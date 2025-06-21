@@ -3,6 +3,11 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Add this ARG to accept the variable at build time
+ARG REACT_APP_API_URL
+# Add this ENV to set it for the build command
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 # Copy package files
 COPY package*.json ./
 
