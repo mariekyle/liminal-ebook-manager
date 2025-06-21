@@ -18,7 +18,7 @@ const generateGradient = () => {
 
 const formatReadingTime = (wordCount) => {
   if (!wordCount || wordCount <= 0) {
-    return null;
+    return 'Not available';
   }
 
   const wpm = 195; // User's average reading speed
@@ -307,12 +307,20 @@ function App() {
                     <h2 className='book-author-large'>{selectedBook.author}</h2>
                     
                     <div className='book-metadata-large'>
-                      {selectedBook.word_count > 0 && (
-                        <p className='book-reading-time'>
-                          <span className='metadata-label'>Est. Reading Time</span>
-                          {formatReadingTime(selectedBook.word_count)}
-                        </p>
+                      <div className='metadata-item'>
+                        <span className='metadata-label'>Est. Reading Time</span>
+                        <span className='metadata-value'>{formatReadingTime(selectedBook.word_count)}</span>
+                      </div>
+                      {selectedBook.file_size && (
+                        <div className='metadata-item'>
+                          <span className='metadata-label'>File Size</span>
+                          <span className='metadata-value'>{(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
                       )}
+                      <div className='metadata-item'>
+                        <span className='metadata-label'>Added On</span>
+                        <span className='metadata-value'>{new Date(selectedBook.added_date).toLocaleDateString()}</span>
+                      </div>
                     </div>
 
                     {selectedBook.description && (

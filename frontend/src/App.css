@@ -277,23 +277,37 @@ body {
 }
 
 .book-metadata-large {
+  display: flex;
+  gap: 2rem;
   margin-bottom: 2rem;
-  padding: 1rem;
+  padding: 1.25rem;
   background: #f9f9f9;
   border-radius: 8px;
   border: 1px solid #eee;
 }
 
-.book-reading-time {
-  font-size: 1rem;
-  color: #333;
+.metadata-item {
+  display: flex;
+  flex-direction: column;
 }
 
-.book-reading-time .metadata-label {
+.metadata-label {
   font-weight: 600;
-  display: block;
-  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
   color: #667eea;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metadata-value {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.book-reading-time {
+  display: none; /* No longer needed, replaced by new structure */
 }
 
 .book-description-large {
