@@ -287,28 +287,16 @@ function App() {
             ) : (
               <div className='book-detail-container'>
                 <div className='book-detail-header'>
+                  <div>
+                    <h1 className='book-title-large'>{selectedBook.title}</h1>
+                    <h2 className='book-author-large'>by {selectedBook.author}</h2>
+                  </div>
                   <button className='back-btn' onClick={() => setSelectedBook(null)}>
                     ← Back to Library
                   </button>
                 </div>
-                <div className='book-detail-body'>
-                  <div className='book-cover-container'>
-                    {selectedBook.cover_path ? (
-                      <img
-                        src={`${API_URL}/${selectedBook.cover_path}`}
-                        alt={selectedBook.title}
-                        className='book-cover-large'
-                      />
-                    ) : (
-                      <div className='book-cover-large-placeholder' style={{ background: generateGradient() }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className='book-info'>
-                    <h1 className='book-title-large'>{selectedBook.title}</h1>
-                    <h2 className='book-author-large'>{selectedBook.author}</h2>
-                    
+                <div className='book-detail-content-area'>
+                  <div className='book-detail-main-content'>
                     <div className='book-metadata-large'>
                       <div className='metadata-item'>
                         <span className='metadata-label'>Est. Reading Time</span>
@@ -331,17 +319,36 @@ function App() {
                     )}
                     
                     <div className='book-actions'>
-                      <button onClick={startEdit} className='btn btn-primary'>
-                        Edit Book
+                      <button onClick={startEdit} className='btn btn-edit'>
+                        Edit
                       </button>
                       <a
                         href={`${API_URL}/books/${selectedBook.id}/download`}
                         download
-                        className='btn btn-secondary'
+                        className='btn btn-download'
                       >
                         Download
                       </a>
+                      <button
+                        onClick={() => deleteBook(selectedBook.id)}
+                        className='btn btn-delete'
+                      >
+                        Delete
+                      </button>
                     </div>
+                  </div>
+                  <div className='book-detail-sidebar'>
+                    {selectedBook.cover_path ? (
+                      <img
+                        src={`${API_URL}/${selectedBook.cover_path}`}
+                        alt={selectedBook.title}
+                        className='book-cover-large'
+                      />
+                    ) : (
+                      <div className='book-cover-large-placeholder' style={{ background: generateGradient() }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
