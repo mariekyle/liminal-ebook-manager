@@ -58,9 +58,9 @@ class BookDB(Base):
     file_size = Column(Integer, nullable=False)
     added_date = Column(DateTime, default=datetime.utcnow, nullable=False)
     cover_path = Column(String(500))
-    isbn = Column(String(20), index=True)
+    isbn = Column(String(500), index=True)
     language = Column(String(10))
-    publisher = Column(String(200))
+    publisher = Column(String(500))
     publication_date = Column(DateTime)
     
     # Create indexes for better performance
