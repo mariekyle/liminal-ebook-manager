@@ -51,7 +51,7 @@ function App() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', author: '', description: '' });
   const [newCoverFile, setNewCoverFile] = useState(null);
-  const [sortBy, setSortBy] = useState('title-asc');
+  const [sortBy, setSortBy] = useState('recently-added');
 
   const fetchBooks = async () => {
     try {
@@ -180,6 +180,8 @@ function App() {
     const sortedBooks = [...booksToSort];
     
     switch (sortBy) {
+      case 'recently-added':
+        return sortedBooks.sort((a, b) => new Date(b.added_date) - new Date(a.added_date));
       case 'title-asc':
         return sortedBooks.sort((a, b) => a.title.localeCompare(b.title));
       case 'title-desc':
@@ -441,6 +443,7 @@ function BookList({ books, onSelectBook, sortBy, onSortChange }) {
             <h2>Your Library ({books.length} books)</h2>
             <div className='sort-dropdown'>
               <select value={sortBy} onChange={(e) => onSortChange(e.target.value)}>
+                <option value='recently-added'>Recently added</option>
                 <option value='title-asc'>Title (A-Z)</option>
                 <option value='title-desc'>Title (Z-A)</option>
                 <option value='read-time-asc'>Quick Reads First</option>
