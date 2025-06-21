@@ -376,25 +376,62 @@ async def upload_book(
 @app.put('/books/{book_id}', response_model=BookResponse)
 async def update_book(
     book_id: int,
-    book_update: BookCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    title: str = File(...),
+    author: str = File(...),
+    description: Optional[str] = File(None),
+    cover_file: Optional[UploadFile] = File(None)
 ):
-    """Update book metadata"""
+    """
+    Update a book's details. Can optionally include a new cover image.
+    """
     db_book = db.query(BookDB).filter(BookDB.id == book_id).first()
     if not db_book:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Book not found'
-        )
-    
-    # Update fields
-    for key, value in book_update.dict(exclude_unset=True).items():
-        setattr(db_book, key, value)
-    
-    db.commit()
-    db.refresh(db_book)
-    
-    logger.info(f"Book updated: {db_book.title}")
+        raise HTTPException(status_code=404, detail='Book not found')
+
+    # Update text fields
+    db_book.title = title
+    db_book.author = author
+    db_book.description = description
+
+    # Handle new cover image upload
+    if cover_file:
+        # Validate file type
+        if not cover_file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail='Invalid file type. Please upload an image.')
+            
+        # Create a new path for the cover
+        file_extension = Path(cover_file.filename).suffix or '.jpg'
+        cover_filename = f"{book_id}{file_extension}"
+        cover_path = f"uploads/covers/{cover_filename}"
+
+        # Delete old cover if it exists to prevent orphaned files
+        if db_book.cover_path and os.path.exists(db_book.cover_path):
+            try:
+                os.remove(db_book.cover_path)
+                logger.info(f"Removed old cover: {db_book.cover_path}")
+            except OSError as e:
+                logger.error(f"Error removing old cover {db_book.cover_path}: {e}")
+
+        # Save the new cover
+        try:
+            with open(cover_path, 'wb') as f:
+                shutil.copyfileobj(cover_file.file, f)
+            db_book.cover_path = cover_path
+            logger.info(f"Updated cover for book {book_id} to {cover_path}")
+        except Exception as e:
+            logger.error(f"Could not save new cover for book {book_id}: {e}")
+            raise HTTPException(status_code=500, detail="Could not save new cover image.")
+
+    try:
+        db.commit()
+        db.refresh(db_book)
+        logger.info(f"Successfully updated book ID: {book_id}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Database error updating book {book_id}: {e}")
+        raise HTTPException(status_code=500, detail="Could not update book in database.")
+        
     return db_book
 
 @app.delete('/books/{book_id}')

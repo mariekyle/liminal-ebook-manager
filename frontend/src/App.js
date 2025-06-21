@@ -23,6 +23,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', author: '', description: '' });
+  const [newCoverFile, setNewCoverFile] = useState(null);
 
   const fetchBooks = async () => {
     try {
@@ -72,20 +73,31 @@ function App() {
 
   const updateBook = async () => {
     if (!selectedBook) return;
+
+    const formData = new FormData();
+    formData.append('title', editForm.title);
+    formData.append('author', editForm.author);
+    formData.append('description', editForm.description || '');
+
+    if (newCoverFile) {
+      formData.append('cover_file', newCoverFile);
+    }
+
     try {
       const response = await fetch(API_URL + '/books/' + selectedBook.id, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: formData,
       });
       if (response.ok) {
         const updatedBook = await response.json();
         setBooks(books.map(book => book.id === selectedBook.id ? updatedBook : book));
         setSelectedBook(updatedBook);
         setEditMode(false);
+        setNewCoverFile(null);
         showNotification('Book updated successfully!', 'success');
       } else {
-        showNotification('Update failed!', 'error');
+        const errorData = await response.json();
+        showNotification(`Update failed: ${errorData.detail || 'Unknown error'}`, 'error');
       }
     } catch (error) {
       showNotification('Update failed!', 'error');
@@ -100,6 +112,7 @@ function App() {
         setBooks(books.filter(book => book.id !== bookId));
         setSelectedBook(null);
         setEditMode(false);
+        setNewCoverFile(null);
         showNotification('Book deleted!', 'success');
       }
     } catch (error) {
@@ -114,11 +127,13 @@ function App() {
       description: selectedBook.description || ''
     });
     setEditMode(true);
+    setNewCoverFile(null);
   };
 
   const cancelEdit = () => {
     setEditMode(false);
     setEditForm({ title: '', author: '', description: '' });
+    setNewCoverFile(null);
   };
 
   const showNotification = (message, type) => {
@@ -178,7 +193,7 @@ function App() {
             </button>
             {editMode ? (
               <div className='edit-form'>
-                <h2>✏️ Edit Book</h2>
+                <h2>Edit Book</h2>
                 <div className='form-group'>
                   <label>Title</label>
                   <input
@@ -204,6 +219,15 @@ function App() {
                     onChange={(e) => setEditForm({...editForm, description: e.target.value})}
                     className='form-textarea'
                     rows='6'
+                  />
+                </div>
+                <div className='form-group'>
+                  <label>Cover Image</label>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    onChange={(e) => setNewCoverFile(e.target.files[0])}
+                    className='form-input'
                   />
                 </div>
                 <div className='form-actions'>
