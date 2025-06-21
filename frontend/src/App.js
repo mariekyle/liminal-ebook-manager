@@ -16,6 +16,30 @@ const generateGradient = () => {
   return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
 };
 
+const formatReadingTime = (wordCount) => {
+  if (!wordCount || wordCount <= 0) {
+    return null;
+  }
+
+  const wpm = 195; // User's average reading speed
+  const minutes = wordCount / wpm;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.round(minutes % 60);
+
+  if (minutes < 1) {
+    return 'Less than a minute';
+  }
+  
+  const parts = [];
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+  }
+  if (remainingMinutes > 0) {
+    parts.push(`${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`);
+  }
+  return parts.join(' ');
+};
+
 function App() {
   const [books, setBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
@@ -258,59 +282,58 @@ function App() {
                 </div>
               </div>
             ) : (
-              <>
+              <div className='book-detail-container'>
                 <div className='book-detail-header'>
-                  <div className='book-detail-title-author'>
-                    <h2>{selectedBook.title}</h2>
-                    <p className='author'>by {selectedBook.author}</p>
-                  </div>
-                  <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
+                  <button className='back-btn' onClick={() => setSelectedBook(null)}>
                     ← Back to Library
                   </button>
                 </div>
-
-                <div className="book-detail-content">
-                  <div className='book-detail-main'>
-                    {selectedBook.description && (
-                      <p className='description-text'>{selectedBook.description}</p>
-                    )}
-                    <div className='metadata'>
-                      <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
-                      {selectedBook.file_size && (
-                        <p><strong>File Size:</strong> {(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                      )}
-                    </div>
-                    <div className='actions'>
-                      <button onClick={startEdit} className='btn btn-edit'>
-                        Edit
-                      </button>
-                      {selectedBook.file_path && (
-                        <a
-                          href={`${API_URL}/${selectedBook.file_path}`}
-                          download
-                          className='btn btn-download'
-                        >
-                          Download
-                        </a>
-                      )}
-                      <button
-                        onClick={() => deleteBook(selectedBook.id)}
-                        className='btn btn-delete'
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className='book-detail-sidebar'>
-                    {selectedBook.cover_path && (
-                      <div className="book-detail-cover">
-                        <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
+                <div className='book-detail-body'>
+                  <div className='book-cover-container'>
+                    {selectedBook.cover_path ? (
+                      <img
+                        src={`${API_URL}/${selectedBook.cover_path}`}
+                        alt={selectedBook.title}
+                        className='book-cover-large'
+                      />
+                    ) : (
+                      <div className='book-cover-large-placeholder' style={{ background: generateGradient() }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                       </div>
                     )}
                   </div>
+                  <div className='book-info'>
+                    <h1 className='book-title-large'>{selectedBook.title}</h1>
+                    <h2 className='book-author-large'>{selectedBook.author}</h2>
+                    
+                    <div className='book-metadata-large'>
+                      {selectedBook.word_count > 0 && (
+                        <p className='book-reading-time'>
+                          <span className='metadata-label'>Est. Reading Time</span>
+                          {formatReadingTime(selectedBook.word_count)}
+                        </p>
+                      )}
+                    </div>
+
+                    {selectedBook.description && (
+                      <p className='book-description-large'>{selectedBook.description}</p>
+                    )}
+                    
+                    <div className='book-actions'>
+                      <button onClick={startEdit} className='btn btn-primary'>
+                        Edit Book
+                      </button>
+                      <a
+                        href={`${API_URL}/books/${selectedBook.id}/download`}
+                        download
+                        className='btn btn-secondary'
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         ) : (

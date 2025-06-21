@@ -48,16 +48,27 @@ engine = create_engine(
 try:
     with engine.connect() as connection:
         transaction = connection.begin()
-        logger.info("Applying manual schema migrations for column sizes...")
+        logger.info("Applying manual schema migrations...")
         connection.execute(text('ALTER TABLE books ALTER COLUMN isbn TYPE VARCHAR(500)'))
         connection.execute(text('ALTER TABLE books ALTER COLUMN publisher TYPE VARCHAR(500)'))
+        
+        # Add word_count column if it doesn't exist
+        try:
+            # Using a try-except block for compatibility as 'IF NOT EXISTS' 
+            # is not supported by all DBs (e.g., older SQLite).
+            connection.execute(text('ALTER TABLE books ADD COLUMN word_count INTEGER DEFAULT 0'))
+            logger.info("Added 'word_count' column to 'books' table.")
+        except Exception as e:
+            # Column likely already exists, which is fine.
+            logger.info(f"Skipping 'word_count' column creation (may already exist): {e}")
+
         transaction.commit()
         logger.info("Schema migrations applied successfully.")
 except Exception as e:
     # Log the error but don't crash the app, it might be a permissions issue
     # or the columns are already correct. The app will fail on upload if the
     # columns are still incorrect.
-    logger.error(f"Could not apply manual schema migrations: {e}")
+    logger.warning(f"Could not apply manual schema migrations (this is expected if columns already exist): {e}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -78,6 +89,7 @@ class BookDB(Base):
     language = Column(String(10))
     publisher = Column(String(500))
     publication_date = Column(DateTime)
+    word_count = Column(Integer, default=0)
     
     # Create indexes for better performance
     __table_args__ = (
@@ -112,6 +124,7 @@ class BookResponse(BaseModel):
     isbn: Optional[str]
     language: Optional[str]
     publisher: Optional[str]
+    word_count: Optional[int]
     
     class Config:
         from_attributes = True
@@ -153,7 +166,69 @@ def get_db():
     finally:
         db.close()
 
+@app.on_event("startup")
+async def backfill_word_counts():
+    """
+    On startup, check for any books without a word count and calculate it.
+    This is a one-time backfill for existing books.
+    """
+    logger.info("Checking for books missing word counts...")
+    db = SessionLocal()
+    try:
+        # Find books where word_count is 0 or NULL.
+        books_to_update = db.query(BookDB).filter((BookDB.word_count == 0) | (BookDB.word_count.is_(None))).all()
+        
+        if not books_to_update:
+            logger.info("No books need word count backfill. All up to date.")
+            return
+
+        logger.info(f"Found {len(books_to_update)} books to backfill word count for.")
+
+        for book in books_to_update:
+            if book.file_path and os.path.exists(book.file_path):
+                logger.info(f"Calculating word count for book ID: {book.id} ({book.title})")
+                word_count = calculate_word_count(book.file_path)
+                if word_count > 0:
+                    book.word_count = word_count
+            else:
+                logger.warning(f"File path not found for book ID: {book.id} at '{book.file_path}', cannot calculate word count.")
+        
+        db.commit()
+        logger.info("Finished backfilling word counts.")
+
+    except Exception as e:
+        logger.error(f"An error occurred during word count backfill: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
 # Utility functions
+def calculate_word_count(epub_path: str) -> int:
+    """Calculates the total word count of an EPUB file."""
+    try:
+        book = epub.read_epub(epub_path)
+        total_words = 0
+        
+        # Get all text content from the book
+        items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+        
+        for item in items:
+            content = item.get_content()
+            if content:
+                # Decode bytes to string
+                text = content.decode('utf-8', errors='ignore')
+                # Remove HTML tags with a simple regex
+                clean_text = re.sub(r'<[^>]+>', '', text)
+                # Remove extra whitespace and count words
+                words = clean_text.split()
+                total_words += len(words)
+                
+        logger.info(f"Calculated word count for {epub_path}: {total_words}")
+        return total_words
+    except Exception as e:
+        logger.error(f"Could not calculate word count for {epub_path}: {e}")
+        return 0
+
 def extract_and_save_cover(epub_path: str, book_id: int) -> Optional[str]:
     """Extracts the cover from an EPUB, saves it, and returns the path."""
     try:
@@ -347,8 +422,9 @@ async def upload_book(
             content = await file.read()
             await f.write(content)
         
-        # Extract metadata
+        # Extract metadata and word count
         metadata = extract_epub_metadata(file_path)
+        word_count = calculate_word_count(file_path)
         
         # Create book record
         book = BookDB(
@@ -359,7 +435,8 @@ async def upload_book(
             file_size=file_size,
             isbn=metadata['isbn'],
             language=metadata['language'],
-            publisher=metadata['publisher']
+            publisher=metadata['publisher'],
+            word_count=word_count
         )
         
         db.add(book)
