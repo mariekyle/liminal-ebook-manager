@@ -45,7 +45,6 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       - ebook_storage:/app/uploads
-      - ./logs:/app/logs
     networks:
       - ebook-network
     ports:
@@ -75,23 +74,6 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: ebook-nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ebook_storage:/var/www/uploads:ro
-    networks:
-      - ebook-network
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - frontend
       - backend
     restart: unless-stopped
 
