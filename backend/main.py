@@ -175,7 +175,7 @@ async def backfill_word_counts():
     logger.info("Checking for books missing word counts...")
     db = SessionLocal()
     try:
-        # Find books where word_count is 0 or NULL.
+        # Find books where word_count is 0 or NULL (not yet processed).
         books_to_update = db.query(BookDB).filter((BookDB.word_count == 0) | (BookDB.word_count.is_(None))).all()
         
         if not books_to_update:
@@ -188,10 +188,10 @@ async def backfill_word_counts():
             if book.file_path and os.path.exists(book.file_path):
                 logger.info(f"Calculating word count for book ID: {book.id} ({book.title})")
                 word_count = calculate_word_count(book.file_path)
-                if word_count > 0:
-                    book.word_count = word_count
+                book.word_count = word_count # Store success (positive) or failure (-1)
             else:
                 logger.warning(f"File path not found for book ID: {book.id} at '{book.file_path}', cannot calculate word count.")
+                book.word_count = -1 # Mark as failed if file is missing
         
         db.commit()
         logger.info("Finished backfilling word counts.")
@@ -227,7 +227,7 @@ def calculate_word_count(epub_path: str) -> int:
         return total_words
     except Exception as e:
         logger.error(f"Could not calculate word count for {epub_path}: {e}")
-        return 0
+        return -1 # Return -1 to indicate failure
 
 def extract_and_save_cover(epub_path: str, book_id: int) -> Optional[str]:
     """Extracts the cover from an EPUB, saves it, and returns the path."""

@@ -17,8 +17,11 @@ const generateGradient = () => {
 };
 
 const formatReadingTime = (wordCount) => {
-  if (!wordCount || wordCount <= 0) {
-    return 'Not available';
+  if (wordCount === -1) {
+    return 'Could not calculate';
+  }
+  if (!wordCount || wordCount === 0) {
+    return 'Calculating...';
   }
 
   const wpm = 195; // User's average reading speed
