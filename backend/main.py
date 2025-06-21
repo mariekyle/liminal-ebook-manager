@@ -252,6 +252,18 @@ def validate_file_size(file_size: int) -> bool:
     
     return file_size <= max_bytes
 
+def set_epub_cover(epub_path: str, cover_image_content: bytes, cover_filename: str):
+    """Sets the cover for an EPUB file and saves it."""
+    try:
+        book = epub.read_epub(epub_path)
+        book.set_cover(cover_filename, cover_image_content)
+        epub.write_epub(epub_path, book, {})
+        logger.info(f"Successfully set new cover for {epub_path}")
+    except Exception as e:
+        logger.error(f"Could not set new cover for {epub_path}: {e}")
+        # We don't re-raise the exception, so the main operation can continue.
+        # The cover path in the DB will be updated, but the EPUB will have the old cover.
+
 # API Endpoints
 @app.get('/')
 async def root():
@@ -419,6 +431,15 @@ async def update_book(
                 shutil.copyfileobj(cover_file.file, f)
             db_book.cover_path = cover_path
             logger.info(f"Updated cover for book {book_id} to {cover_path}")
+
+            # Also update the cover within the EPUB file itself
+            try:
+                with open(cover_path, 'rb') as f_cover:
+                    cover_content = f_cover.read()
+                set_epub_cover(db_book.file_path, cover_content, Path(cover_path).name)
+            except Exception as e:
+                logger.error(f"Failed to update cover in EPUB file for book {book_id}: {e}")
+
         except Exception as e:
             logger.error(f"Could not save new cover for book {book_id}: {e}")
             raise HTTPException(status_code=500, detail="Could not save new cover image.")
