@@ -411,12 +411,12 @@ body {
 }
 
 .form-group { 
-  margin-bottom: 2rem; 
+  margin-bottom: 1rem;
 }
 
 .form-group label { 
   display: block;
-  margin-bottom: .6rem;
+  margin-bottom: .3rem;
   font-size: 14px;
   font-weight: 600;
   color: #555;
@@ -648,7 +648,6 @@ body {
   margin-bottom: 0.5rem;
 }
 
-
 .tag-badge button {
   background: none;
   border: none;
@@ -659,6 +658,22 @@ body {
   margin-left: 0.25rem;
 }
 
-.tag-badge button:hover {
+.remove-tag-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.remove-tag-btn:hover {
+  background-color: rgba(255, 107, 107, 0.1);
   color: #ff5252;
+  transform: scale(1.1);
 }
