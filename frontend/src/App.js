@@ -257,22 +257,27 @@ function App() {
               </div>
             ) : (
               <>
-                <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
-                  ← Back to Library
-                </button>
-                <div className="book-detail-content">
-                  {selectedBook.cover_path && (
-                    <div className="book-detail-cover">
-                      <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
-                    </div>
-                  )}
-                  <div className='book-info-main'>
+                <div className='book-detail-header'>
+                  <div className='book-detail-title-author'>
                     <h2>{selectedBook.title}</h2>
                     <p className='author'>by {selectedBook.author}</p>
+                  </div>
+                  <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
+                    ← Back to Library
+                  </button>
+                </div>
+
+                <div className="book-detail-content">
+                  <div className='book-detail-main'>
                     {selectedBook.description && (
-                      <div className='description'>
-                        <h3>Description</h3>
-                        <p>{selectedBook.description}</p>
+                      <p className='description-text'>{selectedBook.description}</p>
+                    )}
+                  </div>
+
+                  <div className='book-detail-sidebar'>
+                    {selectedBook.cover_path && (
+                      <div className="book-detail-cover">
+                        <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
                       </div>
                     )}
                     <div className='metadata'>
@@ -283,7 +288,7 @@ function App() {
                     </div>
                     <div className='actions'>
                       <button onClick={startEdit} className='btn btn-edit'>
-                        ✏️ Edit
+                        Edit
                       </button>
                       {selectedBook.file_path && (
                         <a
@@ -291,14 +296,14 @@ function App() {
                           download
                           className='btn btn-download'
                         >
-                          📥 Download
+                          Download
                         </a>
                       )}
                       <button
                         onClick={() => deleteBook(selectedBook.id)}
                         className='btn btn-delete'
                       >
-                        🗑️ Delete
+                        Delete
                       </button>
                     </div>
                   </div>

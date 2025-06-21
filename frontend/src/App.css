@@ -193,27 +193,70 @@ body {
   display: none;
 }
 
-.book-detail { 
-  max-width: 900px; 
-  margin: 0 auto; 
-  animation: slideInUp 0.5s ease; 
+.book-detail-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: slideInUp 0.5s ease;
+}
+
+.book-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.book-detail-title-author h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.book-detail-title-author .author {
+  font-size: 1.2rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.book-detail-header .back-btn {
+  margin-bottom: 0;
 }
 
 .book-detail-content {
   display: flex;
-  gap: 2.5rem;
+  gap: 3rem;
   align-items: flex-start;
+  background: white;
+  padding: 3rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+.book-detail-main {
+  flex: 2;
+}
+
+.description-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+}
+
+.book-detail-sidebar {
+  flex: 1;
+  max-width: 300px;
 }
 
 .book-detail-cover {
-  flex-shrink: 0;
-  width: 250px;
-  max-width: 40%;
+  width: 100%;
+  margin-bottom: 2rem;
 }
 
 .book-detail-cover img {
   width: 100%;
-  border-radius: 15px;
+  border-radius: 12px;
   box-shadow: 0 15px 40px rgba(0,0,0,0.2);
 }
 
@@ -257,11 +300,7 @@ body {
 }
 
 .description { 
-  background: #f8f9fa; 
-  padding: 2rem; 
-  border-radius: 15px; 
   margin: 2rem 0; 
-  border-left: 4px solid #667eea; 
 }
 
 .description h3 { 
@@ -278,12 +317,9 @@ body {
 }
 
 .metadata { 
-  background: white; 
-  padding: 1.5rem; 
-  border-radius: 15px; 
-  margin: 2rem 0; 
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
-  border: 1px solid rgba(0,0,0,0.05); 
+  border-top: 2px solid #eee;
+  padding-top: 2rem;
+  margin: 2rem 0;
 }
 
 .metadata p { 
