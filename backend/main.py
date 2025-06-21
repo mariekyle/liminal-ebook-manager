@@ -1,0 +1,399 @@
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Index
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import QueuePool
+from pydantic import BaseModel, validator
+from datetime import datetime
+import os
+import shutil
+import uuid
+import re
+import logging
+from typing import List, Optional
+from pathlib import Path
+import aiofiles
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO')),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
+
+# Create database engine with connection pooling
+engine = create_engine(
+    DATABASE_URL,
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Database Models
+class BookDB(Base):
+    __tablename__ = 'books'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(500), nullable=False, index=True)
+    author = Column(String(200), nullable=False, index=True)
+    description = Column(Text)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    added_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    cover_path = Column(String(500))
+    isbn = Column(String(20), index=True)
+    language = Column(String(10))
+    publisher = Column(String(200))
+    publication_date = Column(DateTime)
+    
+    # Create indexes for better performance
+    __table_args__ = (
+        Index('idx_title_author', 'title', 'author'),
+        Index('idx_added_date', 'added_date'),
+    )
+
+# Pydantic Models
+class BookCreate(BaseModel):
+    title: str
+    author: str
+    description: Optional[str] = None
+    isbn: Optional[str] = None
+    language: Optional[str] = None
+    publisher: Optional[str] = None
+    
+    @validator('title', 'author')
+    def validate_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Field cannot be empty')
+        return v.strip()
+
+class BookResponse(BaseModel):
+    id: int
+    title: str
+    author: str
+    description: Optional[str]
+    file_path: Optional[str]
+    file_size: Optional[int]
+    added_date: datetime
+    cover_path: Optional[str]
+    isbn: Optional[str]
+    language: Optional[str]
+    publisher: Optional[str]
+    
+    class Config:
+        from_attributes = True
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+# FastAPI app
+app = FastAPI(
+    title='Liminal Ebook Manager',
+    description='A modern ebook management system',
+    version='1.0.0',
+    docs_url='/docs',
+    redoc_url='/redoc'
+)
+
+# CORS middleware
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+# Mount static files
+app.mount('/uploads', StaticFiles(directory='uploads'), name='uploads')
+
+# Create upload directories
+for directory in ['uploads/books', 'uploads/covers', 'uploads/temp']:
+    Path(directory).mkdir(parents=True, exist_ok=True)
+
+# Database dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Utility functions
+def extract_epub_metadata(file_path: str) -> dict:
+    """Extract metadata from EPUB file"""
+    try:
+        from ebooklib import epub
+        book = epub.read_epub(file_path)
+        
+        # Extract basic metadata
+        title = book.get_metadata('DC', 'title')
+        author = book.get_metadata('DC', 'creator')
+        description = book.get_metadata('DC', 'description')
+        isbn = book.get_metadata('DC', 'identifier')
+        language = book.get_metadata('DC', 'language')
+        publisher = book.get_metadata('DC', 'publisher')
+        
+        # Clean description
+        clean_description = None
+        if description:
+            desc_text = description[0][0]
+            clean_description = re.sub(r'<[^>]+>', '', desc_text).strip()
+        
+        return {
+            'title': title[0][0] if title else 'Unknown Title',
+            'author': author[0][0] if author else 'Unknown Author',
+            'description': clean_description,
+            'isbn': isbn[0][0] if isbn else None,
+            'language': language[0][0] if language else None,
+            'publisher': publisher[0][0] if publisher else None,
+        }
+    except Exception as e:
+        logger.error(f"Error extracting EPUB metadata: {e}")
+        return {
+            'title': 'Unknown Title',
+            'author': 'Unknown Author',
+            'description': None,
+            'isbn': None,
+            'language': None,
+            'publisher': None,
+        }
+
+def validate_file_size(file_size: int) -> bool:
+    """Validate file size against maximum allowed size"""
+    max_size = os.getenv('UPLOAD_MAX_SIZE', '100MB')
+    if max_size.endswith('MB'):
+        max_bytes = int(max_size[:-2]) * 1024 * 1024
+    elif max_size.endswith('GB'):
+        max_bytes = int(max_size[:-2]) * 1024 * 1024 * 1024
+    else:
+        max_bytes = int(max_size)
+    
+    return file_size <= max_bytes
+
+# API Endpoints
+@app.get('/')
+async def root():
+    """Root endpoint"""
+    return {
+        'message': 'Liminal Ebook Manager API',
+        'version': '1.0.0',
+        'docs': '/docs'
+    }
+
+@app.get('/health')
+async def health_check():
+    """Health check endpoint"""
+    return {'status': 'healthy', 'timestamp': datetime.utcnow()}
+
+@app.get('/books', response_model=List[BookResponse])
+async def get_books(
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all books with optional search and pagination"""
+    query = db.query(BookDB)
+    
+    if search:
+        search_term = f'%{search}%'
+        query = query.filter(
+            (BookDB.title.ilike(search_term)) | 
+            (BookDB.author.ilike(search_term)) |
+            (BookDB.description.ilike(search_term))
+        )
+    
+    books = query.offset(skip).limit(limit).all()
+    return books
+
+@app.get('/books/{book_id}', response_model=BookResponse)
+async def get_book(book_id: int, db: Session = Depends(get_db)):
+    """Get a specific book by ID"""
+    book = db.query(BookDB).filter(BookDB.id == book_id).first()
+    if not book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Book not found'
+        )
+    return book
+
+@app.post('/books/upload', response_model=BookResponse)
+async def upload_book(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Upload a new EPUB book"""
+    # Validate file type
+    if not file.filename.lower().endswith('.epub'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Only EPUB files are supported'
+        )
+    
+    # Validate file size
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if not validate_file_size(file_size):
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail='File too large'
+        )
+    
+    # Generate unique filename
+    file_id = str(uuid.uuid4())
+    safe_filename = f'{file_id}.epub'
+    file_path = f'uploads/books/{safe_filename}'
+    
+    try:
+        # Save file
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+        
+        # Extract metadata
+        metadata = extract_epub_metadata(file_path)
+        
+        # Create book record
+        book = BookDB(
+            title=metadata['title'],
+            author=metadata['author'],
+            description=metadata['description'],
+            file_path=file_path,
+            file_size=file_size,
+            isbn=metadata['isbn'],
+            language=metadata['language'],
+            publisher=metadata['publisher']
+        )
+        
+        db.add(book)
+        db.commit()
+        db.refresh(book)
+        
+        logger.info(f"Book uploaded successfully: {book.title}")
+        return book
+        
+    except Exception as e:
+        # Clean up file if database operation fails
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        logger.error(f"Error uploading book: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Failed to upload book'
+        )
+
+@app.put('/books/{book_id}', response_model=BookResponse)
+async def update_book(
+    book_id: int,
+    book_update: BookCreate,
+    db: Session = Depends(get_db)
+):
+    """Update book metadata"""
+    db_book = db.query(BookDB).filter(BookDB.id == book_id).first()
+    if not db_book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Book not found'
+        )
+    
+    # Update fields
+    for key, value in book_update.dict(exclude_unset=True).items():
+        setattr(db_book, key, value)
+    
+    db.commit()
+    db.refresh(db_book)
+    
+    logger.info(f"Book updated: {db_book.title}")
+    return db_book
+
+@app.delete('/books/{book_id}')
+async def delete_book(book_id: int, db: Session = Depends(get_db)):
+    """Delete a book and its associated files"""
+    book = db.query(BookDB).filter(BookDB.id == book_id).first()
+    if not book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Book not found'
+        )
+    
+    try:
+        # Delete file
+        if book.file_path and os.path.exists(book.file_path):
+            os.remove(book.file_path)
+        
+        # Delete cover if exists
+        if book.cover_path and os.path.exists(book.cover_path):
+            os.remove(book.cover_path)
+        
+        # Delete from database
+        db.delete(book)
+        db.commit()
+        
+        logger.info(f"Book deleted: {book.title}")
+        return {'message': 'Book deleted successfully'}
+        
+    except Exception as e:
+        logger.error(f"Error deleting book: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Failed to delete book'
+        )
+
+@app.get('/books/{book_id}/download')
+async def download_book(book_id: int, db: Session = Depends(get_db)):
+    """Download a book file"""
+    book = db.query(BookDB).filter(BookDB.id == book_id).first()
+    if not book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Book not found'
+        )
+    
+    if not book.file_path or not os.path.exists(book.file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Book file not found'
+        )
+    
+    return FileResponse(
+        book.file_path,
+        filename=f"{book.title}.epub",
+        media_type='application/epub+zip'
+    )
+
+@app.get('/stats')
+async def get_stats(db: Session = Depends(get_db)):
+    """Get library statistics"""
+    total_books = db.query(BookDB).count()
+    total_size = db.query(BookDB.file_size).all()
+    total_size_bytes = sum(size[0] for size in total_size if size[0])
+    
+    return {
+        'total_books': total_books,
+        'total_size_mb': round(total_size_bytes / (1024 * 1024), 2),
+        'average_size_mb': round(total_size_bytes / (1024 * 1024) / total_books, 2) if total_books > 0 else 0
+    }
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=8000) 
