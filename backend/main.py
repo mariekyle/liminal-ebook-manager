@@ -175,6 +175,11 @@ async def backfill_word_counts():
     logger.info("Checking for books missing word counts...")
     db = SessionLocal()
     try:
+        # First, reset any previously failed calculations to try again.
+        db.query(BookDB).filter(BookDB.word_count == -1).update({"word_count": 0})
+        db.commit()
+        logger.info("Reset previously failed word count calculations.")
+
         # Find books where word_count is 0 or NULL (not yet processed).
         books_to_update = db.query(BookDB).filter((BookDB.word_count == 0) | (BookDB.word_count.is_(None))).all()
         
@@ -210,7 +215,7 @@ def calculate_word_count(epub_path: str) -> int:
         total_words = 0
         
         # Get all text content from the book
-        items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+        items = list(book.get_items_of_type(epub.ITEM_DOCUMENT))
         
         for item in items:
             content = item.get_content()
@@ -245,14 +250,14 @@ def extract_and_save_cover(epub_path: str, book_id: int) -> Optional[str]:
 
         # If not found, look for items with a cover property
         if not cover_image:
-            for item in book.get_items_of_type(ebooklib.ITEM_IMAGE):
+            for item in book.get_items_of_type(epub.ITEM_IMAGE):
                 if 'cover' in (item.get_name() or '').lower():
                     cover_image = item
                     break
         
         if not cover_image:
             for item in book.get_items():
-                if item.get_type() == ebooklib.ITEM_COVER:
+                if item.get_type() == epub.ITEM_COVER:
                     cover_image = item
                     break
 
