@@ -307,6 +307,14 @@ body {
     font-weight: 500;
 }
 
+.book-description-large {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #444;
+  margin-bottom: 2.5rem;
+  white-space: pre-wrap; /* Preserve line breaks from description */
+}
+
 .book-actions {
   display: flex;
   gap: 1rem;
@@ -327,29 +335,9 @@ body {
   box-shadow: 0 4px 15px rgba(0,0,0,0.08);
 }
 
-/* Cleanup old styles that are no longer used */
-.book-detail-view,
-.book-detail-body,
-.book-detail-cover,
-.book-info,
-.book-reading-time {
-  display: none;
-}
-
-.back-btn { 
-  background: #667eea; 
-  border: none; 
-  padding: .7rem 1.2rem; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  font-size: 0.9rem;
+.back-btn {
+  background: #667eea;
   color: white;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
 }
 
 .back-btn:hover {
@@ -358,123 +346,31 @@ body {
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);
 }
 
-.book-info h2 { 
-  font-size: 3rem; 
-  margin-bottom: 0.5rem; 
-  color: #333; 
-  font-weight: 700; 
-  line-height: 1.2; 
+.btn-edit {
+  background: #007bff;
+  color: white;
 }
 
-.book-info .author { 
-  font-size: 1.5rem; 
-  color: #667eea; 
-  margin-bottom: 2rem; 
-  font-weight: 500; 
+.btn-edit:hover {
+  background: #0056b3;
 }
 
-.description { 
-  margin: 2rem 0; 
+.btn-download {
+  background: #28a745;
+  color: white;
 }
 
-.description h3 { 
-  margin-bottom: 1rem; 
-  color: #333; 
-  font-size: 1.3rem; 
-  font-weight: 600; 
+.btn-download:hover {
+  background: #1e7e34;
 }
 
-.description p { 
-  line-height: 1.8; 
-  color: #555; 
-  font-size: 1.1rem; 
+.btn-delete {
+  background: #dc3545;
+  color: white;
 }
 
-.metadata { 
-  margin: 2rem 0; 
-}
-
-.metadata p { 
-  margin-bottom: 0.5rem; 
-  color: #555; 
-  font-size: 1.1rem; 
-}
-
-.metadata strong { 
-  color: #333; 
-  font-weight: 600; 
-}
-
-.actions { 
-  display: flex; 
-  gap: 1rem; 
-  margin-top: 2rem; 
-  flex-wrap: wrap; 
-}
-
-.btn { 
-  padding: 1rem 2rem; 
-  border-radius: 12px; 
-  font-size: 1rem; 
-  font-weight: 600; 
-  cursor: pointer; 
-  transition: all 0.3s ease; 
-  border: none; 
-  text-decoration: none; 
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-}
-
-.btn:hover { 
-  transform: translateY(-2px); 
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
-}
-
-.btn-edit { 
-  background: #007bff; 
-  color: white; 
-}
-
-.btn-edit:hover { 
-  background: #0056b3; 
-}
-
-.btn-download { 
-  background: #28a745; 
-  color: white; 
-}
-
-.btn-download:hover { 
-  background: #1e7e34; 
-}
-
-.btn-delete { 
-  background: #dc3545; 
-  color: white; 
-}
-
-.btn-delete:hover { 
-  background: #c82333; 
-}
-
-.btn-primary { 
-  background: #667eea; 
-  color: white; 
-}
-
-.btn-primary:hover { 
-  background: #5a67d8; 
-}
-
-.btn-secondary { 
-  background: #6c757d; 
-  color: white; 
-}
-
-.btn-secondary:hover { 
-  background: #545b62; 
+.btn-delete:hover {
+  background: #c82333;
 }
 
 .form-group { 

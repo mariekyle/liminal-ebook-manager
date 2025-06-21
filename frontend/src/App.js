@@ -216,7 +216,7 @@ function App() {
       </header>
       <main className='main-content'>
         {selectedBook ? (
-          <div className='book-detail-view'>
+          <div className='book-detail-container'>
             {editMode ? (
               <div className='edit-book-container'>
                 <div className='edit-book-header'>
@@ -285,7 +285,7 @@ function App() {
                 </div>
               </div>
             ) : (
-              <div className='book-detail-container'>
+              <>
                 <div className='book-detail-header'>
                   <div>
                     <h1 className='book-title-large'>{selectedBook.title}</h1>
@@ -351,7 +351,7 @@ function App() {
                     )}
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         ) : (
