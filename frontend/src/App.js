@@ -49,9 +49,11 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', author: '', description: '' });
+  const [editForm, setEditForm] = useState({ title: '', author: '', description: '', series: '', series_number: '', tags: [], newTag: '' });
   const [newCoverFile, setNewCoverFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [sortBy, setSortBy] = useState('recently-added');
+  const [view, setView] = useState('library'); // 'library' or 'bulk-import'
 
   const fetchBooks = async () => {
     try {
@@ -106,6 +108,9 @@ function App() {
     formData.append('title', editForm.title);
     formData.append('author', editForm.author);
     formData.append('description', editForm.description || '');
+    formData.append('series', editForm.series || '');
+    formData.append('series_number', editForm.series_number || '');
+    formData.append('tags', editForm.tags.join(','));
 
     if (newCoverFile) {
       formData.append('cover_file', newCoverFile);
@@ -152,7 +157,11 @@ function App() {
     setEditForm({
       title: selectedBook.title || '',
       author: selectedBook.author || '',
-      description: selectedBook.description || ''
+      description: selectedBook.description || '',
+      series: selectedBook.series || '',
+      series_number: selectedBook.series_number || '',
+      tags: selectedBook.tags ? selectedBook.tags.split(',').map(tag => tag.trim()) : [],
+      newTag: ''
     });
     setEditMode(true);
     setNewCoverFile(null);
@@ -160,7 +169,7 @@ function App() {
 
   const cancelEdit = () => {
     setEditMode(false);
-    setEditForm({ title: '', author: '', description: '' });
+    setEditForm({ title: '', author: '', description: '', series: '', series_number: '', tags: [], newTag: '' });
     setNewCoverFile(null);
   };
 
@@ -285,6 +294,64 @@ function App() {
                         className='form-textarea'
                         rows='6'
                       />
+                    </div>
+                    <div className='form-group'>
+                      <label>Series</label>
+                      <input
+                        type='text'
+                        value={editForm.series}
+                        onChange={(e) => setEditForm({ ...editForm, series: e.target.value })}
+                        className='form-input'
+                      />
+                    </div>
+                    <div className='form-group'>
+                      <label>Series Number</label>
+                      <input
+                        type='text'
+                        value={editForm.series_number}
+                        onChange={(e) => setEditForm({ ...editForm, series_number: e.target.value })}
+                        className='form-input'
+                      />
+                    </div>
+                    <div className='form-group'>
+                      <label>Tags</label>
+                      <div className='tag-container'>
+                        {editForm.tags.map((tag, index) => (
+                          <span key={index} className='tag-badge'>
+                            {tag}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditForm({
+                                  ...editForm,
+                                  tags: editForm.tags.filter((t) => t !== tag)
+                                });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <input
+                        type='text'
+                        value={editForm.newTag}
+                        onChange={(e) => setEditForm({ ...editForm, newTag: e.target.value })}
+                        placeholder='Add new tag'
+                        className='form-input'
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditForm({
+                            ...editForm,
+                            tags: [...editForm.tags, editForm.newTag.trim()],
+                            newTag: ''
+                          });
+                        }}
+                      >
+                        Add Tag
+                      </button>
                     </div>
                     <div className='form-group'>
                       <label>Cover Image</label>
