@@ -51,6 +51,7 @@ function App() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', author: '', description: '' });
   const [newCoverFile, setNewCoverFile] = useState(null);
+  const [sortBy, setSortBy] = useState('recently-added');
 
   const fetchBooks = async () => {
     try {
@@ -173,6 +174,27 @@ function App() {
       notification.classList.remove('show');
       setTimeout(() => document.body.removeChild(notification), 300);
     }, 3000);
+  };
+
+  const sortBooks = (booksToSort) => {
+    const sortedBooks = [...booksToSort];
+    
+    switch (sortBy) {
+      case 'recently-added':
+        return sortedBooks.sort((a, b) => new Date(b.added_date) - new Date(a.added_date));
+      case 'read-time':
+        return sortedBooks.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
+      case 'title':
+        return sortedBooks.sort((a, b) => a.title.localeCompare(b.title));
+      case 'date-published':
+        return sortedBooks.sort((a, b) => {
+          const dateA = a.publication_date ? new Date(a.publication_date) : new Date(0);
+          const dateB = b.publication_date ? new Date(b.publication_date) : new Date(0);
+          return dateB - dateA;
+        });
+      default:
+        return sortedBooks;
+    }
   };
 
   useEffect(() => {
@@ -375,14 +397,19 @@ function App() {
             )}
           </div>
         ) : (
-          <BookList books={books} onSelectBook={setSelectedBook} />
+          <BookList 
+            books={sortBooks(books)} 
+            onSelectBook={setSelectedBook} 
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+          />
         )}
       </main>
     </div>
   );
 }
 
-function BookList({ books, onSelectBook }) {
+function BookList({ books, onSelectBook, sortBy, onSortChange }) {
   const gradientMap = useMemo(() => {
     const map = new Map();
     books.forEach(book => {
@@ -404,6 +431,14 @@ function BookList({ books, onSelectBook }) {
         <>
           <div className='books-header'>
             <h2>Your Library ({books.length} books)</h2>
+            <div className='sort-dropdown'>
+              <select value={sortBy} onChange={(e) => onSortChange(e.target.value)}>
+                <option value='recently-added'>Recently Added</option>
+                <option value='read-time'>Read Time</option>
+                <option value='title'>Title</option>
+                <option value='date-published'>Date Published</option>
+              </select>
+            </div>
           </div>
           <div className='books-grid'>
             {books.map((book) => (

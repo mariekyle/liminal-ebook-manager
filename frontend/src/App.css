@@ -111,12 +111,53 @@ body {
 
 .books-header { 
   margin-bottom: 2rem; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .books-header h2 { 
   font-size: 1.8rem; 
   color: #333; 
   font-weight: 600; 
+  margin: 0;
+}
+
+.sort-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-dropdown select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.sort-dropdown select:hover {
+  border-color: #667eea;
+}
+
+.sort-dropdown select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.sort-dropdown::before {
+  content: "↓";
+  font-size: 0.8rem;
+  color: #667eea;
+  font-weight: bold;
 }
 
 .books-grid { 
@@ -214,6 +255,9 @@ body {
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid #e5e5e5;
+}
+.book-detail-header > div {
+  max-width: 67%;
 }
 
 .book-detail-content-area {
