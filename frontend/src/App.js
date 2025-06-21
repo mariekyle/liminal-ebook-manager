@@ -291,7 +291,7 @@ function App() {
                     <h1 className='book-title-large'>{selectedBook.title}</h1>
                     <h2 className='book-author-large'>by {selectedBook.author}</h2>
                   </div>
-                  <button className='back-btn' onClick={() => setSelectedBook(null)}>
+                  <button className='btn back-btn' onClick={() => setSelectedBook(null)}>
                     ← Back to Library
                   </button>
                 </div>
