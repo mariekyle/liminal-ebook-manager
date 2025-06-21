@@ -155,34 +155,36 @@ function App() {
   return (
     <div className='app'>
       <header className='app-header'>
-        <h1>📚 Liminal Ebook Manager</h1>
-        <div className='search-bar'>
-          <input
-            type='text'
-            placeholder='Search books by title or author...'
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              searchBooks(e.target.value);
-            }}
-          />
-        </div>
-        <div className='upload-section'>
-          <input
-            type='file'
-            accept='.epub'
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                uploadFile(e.target.files[0]);
-              }
-            }}
-            disabled={uploading}
-            id='file-upload'
-            style={{ display: 'none' }}
-          />
-          <label htmlFor='file-upload' className={uploading ? 'upload-btn uploading' : 'upload-btn'}>
-            {uploading ? '⏳ Uploading...' : '📤 Upload EPUB'}
-          </label>
+        <div className='header-content'>
+          <div className='app-title'>Liminal</div>
+          <div className='search-bar'>
+            <input
+              type='text'
+              placeholder='Search books by title or author...'
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                searchBooks(e.target.value);
+              }}
+            />
+          </div>
+          <div className='upload-section'>
+            <input
+              type='file'
+              accept='.epub'
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  uploadFile(e.target.files[0]);
+                }
+              }}
+              disabled={uploading}
+              id='file-upload'
+              style={{ display: 'none' }}
+            />
+            <label htmlFor='file-upload' className={uploading ? 'upload-btn uploading' : 'upload-btn'}>
+              {uploading ? 'Uploading...' : 'Upload EPUB'}
+            </label>
+          </div>
         </div>
       </header>
       <main className='main-content'>
