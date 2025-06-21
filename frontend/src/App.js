@@ -272,14 +272,6 @@ function App() {
                     {selectedBook.description && (
                       <p className='description-text'>{selectedBook.description}</p>
                     )}
-                  </div>
-
-                  <div className='book-detail-sidebar'>
-                    {selectedBook.cover_path && (
-                      <div className="book-detail-cover">
-                        <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
-                      </div>
-                    )}
                     <div className='metadata'>
                       <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
                       {selectedBook.file_size && (
@@ -306,6 +298,14 @@ function App() {
                         Delete
                       </button>
                     </div>
+                  </div>
+
+                  <div className='book-detail-sidebar'>
+                    {selectedBook.cover_path && (
+                      <div className="book-detail-cover">
+                        <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
