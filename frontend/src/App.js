@@ -313,6 +313,38 @@ function App() {
                         <span className='metadata-value'>{new Date(selectedBook.added_date).toLocaleDateString()}</span>
                       </div>
                     </div>
+                    
+                    <div className='book-metadata-grid'>
+                      {selectedBook.publisher && (
+                        <div className='metadata-item-grid'>
+                          <span className='metadata-label'>Publisher</span>
+                          <span className='metadata-value'>{selectedBook.publisher}</span>
+                        </div>
+                      )}
+                      {selectedBook.publication_date && (
+                        <div className='metadata-item-grid'>
+                          <span className='metadata-label'>Published</span>
+                          <span className='metadata-value'>{new Date(selectedBook.publication_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                       {selectedBook.isbn && (
+                        <div className='metadata-item-grid'>
+                          <span className='metadata-label'>ISBN</span>
+                          <span className='metadata-value'>{selectedBook.isbn}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {selectedBook.tags && (
+                      <div className='book-tags-section'>
+                        <h3 className='tags-header'>Tags</h3>
+                        <div className='tags-container'>
+                          {selectedBook.tags.split(',').map(tag => tag.trim()).map(tag => (
+                            <span key={tag} className='tag-badge'>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {selectedBook.description && (
                       <p className='book-description-large'>{selectedBook.description}</p>

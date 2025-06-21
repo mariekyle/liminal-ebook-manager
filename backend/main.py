@@ -62,6 +62,13 @@ try:
             # Column likely already exists, which is fine.
             logger.info(f"Skipping 'word_count' column creation (may already exist): {e}")
 
+        # Add tags column if it doesn't exist
+        try:
+            connection.execute(text('ALTER TABLE books ADD COLUMN tags TEXT'))
+            logger.info("Added 'tags' column to 'books' table.")
+        except Exception as e:
+            logger.info(f"Skipping 'tags' column creation (may already exist): {e}")
+
         transaction.commit()
         logger.info("Schema migrations applied successfully.")
 except Exception as e:
@@ -90,6 +97,7 @@ class BookDB(Base):
     publisher = Column(String(500))
     publication_date = Column(DateTime)
     word_count = Column(Integer, default=0)
+    tags = Column(Text)
     
     # Create indexes for better performance
     __table_args__ = (
@@ -124,7 +132,9 @@ class BookResponse(BaseModel):
     isbn: Optional[str]
     language: Optional[str]
     publisher: Optional[str]
+    publication_date: Optional[datetime]
     word_count: Optional[int]
+    tags: Optional[str]
     
     class Config:
         from_attributes = True
@@ -167,6 +177,10 @@ def get_db():
         db.close()
 
 @app.on_event("startup")
+async def startup_tasks():
+    await backfill_word_counts()
+    await backfill_missing_metadata()
+
 async def backfill_word_counts():
     """
     On startup, check for any books without a word count and calculate it.
@@ -203,6 +217,43 @@ async def backfill_word_counts():
 
     except Exception as e:
         logger.error(f"An error occurred during word count backfill: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+async def backfill_missing_metadata():
+    """
+    On startup, check for books with missing metadata and extract it.
+    """
+    logger.info("Checking for books with missing metadata (publisher, pub_date, tags)...")
+    db = SessionLocal()
+    try:
+        # Find books where publisher is null, as a proxy for unprocessed books
+        books_to_update = db.query(BookDB).filter(BookDB.publisher.is_(None)).all()
+        
+        if not books_to_update:
+            logger.info("No books need metadata backfill.")
+            return
+
+        logger.info(f"Found {len(books_to_update)} books to backfill metadata for.")
+
+        for book in books_to_update:
+            if book.file_path and os.path.exists(book.file_path):
+                logger.info(f"Extracting metadata for book ID: {book.id} ({book.title})")
+                metadata = extract_epub_metadata(book.file_path)
+                
+                book.publisher = metadata.get('publisher')
+                book.publication_date = metadata.get('publication_date')
+                book.tags = metadata.get('tags')
+                book.isbn = metadata.get('isbn') # Also update ISBN just in case
+            else:
+                logger.warning(f"File path not found for book ID: {book.id}, cannot backfill metadata.")
+        
+        db.commit()
+        logger.info("Finished backfilling metadata.")
+
+    except Exception as e:
+        logger.error(f"An error occurred during metadata backfill: {e}")
         db.rollback()
     finally:
         db.close()
@@ -294,6 +345,8 @@ def extract_epub_metadata(file_path: str) -> dict:
         isbn = book.get_metadata('DC', 'identifier')
         language = book.get_metadata('DC', 'language')
         publisher = book.get_metadata('DC', 'publisher')
+        pub_date_meta = book.get_metadata('DC', 'date')
+        subjects = book.get_metadata('DC', 'subject')
         
         # Clean description
         clean_description = None
@@ -301,6 +354,21 @@ def extract_epub_metadata(file_path: str) -> dict:
             desc_text = description[0][0]
             clean_description = re.sub(r'<[^>]+>', '', desc_text).strip()
         
+        # Parse publication date
+        publication_date = None
+        if pub_date_meta:
+            try:
+                # Taking the first date found, handling timezone info
+                date_str = pub_date_meta[0][0].split('T')[0]
+                publication_date = datetime.fromisoformat(date_str)
+            except (ValueError, IndexError):
+                logger.warning(f"Could not parse publication date: {pub_date_meta[0][0]}")
+        
+        # Consolidate tags
+        tags = None
+        if subjects:
+            tags = ', '.join([tag[0] for tag in subjects])
+
         return {
             'title': title[0][0] if title else 'Unknown Title',
             'author': author[0][0] if author else 'Unknown Author',
@@ -308,6 +376,8 @@ def extract_epub_metadata(file_path: str) -> dict:
             'isbn': isbn[0][0] if isbn else None,
             'language': language[0][0] if language else None,
             'publisher': publisher[0][0] if publisher else None,
+            'publication_date': publication_date,
+            'tags': tags,
         }
     except Exception as e:
         logger.error(f"Error extracting EPUB metadata: {e}")
@@ -318,6 +388,8 @@ def extract_epub_metadata(file_path: str) -> dict:
             'isbn': None,
             'language': None,
             'publisher': None,
+            'publication_date': None,
+            'tags': None,
         }
 
 def validate_file_size(file_size: int) -> bool:
@@ -441,6 +513,8 @@ async def upload_book(
             isbn=metadata['isbn'],
             language=metadata['language'],
             publisher=metadata['publisher'],
+            publication_date=metadata['publication_date'],
+            tags=metadata['tags'],
             word_count=word_count
         )
         
