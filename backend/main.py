@@ -43,40 +43,6 @@ engine = create_engine(
     pool_pre_ping=True
 )
 
-# Manually alter table columns to ensure they are the correct size.
-# This is a simple migration solution for this project.
-try:
-    with engine.connect() as connection:
-        transaction = connection.begin()
-        logger.info("Applying manual schema migrations...")
-        connection.execute(text('ALTER TABLE books ALTER COLUMN isbn TYPE VARCHAR(500)'))
-        connection.execute(text('ALTER TABLE books ALTER COLUMN publisher TYPE VARCHAR(500)'))
-        
-        # Add word_count column if it doesn't exist
-        try:
-            # Using a try-except block for compatibility as 'IF NOT EXISTS' 
-            # is not supported by all DBs (e.g., older SQLite).
-            connection.execute(text('ALTER TABLE books ADD COLUMN word_count INTEGER DEFAULT 0'))
-            logger.info("Added 'word_count' column to 'books' table.")
-        except Exception as e:
-            # Column likely already exists, which is fine.
-            logger.info(f"Skipping 'word_count' column creation (may already exist): {e}")
-
-        # Add tags column if it doesn't exist
-        try:
-            connection.execute(text('ALTER TABLE books ADD COLUMN tags TEXT'))
-            logger.info("Added 'tags' column to 'books' table.")
-        except Exception as e:
-            logger.info(f"Skipping 'tags' column creation (may already exist): {e}")
-
-        transaction.commit()
-        logger.info("Schema migrations applied successfully.")
-except Exception as e:
-    # Log the error but don't crash the app, it might be a permissions issue
-    # or the columns are already correct. The app will fail on upload if the
-    # columns are still incorrect.
-    logger.warning(f"Could not apply manual schema migrations (this is expected if columns already exist): {e}")
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -139,8 +105,41 @@ class BookResponse(BaseModel):
     class Config:
         from_attributes = True
 
+def run_migrations():
+    """Applies database schema migrations if needed."""
+    logger.info("Applying database schema migrations...")
+    try:
+        with engine.connect() as connection:
+            # Use a single, robust transaction
+            with connection.begin() as transaction:
+                try:
+                    # These columns were widened in a previous migration.
+                    # We keep this for new setups.
+                    connection.execute(text('ALTER TABLE books ALTER COLUMN isbn TYPE VARCHAR(500)'))
+                    connection.execute(text('ALTER TABLE books ALTER COLUMN publisher TYPE VARCHAR(500)'))
+                except Exception as e:
+                    logger.warning(f"Could not alter isbn/publisher columns (may not exist yet on first run): {e}")
+
+                # Use "IF NOT EXISTS" for idempotent column additions
+                connection.execute(text('ALTER TABLE books ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0'))
+                logger.info("Ensured 'word_count' column exists.")
+
+                connection.execute(text('ALTER TABLE books ADD COLUMN IF NOT EXISTS tags TEXT'))
+                logger.info("Ensured 'tags' column exists.")
+                
+                transaction.commit()
+                logger.info("Schema migrations applied successfully.")
+    except Exception as e:
+        logger.error(f"Fatal error during database migration: {e}")
+        # In case of a failure, we might want to stop the application
+        # as it might be in an inconsistent state.
+        raise
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Run migrations before starting the app
+run_migrations()
 
 # FastAPI app
 app = FastAPI(
