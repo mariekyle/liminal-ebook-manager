@@ -1,7 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+const colorPalette = [
+  '#ff9a9e', '#fecfef', '#f6d365', '#fda085', '#a1c4fd', 
+  '#c2e9fb', '#d4fc79', '#96e6a1', '#84fab0', '#8fd3f4',
+  '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#fa709a'
+];
+
+const generateGradient = () => {
+  const color1 = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+  const color2 = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+  const angle = Math.floor(Math.random() * 360);
+  return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+};
 
 function App() {
   const [books, setBooks] = useState([]);
@@ -249,46 +262,54 @@ function App() {
             )}
           </div>
         ) : (
-          <div className='books-container'>
-            {books.length === 0 ? (
-              <div className='empty-state'>
-                <h2>No books yet!</h2>
-                <p>Upload your first EPUB file to get started.</p>
-              </div>
-            ) : (
-              <>
-                <div className='books-header'>
-                  <h2>Your Library ({books.length} books)</h2>
-                </div>
-                <div className='books-grid'>
-                  {books.map(book => (
-                    <div 
-                      key={book.id} 
-                      className='book-card'
-                      onClick={() => setSelectedBook(book)}
-                    >
-                      <div className='book-cover'>
-                        {book.cover_path ? (
-                          <img src={`${API_URL}/${book.cover_path}`} alt={`Cover for ${book.title}`} className="book-cover-image" />
-                        ) : (
-                          <span role="img" aria-label="book icon" className="book-cover-icon">📖</span>
-                        )}
-                      </div>
-                      <div className='book-info'>
-                        <h3 className='book-title'>{book.title}</h3>
-                        <p className='book-author'>{book.author}</p>
-                        <p className='book-date'>
-                          Added: {new Date(book.added_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <BookList books={books} onSelectBook={setSelectedBook} />
         )}
       </main>
+    </div>
+  );
+}
+
+function BookList({ books, onSelectBook }) {
+  const gradientMap = useMemo(() => {
+    const map = new Map();
+    books.forEach(book => {
+      if (!book.cover_path) {
+        map.set(book.id, generateGradient());
+      }
+    });
+    return map;
+  }, [books]);
+
+  return (
+    <div className='books-container'>
+      {books.length === 0 ? (
+        <div className='empty-state'>
+          <h2>No books yet!</h2>
+          <p>Upload your first EPUB file to get started.</p>
+        </div>
+      ) : (
+        <>
+          <div className='books-header'>
+            <h2>Your Library ({books.length} books)</h2>
+          </div>
+          <div className='books-grid'>
+            {books.map((book) => (
+              <div key={book.id} className='book-card' onClick={() => onSelectBook(book)}>
+                <div className='book-cover' style={!book.cover_path ? { background: gradientMap.get(book.id) } : {}}>
+                  {book.cover_path ? (
+                    <img src={`${API_URL}/${book.cover_path}`} alt={`Cover for ${book.title}`} className='book-cover-image' />
+                  ) : (
+                    null
+                  )}
+                </div>
+                <h3 className='book-title'>{book.title}</h3>
+                <p className='book-author'>by {book.author}</p>
+                <p className='book-date'>{new Date(book.added_date).toLocaleDateString()}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
