@@ -187,102 +187,123 @@ function App() {
       </header>
       <main className='main-content'>
         {selectedBook ? (
-          <div className='book-detail'>
-            <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
-              ← Back to Library
-            </button>
+          <div className='book-detail-view'>
             {editMode ? (
-              <div className='edit-form'>
-                <h2>Edit Book</h2>
-                <div className='form-group'>
-                  <label>Title</label>
-                  <input
-                    type='text'
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                    className='form-input'
-                  />
-                </div>
-                <div className='form-group'>
-                  <label>Author</label>
-                  <input
-                    type='text'
-                    value={editForm.author}
-                    onChange={(e) => setEditForm({...editForm, author: e.target.value})}
-                    className='form-input'
-                  />
-                </div>
-                <div className='form-group'>
-                  <label>Description</label>
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                    className='form-textarea'
-                    rows='6'
-                  />
-                </div>
-                <div className='form-group'>
-                  <label>Cover Image</label>
-                  <input
-                    type='file'
-                    accept='image/*'
-                    onChange={(e) => setNewCoverFile(e.target.files[0])}
-                    className='form-input'
-                  />
-                </div>
-                <div className='form-actions'>
-                  <button onClick={updateBook} className='btn btn-primary'>
-                    💾 Save Changes
+              <div className='edit-book-container'>
+                <div className='edit-book-header'>
+                  <h2>Edit Book</h2>
+                  <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
+                    ← Back to Library
                   </button>
-                  <button onClick={cancelEdit} className='btn btn-secondary'>
-                    ❌ Cancel
-                  </button>
+                </div>
+                <div className='edit-book-body'>
+                  <div className='edit-form'>
+                    <div className='form-group'>
+                      <label>Title</label>
+                      <input
+                        type='text'
+                        value={editForm.title}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        className='form-input'
+                      />
+                    </div>
+                    <div className='form-group'>
+                      <label>Author</label>
+                      <input
+                        type='text'
+                        value={editForm.author}
+                        onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
+                        className='form-input'
+                      />
+                    </div>
+                    <div className='form-group'>
+                      <label>Description</label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        className='form-textarea'
+                        rows='6'
+                      />
+                    </div>
+                    <div className='form-group'>
+                      <label>Cover Image</label>
+                      <label htmlFor='cover-upload' className='custom-file-upload'>
+                        Choose File
+                      </label>
+                      <input
+                        id='cover-upload'
+                        type='file'
+                        accept='image/*'
+                        onChange={(e) => setNewCoverFile(e.target.files[0])}
+                        style={{ display: 'none' }}
+                      />
+                      {newCoverFile && <span className='file-name'>{newCoverFile.name}</span>}
+                    </div>
+                    <div className='form-actions'>
+                      <button onClick={updateBook} className='btn btn-primary'>
+                        Save Changes
+                      </button>
+                      <button onClick={cancelEdit} className='btn btn-secondary'>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                  <div className='edit-book-preview'>
+                    {selectedBook.cover_path && (
+                      <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="book-detail-content">
-                {selectedBook.cover_path && (
-                  <div className="book-detail-cover">
-                    <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
-                  </div>
-                )}
-                <div className='book-info-main'>
-                  <h2>{selectedBook.title}</h2>
-                  <p className='author'>by {selectedBook.author}</p>
-                  {selectedBook.description && (
-                    <div className='description'>
-                      <h3>Description</h3>
-                      <p>{selectedBook.description}</p>
+              <>
+                <button className='back-btn' onClick={() => { setSelectedBook(null); setEditMode(false); }}>
+                  ← Back to Library
+                </button>
+                <div className="book-detail-content">
+                  {selectedBook.cover_path && (
+                    <div className="book-detail-cover">
+                      <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
                     </div>
                   )}
-                  <div className='metadata'>
-                    <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
-                    {selectedBook.file_size && (
-                      <p><strong>File Size:</strong> {(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                  <div className='book-info-main'>
+                    <h2>{selectedBook.title}</h2>
+                    <p className='author'>by {selectedBook.author}</p>
+                    {selectedBook.description && (
+                      <div className='description'>
+                        <h3>Description</h3>
+                        <p>{selectedBook.description}</p>
+                      </div>
                     )}
-                  </div>
-                  <div className='actions'>
-                    <button onClick={startEdit} className='btn btn-edit'>
-                      ✏️ Edit
-                    </button>
-                    {selectedBook.file_path && (
-                      <a 
-                        href={`${API_URL}/${selectedBook.file_path}`} 
-                        download 
-                        className='btn btn-download'
+                    <div className='metadata'>
+                      <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
+                      {selectedBook.file_size && (
+                        <p><strong>File Size:</strong> {(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                      )}
+                    </div>
+                    <div className='actions'>
+                      <button onClick={startEdit} className='btn btn-edit'>
+                        ✏️ Edit
+                      </button>
+                      {selectedBook.file_path && (
+                        <a
+                          href={`${API_URL}/${selectedBook.file_path}`}
+                          download
+                          className='btn btn-download'
+                        >
+                          📥 Download
+                        </a>
+                      )}
+                      <button
+                        onClick={() => deleteBook(selectedBook.id)}
+                        className='btn btn-delete'
                       >
-                        📥 Download
-                      </a>
-                    )}
-                    <button 
-                      onClick={() => deleteBook(selectedBook.id)}
-                      className='btn btn-delete'
-                    >
-                      🗑️ Delete
-                    </button>
+                        🗑️ Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         ) : (

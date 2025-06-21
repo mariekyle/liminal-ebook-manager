@@ -390,43 +390,39 @@ body {
 }
 
 .form-group label { 
-  display: block; 
-  margin-bottom: 0.8rem; 
-  font-weight: 600; 
-  color: #333; 
-  font-size: 1.1rem; 
+  display: block;
+  margin-bottom: .6rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
 }
 
 .form-input, .form-textarea { 
   width: 100%; 
-  padding: 1.2rem; 
-  border: 2px solid #e9ecef; 
-  border-radius: 12px; 
+  padding: .8rem; 
   font-size: 1rem; 
-  transition: all 0.3s ease; 
-  background: #fafafa; 
-  font-family: inherit; 
+  border: 1px solid #ddd; 
+  border-radius: 8px; 
+  outline: none; 
+  transition: all 0.2s ease; 
+  background: #fafafa;
 }
 
 .form-input:focus, .form-textarea:focus { 
-  outline: none; 
   border-color: #667eea; 
-  background: white; 
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1); 
-  transform: translateY(-1px); 
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); 
+  background: white;
 }
 
 .form-textarea { 
   resize: vertical; 
-  min-height: 140px; 
-  line-height: 1.6; 
+  min-height: 120px; 
 }
 
 .form-actions { 
   display: flex; 
   gap: 1rem; 
-  margin-top: 2rem; 
-  flex-wrap: wrap; 
+  margin-top: 1rem;
 }
 
 .empty-state { 
@@ -475,7 +471,7 @@ body {
 }
 
 .notification.error { 
-  background: linear-gradient(135deg, #dc3545, #e74c3c); 
+  background: #f56565; 
 }
 
 @keyframes fadeIn { 
@@ -509,4 +505,74 @@ body {
   .edit-form { padding: 1.5rem; } 
   .notification { top: 1rem; right: 1rem; left: 1rem; transform: translateY(-100px); } 
   .notification.show { transform: translateY(0); } 
+} 
+
+.edit-book-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.edit-book-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.edit-book-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.edit-book-header .back-btn {
+  margin-bottom: 0;
+}
+
+.edit-book-body {
+  display: flex;
+  gap: 3rem;
+}
+
+.edit-form {
+  flex: 2;
+  background: white;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.edit-book-preview {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.edit-book-preview img {
+  width: 100%;
+  max-width: 250px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.custom-file-upload {
+  border: 1px solid #ddd;
+  display: inline-block;
+  padding: .8rem 1.2rem;
+  cursor: pointer;
+  border-radius: 8px;
+  background: white;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.custom-file-upload:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.file-name {
+  margin-left: 1rem;
+  font-style: italic;
+  color: #666;
 } 
