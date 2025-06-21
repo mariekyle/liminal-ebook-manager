@@ -257,7 +257,8 @@ def set_epub_cover(epub_path: str, cover_image_content: bytes, cover_filename: s
     try:
         book = epub.read_epub(epub_path)
         book.set_cover(cover_filename, cover_image_content)
-        epub.write_epub(epub_path, book, {})
+        # Enable raise_exceptions to see the actual error if writing fails
+        epub.write_epub(epub_path, book, {"raise_exceptions": True})
         logger.info(f"Successfully set new cover for {epub_path}")
     except Exception as e:
         logger.error(f"Could not set new cover for {epub_path}: {e}")
