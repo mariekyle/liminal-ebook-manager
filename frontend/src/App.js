@@ -315,22 +315,10 @@ function App() {
                     </div>
                     
                     <div className='book-metadata-grid'>
-                      {selectedBook.publisher && (
-                        <div className='metadata-item-grid'>
-                          <span className='metadata-label'>Publisher</span>
-                          <span className='metadata-value'>{selectedBook.publisher}</span>
-                        </div>
-                      )}
                       {selectedBook.publication_date && (
                         <div className='metadata-item-grid'>
                           <span className='metadata-label'>Published</span>
                           <span className='metadata-value'>{new Date(selectedBook.publication_date).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                       {selectedBook.isbn && (
-                        <div className='metadata-item-grid'>
-                          <span className='metadata-label'>ISBN</span>
-                          <span className='metadata-value'>{selectedBook.isbn}</span>
                         </div>
                       )}
                     </div>
