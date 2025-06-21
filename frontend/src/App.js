@@ -203,40 +203,47 @@ function App() {
                 </div>
               </div>
             ) : (
-              <div className='book-info'>
-                <h2>{selectedBook.title}</h2>
-                <p className='author'>by {selectedBook.author}</p>
-                {selectedBook.description && (
-                  <div className='description'>
-                    <h3>Description</h3>
-                    <p>{selectedBook.description}</p>
+              <div className="book-detail-content">
+                {selectedBook.cover_path && (
+                  <div className="book-detail-cover">
+                    <img src={`${API_URL}/${selectedBook.cover_path}`} alt={`Cover for ${selectedBook.title}`} />
                   </div>
                 )}
-                <div className='metadata'>
-                  <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
-                  {selectedBook.file_size && (
-                    <p><strong>File Size:</strong> {(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                <div className='book-info-main'>
+                  <h2>{selectedBook.title}</h2>
+                  <p className='author'>by {selectedBook.author}</p>
+                  {selectedBook.description && (
+                    <div className='description'>
+                      <h3>Description</h3>
+                      <p>{selectedBook.description}</p>
+                    </div>
                   )}
-                </div>
-                <div className='actions'>
-                  <button onClick={startEdit} className='btn btn-edit'>
-                    ✏️ Edit
-                  </button>
-                  {selectedBook.file_path && (
-                    <a 
-                      href={API_URL + '/' + selectedBook.file_path} 
-                      download 
-                      className='btn btn-download'
+                  <div className='metadata'>
+                    <p><strong>Added:</strong> {new Date(selectedBook.added_date).toLocaleDateString()}</p>
+                    {selectedBook.file_size && (
+                      <p><strong>File Size:</strong> {(selectedBook.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                    )}
+                  </div>
+                  <div className='actions'>
+                    <button onClick={startEdit} className='btn btn-edit'>
+                      ✏️ Edit
+                    </button>
+                    {selectedBook.file_path && (
+                      <a 
+                        href={`${API_URL}/${selectedBook.file_path}`} 
+                        download 
+                        className='btn btn-download'
+                      >
+                        📥 Download
+                      </a>
+                    )}
+                    <button 
+                      onClick={() => deleteBook(selectedBook.id)}
+                      className='btn btn-delete'
                     >
-                      📥 Download
-                    </a>
-                  )}
-                  <button 
-                    onClick={() => deleteBook(selectedBook.id)}
-                    className='btn btn-delete'
-                  >
-                    🗑️ Delete
-                  </button>
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -261,7 +268,11 @@ function App() {
                       onClick={() => setSelectedBook(book)}
                     >
                       <div className='book-cover'>
-                        📖
+                        {book.cover_path ? (
+                          <img src={`${API_URL}/${book.cover_path}`} alt={`Cover for ${book.title}`} className="book-cover-image" />
+                        ) : (
+                          <span role="img" aria-label="book icon" className="book-cover-icon">📖</span>
+                        )}
                       </div>
                       <div className='book-info'>
                         <h3 className='book-title'>{book.title}</h3>

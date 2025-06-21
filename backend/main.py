@@ -17,6 +17,7 @@ from typing import List, Optional
 from pathlib import Path
 import aiofiles
 from dotenv import load_dotenv
+from ebooklib import epub
 
 # Load environment variables
 load_dotenv()
@@ -137,10 +138,57 @@ def get_db():
         db.close()
 
 # Utility functions
+def extract_and_save_cover(epub_path: str, book_id: int) -> Optional[str]:
+    """Extracts the cover from an EPUB, saves it, and returns the path."""
+    try:
+        book = epub.read_epub(epub_path)
+        cover_image = None
+        
+        # First, try to find the cover meta tag
+        meta_cover = book.get_metadata('OPF', 'cover')
+        if meta_cover:
+            cover_id = meta_cover[0][1].get('content')
+            cover_item = book.get_item_with_id(cover_id)
+            if cover_item:
+                cover_image = cover_item
+
+        # If not found, look for items with a cover property
+        if not cover_image:
+            for item in book.get_items_of_type(ebooklib.ITEM_IMAGE):
+                if 'cover' in (item.get_name() or '').lower():
+                    cover_image = item
+                    break
+        
+        if not cover_image:
+            for item in book.get_items():
+                if item.get_type() == ebooklib.ITEM_COVER:
+                    cover_image = item
+                    break
+
+        if cover_image:
+            image_bytes = cover_image.get_content()
+            file_extension = Path(cover_image.get_name() or 'cover.jpg').suffix
+            if not file_extension:
+                file_extension = '.jpg' # default
+            
+            cover_filename = f"{book_id}{file_extension}"
+            cover_path = f"uploads/covers/{cover_filename}"
+
+            with open(cover_path, 'wb') as f:
+                f.write(image_bytes)
+            
+            logger.info(f"Extracted cover for book {book_id} to {cover_path}")
+            return cover_path
+        else:
+            logger.warning(f"No cover image found for book at {epub_path}")
+            return None
+    except Exception as e:
+        logger.error(f"Error extracting cover from {epub_path}: {e}")
+        return None
+
 def extract_epub_metadata(file_path: str) -> dict:
     """Extract metadata from EPUB file"""
     try:
-        from ebooklib import epub
         book = epub.read_epub(file_path)
         
         # Extract basic metadata
@@ -288,6 +336,13 @@ async def upload_book(
         db.add(book)
         db.commit()
         db.refresh(book)
+
+        # Now extract cover and update the book record
+        cover_path = extract_and_save_cover(file_path, book.id)
+        if cover_path:
+            book.cover_path = cover_path
+            db.commit()
+            db.refresh(book)
         
         logger.info(f"Book uploaded successfully: {book.title}")
         return book
