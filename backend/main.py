@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Index
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Index, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
@@ -42,6 +42,22 @@ engine = create_engine(
     max_overflow=20,
     pool_pre_ping=True
 )
+
+# Manually alter table columns to ensure they are the correct size.
+# This is a simple migration solution for this project.
+try:
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        logger.info("Applying manual schema migrations for column sizes...")
+        connection.execute(text('ALTER TABLE books ALTER COLUMN isbn TYPE VARCHAR(500)'))
+        connection.execute(text('ALTER TABLE books ALTER COLUMN publisher TYPE VARCHAR(500)'))
+        transaction.commit()
+        logger.info("Schema migrations applied successfully.")
+except Exception as e:
+    # Log the error but don't crash the app, it might be a permissions issue
+    # or the columns are already correct. The app will fail on upload if the
+    # columns are still incorrect.
+    logger.error(f"Could not apply manual schema migrations: {e}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
