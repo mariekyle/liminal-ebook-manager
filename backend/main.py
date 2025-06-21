@@ -17,7 +17,7 @@ from typing import List, Optional
 from pathlib import Path
 import aiofiles
 from dotenv import load_dotenv
-from ebooklib import epub
+from ebooklib import epub, ITEM_DOCUMENT, ITEM_IMAGE, ITEM_COVER
 
 # Load environment variables
 load_dotenv()
@@ -215,7 +215,7 @@ def calculate_word_count(epub_path: str) -> int:
         total_words = 0
         
         # Get all text content from the book
-        items = list(book.get_items_of_type(epub.ITEM_DOCUMENT))
+        items = list(book.get_items_of_type(ITEM_DOCUMENT))
         
         for item in items:
             content = item.get_content()
@@ -250,14 +250,14 @@ def extract_and_save_cover(epub_path: str, book_id: int) -> Optional[str]:
 
         # If not found, look for items with a cover property
         if not cover_image:
-            for item in book.get_items_of_type(epub.ITEM_IMAGE):
+            for item in book.get_items_of_type(ITEM_IMAGE):
                 if 'cover' in (item.get_name() or '').lower():
                     cover_image = item
                     break
         
         if not cover_image:
             for item in book.get_items():
-                if item.get_type() == epub.ITEM_COVER:
+                if item.get_type() == ITEM_COVER:
                     cover_image = item
                     break
 
