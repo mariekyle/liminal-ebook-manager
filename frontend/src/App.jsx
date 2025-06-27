@@ -8,17 +8,16 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 import Loading from './components/common/Loading';
 import NotificationToast from './components/common/NotificationToast';
 
-// Import page components
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import LibraryPage from './pages/LibraryPage';
-import BookDetailPage from './pages/BookDetailPage';
-import SettingsPage from './pages/SettingsPage';
-
 // Import styles
 import './App.css';
-import './styles/routing.css';
+
+// Lazy load page components
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const LibraryPage = React.lazy(() => import('./pages/LibraryPage'));
+const BookDetailPage = React.lazy(() => import('./pages/BookDetailPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 
 // Loading fallback component
 const PageLoading = () => (
@@ -48,22 +47,16 @@ function App() {
         <SettingsProvider>
           <Router>
             <div className="App">
-              {/* Notification Toast */}
               <NotificationToast />
               
-              {/* Main Routes */}
               <Suspense fallback={<PageLoading />}>
                 <Routes>
-                  {/* Public Routes */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   
-                  {/* Protected Routes with Layout */}
                   <Route path="/" element={<MainLayout />}>
-                    {/* Redirect root to dashboard */}
                     <Route index element={<Navigate to="/dashboard" replace />} />
                     
-                    {/* Dashboard */}
                     <Route 
                       path="dashboard" 
                       element={
@@ -73,7 +66,6 @@ function App() {
                       } 
                     />
                     
-                    {/* Library */}
                     <Route 
                       path="library" 
                       element={
@@ -83,7 +75,6 @@ function App() {
                       } 
                     />
                     
-                    {/* Book Details */}
                     <Route 
                       path="books/:id" 
                       element={
@@ -93,7 +84,6 @@ function App() {
                       } 
                     />
                     
-                    {/* Settings */}
                     <Route 
                       path="settings" 
                       element={
@@ -104,7 +94,6 @@ function App() {
                     />
                   </Route>
                   
-                  {/* Catch-all route */}
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
