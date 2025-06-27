@@ -1,4 +1,10 @@
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import { getApiConfig, getUIConfig } from '../config';
+
+// API Configuration (now from config)
+export const API_URL = getApiConfig().baseURL;
+
+// UI Configuration
+const uiConfig = getUIConfig();
 
 export const colorPalette = [
   '#ff9a9e', '#fecfef', '#f6d365', '#fda085', '#a1c4fd', 
@@ -14,4 +20,21 @@ export const SORT_OPTIONS = {
   'read-time-desc': 'Long Reads First',
   'date-published-desc': 'Published Newest First',
   'date-published-asc': 'Published Oldest First'
-}; 
+};
+
+// Pagination constants
+export const DEFAULT_PAGE_SIZE = uiConfig.pagination.defaultPageSize;
+export const MAX_PAGE_SIZE = uiConfig.pagination.maxPageSize;
+
+// Search constants
+export const SEARCH_DEBOUNCE_MS = uiConfig.search.debounceMs;
+export const MIN_QUERY_LENGTH = uiConfig.search.minQueryLength;
+
+// Upload constants
+export const MAX_FILE_SIZE = uiConfig.upload.maxFileSize;
+export const ALLOWED_FILE_TYPES = uiConfig.upload.allowedTypes;
+export const ENABLE_DRAG_DROP = uiConfig.upload.enableDragDrop;
+
+// Theme constants
+export const DEFAULT_THEME = uiConfig.theme.default;
+export const ENABLE_SYSTEM_THEME = uiConfig.theme.enableSystemTheme; 

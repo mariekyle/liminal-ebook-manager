@@ -1,12 +1,16 @@
-import { API_URL } from '../utils/constants';
+import { getApiConfig, getApiUrl } from '../config';
 
 class ApiService {
-  constructor(baseURL) {
-    this.baseURL = baseURL;
+  constructor() {
+    const apiConfig = getApiConfig();
+    this.baseURL = apiConfig.baseURL;
+    this.timeout = apiConfig.timeout;
+    this.retries = apiConfig.retries;
+    this.retryDelay = apiConfig.retryDelay;
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = getApiUrl(endpoint);
     const config = {
       ...options,
       headers: {
@@ -15,36 +19,80 @@ class ApiService {
       },
     };
 
-    try {
-      const response = await fetch(url, config);
+    // Add timeout
+    if (this.timeout) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      config.signal = controller.signal;
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      try {
+        const response = await fetch(url, config);
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error(`Request timeout after ${this.timeout}ms`);
+        }
+        throw error;
       }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+    } else {
+      try {
+        const response = await fetch(url, config);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('API request failed:', error);
+        throw error;
+      }
     }
+  }
+
+  async requestWithRetry(endpoint, options = {}) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= this.retries; attempt++) {
+      try {
+        return await this.request(endpoint, options);
+      } catch (error) {
+        lastError = error;
+        
+        if (attempt < this.retries) {
+          console.warn(`API request failed (attempt ${attempt}/${this.retries}), retrying...`, error);
+          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
+        }
+      }
+    }
+    
+    throw lastError;
   }
 
   // Books API
   async getBooks(searchQuery = '') {
     const endpoint = searchQuery ? `/books?search=${encodeURIComponent(searchQuery)}` : '/books';
-    return this.request(endpoint);
+    return this.requestWithRetry(endpoint);
   }
 
   async getBook(id) {
-    return this.request(`/books/${id}`);
+    return this.requestWithRetry(`/books/${id}`);
   }
 
   async uploadBook(file) {
     const formData = new FormData();
     formData.append('file', file);
     
-    const url = `${this.baseURL}/books/upload`;
+    const url = getApiUrl('/books/upload');
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
@@ -77,7 +125,7 @@ class ApiService {
       formData.append('cover_file', coverFile);
     }
 
-    const url = `${this.baseURL}/books/${id}`;
+    const url = getApiUrl(`/books/${id}`);
     const response = await fetch(url, {
       method: 'PUT',
       body: formData,
@@ -92,23 +140,23 @@ class ApiService {
   }
 
   async deleteBook(id) {
-    return this.request(`/books/${id}`, { method: 'DELETE' });
+    return this.requestWithRetry(`/books/${id}`, { method: 'DELETE' });
   }
 
   async downloadBook(id) {
-    const url = `${this.baseURL}/books/${id}/download`;
+    const url = getApiUrl(`/books/${id}/download`);
     window.open(url, '_blank');
   }
 
   // Health check
   async healthCheck() {
-    return this.request('/health');
+    return this.requestWithRetry('/health');
   }
 
   // Stats
   async getStats() {
-    return this.request('/stats');
+    return this.requestWithRetry('/stats');
   }
 }
 
-export const apiService = new ApiService(API_URL); 
+export const apiService = new ApiService(); 
