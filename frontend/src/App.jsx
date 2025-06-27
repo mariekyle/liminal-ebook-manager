@@ -1,110 +1,134 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { AppProvider, useApp } from './context/AppContext';
+import { NotificationProvider, useNotifications } from './context/NotificationContext';
+import { SettingsProvider, useSettings } from './context/SettingsContext';
 import Header from './components/layout/Header';
 import Library from './pages/Library';
 import BookDetailPage from './pages/BookDetailPage';
-import { useBooks } from './hooks/useBooks';
-import { useNotification } from './hooks/useNotification';
+import Settings from './pages/Settings';
+import NotificationToast from './components/common/NotificationToast';
+import Loading from './components/common/Loading';
 import './App.css';
 
-function App() {
-  const [selectedBook, setSelectedBook] = useState(null);
-  const [sortBy, setSortBy] = useState('recently-added');
-  const [uploading, setUploading] = useState(false);
+// Main app component that uses the context
+const AppContent = () => {
+  const { state, actions, computed } = useApp();
+  const { actions: notificationActions } = useNotifications();
+  const { settings } = useSettings();
 
-  const {
-    books,
-    loading,
-    error,
-    searchQuery,
-    searchBooks,
-    uploadBook,
-    updateBook,
-    deleteBook,
-    downloadBook,
-  } = useBooks();
+  // Load books on mount
+  useEffect(() => {
+    actions.fetchBooks();
+  }, []);
 
-  const { showNotification } = useNotification();
+  // Auto-refresh if enabled
+  useEffect(() => {
+    if (!settings.autoRefresh || !settings.autoRefreshInterval) return;
+
+    const interval = setInterval(() => {
+      actions.fetchBooks(state.searchQuery);
+    }, settings.autoRefreshInterval);
+
+    return () => clearInterval(interval);
+  }, [settings.autoRefresh, settings.autoRefreshInterval, state.searchQuery]);
+
+  // Show error notifications
+  useEffect(() => {
+    if (state.error) {
+      notificationActions.showError(state.error);
+    }
+  }, [state.error, notificationActions]);
 
   const handleSearchChange = (query) => {
-    searchBooks(query);
+    actions.setSearchQuery(query);
+    actions.fetchBooks(query);
   };
 
   const handleUpload = async (file) => {
-    setUploading(true);
-    const result = await uploadBook(file);
+    const result = await actions.uploadBook(file);
     
     if (result.success) {
-      showNotification('Book uploaded successfully!', 'success');
+      notificationActions.showSuccess('Book uploaded successfully!');
     } else {
-      showNotification(`Upload failed: ${result.error}`, 'error');
+      notificationActions.showError(`Upload failed: ${result.error}`);
     }
-    
-    setUploading(false);
   };
 
   const handleSelectBook = (book) => {
-    setSelectedBook(book);
+    actions.setSelectedBook(book);
   };
 
   const handleBackToLibrary = () => {
-    setSelectedBook(null);
+    actions.setSelectedBook(null);
   };
 
   const handleUpdateBook = async (bookId, formData, coverFile) => {
-    const result = await updateBook(bookId, formData, coverFile);
+    const result = await actions.updateBook(bookId, formData, coverFile);
     
     if (result.success) {
-      setSelectedBook(result.book);
-      showNotification('Book updated successfully!', 'success');
+      notificationActions.showSuccess('Book updated successfully!');
     } else {
-      showNotification(`Update failed: ${result.error}`, 'error');
+      notificationActions.showError(`Update failed: ${result.error}`);
     }
     
     return result;
   };
 
   const handleDeleteBook = async (bookId) => {
-    const result = await deleteBook(bookId);
+    const result = await actions.deleteBook(bookId);
     
     if (result.success) {
-      showNotification('Book deleted!', 'success');
+      notificationActions.showSuccess('Book deleted!');
     } else {
-      showNotification(`Delete failed: ${result.error}`, 'error');
+      notificationActions.showError(`Delete failed: ${result.error}`);
     }
     
     return result;
   };
 
   const handleDownloadBook = async (bookId) => {
-    const result = await downloadBook(bookId);
+    const result = await actions.downloadBook(bookId);
     
     if (!result.success) {
-      showNotification(`Download failed: ${result.error}`, 'error');
+      notificationActions.showError(`Download failed: ${result.error}`);
     }
     
     return result;
   };
 
-  // Show error notification if there's an error
-  React.useEffect(() => {
-    if (error) {
-      showNotification(`Error: ${error}`, 'error');
-    }
-  }, [error, showNotification]);
+  const handleSettingsClick = () => {
+    actions.setView('settings');
+  };
+
+  const handleBackFromSettings = () => {
+    actions.setView('library');
+  };
+
+  // Apply theme class to body
+  useEffect(() => {
+    document.body.className = `theme-${settings.theme}`;
+  }, [settings.theme]);
+
+  if (state.loading && state.books.length === 0) {
+    return <Loading fullScreen text="Loading your library..." />;
+  }
 
   return (
-    <div className="app">
+    <div className={`app theme-${settings.theme}`}>
       <Header
-        searchQuery={searchQuery}
+        searchQuery={state.searchQuery}
         onSearchChange={handleSearchChange}
         onUpload={handleUpload}
-        uploading={uploading}
+        uploading={state.uploading}
+        onSettingsClick={handleSettingsClick}
       />
       
       <main className="main-content">
-        {selectedBook ? (
+        {state.view === 'settings' ? (
+          <Settings onBack={handleBackFromSettings} />
+        ) : state.selectedBook ? (
           <BookDetailPage
-            book={selectedBook}
+            book={state.selectedBook}
             onBack={handleBackToLibrary}
             onUpdateBook={handleUpdateBook}
             onDelete={handleDeleteBook}
@@ -112,15 +136,30 @@ function App() {
           />
         ) : (
           <Library
-            books={books}
-            loading={loading}
+            books={computed.displayBooks()}
+            loading={state.loading}
             onSelectBook={handleSelectBook}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
+            sortBy={state.sortBy}
+            onSortChange={actions.setSortBy}
           />
         )}
       </main>
+      
+      <NotificationToast />
     </div>
+  );
+};
+
+// Root app component with providers
+function App() {
+  return (
+    <SettingsProvider>
+      <NotificationProvider>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </NotificationProvider>
+    </SettingsProvider>
   );
 }
 

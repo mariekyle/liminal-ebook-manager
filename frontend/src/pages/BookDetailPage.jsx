@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useApp } from '../context/AppContext';
+import { useNotifications } from '../context/NotificationContext';
+import { useSettings } from '../context/SettingsContext';
 import BookDetail from '../components/books/BookDetail';
 import BookForm from '../components/books/BookForm';
 import Modal from '../components/common/Modal';
@@ -6,86 +9,81 @@ import Modal from '../components/common/Modal';
 const BookDetailPage = ({ 
   book, 
   onBack, 
-  onEdit, 
+  onUpdateBook, 
   onDelete, 
-  onDownload,
-  onUpdateBook 
+  onDownload 
 }) => {
-  const [editMode, setEditMode] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { state, actions } = useApp();
+  const { actions: notificationActions } = useNotifications();
+  const { settings } = useSettings();
 
   const handleEdit = () => {
-    setEditMode(true);
+    actions.setEditMode(true);
   };
 
   const handleCancelEdit = () => {
-    setEditMode(false);
+    actions.setEditMode(false);
   };
 
   const handleSaveEdit = async (formData, coverFile) => {
     const result = await onUpdateBook(book.id, formData, coverFile);
     if (result.success) {
-      setEditMode(false);
+      actions.setEditMode(false);
     }
   };
 
   const handleDelete = () => {
-    setShowDeleteModal(true);
+    if (settings.confirmDelete) {
+      // Show confirmation modal
+      notificationActions.showWarning(
+        `Are you sure you want to delete "${book.title}"?`,
+        {
+          description: 'This action cannot be undone.',
+          actions: [
+            {
+              label: 'Delete',
+              action: () => confirmDelete(),
+              variant: 'danger'
+            },
+            {
+              label: 'Cancel',
+              action: () => {},
+              variant: 'secondary'
+            }
+          ]
+        }
+      );
+    } else {
+      confirmDelete();
+    }
   };
 
   const confirmDelete = async () => {
-    await onDelete(book.id);
-    setShowDeleteModal(false);
-    onBack();
+    const result = await onDelete(book.id);
+    if (result.success) {
+      onBack();
+    }
   };
 
-  if (editMode) {
+  if (state.editMode) {
     return (
       <BookForm
         book={book}
         onSave={handleSaveEdit}
         onCancel={handleCancelEdit}
-        onBack={() => setEditMode(false)}
+        onBack={() => actions.setEditMode(false)}
       />
     );
   }
 
   return (
-    <>
-      <BookDetail
-        book={book}
-        onBack={onBack}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onDownload={onDownload}
-      />
-      
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Book"
-        size="small"
-      >
-        <div className="delete-confirmation">
-          <p>Are you sure you want to delete "{book.title}"?</p>
-          <p>This action cannot be undone.</p>
-          <div className="modal-actions">
-            <button 
-              className="btn btn-danger" 
-              onClick={confirmDelete}
-            >
-              Delete
-            </button>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setShowDeleteModal(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </>
+    <BookDetail
+      book={book}
+      onBack={onBack}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onDownload={onDownload}
+    />
   );
 };
 
