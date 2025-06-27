@@ -8,18 +8,11 @@ import { lazy } from 'react';
 // Lazy load components for better performance
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('../pages/auth/ResetPasswordPage'));
 
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const LibraryPage = lazy(() => import('../pages/LibraryPage'));
 const BookDetailPage = lazy(() => import('../pages/BookDetailPage'));
-const UploadPage = lazy(() => import('../pages/UploadPage'));
-const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
-
-const AdminUsersPage = lazy(() => import('../pages/admin/UsersPage'));
-const AdminStatsPage = lazy(() => import('../pages/admin/StatsPage'));
 
 // Route configuration
 export const routes = [
@@ -41,24 +34,6 @@ export const routes = [
     element: 'RegisterPage',
     protected: false,
     title: 'Create Account'
-  },
-  {
-    path: '/forgot-password',
-    element: 'ForgotPasswordPage',
-    protected: false,
-    title: 'Forgot Password'
-  },
-  {
-    path: '/reset-password',
-    element: 'ResetPasswordPage',
-    protected: false,
-    title: 'Reset Password'
-  },
-  {
-    path: '/verify-email',
-    element: 'EmailVerificationPage',
-    protected: false,
-    title: 'Verify Email'
   },
 
   // Protected routes (authentication required)
@@ -84,46 +59,11 @@ export const routes = [
     icon: 'Book'
   },
   {
-    path: '/upload',
-    element: 'UploadPage',
-    protected: true,
-    title: 'Upload Book',
-    icon: 'Upload',
-    permission: 'books:create'
-  },
-  {
-    path: '/profile',
-    element: 'ProfilePage',
-    protected: true,
-    title: 'Profile',
-    icon: 'User'
-  },
-  {
     path: '/settings',
     element: 'SettingsPage',
     protected: true,
     title: 'Settings',
     icon: 'Settings'
-  },
-
-  // Admin routes (admin role required)
-  {
-    path: '/admin/users',
-    element: 'AdminUsersPage',
-    protected: true,
-    title: 'User Management',
-    icon: 'Users',
-    permission: 'users:read',
-    admin: true
-  },
-  {
-    path: '/admin/stats',
-    element: 'AdminStatsPage',
-    protected: true,
-    title: 'Statistics',
-    icon: 'BarChart3',
-    permission: 'stats:read',
-    admin: true
   },
 
   // Catch-all route
@@ -139,16 +79,10 @@ export const routes = [
 export const componentMap = {
   LoginPage,
   RegisterPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
   DashboardPage,
   LibraryPage,
   BookDetailPage,
-  UploadPage,
-  ProfilePage,
-  SettingsPage,
-  AdminUsersPage,
-  AdminStatsPage
+  SettingsPage
 };
 
 // Navigation menu configuration
@@ -157,24 +91,14 @@ export const navigationMenu = [
     title: 'Main',
     items: [
       { path: '/dashboard', title: 'Dashboard', icon: 'Home' },
-      { path: '/library', title: 'Library', icon: 'BookOpen' },
-      { path: '/upload', title: 'Upload Book', icon: 'Upload', permission: 'books:create' }
+      { path: '/library', title: 'Library', icon: 'BookOpen' }
     ]
   },
   {
     title: 'Account',
     items: [
-      { path: '/profile', title: 'Profile', icon: 'User' },
       { path: '/settings', title: 'Settings', icon: 'Settings' }
     ]
-  },
-  {
-    title: 'Admin',
-    items: [
-      { path: '/admin/users', title: 'User Management', icon: 'Users', permission: 'users:read' },
-      { path: '/admin/stats', title: 'Statistics', icon: 'BarChart3', permission: 'stats:read' }
-    ],
-    admin: true
   }
 ];
 

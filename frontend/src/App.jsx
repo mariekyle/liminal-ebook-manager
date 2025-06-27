@@ -102,45 +102,6 @@ function App() {
                         </ProtectedRoute>
                       } 
                     />
-                    
-                    {/* Upload (with permission check) */}
-                    <Route 
-                      path="upload" 
-                      element={
-                        <ProtectedRoute requiredPermission="books:create">
-                          <div>Upload Page - Coming Soon</div>
-                        </ProtectedRoute>
-                      } 
-                    />
-                    
-                    {/* Profile */}
-                    <Route 
-                      path="profile" 
-                      element={
-                        <ProtectedRoute>
-                          <div>Profile Page - Coming Soon</div>
-                        </ProtectedRoute>
-                      } 
-                    />
-                    
-                    {/* Admin Routes */}
-                    <Route 
-                      path="admin/users" 
-                      element={
-                        <ProtectedRoute adminOnly>
-                          <div>Admin Users Page - Coming Soon</div>
-                        </ProtectedRoute>
-                      } 
-                    />
-                    
-                    <Route 
-                      path="admin/stats" 
-                      element={
-                        <ProtectedRoute adminOnly>
-                          <div>Admin Stats Page - Coming Soon</div>
-                        </ProtectedRoute>
-                      } 
-                    />
                   </Route>
                   
                   {/* Catch-all route */}

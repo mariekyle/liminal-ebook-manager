@@ -11,14 +11,14 @@ ENV REACT_APP_API_URL=$REACT_APP_API_URL
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (use npm install instead of npm ci)
-RUN npm install
+# Install dependencies with legacy peer deps to avoid conflicts
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with additional flags for better error reporting
+RUN npm run build || (echo "Build failed. Checking for errors..." && exit 1)
 
 # Production stage
 FROM nginx:alpine

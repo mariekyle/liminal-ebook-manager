@@ -3,7 +3,6 @@ import { AppContext } from '../context/AppContext';
 import { useBooks } from '../hooks/useBooks';
 import { 
   BookOpen, 
-  Upload, 
   Clock, 
   TrendingUp,
   User,
@@ -151,13 +150,6 @@ const DashboardPage = () => {
         <h2>Quick Actions</h2>
         <div className="quick-actions-grid">
           <QuickAction
-            icon={Upload}
-            title="Upload Book"
-            description="Add a new book to your library"
-            action={() => window.location.href = '/upload'}
-            color="blue"
-          />
-          <QuickAction
             icon={BookOpen}
             title="Browse Library"
             description="View and manage your books"
@@ -166,9 +158,9 @@ const DashboardPage = () => {
           />
           <QuickAction
             icon={User}
-            title="View Profile"
-            description="Update your account settings"
-            action={() => window.location.href = '/profile'}
+            title="Settings"
+            description="Update your preferences"
+            action={() => window.location.href = '/settings'}
             color="purple"
           />
         </div>
