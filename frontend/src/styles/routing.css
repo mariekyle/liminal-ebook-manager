@@ -1,0 +1,353 @@
+/* Routing Styles */
+
+/* Protected Route Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.loading-container p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Error Container */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  text-align: center;
+  color: var(--error-color);
+  padding: 2rem;
+}
+
+.error-container h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.error-container p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  max-width: 400px;
+}
+
+/* Route Transition Animations */
+.route-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.route-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.route-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.route-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Page Transition Loading */
+.page-transition-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--primary-color);
+  z-index: 9999;
+  animation: pageTransition 1s ease-in-out infinite;
+}
+
+@keyframes pageTransition {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Route Not Found */
+.not-found-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.not-found-page h1 {
+  margin: 0 0 1rem 0;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.not-found-page h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.not-found-page p {
+  margin: 0 0 2rem 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  max-width: 500px;
+}
+
+.not-found-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Route Guards */
+.route-guard {
+  position: relative;
+}
+
+.route-guard.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.route-guard.loading::after {
+  content: 'Loading...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 11;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Authentication Redirect */
+.auth-redirect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.auth-redirect h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth-redirect p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.auth-redirect .redirect-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.auth-redirect .redirect-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Permission Denied */
+.permission-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  text-align: center;
+  color: var(--error-color);
+  padding: 2rem;
+}
+
+.permission-denied h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.permission-denied p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  max-width: 400px;
+}
+
+.permission-denied .permission-required {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+/* Route Loading States */
+.route-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+}
+
+.route-loading .loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.route-loading .loading-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Route Error States */
+.route-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+  text-align: center;
+  color: var(--error-color);
+  padding: 2rem;
+}
+
+.route-error h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.route-error p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  max-width: 400px;
+}
+
+.route-error .retry-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.route-error .retry-button:hover {
+  background: var(--primary-hover);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .not-found-page h1 {
+    font-size: 2rem;
+  }
+  
+  .not-found-page h2 {
+    font-size: 1.25rem;
+  }
+  
+  .not-found-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .error-container,
+  .permission-denied,
+  .route-error {
+    padding: 1rem;
+  }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .route-guard.loading::before {
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .permission-denied .permission-required {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+  }
+}
+
+/* Accessibility */
+.route-error .retry-button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.auth-redirect .redirect-link:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Print styles */
+@media print {
+  .page-transition-loading,
+  .route-guard.loading::before,
+  .route-guard.loading::after {
+    display: none;
+  }
+} 

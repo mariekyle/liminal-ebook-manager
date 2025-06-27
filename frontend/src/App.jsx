@@ -1,165 +1,157 @@
-import React, { useEffect } from 'react';
-import { AppProvider, useApp } from './context/AppContext';
-import { NotificationProvider, useNotifications } from './context/NotificationContext';
-import { SettingsProvider, useSettings } from './context/SettingsContext';
-import Header from './components/layout/Header';
-import Library from './pages/Library';
-import BookDetailPage from './pages/BookDetailPage';
-import Settings from './pages/Settings';
-import NotificationToast from './components/common/NotificationToast';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { SettingsProvider } from './context/SettingsContext';
+import MainLayout from './components/layout/MainLayout';
+import ProtectedRoute from './components/routing/ProtectedRoute';
 import Loading from './components/common/Loading';
+import NotificationToast from './components/common/NotificationToast';
+
+// Import page components
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+import LibraryPage from './pages/LibraryPage';
+import BookDetailPage from './pages/BookDetailPage';
+import SettingsPage from './pages/SettingsPage';
+
+// Import styles
 import './App.css';
+import './styles/routing.css';
 
-// Main app component that uses the context
-const AppContent = () => {
-  const { state, actions, computed } = useApp();
-  const { actions: notificationActions } = useNotifications();
-  const { settings } = useSettings();
+// Loading fallback component
+const PageLoading = () => (
+  <div className="loading-container">
+    <Loading size="large" />
+    <p>Loading page...</p>
+  </div>
+);
 
-  // Load books on mount
-  useEffect(() => {
-    actions.fetchBooks();
-  }, []);
-
-  // Auto-refresh if enabled
-  useEffect(() => {
-    if (!settings.autoRefresh || !settings.autoRefreshInterval) return;
-
-    const interval = setInterval(() => {
-      actions.fetchBooks(state.searchQuery);
-    }, settings.autoRefreshInterval);
-
-    return () => clearInterval(interval);
-  }, [settings.autoRefresh, settings.autoRefreshInterval, state.searchQuery]);
-
-  // Show error notifications
-  useEffect(() => {
-    if (state.error) {
-      notificationActions.showError(state.error);
-    }
-  }, [state.error, notificationActions]);
-
-  const handleSearchChange = (query) => {
-    actions.setSearchQuery(query);
-    actions.fetchBooks(query);
-  };
-
-  const handleUpload = async (file) => {
-    const result = await actions.uploadBook(file);
-    
-    if (result.success) {
-      notificationActions.showSuccess('Book uploaded successfully!');
-    } else {
-      notificationActions.showError(`Upload failed: ${result.error}`);
-    }
-  };
-
-  const handleSelectBook = (book) => {
-    actions.setSelectedBook(book);
-  };
-
-  const handleBackToLibrary = () => {
-    actions.setSelectedBook(null);
-  };
-
-  const handleUpdateBook = async (bookId, formData, coverFile) => {
-    const result = await actions.updateBook(bookId, formData, coverFile);
-    
-    if (result.success) {
-      notificationActions.showSuccess('Book updated successfully!');
-    } else {
-      notificationActions.showError(`Update failed: ${result.error}`);
-    }
-    
-    return result;
-  };
-
-  const handleDeleteBook = async (bookId) => {
-    const result = await actions.deleteBook(bookId);
-    
-    if (result.success) {
-      notificationActions.showSuccess('Book deleted!');
-    } else {
-      notificationActions.showError(`Delete failed: ${result.error}`);
-    }
-    
-    return result;
-  };
-
-  const handleDownloadBook = async (bookId) => {
-    const result = await actions.downloadBook(bookId);
-    
-    if (!result.success) {
-      notificationActions.showError(`Download failed: ${result.error}`);
-    }
-    
-    return result;
-  };
-
-  const handleSettingsClick = () => {
-    actions.setView('settings');
-  };
-
-  const handleBackFromSettings = () => {
-    actions.setView('library');
-  };
-
-  // Apply theme class to body
-  useEffect(() => {
-    document.body.className = `theme-${settings.theme}`;
-  }, [settings.theme]);
-
-  if (state.loading && state.books.length === 0) {
-    return <Loading fullScreen text="Loading your library..." />;
-  }
-
-  return (
-    <div className={`app theme-${settings.theme}`}>
-      <Header
-        searchQuery={state.searchQuery}
-        onSearchChange={handleSearchChange}
-        onUpload={handleUpload}
-        uploading={state.uploading}
-        onSettingsClick={handleSettingsClick}
-      />
-      
-      <main className="main-content">
-        {state.view === 'settings' ? (
-          <Settings onBack={handleBackFromSettings} />
-        ) : state.selectedBook ? (
-          <BookDetailPage
-            book={state.selectedBook}
-            onBack={handleBackToLibrary}
-            onUpdateBook={handleUpdateBook}
-            onDelete={handleDeleteBook}
-            onDownload={handleDownloadBook}
-          />
-        ) : (
-          <Library
-            books={computed.displayBooks()}
-            loading={state.loading}
-            onSelectBook={handleSelectBook}
-            sortBy={state.sortBy}
-            onSortChange={actions.setSortBy}
-          />
-        )}
-      </main>
-      
-      <NotificationToast />
+// Not Found component
+const NotFoundPage = () => (
+  <div className="not-found-page">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>The page you're looking for doesn't exist or has been moved.</p>
+    <div className="not-found-actions">
+      <button onClick={() => window.history.back()}>Go Back</button>
+      <button onClick={() => window.location.href = '/dashboard'}>Go to Dashboard</button>
     </div>
-  );
-};
+  </div>
+);
 
-// Root app component with providers
 function App() {
   return (
-    <SettingsProvider>
+    <AppProvider>
       <NotificationProvider>
-        <AppProvider>
-          <AppContent />
-        </AppProvider>
+        <SettingsProvider>
+          <Router>
+            <div className="App">
+              {/* Notification Toast */}
+              <NotificationToast />
+              
+              {/* Main Routes */}
+              <Suspense fallback={<PageLoading />}>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  
+                  {/* Protected Routes with Layout */}
+                  <Route path="/" element={<MainLayout />}>
+                    {/* Redirect root to dashboard */}
+                    <Route index element={<Navigate to="/dashboard" replace />} />
+                    
+                    {/* Dashboard */}
+                    <Route 
+                      path="dashboard" 
+                      element={
+                        <ProtectedRoute>
+                          <DashboardPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Library */}
+                    <Route 
+                      path="library" 
+                      element={
+                        <ProtectedRoute>
+                          <LibraryPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Book Details */}
+                    <Route 
+                      path="books/:id" 
+                      element={
+                        <ProtectedRoute>
+                          <BookDetailPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Settings */}
+                    <Route 
+                      path="settings" 
+                      element={
+                        <ProtectedRoute>
+                          <SettingsPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Upload (with permission check) */}
+                    <Route 
+                      path="upload" 
+                      element={
+                        <ProtectedRoute requiredPermission="books:create">
+                          <div>Upload Page - Coming Soon</div>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Profile */}
+                    <Route 
+                      path="profile" 
+                      element={
+                        <ProtectedRoute>
+                          <div>Profile Page - Coming Soon</div>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Admin Routes */}
+                    <Route 
+                      path="admin/users" 
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <div>Admin Users Page - Coming Soon</div>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    <Route 
+                      path="admin/stats" 
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <div>Admin Stats Page - Coming Soon</div>
+                        </ProtectedRoute>
+                      } 
+                    />
+                  </Route>
+                  
+                  {/* Catch-all route */}
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </Suspense>
+            </div>
+          </Router>
+        </SettingsProvider>
       </NotificationProvider>
-    </SettingsProvider>
+    </AppProvider>
   );
 }
 
