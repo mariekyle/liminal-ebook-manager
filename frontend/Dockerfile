@@ -1,33 +1,27 @@
-# Build stage
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
 WORKDIR /app
-
-# Add this ARG to accept the variable at build time
-ARG REACT_APP_API_URL
-# Add this ENV to set it for the build command
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with legacy peer deps to avoid conflicts
-RUN npm install --legacy-peer-deps --verbose
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build the application with detailed error reporting
+# Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Install nginx
+RUN apk add --no-cache nginx
 
-# Copy built application
-COPY --from=builder /app/build /usr/share/nginx/html
+# Copy built application to nginx
+RUN cp -r build/* /var/www/localhost/htdocs/
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/http.d/default.conf
 
 # Expose port
 EXPOSE 3000
