@@ -7,7 +7,6 @@ sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 
 # File processing
-ebooklib==0.18.2
 python-multipart==0.0.6
 
 # Validation and serialization
