@@ -1,25 +1,6 @@
 version: '3.8'
 
 services:
-  # Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: liminal-postgres
-    environment:
-      POSTGRES_DB: liminal_ebooks
-      POSTGRES_USER: liminal_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - liminal-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U liminal_user"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # Backend API
   backend:
     build:
@@ -27,20 +8,18 @@ services:
       dockerfile: Dockerfile
     container_name: liminal-backend
     environment:
-      - DATABASE_URL=postgresql://liminal_user:${POSTGRES_PASSWORD:-changeme}@postgres:5432/liminal_ebooks
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - DATABASE_URL=sqlite:///./liminal_ebooks.db
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
       - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
       - UPLOAD_MAX_SIZE=100MB
       - LOG_LEVEL=info
     volumes:
       - ebook_storage:/app/uploads
+      - sqlite_data:/app
     networks:
       - liminal-network
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -65,9 +44,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
-    driver: local
   ebook_storage:
+    driver: local
+  sqlite_data:
     driver: local
 
 networks:

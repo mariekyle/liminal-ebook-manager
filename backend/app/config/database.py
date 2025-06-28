@@ -7,11 +7,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://liminal_user:changeme@localhost:5432/liminal_ebooks")
+# Database URL from environment - using SQLite for MVP
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./liminal_ebooks.db")
 
 # Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
