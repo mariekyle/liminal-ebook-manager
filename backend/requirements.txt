@@ -1,17 +1,16 @@
 # FastAPI and ASGI
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+fastapi
+uvicorn
 
 # Database
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
+sqlalchemy
+psycopg2-binary
 
 # File processing
-python-multipart==0.0.6
+python-multipart
 
 # Validation and serialization
-pydantic==2.5.0
-pydantic-settings==2.1.0
+pydantic
 
 # Development
-python-dotenv==1.0.0 
+python-dotenv 
