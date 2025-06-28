@@ -1,58 +1,45 @@
 version: '3.8'
 
 services:
+  # Database
   postgres:
     image: postgres:15-alpine
-    container_name: ebook-postgres
+    container_name: liminal-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ebooks}
-      POSTGRES_USER: ${POSTGRES_USER:-ebook_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: liminal_ebooks
+      POSTGRES_USER: liminal_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - ebook-network
+      - liminal-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ebook_user}"]
+      test: ["CMD-SHELL", "pg_isready -U liminal_user"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  redis:
-    image: redis:7-alpine
-    container_name: ebook-redis
-    networks:
-      - ebook-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
+  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: ebook-backend
+    container_name: liminal-backend
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ebook_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ebooks}
-      - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://10.0.0.163:3000}
-      - UPLOAD_MAX_SIZE=${UPLOAD_MAX_SIZE:-100MB}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=postgresql://liminal_user:${POSTGRES_PASSWORD:-changeme}@postgres:5432/liminal_ebooks
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - UPLOAD_MAX_SIZE=100MB
+      - LOG_LEVEL=info
     volumes:
       - ebook_storage:/app/uploads
     networks:
-      - ebook-network
+      - liminal-network
     ports:
       - "8000:8000"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -61,18 +48,16 @@ services:
       timeout: 10s
       retries: 3
 
+  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - REACT_APP_API_URL=${REACT_APP_API_URL}
-    container_name: ebook-frontend
+    container_name: liminal-frontend
     environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://10.0.0.163:8000}
-      - REACT_APP_VERSION=${APP_VERSION:-1.0.0}
+      - VITE_API_URL=http://localhost:8000
     networks:
-      - ebook-network
+      - liminal-network
     ports:
       - "3000:3000"
     depends_on:
@@ -86,5 +71,5 @@ volumes:
     driver: local
 
 networks:
-  ebook-network:
+  liminal-network:
     driver: bridge

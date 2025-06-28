@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Liminal Ebook Manager - Basic Cursor Rules
+
+## Core Rules (The Essentials)
+1. ALWAYS check existing code before making changes
+2. NEVER modify .env files without asking first
+3. Don't add features that weren't requested
+4. If something seems like it might break existing features, mention it
+
+## Current Project Structure
+- Backend: FastAPI in backend/main.py (will be refactored later)
+- Frontend: React in frontend/src/App.js (will be split up later)
+- Database: PostgreSQL with SQLAlchemy
+- This structure is temporary - we're planning to refactor
+- Do not run anything locally. I am working from different devices and running anything locally would hinder progress. 
+
+## When Making Changes
+- Keep changes focused on what was asked
+- If you notice something that could be improved, mention it but don't implement unless asked
+- Test that existing features still work after changes
+
+## Note
+This project is in early stages. Architecture will evolve. These rules will too.

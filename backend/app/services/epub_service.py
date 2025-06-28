@@ -1,3 +1,7 @@
+"""
+EPUB processing service for metadata extraction.
+"""
+
 import os
 import re
 import logging
@@ -146,3 +150,24 @@ def set_epub_cover(epub_path: str, cover_image_content: bytes, cover_filename: s
         logger.error(f"Could not set new cover for {epub_path}: {e}")
         # We don't re-raise the exception, so the main operation can continue.
         # The cover path in the DB will be updated, but the EPUB will have the old cover. 
+
+async def process_epub_file(file_path: str) -> Dict[str, Any]:
+    """
+    Process an EPUB file and extract metadata.
+    
+    This is a placeholder implementation. In the future, this will:
+    - Extract title, author, description from EPUB metadata
+    - Extract cover image
+    - Calculate word count
+    - Extract publication date, ISBN, etc.
+    """
+    # For now, just return basic info from filename
+    filename = os.path.basename(file_path)
+    title = os.path.splitext(filename)[0]
+    
+    return {
+        "title": title,
+        "author": "Unknown Author",
+        "description": "",
+        "word_count": 0
+    } 

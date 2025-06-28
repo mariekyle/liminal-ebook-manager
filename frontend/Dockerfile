@@ -1,36 +1,25 @@
-# Build stage
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
-
-# Add this ARG to accept the variable at build time
-ARG REACT_APP_API_URL
-# Add this ENV to set it for the build command
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (use npm install instead of npm ci)
-RUN npm install
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the app
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built application
-COPY --from=builder /app/build /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Install serve to run the built app
+RUN npm install -g serve
 
 # Expose port
 EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Start the app
+CMD ["serve", "-s", "dist", "-l", "3000"] 

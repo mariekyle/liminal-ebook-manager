@@ -1,29 +1,23 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Index
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+"""
+Book model for the database.
+"""
 
-Base = declarative_base()
+from sqlalchemy import Column, Integer, String, Text, DateTime, BigInteger
+from sqlalchemy.sql import func
+from app.config.database import Base
 
-class BookDB(Base):
-    __tablename__ = 'books'
+class Book(Base):
+    """Book model representing an ebook in the library."""
+    
+    __tablename__ = "books"
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False, index=True)
-    author = Column(String(200), nullable=False, index=True)
-    description = Column(Text)
-    file_path = Column(String(500), nullable=False)
-    file_size = Column(Integer, nullable=False)
-    added_date = Column(DateTime, default=datetime.utcnow, nullable=False)
-    cover_path = Column(String(500))
-    isbn = Column(String(500), index=True)
-    language = Column(String(10))
-    publisher = Column(String(500))
-    publication_date = Column(DateTime)
-    word_count = Column(Integer, default=0)
-    tags = Column(Text)
+    author = Column(String(500), nullable=True, index=True)
+    description = Column(Text, nullable=True)
+    file_path = Column(String(1000), nullable=False, unique=True)
+    file_size = Column(BigInteger, nullable=False)  # File size in bytes
+    added_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
-    # Create indexes for better performance
-    __table_args__ = (
-        Index('idx_title_author', 'title', 'author'),
-        Index('idx_added_date', 'added_date'),
-    ) 
+    def __repr__(self):
+        return f"<Book(id={self.id}, title='{self.title}', author='{self.author}')>" 

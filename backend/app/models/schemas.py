@@ -1,36 +1,38 @@
-from pydantic import BaseModel, validator
+"""
+Pydantic schemas for API request/response validation.
+"""
+
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
-class BookCreate(BaseModel):
-    title: str
-    author: str
+class BookBase(BaseModel):
+    """Base book schema with common fields."""
+    title: str = Field(..., min_length=1, max_length=500)
+    author: Optional[str] = Field(None, max_length=500)
     description: Optional[str] = None
-    isbn: Optional[str] = None
-    language: Optional[str] = None
-    publisher: Optional[str] = None
-    
-    @validator('title', 'author')
-    def validate_not_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Field cannot be empty')
-        return v.strip()
 
-class BookResponse(BaseModel):
+class BookCreate(BookBase):
+    """Schema for creating a new book."""
+    pass
+
+class BookUpdate(BaseModel):
+    """Schema for updating book metadata."""
+    title: Optional[str] = Field(None, min_length=1, max_length=500)
+    author: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
+
+class BookResponse(BookBase):
+    """Schema for book responses."""
     id: int
-    title: str
-    author: str
-    description: Optional[str]
-    file_path: Optional[str]
-    file_size: Optional[int]
+    file_path: str
+    file_size: int
     added_date: datetime
-    cover_path: Optional[str]
-    isbn: Optional[str]
-    language: Optional[str]
-    publisher: Optional[str]
-    publication_date: Optional[datetime]
-    word_count: Optional[int]
-    tags: Optional[str]
     
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class BookUploadResponse(BaseModel):
+    """Schema for book upload response."""
+    message: str
+    book: BookResponse 

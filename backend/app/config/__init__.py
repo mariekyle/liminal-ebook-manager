@@ -1,1 +1,3 @@
-# Configuration package 
+"""
+Configuration package for Liminal Ebook Manager.
+""" 
