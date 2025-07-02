@@ -1,54 +1,53 @@
 version: '3.8'
 
 services:
-  # Backend API
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: liminal-backend
+  postgres:
+    image: postgres:15-alpine
     environment:
-      - DATABASE_URL=sqlite:///./liminal_ebooks.db
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
-      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-      - UPLOAD_MAX_SIZE=100MB
-      - LOG_LEVEL=info
+      POSTGRES_USER: ${POSTGRES_USER:-liminal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-liminal_db}
     volumes:
-      - ebook_storage:/app/uploads
-      - sqlite_data:/app
-    networks:
-      - liminal-network
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liminal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-liminal}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-liminal_db}
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ./storage:/app/storage
     ports:
       - "8000:8000"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Frontend
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: liminal-frontend
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    networks:
-      - liminal-network
-    ports:
-      - "3000:3000"
+    build: ./frontend
     depends_on:
       - backend
-    restart: unless-stopped
+    ports:
+      - "3000:3000"
 
 volumes:
-  ebook_storage:
-    driver: local
-  sqlite_data:
-    driver: local
-
-networks:
-  liminal-network:
-    driver: bridge
+  postgres_data:
+  redis_data:
