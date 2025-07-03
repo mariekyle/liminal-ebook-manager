@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_CONFIG } from '../config/api';
 
-const API_URL = '/api/v1/auth';
+const API_URL = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}`;
 
 export async function login(username: string, password: string) {
   const res = await axios.post(`${API_URL}/login`, { username, password });

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getCurrentUser } from '../services/auth';
 
 interface User {
   id: number;
@@ -46,17 +47,10 @@ export const useAuthStore = create<AuthState>((set: any, get: any) => ({
     const token = get().token;
     if (!token) return;
     try {
-      const res = await fetch('/api/v1/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const user = await res.json();
-        set({ user });
-      } else {
-        set({ user: null, token: null, isAuthenticated: false });
-        localStorage.removeItem('token');
-      }
-    } catch {
+      const user = await getCurrentUser(token);
+      set({ user });
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
       set({ user: null, token: null, isAuthenticated: false });
       localStorage.removeItem('token');
     }
