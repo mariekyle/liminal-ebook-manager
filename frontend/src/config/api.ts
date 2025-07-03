@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://172.16.3.2:8000',
+  BASE_URL: 'http://172.16.3.2:8000',
   ENDPOINTS: {
     AUTH: '/api/v1/auth',
     USERS: '/api/v1/users',

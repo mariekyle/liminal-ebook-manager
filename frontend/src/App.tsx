@@ -1,31 +1,23 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import LibraryPage from './pages/LibraryPage';
-import NotFoundPage from './pages/NotFoundPage';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-100">
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          
-          {/* Temporary direct access to library for testing */}
-          <Route path="/library" element={<LibraryPage />} />
-          
-          {/* Default redirect to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          
-          {/* Catch-all */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Liminal Ebook Manager</h1>
+      <p>Frontend is working!</p>
+      <div style={{ marginTop: '20px' }}>
+        <h2>Quick Links:</h2>
+        <ul>
+          <li><a href="/login">Login</a></li>
+          <li><a href="/register">Register</a></li>
+          <li><a href="/library">Library</a></li>
+        </ul>
       </div>
-    </Router>
+      <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px' }}>
+        <p><strong>Status:</strong> Container is running successfully!</p>
+        <p><strong>API URL:</strong> http://172.16.3.2:8000</p>
+      </div>
+    </div>
   );
 };
 
