@@ -10,9 +10,9 @@ class Settings(BaseModel):
     api_v1_str: str = "/api/v1"
     
     # Database
-    database_url: str = "postgresql://liminal:changeme@localhost/liminal_db"
+    database_url: str = "sqlite:///./test.db"
     
-    # Redis
+    # Redis (optional for testing)
     redis_url: str = "redis://localhost:6379"
     
     # Security

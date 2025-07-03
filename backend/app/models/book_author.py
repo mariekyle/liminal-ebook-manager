@@ -1,6 +1,5 @@
-from sqlalchemy import Column, ForeignKey, DateTime
+from sqlalchemy import Column, String, ForeignKey, DateTime
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from ..db.base import Base
 import uuid
@@ -9,8 +8,8 @@ import uuid
 class BookAuthor(Base):
     __tablename__ = "book_authors"
 
-    book_id = Column(PostgresUUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), primary_key=True)
-    author_id = Column(PostgresUUID(as_uuid=True), ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True)
+    book_id = Column(String, ForeignKey("books.id", ondelete="CASCADE"), primary_key=True)
+    author_id = Column(String, ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

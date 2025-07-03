@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Integer, Date, DateTime, Text
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from ..db.base import Base
 import uuid
@@ -9,7 +8,7 @@ import uuid
 class Book(Base):
     __tablename__ = "books"
 
-    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     file_path = Column(String(500), nullable=False)
     file_hash = Column(String(64), unique=True, nullable=False, index=True)
     title = Column(String(500), nullable=False, index=True)

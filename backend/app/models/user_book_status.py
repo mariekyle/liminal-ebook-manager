@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Date, ForeignKey, DateTime
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import relationship
 from ..db.base import Base
 import uuid
@@ -9,8 +8,8 @@ import uuid
 class UserBookStatus(Base):
     __tablename__ = "user_book_status"
 
-    user_id = Column(PostgresUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    book_id = Column(PostgresUUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    book_id = Column(String, ForeignKey("books.id", ondelete="CASCADE"), primary_key=True)
     status = Column(String(50), nullable=False)  # read, unread, dnf, in_progress
     read_date = Column(Date)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
