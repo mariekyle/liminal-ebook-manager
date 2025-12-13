@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Main Liminal application
+  app:
+    build: .
+    ports:
+      - "3000:3000"   # Frontend + API
+    volumes:
+      # Persist the database
+      - ./data:/app/data
+      
+      # Mount your book storage (READ-ONLY for safety)
+      # Update this path to match your NAS structure
+      - /volume1/Media/Reading/Books:/books:ro
+      
+    environment:
+      - BOOKS_PATH=/books
+      - DATABASE_PATH=/app/data/library.db
+    
+    restart: unless-stopped
+
+  # Auto-deploy webhook receiver
+  # Listens for GitHub webhooks and redeploys on push to main
+  webhook:
+    build: ./webhook
+    ports:
+      - "9000:9000"   # Webhook endpoint
+    volumes:
+      # Mount Docker socket to control containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Mount project directory for git pull
+      - .:/project
+      
+    environment:
+      # IMPORTANT: Change this to a random secret string!
+      # Use: openssl rand -hex 32
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-change-me-please}
+      
+    restart: unless-stopped
+    
+    # Run after app is up
+    depends_on:
+      - app

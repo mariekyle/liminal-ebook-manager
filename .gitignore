@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build outputs
+frontend/dist/
+*.egg-info/
+
+# Local data (don't commit your database!)
+data/
+*.db
+
+# Environment files (may contain secrets)
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
