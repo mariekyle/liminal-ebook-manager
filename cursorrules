@@ -1,0 +1,96 @@
+# Liminal - Ebook Library Manager
+
+## Project Overview
+Self-hosted web app for managing an ebook library on Synology NAS.
+- **Backend**: Python FastAPI + SQLite
+- **Frontend**: React + Tailwind CSS
+- **Deployment**: Docker on Synology NAS
+
+## Golden Rules
+
+1. **DO NOT remove, overwrite, or "clean up" any unrelated feature.**
+   - If you see code that seems unused, ASK before removing it
+   - Features may be called from places you haven't seen yet
+
+2. **Modify only the code related to the specific bug/feature named.**
+   - Stay focused on what was asked
+   - Don't refactor "while you're in there"
+
+3. **Output minimal, surgical changes.**
+   - Show only the specific lines/functions being changed
+   - No full file rewrites unless explicitly rebuilding from scratch
+
+4. **Do not delete imports, classes, or methods unless explicitly approved.**
+   - Even if they appear unused
+   - Ask first: "I notice X isn't being used - should I remove it?"
+
+5. **After every change, summarize:**
+   - What changed
+   - What was preserved/verified unchanged
+
+## Protected Systems (ask before modifying)
+
+- **Gradient cover generation** (`services/covers.py`, `GradientCover.jsx`)
+- **Metadata extraction** (`services/metadata.py`)
+- **Database schema** (`database.py`)
+- **Folder name parsing** (`routers/sync.py` - parse_folder_name function)
+
+## Architecture Notes
+
+### Data Flow
+```
+Folder scan → Parse folder name (title/author/series)
+            → Extract EPUB metadata (year/summary/tags/words)
+            → Merge data (folder wins for title/author)
+            → Save to SQLite
+            → Display in React frontend
+```
+
+### Key Design Decisions
+- **Folder name is source of truth** for title, author, series
+- **EPUB metadata enriches** with year, summary, tags, word count
+- **Books are read-only** - app never modifies book files
+- **SQLite for simplicity** - single file database
+
+## File Structure
+```
+backend/
+  main.py           - FastAPI app entry point
+  database.py       - SQLite schema and init
+  routers/
+    books.py        - List/search/filter books, notes CRUD
+    sync.py         - Folder scanning, metadata extraction
+  services/
+    metadata.py     - EPUB/PDF metadata extraction
+    covers.py       - Gradient cover color generation
+
+frontend/src/
+  App.jsx           - Main app with routing
+  api.js            - Backend API wrapper
+  components/
+    Library.jsx     - Book grid with filters
+    BookCard.jsx    - Individual book card
+    BookDetail.jsx  - Book page with notes
+    GradientCover.jsx - CSS gradient covers
+```
+
+## Naming Conventions
+- Never use "FINAL" in filenames - this project evolves continuously
+- Use descriptive names: `fix-cover-text-shadow` not `update-v2`
+- Changelog files: `YYYYMMDD_description.md`
+
+## When Making Changes
+
+### Before coding:
+- Confirm which specific file(s) and function(s) to modify
+- Check if the area touches any protected systems
+
+### While coding:
+- Make the minimum change necessary
+- Preserve all existing imports and functions
+- Add new code rather than replacing when possible
+
+### After coding:
+- List what changed
+- Confirm what stayed the same
+- Note any side effects or areas to test
