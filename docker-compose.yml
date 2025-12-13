@@ -25,3 +25,12 @@ services:
     restart: unless-stopped
     depends_on:
       - app
+
+  smee:
+    image: deltaprojects/smee-client
+    environment:
+      - SMEE_URL=https://smee.io/BOEmkQsQFgp1JQH8
+      - SMEE_TARGET=http://webhook:9000/webhook
+    restart: unless-stopped
+    depends_on:
+      - webhook
