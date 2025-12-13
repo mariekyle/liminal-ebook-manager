@@ -276,10 +276,6 @@ async def sync_library(
                     try:
                         file_metadata = await extract_metadata(book_file)
                         # Merge: prefer extracted over parsed
-                        if file_metadata.get("title"):
-                            parsed["title"] = file_metadata["title"]
-                        if file_metadata.get("authors"):
-                            parsed["authors"] = file_metadata["authors"]
                         if file_metadata.get("publication_year"):
                             parsed["publication_year"] = file_metadata["publication_year"]
                         if file_metadata.get("summary"):
