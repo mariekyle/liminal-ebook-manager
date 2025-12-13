@@ -38,13 +38,19 @@ function GradientCover({
       <div className="absolute inset-0 flex flex-col justify-between p-3">
         {/* Title area */}
         <div className="flex-1 flex items-center justify-center">
-          <h3 className="text-white text-center font-serif font-bold text-sm sm:text-base leading-tight px-2">
+          <h3 
+            className="text-white text-center font-serif font-bold text-sm sm:text-base leading-tight px-2"
+            style={{ textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)' }}
+          >
             {displayTitle}
           </h3>
         </div>
         
         {/* Author */}
-        <p className="text-white/70 text-center text-xs truncate">
+        <p 
+          className="text-white/70 text-center text-xs truncate"
+          style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}
+        >
           {displayAuthor}
         </p>
       </div>
