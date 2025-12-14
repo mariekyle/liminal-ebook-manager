@@ -130,7 +130,7 @@ async def list_books(
     search: Optional[str] = Query(None, description="Search in title/author"),
     sort: str = Query("title", description="Sort field: title, author, series, updated"),
     order: str = Query("asc", description="Sort order: asc or desc"),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db = Depends(get_db)
 ):
