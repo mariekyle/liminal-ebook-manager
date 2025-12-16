@@ -2,7 +2,7 @@
 
 ## Vision Statement
 
-Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books - both owned and wished for - so that the reader can spend less time managing and more time in the liminal space of reading.
+Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books - both aquired and wished for - so that the reader can spend less time managing and more time in the liminal space of reading.
 
 ---
 

@@ -160,23 +160,36 @@ def get_book_folders(root_path: Path) -> list[Path]:
     return book_folders
 
 
-def determine_category(folder_path: Path, books_root: Path) -> Optional[str]:
+async def find_existing_book_by_content(db, title: str, authors: list[str]) -> Optional[dict]:
+    """
+    Find existing book by title and first author.
+    Used to preserve category when folder paths change.
+    """
+    if not authors:
+        return None
+    
+    first_author = authors[0]
+    cursor = await db.execute(
+        """SELECT id, category, folder_path FROM books 
+           WHERE title = ? AND authors LIKE ?""",
+        [title, f'%"{first_author}"%']
+    )
+    return await cursor.fetchone()
+
+
+def determine_category_from_path(folder_path: Path, books_root: Path) -> Optional[str]:
     """
     Determine book category from folder structure.
-    
-    Assumes structure like:
-    /books/Fiction/...
-    /books/Non-Fiction/...
-    /books/FanFiction/...
+    Only works if books are in category subfolders (legacy structure).
+    Returns None for flat structure.
     """
     try:
         relative = folder_path.relative_to(books_root)
         parts = relative.parts
         
-        if parts:
-            # First directory level is typically the category
+        # Need at least 2 levels: category/book_folder
+        if len(parts) >= 2:
             category = parts[0]
-            # Normalize common variations
             category_map = {
                 "fiction": "Fiction",
                 "non-fiction": "Non-Fiction", 
@@ -184,7 +197,10 @@ def determine_category(folder_path: Path, books_root: Path) -> Optional[str]:
                 "fanfiction": "FanFiction",
                 "fanfic": "FanFiction"
             }
-            return category_map.get(category.lower(), category)
+            normalized = category_map.get(category.lower())
+            # Only return if it's a known category, not a book folder name
+            if normalized:
+                return normalized
     except ValueError:
         pass
     
@@ -253,16 +269,43 @@ async def sync_library(
             
             folder_str = str(folder)
             
-            # Check if book already exists
+            # Check if book already exists by folder_path
             cursor = await db.execute(
-                "SELECT id FROM books WHERE folder_path = ?",
+                "SELECT id, category FROM books WHERE folder_path = ?",
                 [folder_str]
             )
             existing = await cursor.fetchone()
+            existing_category = None
+            
+            if not existing:
+                # Folder path changed - try matching by title+author
+                parsed_temp = parse_folder_name(folder.name)
+                
+                # Only attempt content matching if we have a real author
+                # (avoid false matches or failed lookups with "Unknown Author")
+                if parsed_temp["authors"] and parsed_temp["authors"] != ["Unknown Author"]:
+                    existing = await find_existing_book_by_content(
+                        db, 
+                        parsed_temp["title"], 
+                        parsed_temp["authors"]
+                    )
+                    if existing:
+                        existing_category = existing["category"]
+                        print(f"Matched existing book by content: {parsed_temp['title']}")
+                else:
+                    print(f"Skipping content match for '{folder.name}' - no author in folder name")
+            elif existing:
+                existing_category = existing["category"] if "category" in existing.keys() else None
             
             if existing and not full:
-                result.skipped += 1
-                continue
+                # For non-full sync, only skip if folder_path already matches
+                cursor_check = await db.execute(
+                    "SELECT id FROM books WHERE folder_path = ?",
+                    [folder_str]
+                )
+                if await cursor_check.fetchone():
+                    result.skipped += 1
+                    continue
             
             try:
                 # Parse folder name for basic info
@@ -292,8 +335,11 @@ async def sync_library(
                 author_for_color = parsed["authors"][0] if parsed["authors"] else "Unknown"
                 color1, color2 = generate_cover_colors(parsed["title"], author_for_color)
                 
-                # Determine category
-                category = determine_category(folder, books_root)
+                # Determine category: preserve existing, try path detection, default to Uncategorized
+                if existing_category:
+                    category = existing_category
+                else:
+                    category = determine_category_from_path(folder, books_root) or "Uncategorized"
                 
                 # Prepare data for insert/update
                 book_data = {
@@ -313,12 +359,12 @@ async def sync_library(
                 }
                 
                 if existing:
-                    # Update existing book
+                    # Update existing book (including folder_path for migrated books)
                     await db.execute(
                         """UPDATE books SET
                             title = ?, authors = ?, series = ?, series_number = ?,
                             category = ?, publication_year = ?, word_count = ?,
-                            summary = ?, tags = ?, file_path = ?,
+                            summary = ?, tags = ?, folder_path = ?, file_path = ?,
                             cover_color_1 = ?, cover_color_2 = ?,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?""",
@@ -327,7 +373,7 @@ async def sync_library(
                             book_data["series"], book_data["series_number"],
                             book_data["category"], book_data["publication_year"],
                             book_data["word_count"], book_data["summary"],
-                            book_data["tags"], book_data["file_path"],
+                            book_data["tags"], book_data["folder_path"], book_data["file_path"],
                             book_data["cover_color_1"], book_data["cover_color_2"],
                             existing["id"]
                         ]
