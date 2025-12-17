@@ -10,6 +10,7 @@ function Library() {
   
   // Filter state
   const [category, setCategory] = useState('')
+  const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('title')
   const [categories, setCategories] = useState([])
@@ -28,6 +29,7 @@ function Library() {
     
     listBooks({
       category: category || undefined,
+      status: status || undefined,
       search: search || undefined,
       sort,
       limit: 10000, // Load all books
@@ -41,7 +43,7 @@ function Library() {
         setBooks([])
       })
       .finally(() => setLoading(false))
-  }, [category, search, sort])
+  }, [category, status, search, sort])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
@@ -68,6 +70,19 @@ function Library() {
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat}</option>
           ))}
+        </select>
+        
+        {/* Status Filter */}
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
+          className="bg-library-card text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="Unread">Unread</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Finished">Finished</option>
+          <option value="DNF">DNF</option>
         </select>
         
         {/* Sort */}
@@ -111,7 +126,7 @@ function Library() {
           <div className="text-4xl mb-4">📭</div>
           <p className="text-gray-400 mb-4">No books found</p>
           <p className="text-gray-500 text-sm">
-            {search || category 
+            {search || category || status
               ? 'Try adjusting your filters' 
               : 'Click "Sync Library" to scan your book folders'
             }
