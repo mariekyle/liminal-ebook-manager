@@ -2,22 +2,23 @@
 
 ## Vision Statement
 
-Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books - both aquired and wished for - so that the reader can spend less time managing and more time in the liminal space of reading.
+Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books - both owned and wished for - so that the reader can spend less time managing and more time in the liminal space of reading.
 
 ---
 
 ## Current State (v0.1)
 
 **What Liminal can do today:**
-- Scan books from NAS storage
+- Scan books from NAS storage (single folder structure)
 - Display library with gradient covers
 - Search and filter by category
 - Sort by title
-- Scroll through full library (1694+ books)
+- Scroll through full library (1688+ books)
 - View book detail page with metadata (title, author, series, year, word count, summary, tags)
 - Add free-form notes to books
 - Mobile-responsive design
 - Text shadows on covers for readability
+- Match existing books by title+author when folder paths change (preserves categories during migrations)
 
 ---
 
@@ -36,15 +37,15 @@ Moving to a single folder with category as editable metadata is a cleaner founda
 ### Migration Steps
 
 **Step 1: Preserve Existing Categories**
-- [ ] Run full sync to ensure all books and current categories are in database
-- [ ] Verify book count matches expectations (1694 books)
-- [ ] Back up database file before proceeding
+- [x] Run full sync to ensure all books and current categories are in database
+- [x] Verify book count matches expectations (1688 books)
+- [x] Back up database file before proceeding
 
 **Step 2: Update Backend for Single Folder**
-- [ ] Modify docker-compose.yml to mount single /books path
-- [ ] Update sync.py to scan one folder instead of three
-- [ ] For existing books (matched by folder path), preserve current category
-- [ ] For new books, default to "Uncategorized"
+- [x] Modify docker-compose.yml to mount single /books path (was already configured correctly)
+- [x] Update sync.py to scan one folder instead of three
+- [x] For existing books (matched by title+author), preserve current category
+- [x] For new books, default to "Uncategorized"
 
 **Step 3: Add FanFiction Auto-Detection**
 - [ ] Detect AO3 patterns in EPUB metadata (fandom tags, ship tags, "fanworks")
@@ -56,11 +57,11 @@ Moving to a single folder with category as editable metadata is a cleaner founda
 - [ ] Options: Fiction, Non-Fiction, FanFiction, Uncategorized
 - [ ] Allow custom categories in future (Phase 4)
 
-**Step 5: Migrate Files**
-- [ ] Move all books from subfolders into single /Books folder
-- [ ] Run sync to update file paths in database
-- [ ] Verify all books still accessible and categories preserved
-- [ ] Remove empty Fiction/Non-Fiction/FanFiction folders
+**Step 5: Migrate Files** *(Completed before Step 2)*
+- [x] Move all books from subfolders into single /Books folder
+- [x] Run sync to update file paths in database
+- [x] Verify all books still accessible and categories preserved
+- [x] Remove empty Fiction/Non-Fiction/FanFiction folders
 
 ### Technical Notes
 
@@ -224,6 +225,7 @@ When Phase 4 is complete, Liminal helps you *discover* your next read, not just 
 - [ ] Add new books directly through Liminal UI
 - [ ] Auto-scan on upload
 - [ ] Drag-and-drop upload
+- [ ] Mobile-friendly upload (share file to Liminal)
 
 ### Storage & Sync
 - [ ] Fix re-scan (currently broken beyond initial scan)
@@ -322,10 +324,19 @@ These can be revisited once the core experience is solid.
 
 Track known issues that need fixing:
 
-- [ ] Sync only works on initial scan (re-scan broken)
+### Parsing Issues
+- [ ] **Folder name parsing too strict on dash separator** - Parser requires ` - ` (space-dash-space) but some folders use `- ` (dash-space without leading space). Example: `River Ramsey, Harper Lennox- [Fameverse 01] Claimed by the Band` gets parsed as title with "Unknown Author" instead of recognizing the authors.
+  - *Fix:* Update `parse_folder_name()` regex to accept optional space before dash
+  - *Affected:* sync.py lines 40-70
+  - *Priority:* Medium (3 books currently affected)
+
+### Display Issues
 - [ ] HTML entities not decoded in summaries (&amp; showing)
 - [ ] Sort options don't clearly indicate direction
 - [ ] Book "added date" doesn't reflect actual file date
+
+### Sync Issues
+- [ ] Sync only works on initial scan (re-scan broken) - *Note: May be fixed with Phase 0 changes, needs verification*
 - [ ] Some non-book files (.indd) getting scanned
 
 ---
@@ -335,11 +346,11 @@ Track known issues that need fixing:
 **Start with Phase 0 (Foundation), then Phase 1:**
 
 ### Phase 0 - Do First
-1. **Backup & sync** - Preserve all existing categories
-2. **Single folder support** - Update backend to scan one path
-3. **FanFiction auto-detect** - Smart categorization for new books
+1. ~~**Backup & sync**~~ ✅ Complete (Dec 16, 2025)
+2. ~~**Single folder support**~~ ✅ Complete (Dec 16, 2025)
+3. **FanFiction auto-detect** - Smart categorization for new books ← *Next*
 4. **Category editable** - Allow manual corrections
-5. **Migrate files** - Move to single folder structure
+5. ~~**Migrate files**~~ ✅ Complete (Dec 16, 2025)
 
 ### Phase 1 - Core Tracking
 1. **Read status** - Biggest daily impact
@@ -357,7 +368,8 @@ Track known issues that need fixing:
 | Version | Date | Milestone |
 |---------|------|-----------|
 | v0.1.0 | Dec 2025 | Initial release - Library browsing, search, detail pages |
-| v0.2.0 | TBD | Phase 1 - Core tracking (status, ratings, dates) |
+| v0.1.1 | Dec 16, 2025 | Phase 0 partial - Single folder support, category preservation during path migration |
+| v0.2.0 | TBD | Phase 0 complete + Phase 1 - Core tracking (status, ratings, dates) |
 | v0.3.0 | TBD | Phase 2 - Rich notes & metadata |
 | v0.4.0 | TBD | Phase 3 - TBR & Wishlist |
 | v0.5.0 | TBD | Phase 4 - Discovery & Collections |
@@ -365,4 +377,21 @@ Track known issues that need fixing:
 
 ---
 
-*Last updated: December 14, 2025*
+## Completed Work Log
+
+### December 16, 2025 - Phase 0 Migration
+**Changes made:**
+- Updated `sync.py` to support single folder scanning
+- Added `find_existing_book_by_content()` function to match books by title+author when paths change
+- Modified category logic: preserve existing categories, default new books to "Uncategorized"
+- Added guard against "Unknown Author" content matching to prevent false matches
+
+**Results:**
+- 1688 books successfully migrated
+- 0 duplicates created
+- All existing categories preserved
+- 3 books in "Uncategorized" (new or parsing issues)
+
+---
+
+*Last updated: December 16, 2025*

@@ -177,6 +177,77 @@ async def find_existing_book_by_content(db, title: str, authors: list[str]) -> O
     return await cursor.fetchone()
 
 
+def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
+    """
+    Detect if a book is likely FanFiction based on metadata patterns.
+    
+    Returns:
+        tuple: (is_fanfiction: bool, reason: str)
+    
+    Detection heuristics:
+    - Tags containing AO3/fanfic indicators
+    - Author names matching username patterns
+    - Summary containing fanfic-related terms
+    """
+    reasons = []
+    
+    # --- Check tags ---
+    tags = parsed.get("tags", [])
+    if tags:
+        tags_lower = [t.lower() if isinstance(t, str) else "" for t in tags]
+        
+        # Direct fanfic indicators
+        fanfic_tag_patterns = [
+            "fanworks", "fanfiction", "fanfic", "ao3", "archive of our own",
+            "fandom", "fan fiction", "transformative work"
+        ]
+        for pattern in fanfic_tag_patterns:
+            if any(pattern in tag for tag in tags_lower):
+                reasons.append(f"tag contains '{pattern}'")
+                break
+        
+        # Ship patterns: "Character/Character" or "Character x Character"
+        ship_patterns = [
+            r'\w+\s*/\s*\w+',  # Name/Name
+            r'\w+\s*x\s*\w+',  # Name x Name  
+        ]
+        for tag in tags_lower:
+            for pattern in ship_patterns:
+                if re.search(pattern, tag, re.IGNORECASE):
+                    reasons.append(f"ship tag detected: '{tag}'")
+                    break
+    
+    # --- Check author name patterns ---
+    if authors and authors != ["Unknown Author"]:
+        for author in authors:
+            # Username patterns: contains underscore, or is mostly lowercase with numbers
+            if '_' in author:
+                reasons.append(f"author name has underscore: '{author}'")
+            elif re.match(r'^[a-z0-9_]+$', author) and len(author) > 3:
+                reasons.append(f"author name looks like username: '{author}'")
+    
+    # --- Check summary ---
+    summary = parsed.get("summary", "")
+    if summary:
+        summary_lower = summary.lower()
+        fanfic_summary_terms = [
+            "ao3", "archive of our own", "fanfiction", "fanfic",
+            "this fic", "this story is", "canon divergent", "canon-divergent",
+            "post-canon", "pre-canon", "alternate universe", "au where",
+            "what if", "slow burn", "enemies to lovers", "friends to lovers",
+            "fix-it", "fixit", "one-shot", "oneshot", "multi-chapter"
+        ]
+        for term in fanfic_summary_terms:
+            if term in summary_lower:
+                reasons.append(f"summary contains '{term}'")
+                break
+    
+    is_fanfiction = len(reasons) > 0
+    reason_str = "; ".join(reasons) if reasons else ""
+    
+    return is_fanfiction, reason_str
+
+
 def determine_category_from_path(folder_path: Path, books_root: Path) -> Optional[str]:
     """
     Determine book category from folder structure.
@@ -335,11 +406,22 @@ async def sync_library(
                 author_for_color = parsed["authors"][0] if parsed["authors"] else "Unknown"
                 color1, color2 = generate_cover_colors(parsed["title"], author_for_color)
                 
-                # Determine category: preserve existing, try path detection, default to Uncategorized
+                # Determine category
+                # Priority: 1) existing category (preserved), 2) path-based, 3) fanfic detection, 4) Uncategorized
                 if existing_category:
                     category = existing_category
                 else:
-                    category = determine_category_from_path(folder, books_root) or "Uncategorized"
+                    # Try path-based detection first (for legacy folder structures)
+                    category = determine_category_from_path(folder, books_root)
+                    
+                    # If no category from path, try fanfiction auto-detection
+                    if not category:
+                        is_fanfic, detection_reason = detect_fanfiction(parsed, parsed.get("authors", []))
+                        if is_fanfic:
+                            category = "FanFiction"
+                            print(f"Auto-detected FanFiction: {parsed.get('title', folder.name)} - Reason: {detection_reason}")
+                        else:
+                            category = "Uncategorized"
                 
                 # Prepare data for insert/update
                 book_data = {
