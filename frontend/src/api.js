@@ -88,6 +88,16 @@ export async function saveNote(bookId, content) {
 }
 
 /**
+ * Update a book's category
+ */
+export async function updateBookCategory(bookId, category) {
+  return apiFetch(`/books/${bookId}/category`, {
+    method: 'PATCH',
+    body: JSON.stringify({ category }),
+  })
+}
+
+/**
  * Get list of categories
  */
 export async function getCategories() {

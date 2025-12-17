@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories } from '../api'
 import GradientCover from './GradientCover'
 
 function BookDetail() {
@@ -14,8 +14,14 @@ function BookDetail() {
   const [noteContent, setNoteContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
+  
+  // Category editing state
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [categoryLoading, setCategoryLoading] = useState(false)
+  const [categoryStatus, setCategoryStatus] = useState(null)
 
-  // Load book and notes
+  // Load book and notes (essential for page)
   useEffect(() => {
     setLoading(true)
     setError(null)
@@ -27,6 +33,7 @@ function BookDetail() {
       .then(([bookData, notesData]) => {
         setBook(bookData)
         setNotes(notesData)
+        setSelectedCategory(bookData.category || '')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
           setNoteContent(notesData[0].content || '')
@@ -35,6 +42,13 @@ function BookDetail() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [id])
+  
+  // Load categories separately (non-essential, for dropdown only)
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(err => console.error('Failed to load categories:', err))
+  }, [])
 
   const handleSaveNote = async () => {
     if (saving) return
@@ -52,6 +66,32 @@ function BookDetail() {
       console.error('Failed to save note:', err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleCategoryChange = async (newCategory) => {
+    if (categoryLoading || newCategory === selectedCategory) return
+    
+    const previousCategory = selectedCategory
+    setCategoryLoading(true)
+    setCategoryStatus(null)
+    
+    // Optimistic update
+    setSelectedCategory(newCategory)
+    
+    try {
+      await updateBookCategory(id, newCategory)
+      setBook(prev => ({ ...prev, category: newCategory }))
+      setCategoryStatus('saved')
+      setTimeout(() => setCategoryStatus(null), 2000)
+    } catch (err) {
+      console.error('Failed to update category:', err)
+      // Revert on failure
+      setSelectedCategory(previousCategory)
+      setCategoryStatus('error')
+      setTimeout(() => setCategoryStatus(null), 3000)
+    } finally {
+      setCategoryLoading(false)
     }
   }
 
@@ -112,10 +152,29 @@ function BookDetail() {
           
           {/* Metadata pills */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {book.category && (
-              <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">
-                {book.category}
-              </span>
+            <select
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              disabled={categoryLoading}
+              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+            >
+              <option value="">Uncategorized</option>
+              <option value="Fiction">Fiction</option>
+              <option value="Non-Fiction">Non-Fiction</option>
+              <option value="FanFiction">FanFiction</option>
+              {/* Include any other categories from the database */}
+              {categories
+                .filter(cat => cat && !['Fiction', 'Non-Fiction', 'FanFiction', 'Uncategorized', ''].includes(cat))
+                .map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))
+              }
+            </select>
+            {categoryStatus === 'saved' && (
+              <span className="text-green-400 text-sm">✓</span>
+            )}
+            {categoryStatus === 'error' && (
+              <span className="text-red-400 text-sm">Failed</span>
             )}
             {book.series && (
               <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">

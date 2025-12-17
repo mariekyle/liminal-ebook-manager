@@ -65,6 +65,11 @@ class NoteCreate(BaseModel):
     content: str
 
 
+class BookCategoryUpdate(BaseModel):
+    """Request body for updating a book's category."""
+    category: str
+
+
 class BooksListResponse(BaseModel):
     """Response for book list endpoint."""
     books: List[BookSummary]
@@ -209,6 +214,33 @@ async def get_book(book_id: int, db = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Book not found")
     
     return row_to_book_detail(row)
+
+
+@router.patch("/books/{book_id}/category")
+async def update_book_category(
+    book_id: int,
+    update: BookCategoryUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update a book's category.
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Convert empty string to NULL for consistency with getCategories filter
+    category_value = update.category if update.category else None
+    
+    # Update category
+    await db.execute(
+        "UPDATE books SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [category_value, book_id]
+    )
+    await db.commit()
+    
+    return {"status": "ok", "category": category_value}
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])
