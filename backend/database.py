@@ -31,7 +31,36 @@ async def init_db(db_path: str) -> None:
         await db.executescript(SCHEMA)
         await db.commit()
         
+        # Run migrations for existing databases
+        await run_migrations(db)
+        
         print(f"Database initialized at {db_path}")
+
+
+async def run_migrations(db: aiosqlite.Connection) -> None:
+    """
+    Run database migrations to add new columns to existing tables.
+    SQLite's CREATE TABLE IF NOT EXISTS doesn't add new columns,
+    so we need to handle this separately.
+    
+    Each migration checks if the column exists before adding it,
+    making migrations idempotent (safe to run multiple times).
+    """
+    # Get existing columns in books table
+    cursor = await db.execute("PRAGMA table_info(books)")
+    columns = await cursor.fetchall()
+    existing_columns = {col[1] for col in columns}  # col[1] is the column name
+    
+    # Migration 1: Add status column (Phase 1 - Read Status)
+    if 'status' not in existing_columns:
+        print("Migration: Adding 'status' column to books table...")
+        await db.execute("ALTER TABLE books ADD COLUMN status TEXT DEFAULT 'Unread'")
+        print("Migration: 'status' column added successfully")
+    
+    # Ensure indexes exist (these are idempotent)
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_books_status ON books(status)")
+    
+    await db.commit()
 
 
 async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
