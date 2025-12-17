@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus } from '../api'
 import GradientCover from './GradientCover'
 
 function BookDetail() {
@@ -20,6 +20,11 @@ function BookDetail() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [categoryStatus, setCategoryStatus] = useState(null)
+  
+  // Status editing state
+  const [selectedStatus, setSelectedStatus] = useState('Unread')
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [statusStatus, setStatusStatus] = useState(null)
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -34,6 +39,7 @@ function BookDetail() {
         setBook(bookData)
         setNotes(notesData)
         setSelectedCategory(bookData.category || '')
+        setSelectedStatus(bookData.status || 'Unread')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
           setNoteContent(notesData[0].content || '')
@@ -92,6 +98,32 @@ function BookDetail() {
       setTimeout(() => setCategoryStatus(null), 3000)
     } finally {
       setCategoryLoading(false)
+    }
+  }
+
+  const handleStatusChange = async (newStatus) => {
+    if (statusLoading || newStatus === selectedStatus) return
+    
+    const previousStatus = selectedStatus
+    setStatusLoading(true)
+    setStatusStatus(null)
+    
+    // Optimistic update
+    setSelectedStatus(newStatus)
+    
+    try {
+      await updateBookStatus(id, newStatus)
+      setBook(prev => ({ ...prev, status: newStatus }))
+      setStatusStatus('saved')
+      setTimeout(() => setStatusStatus(null), 2000)
+    } catch (err) {
+      console.error('Failed to update status:', err)
+      // Revert on failure
+      setSelectedStatus(previousStatus)
+      setStatusStatus('error')
+      setTimeout(() => setStatusStatus(null), 3000)
+    } finally {
+      setStatusLoading(false)
     }
   }
 
@@ -174,6 +206,24 @@ function BookDetail() {
               <span className="text-green-400 text-sm">✓</span>
             )}
             {categoryStatus === 'error' && (
+              <span className="text-red-400 text-sm">Failed</span>
+            )}
+            {/* Status dropdown */}
+            <select
+              value={selectedStatus}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={statusLoading}
+              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+            >
+              <option value="Unread">Unread</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Finished">Finished</option>
+              <option value="DNF">DNF</option>
+            </select>
+            {statusStatus === 'saved' && (
+              <span className="text-green-400 text-sm">✓</span>
+            )}
+            {statusStatus === 'error' && (
               <span className="text-red-400 text-sm">Failed</span>
             )}
             {book.series && (

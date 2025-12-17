@@ -98,6 +98,23 @@ export async function updateBookCategory(bookId, category) {
 }
 
 /**
+ * Update a book's read status
+ */
+export async function updateBookStatus(bookId, status) {
+  return apiFetch(`/books/${bookId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
+/**
+ * Get list of valid statuses
+ */
+export async function getStatuses() {
+  return apiFetch('/statuses')
+}
+
+/**
  * Get list of categories
  */
 export async function getCategories() {

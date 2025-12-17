@@ -29,6 +29,7 @@ class BookSummary(BaseModel):
     series: Optional[str] = None
     series_number: Optional[str] = None
     category: Optional[str] = None
+    status: Optional[str] = None
     cover_color_1: Optional[str] = None
     cover_color_2: Optional[str] = None
     has_notes: bool = False
@@ -42,6 +43,7 @@ class BookDetail(BaseModel):
     series: Optional[str] = None
     series_number: Optional[str] = None
     category: Optional[str] = None
+    status: Optional[str] = None
     publication_year: Optional[int] = None
     word_count: Optional[int] = None
     summary: Optional[str] = None
@@ -68,6 +70,11 @@ class NoteCreate(BaseModel):
 class BookCategoryUpdate(BaseModel):
     """Request body for updating a book's category."""
     category: str
+
+
+class BookStatusUpdate(BaseModel):
+    """Request body for updating a book's read status."""
+    status: str
 
 
 class BooksListResponse(BaseModel):
@@ -99,6 +106,7 @@ def row_to_book_summary(row) -> BookSummary:
         series=row["series"],
         series_number=row["series_number"],
         category=row["category"],
+        status=row["status"],
         cover_color_1=row["cover_color_1"],
         cover_color_2=row["cover_color_2"],
         has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False
@@ -114,6 +122,7 @@ def row_to_book_detail(row) -> BookDetail:
         series=row["series"],
         series_number=row["series_number"],
         category=row["category"],
+        status=row["status"],
         publication_year=row["publication_year"],
         word_count=row["word_count"],
         summary=row["summary"],
@@ -131,6 +140,7 @@ def row_to_book_detail(row) -> BookDetail:
 @router.get("/books", response_model=BooksListResponse)
 async def list_books(
     category: Optional[str] = Query(None, description="Filter by category"),
+    status: Optional[str] = Query(None, description="Filter by status"),
     series: Optional[str] = Query(None, description="Filter by series"),
     search: Optional[str] = Query(None, description="Search in title/author"),
     sort: str = Query("title", description="Sort field: title, author, series, updated"),
@@ -151,6 +161,10 @@ async def list_books(
     if category:
         where_clauses.append("category = ?")
         params.append(category)
+    
+    if status:
+        where_clauses.append("status = ?")
+        params.append(status)
     
     if series:
         where_clauses.append("series = ?")
@@ -241,6 +255,39 @@ async def update_book_category(
     await db.commit()
     
     return {"status": "ok", "category": category_value}
+
+
+@router.patch("/books/{book_id}/status")
+async def update_book_status(
+    book_id: int,
+    update: BookStatusUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update a book's read status.
+    Valid statuses: Unread, In Progress, Finished, DNF
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Validate status value
+    valid_statuses = ['Unread', 'In Progress', 'Finished', 'DNF']
+    if update.status not in valid_statuses:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+    
+    # Update status
+    await db.execute(
+        "UPDATE books SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [update.status, book_id]
+    )
+    await db.commit()
+    
+    return {"status": "ok", "read_status": update.status}
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])
@@ -341,6 +388,15 @@ async def list_categories(db = Depends(get_db)):
     )
     rows = await cursor.fetchall()
     return [row["category"] for row in rows]
+
+
+@router.get("/statuses")
+async def list_statuses():
+    """
+    Get all valid read statuses.
+    Returns static list since statuses are predefined.
+    """
+    return ["Unread", "In Progress", "Finished", "DNF"]
 
 
 @router.get("/series")

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS books (
     series TEXT,
     series_number TEXT,
     category TEXT,                -- Fiction, Non-Fiction, FanFiction
+    status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
     publication_year INTEGER,
     word_count INTEGER,
     summary TEXT,
@@ -96,6 +97,7 @@ CREATE TABLE IF NOT EXISTS links (
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
+CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
 CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
