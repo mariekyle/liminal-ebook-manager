@@ -126,7 +126,6 @@ CREATE TABLE IF NOT EXISTS links (
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
-CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
 CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
