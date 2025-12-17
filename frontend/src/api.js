@@ -108,6 +108,16 @@ export async function updateBookStatus(bookId, status) {
 }
 
 /**
+ * Update a book's rating
+ */
+export async function updateBookRating(bookId, rating) {
+  return apiFetch(`/books/${bookId}/rating`, {
+    method: 'PATCH',
+    body: JSON.stringify({ rating }),
+  })
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {

@@ -13,7 +13,7 @@ Liminal is a self-hosted web application for managing your ebook library. It run
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Your Device                           │
-│                    (Phone, Tablet, PC)                       │
+│                    (Phone, Tablet, PC)                       
 │                                                              │
 │    Browser → http://your-nas:3000 (via Tailscale)           │
 └─────────────────────────┬───────────────────────────────────┘

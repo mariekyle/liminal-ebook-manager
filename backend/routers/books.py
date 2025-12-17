@@ -30,6 +30,7 @@ class BookSummary(BaseModel):
     series_number: Optional[str] = None
     category: Optional[str] = None
     status: Optional[str] = None
+    rating: Optional[int] = None
     cover_color_1: Optional[str] = None
     cover_color_2: Optional[str] = None
     has_notes: bool = False
@@ -44,6 +45,7 @@ class BookDetail(BaseModel):
     series_number: Optional[str] = None
     category: Optional[str] = None
     status: Optional[str] = None
+    rating: Optional[int] = None
     publication_year: Optional[int] = None
     word_count: Optional[int] = None
     summary: Optional[str] = None
@@ -77,6 +79,11 @@ class BookStatusUpdate(BaseModel):
     status: str
 
 
+class BookRatingUpdate(BaseModel):
+    """Request body for updating a book's rating."""
+    rating: Optional[int] = None  # None to clear rating, 1-5 to set
+
+
 class BooksListResponse(BaseModel):
     """Response for book list endpoint."""
     books: List[BookSummary]
@@ -107,6 +114,7 @@ def row_to_book_summary(row) -> BookSummary:
         series_number=row["series_number"],
         category=row["category"],
         status=row["status"],
+        rating=row["rating"],
         cover_color_1=row["cover_color_1"],
         cover_color_2=row["cover_color_2"],
         has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False
@@ -123,6 +131,7 @@ def row_to_book_detail(row) -> BookDetail:
         series_number=row["series_number"],
         category=row["category"],
         status=row["status"],
+        rating=row["rating"],
         publication_year=row["publication_year"],
         word_count=row["word_count"],
         summary=row["summary"],
@@ -288,6 +297,38 @@ async def update_book_status(
     await db.commit()
     
     return {"status": "ok", "read_status": update.status}
+
+
+@router.patch("/books/{book_id}/rating")
+async def update_book_rating(
+    book_id: int,
+    update: BookRatingUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update a book's rating.
+    Valid ratings: 1-5, or null to clear.
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Validate rating value
+    if update.rating is not None and (update.rating < 1 or update.rating > 5):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid rating. Must be 1-5 or null to clear."
+        )
+    
+    # Update rating
+    await db.execute(
+        "UPDATE books SET rating = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [update.rating, book_id]
+    )
+    await db.commit()
+    
+    return {"status": "ok", "rating": update.rating}
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])

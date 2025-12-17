@@ -57,6 +57,12 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
         await db.execute("ALTER TABLE books ADD COLUMN status TEXT DEFAULT 'Unread'")
         print("Migration: 'status' column added successfully")
     
+    # Migration 2: Add rating column (Phase 1 - Rating System)
+    if 'rating' not in existing_columns:
+        print("Migration: Adding 'rating' column to books table...")
+        await db.execute("ALTER TABLE books ADD COLUMN rating INTEGER")
+        print("Migration: 'rating' column added successfully")
+    
     # Ensure indexes exist (these are idempotent)
     await db.execute("CREATE INDEX IF NOT EXISTS idx_books_status ON books(status)")
     
@@ -89,6 +95,7 @@ CREATE TABLE IF NOT EXISTS books (
     series_number TEXT,
     category TEXT,                -- Fiction, Non-Fiction, FanFiction
     status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
+    rating INTEGER,               -- 1-5 star rating
     publication_year INTEGER,
     word_count INTEGER,
     summary TEXT,

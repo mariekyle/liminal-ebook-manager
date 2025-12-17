@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating } from '../api'
 import GradientCover from './GradientCover'
+
+// Rating labels - can be customized in future settings
+const RATING_LABELS = {
+  1: 'Disliked',
+  2: 'Disappointing',
+  3: 'Decent/Fine',
+  4: 'Better than Good',
+  5: 'All-time Fav'
+}
 
 function BookDetail() {
   const { id } = useParams()
@@ -25,6 +34,11 @@ function BookDetail() {
   const [selectedStatus, setSelectedStatus] = useState('Unread')
   const [statusLoading, setStatusLoading] = useState(false)
   const [statusStatus, setStatusStatus] = useState(null)
+  
+  // Rating editing state
+  const [selectedRating, setSelectedRating] = useState(null)
+  const [ratingLoading, setRatingLoading] = useState(false)
+  const [ratingStatus, setRatingStatus] = useState(null)
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -40,6 +54,7 @@ function BookDetail() {
         setNotes(notesData)
         setSelectedCategory(bookData.category || '')
         setSelectedStatus(bookData.status || 'Unread')
+        setSelectedRating(bookData.rating || null)
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
           setNoteContent(notesData[0].content || '')
@@ -124,6 +139,35 @@ function BookDetail() {
       setTimeout(() => setStatusStatus(null), 3000)
     } finally {
       setStatusLoading(false)
+    }
+  }
+
+  const handleRatingChange = async (newRating) => {
+    // Convert to number or null
+    const ratingValue = newRating === '' ? null : parseInt(newRating, 10)
+    
+    if (ratingLoading || ratingValue === selectedRating) return
+    
+    const previousRating = selectedRating
+    setRatingLoading(true)
+    setRatingStatus(null)
+    
+    // Optimistic update
+    setSelectedRating(ratingValue)
+    
+    try {
+      await updateBookRating(id, ratingValue)
+      setBook(prev => ({ ...prev, rating: ratingValue }))
+      setRatingStatus('saved')
+      setTimeout(() => setRatingStatus(null), 2000)
+    } catch (err) {
+      console.error('Failed to update rating:', err)
+      // Revert on failure
+      setSelectedRating(previousRating)
+      setRatingStatus('error')
+      setTimeout(() => setRatingStatus(null), 3000)
+    } finally {
+      setRatingLoading(false)
     }
   }
 
@@ -224,6 +268,26 @@ function BookDetail() {
               <span className="text-green-400 text-sm">✓</span>
             )}
             {statusStatus === 'error' && (
+              <span className="text-red-400 text-sm">Failed</span>
+            )}
+            {/* Rating dropdown */}
+            <select
+              value={selectedRating ?? ''}
+              onChange={(e) => handleRatingChange(e.target.value)}
+              disabled={ratingLoading}
+              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+            >
+              <option value="">No Rating</option>
+              {[5, 4, 3, 2, 1].map(num => (
+                <option key={num} value={num}>
+                  {'★'.repeat(num)}{'☆'.repeat(5-num)} {RATING_LABELS[num]}
+                </option>
+              ))}
+            </select>
+            {ratingStatus === 'saved' && (
+              <span className="text-green-400 text-sm">✓</span>
+            )}
+            {ratingStatus === 'error' && (
               <span className="text-red-400 text-sm">Failed</span>
             )}
             {book.series && (
