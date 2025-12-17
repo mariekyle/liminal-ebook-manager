@@ -2,90 +2,48 @@
 
 ## Vision Statement
 
-Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books - both owned and wished for - so that the reader can spend less time managing and more time in the liminal space of reading.
+Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books — both owned and wished for — so that the reader can spend less time managing and more time in the liminal space of reading.
 
 ---
 
-## Current State (v0.1)
+## Current State (v0.1.2)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
 - Display library with gradient covers
 - Search and filter by category
 - Sort by title
-- Scroll through full library (1688+ books)
+- Scroll through full library (1689+ books)
 - View book detail page with metadata (title, author, series, year, word count, summary, tags)
+- **Edit book category** via dropdown (Fiction, Non-Fiction, FanFiction, Uncategorized)
+- **Auto-detect FanFiction** based on tags, author patterns, and summary
 - Add free-form notes to books
 - Mobile-responsive design
 - Text shadows on covers for readability
-- Match existing books by title+author when folder paths change (preserves categories during migrations)
 
 ---
 
-## Phase 0: Foundation (Storage Migration)
+## Phase 0: Foundation ✅ COMPLETE
 
 **Goal:** Simplify storage structure and make categorization a metadata field instead of folder-based.
 
-### Why This Matters
-The current architecture requires books to be organized in Fiction/Non-Fiction/FanFiction subfolders, with category inferred from folder location. This is:
-- Fragile (misplaced books get wrong category)
-- Inflexible (arbitrary constraint for future users)
-- Legacy (designed around Obsidian limitations)
+**Completed: December 17, 2025**
 
-Moving to a single folder with category as editable metadata is a cleaner foundation before building Phase 1+ features.
+- [x] Step 1: Backup & preserve existing categories
+- [x] Step 2: Update backend for single folder scanning
+- [x] Step 3: Add FanFiction auto-detection
+- [x] Step 4: Make category editable in UI
+- [x] Step 5: Migrate files to single folder structure
 
-### Migration Steps
-
-**Step 1: Preserve Existing Categories**
-- [x] Run full sync to ensure all books and current categories are in database
-- [x] Verify book count matches expectations (1688 books)
-- [x] Back up database file before proceeding
-
-**Step 2: Update Backend for Single Folder**
-- [x] Modify docker-compose.yml to mount single /books path (was already configured correctly)
-- [x] Update sync.py to scan one folder instead of three
-- [x] For existing books (matched by title+author), preserve current category
-- [x] For new books, default to "Uncategorized"
-
-**Step 3: Add FanFiction Auto-Detection**
-- [ ] Detect AO3 patterns in EPUB metadata (fandom tags, ship tags, "fanworks")
-- [ ] Auto-assign "FanFiction" category when patterns detected
-- [ ] Log detection reasoning for debugging
-
-**Step 4: Make Category Editable**
-- [ ] Add category dropdown to book detail page
-- [ ] Options: Fiction, Non-Fiction, FanFiction, Uncategorized
-- [ ] Allow custom categories in future (Phase 4)
-
-**Step 5: Migrate Files** *(Completed before Step 2)*
-- [x] Move all books from subfolders into single /Books folder
-- [x] Run sync to update file paths in database
-- [x] Verify all books still accessible and categories preserved
-- [x] Remove empty Fiction/Non-Fiction/FanFiction folders
-
-### Technical Notes
-
-**FanFiction Detection Heuristics:**
-- Tags containing: "fanworks", "ao3", fandom names, character ship patterns (name/name or name-name)
-- Author names matching username patterns (underscores, numbers, no spaces)
-- Summary containing "fic", "fandom", "canon"
-
-**Database Impact:**
-- No schema changes needed
-- Category field already exists as text
-- File paths will update but book IDs remain stable
-
-**Rollback Plan:**
-- Keep database backup from Step 1
-- If migration fails, restore backup and revert code changes
-- Files can be moved back to subfolders if needed
-
-### Milestone
-When Phase 0 is complete, all books live in a single folder, categories are stored as metadata, and the foundation is set for all future features. New users can point Liminal at any folder of books without needing a specific structure.
+**Key Outcomes:**
+- Books live in single `/Books` folder (no subfolders required)
+- Categories are editable metadata
+- New fanfics auto-detected by tags, author patterns, summary keywords
+- 1688 books migrated with categories preserved
 
 ---
 
-## Phase 1: Replace Obsidian (Core Tracking)
+## Phase 1: Replace Obsidian (Core Tracking) ← NEXT
 
 **Goal:** Stop using Obsidian for day-to-day library management.
 
@@ -117,7 +75,7 @@ When Phase 0 is complete, all books live in a single folder, categories are stor
 - [ ] Basic tag management (view all tags, see count per tag)
 
 ### Milestone
-When Phase 1 is complete, you can open Liminal on your phone, browse your library, mark books as read/DNF/in-progress, rate them, and track when you read them - without touching Obsidian.
+When Phase 1 is complete, you can open Liminal on your phone, browse your library, mark books as read/DNF/in-progress, rate them, and track when you read them — without touching Obsidian.
 
 ---
 
@@ -138,7 +96,7 @@ When Phase 1 is complete, you can open Liminal on your phone, browse your librar
 - [ ] Markdown support in notes
 
 ### Reading Stats
-- [ ] Actual WPM field (manual entry from Mood Reader)
+- [ ] Actual WPM field (manual entry from Moon Reader)
 - [ ] Actual read time field
 - [ ] Estimated read time (calculated from word count + average WPM setting)
 
@@ -228,7 +186,7 @@ When Phase 4 is complete, Liminal helps you *discover* your next read, not just 
 - [ ] Mobile-friendly upload (share file to Liminal)
 
 ### Storage & Sync
-- [ ] Fix re-scan (currently broken beyond initial scan)
+- [ ] Fix Sync Library button in UI (currently not loading new books)
 - [ ] Settings: view/change storage location
 - [ ] Sync progress indicator (show what's happening during scan)
 - [ ] Incremental sync (only scan new/changed files)
@@ -265,8 +223,6 @@ The Obsidian plugin produces superior gradients that should be replicated. Key d
 - `NoteCoverProcessor.ts` - Color selection logic (hash-based? author-based?)
 - Location: `.obsidian/plugins/nas-book-importer/` or development source folder
 
-*Screenshots saved:* December 14, 2025 - Obsidian plugin covers showing desired style
-
 ### UI Polish
 - [ ] Clear search button (X icon)
 - [ ] Sort direction indicators (↑↓)
@@ -300,11 +256,11 @@ When Phase 5 is complete, Liminal is a polished, self-contained system. All book
 
 These are interesting but not essential to the core vision:
 
-- **Calibre integration** - You have a good folder structure already
-- **Social features** - Sharing, friend recommendations, book clubs
-- **In-app reading** - Mood Reader handles this well
-- **Audiobook support** - Different workflow, different app
-- **Library lending/borrowing tracking** - Edge case
+- **Calibre integration** — You have a good folder structure already
+- **Social features** — Sharing, friend recommendations, book clubs
+- **In-app reading** — Moon Reader handles this well
+- **Audiobook support** — Different workflow, different app
+- **Library lending/borrowing tracking** — Edge case
 
 These can be revisited once the core experience is solid.
 
@@ -312,11 +268,11 @@ These can be revisited once the core experience is solid.
 
 ## Development Principles
 
-1. **Mobile-first** - Every feature should work great on Android
-2. **Single source of truth** - Liminal is THE place for book data
-3. **Reduce friction** - If it takes more than 2 taps, simplify it
-4. **Data integrity** - Never lose user's notes or reading history
-5. **Offline-capable** - Core features should work without internet (future PWA)
+1. **Mobile-first** — Every feature should work great on Android
+2. **Single source of truth** — Liminal is THE place for book data
+3. **Reduce friction** — If it takes more than 2 taps, simplify it
+4. **Data integrity** — Never lose user's notes or reading history
+5. **Offline-capable** — Core features should work without internet (future PWA)
 
 ---
 
@@ -325,41 +281,18 @@ These can be revisited once the core experience is solid.
 Track known issues that need fixing:
 
 ### Parsing Issues
-- [ ] **Folder name parsing too strict on dash separator** - Parser requires ` - ` (space-dash-space) but some folders use `- ` (dash-space without leading space). Example: `River Ramsey, Harper Lennox- [Fameverse 01] Claimed by the Band` gets parsed as title with "Unknown Author" instead of recognizing the authors.
+- [ ] **Folder name parsing too strict on dash separator** — Parser requires ` - ` (space-dash-space) but some folders use `- ` (dash-space without leading space). Example: `River Ramsey, Harper Lennox- [Fameverse 01] Claimed by the Band` parses incorrectly.
   - *Fix:* Update `parse_folder_name()` regex to accept optional space before dash
-  - *Affected:* sync.py lines 40-70
-  - *Priority:* Medium (3 books currently affected)
+  - *Affected:* sync.py
+  - *Priority:* Low (3 books affected, can fix via folder rename)
 
 ### Display Issues
 - [ ] HTML entities not decoded in summaries (&amp; showing)
 - [ ] Sort options don't clearly indicate direction
-- [ ] Book "added date" doesn't reflect actual file date
 
 ### Sync Issues
-- [ ] Sync only works on initial scan (re-scan broken) - *Note: May be fixed with Phase 0 changes, needs verification*
+- [ ] Sync Library button in UI not working for new books
 - [ ] Some non-book files (.indd) getting scanned
-
----
-
-## Suggested Implementation Order
-
-**Start with Phase 0 (Foundation), then Phase 1:**
-
-### Phase 0 - Do First
-1. ~~**Backup & sync**~~ ✅ Complete (Dec 16, 2025)
-2. ~~**Single folder support**~~ ✅ Complete (Dec 16, 2025)
-3. **FanFiction auto-detect** - Smart categorization for new books ← *Next*
-4. **Category editable** - Allow manual corrections
-5. ~~**Migrate files**~~ ✅ Complete (Dec 16, 2025)
-
-### Phase 1 - Core Tracking
-1. **Read status** - Biggest daily impact
-2. **Status filter** - Make status useful immediately
-3. **Rating system** - Quick to add, high value
-4. **Reading dates** - Complete the tracking trifecta
-5. **Series improvements** - Important for your reading flow
-
-**Why this order?** Phase 0 creates a clean foundation that doesn't depend on folder structure. Then Phase 1 tackles daily friction - the moment you can track read status, ratings, and dates on mobile, you've solved 80% of your pain points.
 
 ---
 
@@ -367,31 +300,15 @@ Track known issues that need fixing:
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| v0.1.0 | Dec 2025 | Initial release - Library browsing, search, detail pages |
-| v0.1.1 | Dec 16, 2025 | Phase 0 partial - Single folder support, category preservation during path migration |
-| v0.2.0 | TBD | Phase 0 complete + Phase 1 - Core tracking (status, ratings, dates) |
-| v0.3.0 | TBD | Phase 2 - Rich notes & metadata |
-| v0.4.0 | TBD | Phase 3 - TBR & Wishlist |
-| v0.5.0 | TBD | Phase 4 - Discovery & Collections |
-| v1.0.0 | TBD | Phase 5 - Full Obsidian replacement complete |
+| v0.1.0 | Dec 14, 2025 | Initial release — Library browsing, search, detail pages |
+| v0.1.1 | Dec 16, 2025 | Single folder migration, category preservation |
+| v0.1.2 | Dec 17, 2025 | **Phase 0 complete** — Editable categories, fanfic auto-detection |
+| v0.2.0 | TBD | Phase 1 — Core tracking (status, ratings, dates) |
+| v0.3.0 | TBD | Phase 2 — Rich notes & metadata |
+| v0.4.0 | TBD | Phase 3 — TBR & Wishlist |
+| v0.5.0 | TBD | Phase 4 — Discovery & Collections |
+| v1.0.0 | TBD | Phase 5 — Full Obsidian replacement complete |
 
 ---
 
-## Completed Work Log
-
-### December 16, 2025 - Phase 0 Migration
-**Changes made:**
-- Updated `sync.py` to support single folder scanning
-- Added `find_existing_book_by_content()` function to match books by title+author when paths change
-- Modified category logic: preserve existing categories, default new books to "Uncategorized"
-- Added guard against "Unknown Author" content matching to prevent false matches
-
-**Results:**
-- 1688 books successfully migrated
-- 0 duplicates created
-- All existing categories preserved
-- 3 books in "Uncategorized" (new or parsing issues)
-
----
-
-*Last updated: December 16, 2025*
+*Last updated: December 17, 2025*
