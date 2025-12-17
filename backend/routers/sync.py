@@ -223,7 +223,14 @@ def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
             # Username patterns: contains underscore, or is mostly lowercase with numbers
             if '_' in author:
                 reasons.append(f"author name has underscore: '{author}'")
-            elif re.match(r'^[a-z0-9_]+$', author) and len(author) > 3:
+            elif re.match(r'^[a-zA-Z0-9]+$', author) and re.search(r'\d', author) and len(author) > 3:
+                # Alphanumeric WITH digit (no spaces, no special chars) - looks like username
+                reasons.append(f"author name looks like username: '{author}'")
+            elif re.match(r'^[a-z0-9]+$', author) and len(author) > 3:
+                # All lowercase, no spaces - likely username (real authors use title case)
+                reasons.append(f"author name looks like username: '{author}'")
+            elif '-' in author and re.search(r'\d', author) and ' ' not in author:
+                # Has hyphen AND digit AND no space - likely username like "rock-the-casbah18"
                 reasons.append(f"author name looks like username: '{author}'")
     
     # --- Check summary ---
