@@ -118,6 +118,19 @@ export async function updateBookRating(bookId, rating) {
 }
 
 /**
+ * Update a book's reading dates
+ */
+export async function updateBookDates(bookId, dateStarted, dateFinished) {
+  return apiFetch(`/books/${bookId}/dates`, {
+    method: 'PATCH',
+    body: JSON.stringify({ 
+      date_started: dateStarted || null,
+      date_finished: dateFinished || null
+    }),
+  })
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {

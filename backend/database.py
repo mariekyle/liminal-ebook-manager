@@ -63,6 +63,18 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
         await db.execute("ALTER TABLE books ADD COLUMN rating INTEGER")
         print("Migration: 'rating' column added successfully")
     
+    # Migration 3: Add date_started column (Phase 1 - Reading Dates)
+    if 'date_started' not in existing_columns:
+        print("Migration: Adding 'date_started' column to books table...")
+        await db.execute("ALTER TABLE books ADD COLUMN date_started TEXT")
+        print("Migration: 'date_started' column added successfully")
+    
+    # Migration 4: Add date_finished column (Phase 1 - Reading Dates)
+    if 'date_finished' not in existing_columns:
+        print("Migration: Adding 'date_finished' column to books table...")
+        await db.execute("ALTER TABLE books ADD COLUMN date_finished TEXT")
+        print("Migration: 'date_finished' column added successfully")
+    
     # Ensure indexes exist (these are idempotent)
     await db.execute("CREATE INDEX IF NOT EXISTS idx_books_status ON books(status)")
     
@@ -96,6 +108,8 @@ CREATE TABLE IF NOT EXISTS books (
     category TEXT,                -- Fiction, Non-Fiction, FanFiction
     status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
     rating INTEGER,               -- 1-5 star rating
+    date_started TEXT,            -- ISO date: YYYY-MM-DD
+    date_finished TEXT,           -- ISO date: YYYY-MM-DD
     publication_year INTEGER,
     word_count INTEGER,
     summary TEXT,

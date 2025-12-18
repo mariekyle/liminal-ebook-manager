@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates } from '../api'
 import GradientCover from './GradientCover'
 
 // Rating labels - can be customized in future settings
@@ -39,6 +39,12 @@ function BookDetail() {
   const [selectedRating, setSelectedRating] = useState(null)
   const [ratingLoading, setRatingLoading] = useState(false)
   const [ratingStatus, setRatingStatus] = useState(null)
+  
+  // Date editing state
+  const [dateStarted, setDateStarted] = useState('')
+  const [dateFinished, setDateFinished] = useState('')
+  const [datesLoading, setDatesLoading] = useState(false)
+  const [datesStatus, setDatesStatus] = useState(null)
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -55,6 +61,8 @@ function BookDetail() {
         setSelectedCategory(bookData.category || '')
         setSelectedStatus(bookData.status || 'Unread')
         setSelectedRating(bookData.rating || null)
+        setDateStarted(bookData.date_started || '')
+        setDateFinished(bookData.date_finished || '')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
           setNoteContent(notesData[0].content || '')
@@ -168,6 +176,47 @@ function BookDetail() {
       setTimeout(() => setRatingStatus(null), 3000)
     } finally {
       setRatingLoading(false)
+    }
+  }
+
+  const handleDateChange = async (field, value) => {
+    if (datesLoading) return
+    
+    const newDateStarted = field === 'started' ? value : dateStarted
+    const newDateFinished = field === 'finished' ? value : dateFinished
+    
+    // Save previous values for rollback
+    const previousDateStarted = dateStarted
+    const previousDateFinished = dateFinished
+    
+    // Optimistic update
+    if (field === 'started') {
+      setDateStarted(value)
+    } else {
+      setDateFinished(value)
+    }
+    
+    setDatesLoading(true)
+    setDatesStatus(null)
+    
+    try {
+      await updateBookDates(id, newDateStarted, newDateFinished)
+      setBook(prev => ({ 
+        ...prev, 
+        date_started: newDateStarted || null,
+        date_finished: newDateFinished || null
+      }))
+      setDatesStatus('saved')
+      setTimeout(() => setDatesStatus(null), 2000)
+    } catch (err) {
+      console.error('Failed to update dates:', err)
+      // Revert on failure
+      setDateStarted(previousDateStarted)
+      setDateFinished(previousDateFinished)
+      setDatesStatus('error')
+      setTimeout(() => setDatesStatus(null), 3000)
+    } finally {
+      setDatesLoading(false)
     }
   }
 
@@ -304,6 +353,36 @@ function BookDetail() {
               <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">
                 {book.word_count.toLocaleString()} words
               </span>
+            )}
+          </div>
+          
+          {/* Reading Dates */}
+          <div className="flex flex-wrap gap-4 mb-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-gray-400 text-sm">Started:</label>
+              <input
+                type="date"
+                value={dateStarted}
+                onChange={(e) => handleDateChange('started', e.target.value)}
+                disabled={datesLoading}
+                className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-gray-400 text-sm">Finished:</label>
+              <input
+                type="date"
+                value={dateFinished}
+                onChange={(e) => handleDateChange('finished', e.target.value)}
+                disabled={datesLoading}
+                className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+              />
+            </div>
+            {datesStatus === 'saved' && (
+              <span className="text-green-400 text-sm">✓ Saved</span>
+            )}
+            {datesStatus === 'error' && (
+              <span className="text-red-400 text-sm">Failed to save</span>
             )}
           </div>
           

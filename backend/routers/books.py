@@ -46,6 +46,8 @@ class BookDetail(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     rating: Optional[int] = None
+    date_started: Optional[str] = None
+    date_finished: Optional[str] = None
     publication_year: Optional[int] = None
     word_count: Optional[int] = None
     summary: Optional[str] = None
@@ -82,6 +84,12 @@ class BookStatusUpdate(BaseModel):
 class BookRatingUpdate(BaseModel):
     """Request body for updating a book's rating."""
     rating: Optional[int] = None  # None to clear rating, 1-5 to set
+
+
+class BookDatesUpdate(BaseModel):
+    """Request body for updating a book's reading dates."""
+    date_started: Optional[str] = None   # ISO format: YYYY-MM-DD or null
+    date_finished: Optional[str] = None  # ISO format: YYYY-MM-DD or null
 
 
 class BooksListResponse(BaseModel):
@@ -132,6 +140,8 @@ def row_to_book_detail(row) -> BookDetail:
         category=row["category"],
         status=row["status"],
         rating=row["rating"],
+        date_started=row["date_started"],
+        date_finished=row["date_finished"],
         publication_year=row["publication_year"],
         word_count=row["word_count"],
         summary=row["summary"],
@@ -329,6 +339,37 @@ async def update_book_rating(
     await db.commit()
     
     return {"status": "ok", "rating": update.rating}
+
+
+@router.patch("/books/{book_id}/dates")
+async def update_book_dates(
+    book_id: int,
+    update: BookDatesUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update a book's reading dates.
+    Dates should be in ISO format (YYYY-MM-DD) or null to clear.
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Update dates
+    await db.execute(
+        """UPDATE books 
+           SET date_started = ?, date_finished = ?, updated_at = CURRENT_TIMESTAMP 
+           WHERE id = ?""",
+        [update.date_started, update.date_finished, book_id]
+    )
+    await db.commit()
+    
+    return {
+        "status": "ok", 
+        "date_started": update.date_started,
+        "date_finished": update.date_finished
+    }
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])
