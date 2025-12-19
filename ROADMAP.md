@@ -6,20 +6,23 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.1.2)
+## Current State (v0.2.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
 - Display library with gradient covers
-- Search and filter by category
-- Sort by title
+- Search and filter by category and status
+- Sort by title, author, series, year, recently updated
 - Scroll through full library (1689+ books)
-- View book detail page with metadata (title, author, series, year, word count, summary, tags)
-- **Edit book category** via dropdown (Fiction, Non-Fiction, FanFiction, Uncategorized)
-- **Auto-detect FanFiction** based on tags, author patterns, and summary
+- View book detail page with full metadata
+- **Track read status** (Unread, In Progress, Finished, DNF)
+- **Rate books 1-5 stars** with custom labels
+- **Track reading dates** (started, finished)
+- **Finished checkmark** on book covers
+- Edit book category via dropdown
+- Auto-detect FanFiction based on metadata patterns
 - Add free-form notes to books
 - Mobile-responsive design
-- Text shadows on covers for readability
 
 ---
 
@@ -43,31 +46,30 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Phase 1: Replace Obsidian (Core Tracking) ← NEXT
+## Phase 1: Replace Obsidian (Core Tracking) ← IN PROGRESS
 
 **Goal:** Stop using Obsidian for day-to-day library management.
 
-### Read Status System
-- [ ] Add status field to database: Unread, In Progress, Finished, DNF
-- [ ] Status selector dropdown on detail page
-- [ ] Status indicator badge on book covers in library view
-- [ ] Filter library by status
+### Read Status System ✅ COMPLETE
+- [x] Add status field to database: Unread, In Progress, Finished, DNF
+- [x] Status selector dropdown on detail page
+- [x] Status indicator badge on book covers (checkmark for Finished)
+- [x] Filter library by status
 
-### Rating System
-- [ ] 1-5 rating field on detail page
-- [ ] Custom labels: 1=Disliked, 2=Disappointing, 3=Decent/Fine, 4=Better than Good, 5=All-time Fav
-- [ ] Display rating on detail page and optionally on cover
+### Rating System ✅ COMPLETE
+- [x] 1-5 rating field on detail page
+- [x] Custom labels: 1=Disliked, 2=Disappointing, 3=Decent/Fine, 4=Better than Good, 5=All-time Fav
+- [x] Display rating on detail page with stars
 
-### Reading Dates
-- [ ] Date started field (manual entry)
-- [ ] Date finished field (manual entry)
-- [ ] Display on detail page
+### Reading Dates ✅ COMPLETE
+- [x] Date started field (manual entry)
+- [x] Date finished field (manual entry)
+- [x] Display on detail page with native date pickers
 
 ### Series Improvements
-- [ ] Series detail page (view all books in a series, in order)
 - [ ] Browse/filter by series in library
-- [ ] Show series name + number on gradient covers (replace title)
 - [ ] Series number sorting
+- [ ] Series detail page (view all books in a series, in order) — *moved to Phase 4*
 
 ### Tags That Work
 - [ ] Filter library by tags
@@ -95,13 +97,15 @@ When Phase 1 is complete, you can open Liminal on your phone, browse your librar
 - [ ] Each section expandable/collapsible
 - [ ] Markdown support in notes
 
-### Reading Stats
+### Reading Stats & Estimated Time
+- [ ] **Estimated read time** displayed on book detail page (calculated from word count ÷ WPM)
+- [ ] **Estimated read time filter** in library (e.g., "Under 2 hours", "2-5 hours", "5+ hours")
 - [ ] Actual WPM field (manual entry from Moon Reader)
 - [ ] Actual read time field
-- [ ] Estimated read time (calculated from word count + average WPM setting)
 
 ### Settings Screen
-- [ ] Average WPM setting (for read time estimates)
+- [ ] **Reading speed (WPM) setting** for estimated read time calculations
+- [ ] **Customizable rating labels** (rename "Disliked" to your own terms)
 - [ ] Display preferences (show/hide on covers: author, title, series)
 - [ ] Rows displayed in library grid
 
@@ -110,6 +114,12 @@ When Phase 1 is complete, you can open Liminal on your phone, browse your librar
 - [ ] HTML entity decoding in summaries (fix &amp; etc.)
 - [ ] "Added to library" date (pulled from file system)
 - [ ] Storage location display and validation
+
+### Simple Author Page
+- [ ] Basic author page (name + notes)
+- [ ] **Author notes** — free-form notes about an author
+- [ ] Link from book detail page (click author name → author page)
+- [ ] List of books by this author (simple list, not full grid)
 
 ### Milestone
 When Phase 2 is complete, Liminal holds all the rich reading data you currently keep in Obsidian. You can migrate existing notes and retire Obsidian for books entirely.
@@ -146,9 +156,9 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 **Goal:** Rediscover your library. Find your next read with joy.
 
 ### Smart Filtering
-- [ ] Multi-filter: combine status + category + tags + rating
-- [ ] Complex queries: "Unread 5-star fiction", "DNF fanfiction"
-- [ ] Sort by: date added, date read, rating, title, author, series
+- [ ] Multi-filter: combine status + category + tags + rating + read time
+- [ ] Complex queries: "Unread 5-star fiction under 3 hours"
+- [ ] Sort by: date added, date read, rating, title, author, series, estimated time
 - [ ] Sort direction toggle (asc/desc)
 - [ ] Clear search button (X icon)
 
@@ -157,10 +167,16 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 - [ ] Smart collections (auto-populate based on rules)
 - [ ] Collection cover (mosaic of book covers or custom)
 
-### Author Pages
-- [ ] Author detail page
-- [ ] View all books by author
+### Series Pages
+- [ ] Series detail page (view all books in a series, in order)
+- [ ] Series completion tracking (3 of 7 read)
+- [ ] Navigate between books in series
+
+### Author Pages (Enhanced)
+- [ ] Full author detail page with rich UI
 - [ ] Author statistics (books owned, books read, average rating)
+- [ ] Books by author grid view (full library-style display)
+- [ ] Author photo/avatar support
 
 ### Statistics Dashboard
 - [ ] Books read per month/year (charts)
@@ -168,6 +184,7 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 - [ ] Average rating given
 - [ ] Total books, total read, completion percentage
 - [ ] Reading streak/pace
+- [ ] Total reading time
 
 ### Milestone
 When Phase 4 is complete, Liminal helps you *discover* your next read, not just *find* it. The library becomes a source of joy, not just storage.
@@ -302,11 +319,12 @@ Track known issues that need fixing:
 |---------|------|-----------|
 | v0.1.0 | Dec 14, 2025 | Initial release — Library browsing, search, detail pages |
 | v0.1.1 | Dec 16, 2025 | Single folder migration, category preservation |
-| v0.1.2 | Dec 17, 2025 | **Phase 0 complete** — Editable categories, fanfic auto-detection |
-| v0.2.0 | TBD | Phase 1 — Core tracking (status, ratings, dates) |
-| v0.3.0 | TBD | Phase 2 — Rich notes & metadata |
-| v0.4.0 | TBD | Phase 3 — TBR & Wishlist |
-| v0.5.0 | TBD | Phase 4 — Discovery & Collections |
+| v0.1.2 | Dec 17, 2025 | Phase 0 complete — Editable categories, fanfic auto-detection |
+| v0.2.0 | Dec 17, 2025 | **Phase 1 core tracking** — Status, ratings, dates |
+| v0.3.0 | TBD | Phase 1 complete — Series, tags |
+| v0.4.0 | TBD | Phase 2 — Rich notes & metadata |
+| v0.5.0 | TBD | Phase 3 — TBR & Wishlist |
+| v0.6.0 | TBD | Phase 4 — Discovery & Collections |
 | v1.0.0 | TBD | Phase 5 — Full Obsidian replacement complete |
 
 ---
