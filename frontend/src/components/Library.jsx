@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { listBooks, getCategories } from '../api'
+import { listBooks, getCategories, listSeries } from '../api'
 import BookCard from './BookCard'
+import SeriesCard from './SeriesCard'
 
 function Library() {
   const [books, setBooks] = useState([])
@@ -17,6 +18,12 @@ function Library() {
   
   // View state (tabs)
   const [activeView, setActiveView] = useState('library')
+  
+  // Series state
+  const [seriesList, setSeriesList] = useState([])
+  const [seriesTotal, setSeriesTotal] = useState(0)
+  const [seriesLoading, setSeriesLoading] = useState(false)
+  const [seriesError, setSeriesError] = useState(null)
 
   // Load categories on mount
   useEffect(() => {
@@ -47,6 +54,28 @@ function Library() {
       })
       .finally(() => setLoading(false))
   }, [category, status, search, sort])
+
+  // Load series when Series tab is active and filters change
+  useEffect(() => {
+    if (activeView !== 'series') return
+    
+    setSeriesLoading(true)
+    setSeriesError(null)
+    
+    listSeries({
+      category: category || undefined,
+      search: search || undefined,
+    })
+      .then(data => {
+        setSeriesList(data.series)
+        setSeriesTotal(data.total)
+      })
+      .catch(err => {
+        setSeriesError(err.message)
+        setSeriesList([])
+      })
+      .finally(() => setSeriesLoading(false))
+  }, [activeView, category, search])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
@@ -110,42 +139,44 @@ function Library() {
 
       {/* Info Row: Count + Sort + Status */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4 flex-shrink-0">
-        {/* Book Count */}
+        {/* Count */}
         <div className="text-gray-400 text-sm">
-          {total} books
+          {activeView === 'library' ? `${total} books` : `${seriesTotal} series`}
         </div>
         
-        {/* Sort and Status Filters */}
-        <div className="flex gap-3">
-          {/* Sort */}
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
-          >
-            <option value="title">Sort by Title</option>
-            <option value="author">Sort by Author</option>
-            <option value="series">Sort by Series</option>
-            <option value="year">Sort by Year</option>
-            <option value="updated">Recently Updated</option>
-          </select>
-          
-          {/* Status Filter */}
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value)}
-            className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
-          >
-            <option value="">All Statuses</option>
-            <option value="Unread">Unread</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Finished">Finished</option>
-            <option value="DNF">DNF</option>
-          </select>
-        </div>
+        {/* Sort and Status Filters - Library view only */}
+        {activeView === 'library' && (
+          <div className="flex gap-3">
+            {/* Sort */}
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
+            >
+              <option value="title">Sort by Title</option>
+              <option value="author">Sort by Author</option>
+              <option value="series">Sort by Series</option>
+              <option value="year">Sort by Year</option>
+              <option value="updated">Recently Updated</option>
+            </select>
+            
+            {/* Status Filter */}
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
+            >
+              <option value="">All Statuses</option>
+              <option value="Unread">Unread</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Finished">Finished</option>
+              <option value="DNF">DNF</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* Loading State */}
+      {/* Loading State - Library */}
       {activeView === 'library' && loading && (
         <div className="text-center py-12">
           <div className="animate-pulse-slow text-4xl mb-4">📚</div>
@@ -153,7 +184,7 @@ function Library() {
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error State - Library */}
       {activeView === 'library' && error && !loading && (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">⚠️</div>
@@ -161,7 +192,7 @@ function Library() {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty State - Library */}
       {activeView === 'library' && !loading && !error && books.length === 0 && (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">📭</div>
@@ -186,12 +217,43 @@ function Library() {
         </div>
       )}
 
-      {/* Series View - Placeholder for now */}
-      {activeView === 'series' && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <div className="text-4xl mb-4">📚</div>
-            <p>Series view coming soon</p>
+      {/* Loading State - Series */}
+      {activeView === 'series' && seriesLoading && (
+        <div className="text-center py-12">
+          <div className="animate-pulse-slow text-4xl mb-4">📚</div>
+          <p className="text-gray-400">Loading series...</p>
+        </div>
+      )}
+
+      {/* Error State - Series */}
+      {activeView === 'series' && seriesError && !seriesLoading && (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-red-400">{seriesError}</p>
+        </div>
+      )}
+
+      {/* Empty State - Series */}
+      {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">📚</div>
+          <p className="text-gray-400 mb-4">No series found</p>
+          <p className="text-gray-500 text-sm">
+            {search || category 
+              ? 'Try adjusting your filters' 
+              : 'Books with series information will appear here'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Series Grid - Series View */}
+      {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length > 0 && (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4">
+            {seriesList.map(series => (
+              <SeriesCard key={series.name} series={series} />
+            ))}
           </div>
         </div>
       )}

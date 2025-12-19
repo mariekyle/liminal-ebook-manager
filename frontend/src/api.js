@@ -64,6 +64,18 @@ export async function listBooks(params = {}) {
 }
 
 /**
+ * List all series with metadata
+ */
+export async function listSeries({ category, search } = {}) {
+  const params = new URLSearchParams()
+  if (category) params.append('category', category)
+  if (search) params.append('search', search)
+  
+  const query = params.toString()
+  return apiFetch(`/series${query ? `?${query}` : ''}`)
+}
+
+/**
  * Get full details for a single book
  */
 export async function getBook(bookId) {
