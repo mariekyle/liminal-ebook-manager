@@ -519,7 +519,7 @@ async def list_series(
     # Category filter is applied to both main query AND correlated subqueries
     query = f"""
         SELECT 
-            s.series as name,
+            s.name,
             s.author,
             s.book_count,
             s.books_read,
@@ -527,7 +527,7 @@ async def list_series(
             s.cover_color_2
         FROM (
             SELECT 
-                b.series,
+                b.series as name,
                 (SELECT authors FROM books b2 
                  WHERE b2.series = b.series{category_filter}
                  ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
