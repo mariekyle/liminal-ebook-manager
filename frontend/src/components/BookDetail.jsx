@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail } from '../api'
 import GradientCover from './GradientCover'
 
 // Rating labels - can be customized in future settings
@@ -45,6 +45,10 @@ function BookDetail() {
   const [dateFinished, setDateFinished] = useState('')
   const [datesLoading, setDatesLoading] = useState(false)
   const [datesStatus, setDatesStatus] = useState(null)
+  
+  // Series data (for books in a series)
+  const [seriesBooks, setSeriesBooks] = useState([])
+  const [seriesLoading, setSeriesLoading] = useState(false)
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -78,6 +82,39 @@ function BookDetail() {
       .then(setCategories)
       .catch(err => console.error('Failed to load categories:', err))
   }, [])
+
+  // Load series data if book is part of a series
+  useEffect(() => {
+    if (!book?.series) {
+      setSeriesBooks([])
+      return
+    }
+    
+    let cancelled = false
+    setSeriesLoading(true)
+    
+    getSeriesDetail(book.series)
+      .then(data => {
+        if (!cancelled) {
+          setSeriesBooks(data.books)
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          console.error('Failed to load series:', err)
+          setSeriesBooks([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSeriesLoading(false)
+        }
+      })
+    
+    return () => {
+      cancelled = true
+    }
+  }, [book?.series])
 
   const handleSaveNote = async () => {
     if (saving) return
@@ -464,6 +501,67 @@ function BookDetail() {
           <code className="bg-library-card px-2 py-1 rounded">
             {book.folder_path}
           </code>
+        </div>
+      )}
+
+      {/* Series Section */}
+      {book.series && (
+        <div className="mt-8 bg-library-card rounded-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+            <h2 className="text-white font-medium">
+              {book.series}
+            </h2>
+            <Link 
+              to={`/series/${encodeURIComponent(book.series)}`}
+              className="text-library-accent text-sm hover:underline"
+            >
+              View Series →
+            </Link>
+          </div>
+          
+          {seriesLoading ? (
+            <div className="px-4 py-6 text-center text-gray-400">
+              Loading series...
+            </div>
+          ) : seriesBooks.length > 0 ? (
+            <ul className="divide-y divide-gray-700">
+              {seriesBooks.map((seriesBook) => {
+                const isCurrentBook = seriesBook.id === book.id
+                return (
+                  <li key={seriesBook.id}>
+                    {isCurrentBook ? (
+                      // Current book - highlighted, not a link
+                      <div className="flex items-center gap-4 px-4 py-3 bg-gray-800">
+                        <span className="text-gray-500 text-sm w-8 flex-shrink-0">
+                          {seriesBook.series_number || '—'}
+                        </span>
+                        <span className="text-library-accent font-medium flex-1 truncate">
+                          {seriesBook.title}
+                        </span>
+                        <span className="text-gray-500 text-xs">You are here</span>
+                      </div>
+                    ) : (
+                      // Other books - clickable links
+                      <Link
+                        to={`/book/${seriesBook.id}`}
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-colors"
+                      >
+                        <span className="text-gray-500 text-sm w-8 flex-shrink-0">
+                          {seriesBook.series_number || '—'}
+                        </span>
+                        <span className="text-white flex-1 truncate">
+                          {seriesBook.title}
+                        </span>
+                        {seriesBook.status === 'Finished' && (
+                          <span className="text-green-400 text-sm">✓</span>
+                        )}
+                      </Link>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
         </div>
       )}
     </div>
