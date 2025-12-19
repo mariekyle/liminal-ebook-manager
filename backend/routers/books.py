@@ -57,6 +57,22 @@ class BookDetail(BaseModel):
     cover_color_2: Optional[str] = None
 
 
+class SeriesSummary(BaseModel):
+    """Summary of a series for the series library view."""
+    name: str
+    author: str  # Primary author (from first book)
+    book_count: int
+    books_read: int  # Count of books with status 'Finished'
+    cover_color_1: Optional[str] = None  # From first book in series
+    cover_color_2: Optional[str] = None  # From first book in series
+
+
+class SeriesListResponse(BaseModel):
+    """Response for series list endpoint."""
+    series: List[SeriesSummary]
+    total: int
+
+
 class Note(BaseModel):
     """A note attached to a book."""
     id: int
@@ -481,26 +497,104 @@ async def list_statuses():
     return ["Unread", "In Progress", "Finished", "DNF"]
 
 
-@router.get("/series")
+@router.get("/series", response_model=SeriesListResponse)
 async def list_series(
-    category: Optional[str] = None,
+    category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Search series name, author, or book titles"),
     db = Depends(get_db)
 ):
     """
-    Get all unique series in the library.
-    Optionally filter by category.
+    List all series with metadata.
+    Returns series sorted alphabetically by name.
     """
-    if category:
-        cursor = await db.execute(
-            """SELECT DISTINCT series FROM books 
-               WHERE series IS NOT NULL AND category = ? 
-               ORDER BY series""",
-            [category]
-        )
-    else:
-        cursor = await db.execute(
-            "SELECT DISTINCT series FROM books WHERE series IS NOT NULL ORDER BY series"
-        )
+    params = []
     
+    # Build category filter clause for correlated subqueries
+    category_filter = ""
+    if category:
+        category_filter = " AND b2.category = ?"
+    
+    # Query to get series with aggregated data
+    # Gets first book's author and colors, counts total and read books
+    # Category filter is applied to both main query AND correlated subqueries
+    query = f"""
+        SELECT 
+            s.series as name,
+            s.author,
+            s.book_count,
+            s.books_read,
+            s.cover_color_1,
+            s.cover_color_2
+        FROM (
+            SELECT 
+                b.series,
+                (SELECT authors FROM books b2 
+                 WHERE b2.series = b.series{category_filter}
+                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
+                 LIMIT 1) as author,
+                COUNT(*) as book_count,
+                SUM(CASE WHEN b.status = 'Finished' THEN 1 ELSE 0 END) as books_read,
+                (SELECT cover_color_1 FROM books b2 
+                 WHERE b2.series = b.series{category_filter}
+                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
+                 LIMIT 1) as cover_color_1,
+                (SELECT cover_color_2 FROM books b2 
+                 WHERE b2.series = b.series{category_filter}
+                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
+                 LIMIT 1) as cover_color_2
+            FROM books b
+            WHERE b.series IS NOT NULL AND b.series != ''
+    """
+    
+    # Add category filter to main query and track params for subqueries
+    if category:
+        # 3 subqueries need category param, plus main WHERE clause
+        params.extend([category, category, category])
+        query += " AND b.category = ?"
+        params.append(category)
+    
+    query += " GROUP BY b.series) s"
+    
+    # Add search filter (searches series name, author, or book titles in series)
+    if search:
+        # Join must also respect category filter to avoid false matches
+        join_condition = "b.series = s.name"
+        if category:
+            join_condition += " AND b.category = ?"
+            params.append(category)
+        
+        query = f"""
+            SELECT DISTINCT s.* FROM ({query}) s
+            LEFT JOIN books b ON {join_condition}
+            WHERE s.name LIKE ? 
+               OR s.author LIKE ? 
+               OR b.title LIKE ?
+        """
+        search_term = f"%{search}%"
+        params.extend([search_term, search_term, search_term])
+    
+    # Sort alphabetically
+    query += " ORDER BY s.name ASC"
+    
+    cursor = await db.execute(query, params)
     rows = await cursor.fetchall()
-    return [row["series"] for row in rows]
+    
+    series_list = []
+    for row in rows:
+        # Parse author using the same utility as other book queries
+        authors = parse_json_field(row["author"])
+        primary_author = authors[0] if authors else "Unknown Author"
+        
+        series_list.append(SeriesSummary(
+            name=row["name"],
+            author=primary_author,
+            book_count=row["book_count"],
+            books_read=row["books_read"] or 0,
+            cover_color_1=row["cover_color_1"],
+            cover_color_2=row["cover_color_2"]
+        ))
+    
+    return {
+        "series": series_list,
+        "total": len(series_list)
+    }
