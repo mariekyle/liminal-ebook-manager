@@ -67,9 +67,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [x] Display on detail page with native date pickers
 
 ### Series Improvements
-- [ ] Browse/filter by series in library
-- [ ] Series number sorting
-- [ ] Series detail page (view all books in a series, in order) — *moved to Phase 4*
+- [ ] **Library UI redesign** — Full-width search, nav tabs, category pills, cleaner filter row
+- [ ] **Series tab in navigation** — Separate view for browsing series
+- [ ] **Series Library View** — Grid of series with square covers (gradient from book #1)
+- [ ] **Series Detail Page** — Series info, book list in order with links
+- [ ] **Series section on Book Detail** — List other books in series, highlight current, link to each
 
 ### Tags That Work
 - [ ] Filter library by tags
@@ -106,6 +108,7 @@ When Phase 1 is complete, you can open Liminal on your phone, browse your librar
 ### Settings Screen
 - [ ] **Reading speed (WPM) setting** for estimated read time calculations
 - [ ] **Customizable rating labels** (rename "Disliked" to your own terms)
+- [ ] **Light/dark mode toggle**
 - [ ] Display preferences (show/hide on covers: author, title, series)
 - [ ] Rows displayed in library grid
 
@@ -167,10 +170,11 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 - [ ] Smart collections (auto-populate based on rules)
 - [ ] Collection cover (mosaic of book covers or custom)
 
-### Series Pages
-- [ ] Series detail page (view all books in a series, in order)
+### Series Pages (Enhanced)
+- [ ] **Series mosaic covers** — 4-book grid image instead of gradient
+- [ ] **Progress bar on series cover** — Visual completion indicator
 - [ ] Series completion tracking (3 of 7 read)
-- [ ] Navigate between books in series
+- [ ] Navigate between books in series (prev/next from book detail)
 
 ### Author Pages (Enhanced)
 - [ ] Full author detail page with rich UI
