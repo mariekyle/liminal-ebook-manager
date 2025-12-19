@@ -7,8 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Phase 1: Series improvements (filter, sorting)
-- Phase 1: Tag filtering
+- Phase 2 features (see ROADMAP.md)
+
+---
+
+## [0.3.0] - 2025-12-19
+
+### Added
+
+#### Library UI Redesign
+- **Unified filter bar** — All filters on single row with consistent pill styling
+- **Navigation tabs** — Library and Series tabs with underline indicator
+- **Category pills** — Quick-select category filtering with active state
+- **Visual separator** — Clean division between categories and advanced filters
+- **Active filters row** — Shows all active filters with individual × remove buttons
+- **Clear all button** — One-click reset of all filters
+
+#### Series System
+- **Series tab** — Dedicated view for browsing series
+- **Series Library View** — Grid of square series covers with gradient from first book
+- **Series cards** — Display series name, book count, author
+- **Series Detail Page** — Full page showing series info and book list in order
+- **Series section on Book Detail** — Shows other books in series with current highlighted
+- **View Series link** — Navigate from book detail to full series page
+- **GET /series endpoint** — List all series with metadata (name, author, book count, colors)
+- **GET /series/{name} endpoint** — Get series details with ordered book list
+
+#### Tag Filtering
+- **Tags modal** — Searchable popup for selecting multiple tags
+- **Tag checkboxes** — Multi-select with visual feedback
+- **Tag counts** — Shows number of books per tag
+- **Tag search** — Filter tags by name in modal
+- **GET /tags endpoint** — List all tags with counts, filterable by category
+- **Exact tag matching** — Fixed substring matching bug (e.g., "fan" no longer matches "fantasy")
+- **Tags badge** — Shows count of selected tags on filter button
+
+#### Backend Improvements
+- **SeriesSummary model** — Series data for library view
+- **SeriesDetail model** — Full series data with book list
+- **SeriesBookItem model** — Book data within series context
+- **TagSummary model** — Tag with count
+- **SeriesListResponse model** — Proper response serialization
+
+### Changed
+- Filter bar consolidated from multiple rows to single unified row
+- Category filter changed from dropdown to pill buttons
+- Status filter styled as pill dropdown
+- Sort filter styled as pill dropdown
+- Book count moved to right side of filter bar
+- Status/Tags/Sort hidden on Series view (not applicable)
+
+### Fixed
+- Race condition in series loading on Book Detail page (cleanup flag pattern)
+- SQL column reference error in series endpoint (`s.name` → `s.series`)
+- Tag substring matching returning incorrect results
 
 ---
 
@@ -139,6 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.3.0 | 2025-12-19 | **Phase 1 complete** — Series system, tag filtering, unified UI |
 | 0.2.0 | 2025-12-17 | Phase 1 core tracking — Status, ratings, dates |
 | 0.1.2 | 2025-12-17 | Phase 0 complete — Editable categories, fanfic auto-detection |
 | 0.1.1 | 2025-12-16 | Single folder migration, category preservation |
@@ -147,6 +200,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.3.0
+No database migrations required. Deploy updated backend and frontend.
+- New endpoints: GET /series, GET /series/{name}, GET /tags
+- Frontend components: SeriesCard, SeriesDetail, TagsModal
+- Library.jsx significantly refactored (unified filter bar)
 
 ### Upgrading to 0.2.0
 Database migrations run automatically on startup. No manual steps required.

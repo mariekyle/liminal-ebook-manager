@@ -6,12 +6,17 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.2.0)
+## Current State (v0.3.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
 - Display library with gradient covers
-- Search and filter by category and status
+- **Unified filter bar** — Categories, status, tags, sort on one row
+- **Series tab** — Browse series with square gradient covers
+- **Series detail pages** — View all books in a series
+- **Tag filtering** — Multi-select tags with searchable modal
+- **Active filters row** — Clear individual filters or all at once
+- Search and filter by category, status, tags
 - Sort by title, author, series, year, recently updated
 - Scroll through full library (1689+ books)
 - View book detail page with full metadata
@@ -19,6 +24,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Rate books 1-5 stars** with custom labels
 - **Track reading dates** (started, finished)
 - **Finished checkmark** on book covers
+- **Series section on book detail** — Navigate between books in series
 - Edit book category via dropdown
 - Auto-detect FanFiction based on metadata patterns
 - Add free-form notes to books
@@ -46,44 +52,47 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Phase 1: Replace Obsidian (Core Tracking) ← IN PROGRESS
+## Phase 1: Replace Obsidian (Core Tracking) ✅ COMPLETE
 
 **Goal:** Stop using Obsidian for day-to-day library management.
 
-### Read Status System ✅ COMPLETE
+**Completed: December 19, 2025**
+
+### Read Status System ✅
 - [x] Add status field to database: Unread, In Progress, Finished, DNF
 - [x] Status selector dropdown on detail page
 - [x] Status indicator badge on book covers (checkmark for Finished)
 - [x] Filter library by status
 
-### Rating System ✅ COMPLETE
+### Rating System ✅
 - [x] 1-5 rating field on detail page
-- [x] Custom labels: 1=Disliked, 2=Disappointing, 3=Decent/Fine, 4=Better than Good, 5=All-time Fav
+- [x] Custom labels: Disliked, Disappointing, Decent/Fine, Better than Good, All-time Fav
 - [x] Display rating on detail page with stars
 
-### Reading Dates ✅ COMPLETE
+### Reading Dates ✅
 - [x] Date started field (manual entry)
 - [x] Date finished field (manual entry)
 - [x] Display on detail page with native date pickers
 
-### Series Improvements
-- [ ] **Library UI redesign** — Full-width search, nav tabs, category pills, cleaner filter row
-- [ ] **Series tab in navigation** — Separate view for browsing series
-- [ ] **Series Library View** — Grid of series with square covers (gradient from book #1)
-- [ ] **Series Detail Page** — Series info, book list in order with links
-- [ ] **Series section on Book Detail** — List other books in series, highlight current, link to each
+### Series Improvements ✅
+- [x] Library UI redesign — Full-width search, nav tabs, category pills, unified filter bar
+- [x] Series tab in navigation — Separate view for browsing series
+- [x] Series Library View — Grid of series with square covers (gradient from book #1)
+- [x] Series Detail Page — Series info, book list in order with links
+- [x] Series section on Book Detail — List other books in series, highlight current, link to each
 
-### Tags That Work
-- [ ] Filter library by tags
-- [ ] Multi-tag selection
-- [ ] Basic tag management (view all tags, see count per tag)
+### Tags That Work ✅
+- [x] Filter library by tags via modal
+- [x] Multi-tag selection with checkboxes
+- [x] Searchable tag list with counts
+- [x] Active filters row with individual clear and clear all
 
-### Milestone
-When Phase 1 is complete, you can open Liminal on your phone, browse your library, mark books as read/DNF/in-progress, rate them, and track when you read them — without touching Obsidian.
+### Milestone ✅
+You can now open Liminal on your phone, browse your library, mark books as read/DNF/in-progress, rate them, track when you read them, browse by series, and filter by tags — all without touching Obsidian.
 
 ---
 
-## Phase 2: Rich Notes & Metadata
+## Phase 2: Rich Notes & Metadata ← NEXT
 
 **Goal:** Book notes and reading data live in Liminal with the same richness as Obsidian.
 
@@ -307,6 +316,9 @@ Track known issues that need fixing:
   - *Affected:* sync.py
   - *Priority:* Low (3 books affected, can fix via folder rename)
 
+### UX Issues
+- [ ] **Filter/sort state doesn't persist** — Navigating to book detail and back resets category, status, and sort selections. Consider URL params or localStorage to maintain state.
+
 ### Display Issues
 - [ ] HTML entities not decoded in summaries (&amp; showing)
 - [ ] Sort options don't clearly indicate direction
@@ -324,8 +336,8 @@ Track known issues that need fixing:
 | v0.1.0 | Dec 14, 2025 | Initial release — Library browsing, search, detail pages |
 | v0.1.1 | Dec 16, 2025 | Single folder migration, category preservation |
 | v0.1.2 | Dec 17, 2025 | Phase 0 complete — Editable categories, fanfic auto-detection |
-| v0.2.0 | Dec 17, 2025 | **Phase 1 core tracking** — Status, ratings, dates |
-| v0.3.0 | TBD | Phase 1 complete — Series, tags |
+| v0.2.0 | Dec 17, 2025 | Phase 1 core tracking — Status, ratings, dates |
+| v0.3.0 | Dec 19, 2025 | **Phase 1 complete** — Series system, tag filtering, unified UI |
 | v0.4.0 | TBD | Phase 2 — Rich notes & metadata |
 | v0.5.0 | TBD | Phase 3 — TBR & Wishlist |
 | v0.6.0 | TBD | Phase 4 — Discovery & Collections |
@@ -333,4 +345,4 @@ Track known issues that need fixing:
 
 ---
 
-*Last updated: December 17, 2025*
+*Last updated: December 19, 2025*
