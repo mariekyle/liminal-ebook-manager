@@ -28,6 +28,9 @@ function Library() {
   const [seriesLoading, setSeriesLoading] = useState(false)
   const [seriesError, setSeriesError] = useState(null)
 
+  // Check if any filters are active (excluding "All" category and default sort)
+  const hasActiveFilters = category || status || selectedTags.length > 0 || search
+
   // Load categories on mount
   useEffect(() => {
     getCategories()
@@ -224,6 +227,81 @@ function Library() {
           {activeView === 'library' ? `${total} books` : `${seriesTotal} series`}
         </span>
       </div>
+
+      {/* Active Filters Row - Only show when filters are active */}
+      {activeView === 'library' && hasActiveFilters && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap p-3 bg-gray-800/50 rounded-lg flex-shrink-0">
+          <span className="text-gray-500 text-xs uppercase tracking-wide mr-1">Filtering:</span>
+          
+          {/* Category filter tag */}
+          {category && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
+              {category}
+              <button
+                onClick={() => setCategory('')}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          
+          {/* Status filter tag */}
+          {status && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
+              status: {status}
+              <button
+                onClick={() => setStatus('')}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          
+          {/* Search filter tag */}
+          {search && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
+              search: "{search}"
+              <button
+                onClick={() => setSearch('')}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          
+          {/* Tag filter tags */}
+          {selectedTags.map(tag => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200"
+            >
+              {tag}
+              <button
+                onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          
+          {/* Clear All button */}
+          <button
+            onClick={() => {
+              setCategory('')
+              setStatus('')
+              setSearch('')
+              setSelectedTags([])
+            }}
+            className="ml-auto text-library-accent text-sm hover:underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* Loading State - Library */}
       {activeView === 'library' && loading && (
