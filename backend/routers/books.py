@@ -73,6 +73,24 @@ class SeriesListResponse(BaseModel):
     total: int
 
 
+class SeriesBookItem(BaseModel):
+    """A book within a series."""
+    id: int
+    title: str
+    series_number: Optional[str] = None
+    status: Optional[str] = None
+    rating: Optional[int] = None
+
+
+class SeriesDetail(BaseModel):
+    """Full details of a series."""
+    name: str
+    author: str
+    book_count: int
+    books_read: int
+    books: List[SeriesBookItem]
+
+
 class Note(BaseModel):
     """A note attached to a book."""
     id: int
@@ -598,3 +616,57 @@ async def list_series(
         "series": series_list,
         "total": len(series_list)
     }
+
+
+@router.get("/series/{series_name}", response_model=SeriesDetail)
+async def get_series_detail(
+    series_name: str,
+    db = Depends(get_db)
+):
+    """
+    Get details for a specific series including all books.
+    """
+    from urllib.parse import unquote
+    series_name = unquote(series_name)
+    
+    # Get all books in this series, ordered by series number
+    cursor = await db.execute(
+        """
+        SELECT id, title, series_number, status, rating, authors
+        FROM books 
+        WHERE series = ?
+        ORDER BY CAST(series_number AS FLOAT) ASC, id ASC
+        """,
+        [series_name]
+    )
+    rows = await cursor.fetchall()
+    
+    if not rows:
+        raise HTTPException(status_code=404, detail="Series not found")
+    
+    # Get author from first book
+    first_row = rows[0]
+    authors = parse_json_field(first_row["authors"])
+    primary_author = authors[0] if authors else "Unknown Author"
+    
+    # Build book list and count finished
+    books = []
+    books_read = 0
+    for row in rows:
+        books.append(SeriesBookItem(
+            id=row["id"],
+            title=row["title"],
+            series_number=row["series_number"],
+            status=row["status"],
+            rating=row["rating"]
+        ))
+        if row["status"] == "Finished":
+            books_read += 1
+    
+    return SeriesDetail(
+        name=series_name,
+        author=primary_author,
+        book_count=len(books),
+        books_read=books_read,
+        books=books
+    )

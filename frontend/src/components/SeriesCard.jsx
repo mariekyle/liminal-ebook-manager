@@ -47,11 +47,8 @@ function SeriesCard({ series }) {
         />
       </div>
       
-      {/* Info below cover */}
+      {/* Author below cover */}
       <div className="mt-2 px-1">
-        <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
-          {series.name}
-        </h3>
         <p className="text-gray-400 text-xs truncate">
           {series.author}
         </p>

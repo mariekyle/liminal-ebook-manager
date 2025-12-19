@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Library from './components/Library'
 import BookDetail from './components/BookDetail'
+import SeriesDetail from './components/SeriesDetail'
 import Header from './components/Header'
 import { checkHealth } from './api'
 
@@ -64,6 +65,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Library />} />
           <Route path="/book/:id" element={<BookDetail />} />
+          <Route path="/series/:name" element={<SeriesDetail />} />
         </Routes>
       </main>
     </div>

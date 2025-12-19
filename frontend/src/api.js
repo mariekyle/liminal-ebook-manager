@@ -76,6 +76,13 @@ export async function listSeries({ category, search } = {}) {
 }
 
 /**
+ * Get details for a specific series
+ */
+export async function getSeriesDetail(seriesName) {
+  return apiFetch(`/series/${encodeURIComponent(seriesName)}`)
+}
+
+/**
  * Get full details for a single book
  */
 export async function getBook(bookId) {
