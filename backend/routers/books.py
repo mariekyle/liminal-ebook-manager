@@ -91,6 +91,12 @@ class SeriesDetail(BaseModel):
     books: List[SeriesBookItem]
 
 
+class TagSummary(BaseModel):
+    """A tag with its usage count."""
+    name: str
+    count: int
+
+
 class Note(BaseModel):
     """A note attached to a book."""
     id: int
@@ -195,6 +201,7 @@ async def list_books(
     category: Optional[str] = Query(None, description="Filter by category"),
     status: Optional[str] = Query(None, description="Filter by read status"),
     series: Optional[str] = Query(None, description="Filter by series"),
+    tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     search: Optional[str] = Query(None, description="Search in title/author"),
     sort: str = Query("title", description="Sort field: title, author, series, updated"),
     order: str = Query("asc", description="Sort order: asc or desc"),
@@ -227,6 +234,19 @@ async def list_books(
         where_clauses.append("(title LIKE ? OR authors LIKE ?)")
         search_term = f"%{search}%"
         params.extend([search_term, search_term])
+    
+    # Filter by tags (comma-separated, must have ALL specified tags)
+    if tags:
+        tag_list = [t.strip().lower() for t in tags.split(',') if t.strip()]
+        for tag in tag_list:
+            # Exact match in JSON array - tag must be followed by comma or closing bracket
+            where_clauses.append(
+                '(LOWER(tags) LIKE ? OR LOWER(tags) LIKE ?)'
+            )
+            params.extend([
+                f'%"{tag}",%',     # Tag followed by comma (not last item)
+                f'%"{tag}"]%',     # Tag followed by ] (last item)
+            ])
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
@@ -670,3 +690,45 @@ async def get_series_detail(
         books_read=books_read,
         books=books
     )
+
+
+@router.get("/tags")
+async def list_tags(
+    category: Optional[str] = Query(None, description="Filter by category"),
+    db = Depends(get_db)
+):
+    """
+    List all tags with their book counts.
+    Optionally filter by category.
+    """
+    # Tags are stored as JSON array in the tags column
+    # We need to extract and count them
+    
+    if category:
+        cursor = await db.execute(
+            "SELECT tags FROM books WHERE category = ? AND tags IS NOT NULL AND tags != '[]'",
+            [category]
+        )
+    else:
+        cursor = await db.execute(
+            "SELECT tags FROM books WHERE tags IS NOT NULL AND tags != '[]'"
+        )
+    
+    rows = await cursor.fetchall()
+    
+    # Count tag occurrences
+    tag_counts = {}
+    for row in rows:
+        tags = parse_json_field(row["tags"])
+        for tag in tags:
+            tag = tag.strip().lower()
+            if tag:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+    
+    # Sort by count (descending), then name (ascending)
+    sorted_tags = sorted(tag_counts.items(), key=lambda x: (-x[1], x[0]))
+    
+    return {
+        "tags": [TagSummary(name=name, count=count) for name, count in sorted_tags],
+        "total": len(sorted_tags)
+    }

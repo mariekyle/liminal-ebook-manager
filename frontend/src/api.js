@@ -76,6 +76,17 @@ export async function listSeries({ category, search } = {}) {
 }
 
 /**
+ * List all tags with counts
+ */
+export async function listTags({ category } = {}) {
+  const params = new URLSearchParams()
+  if (category) params.append('category', category)
+  
+  const query = params.toString()
+  return apiFetch(`/tags${query ? `?${query}` : ''}`)
+}
+
+/**
  * Get details for a specific series
  */
 export async function getSeriesDetail(seriesName) {

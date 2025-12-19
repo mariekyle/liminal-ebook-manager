@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { listBooks, getCategories, listSeries } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
+import TagsModal from './TagsModal'
 
 function Library() {
   const [books, setBooks] = useState([])
@@ -12,6 +13,8 @@ function Library() {
   // Filter state
   const [category, setCategory] = useState('')
   const [status, setStatus] = useState('')
+  const [selectedTags, setSelectedTags] = useState([])
+  const [tagsModalOpen, setTagsModalOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('title')
   const [categories, setCategories] = useState([])
@@ -40,6 +43,7 @@ function Library() {
     listBooks({
       category: category || undefined,
       status: status || undefined,
+      tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
       search: search || undefined,
       sort,
       limit: 10000, // Load all books
@@ -53,7 +57,7 @@ function Library() {
         setBooks([])
       })
       .finally(() => setLoading(false))
-  }, [category, status, search, sort])
+  }, [category, status, selectedTags, search, sort])
 
   // Load series when Series tab is active and filters change
   useEffect(() => {
@@ -174,13 +178,22 @@ function Library() {
           </div>
         )}
         
-        {/* Tags Button - Library view only, placeholder for Part B */}
+        {/* Tags Button - Library view only */}
         {activeView === 'library' && (
           <button
-            className="px-4 py-1.5 rounded-full text-sm text-gray-300 border border-gray-500 hover:border-gray-400 flex items-center gap-2"
-            onClick={() => console.log('Tags modal - Part B')}
+            onClick={() => setTagsModalOpen(true)}
+            className={`px-4 py-1.5 rounded-full text-sm flex items-center gap-2 transition-colors ${
+              selectedTags.length > 0
+                ? 'bg-gray-700 text-white border border-gray-600'
+                : 'bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400'
+            }`}
           >
             Tags
+            {selectedTags.length > 0 && (
+              <span className="bg-library-accent/30 text-library-accent px-1.5 py-0.5 rounded text-xs">
+                {selectedTags.length}
+              </span>
+            )}
             <span className="text-xs text-gray-400">▼</span>
           </button>
         )}
@@ -293,6 +306,15 @@ function Library() {
           </div>
         </div>
       )}
+
+      {/* Tags Modal */}
+      <TagsModal
+        isOpen={tagsModalOpen}
+        onClose={() => setTagsModalOpen(false)}
+        selectedTags={selectedTags}
+        onApply={setSelectedTags}
+        category={category}
+      />
     </div>
   )
 }
