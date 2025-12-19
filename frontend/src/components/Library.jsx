@@ -120,11 +120,22 @@ function Library() {
         </button>
       </div>
 
-      {/* Category Pills */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide flex-shrink-0">
-        {['', ...categories].map((cat) => (
+      {/* Unified Filter Bar */}
+      <div className="mb-4 flex items-center gap-2 flex-wrap flex-shrink-0">
+        {/* Category Pills */}
+        <button
+          onClick={() => setCategory('')}
+          className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+            category === ''
+              ? 'bg-library-accent text-white'
+              : 'bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((cat) => (
           <button
-            key={cat || 'all'}
+            key={cat}
             onClick={() => setCategory(cat)}
             className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
               category === cat
@@ -132,48 +143,73 @@ function Library() {
                 : 'bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400'
             }`}
           >
-            {cat || 'All Categories'}
+            {cat}
           </button>
         ))}
-      </div>
-
-      {/* Info Row: Count + Sort + Status */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 flex-shrink-0">
-        {/* Count */}
-        <div className="text-gray-400 text-sm">
-          {activeView === 'library' ? `${total} books` : `${seriesTotal} series`}
-        </div>
         
-        {/* Sort and Status Filters - Library view only */}
+        {/* Separator - Library view only */}
         {activeView === 'library' && (
-          <div className="flex gap-3">
-            {/* Sort */}
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
-            >
-              <option value="title">Sort by Title</option>
-              <option value="author">Sort by Author</option>
-              <option value="series">Sort by Series</option>
-              <option value="year">Sort by Year</option>
-              <option value="updated">Recently Updated</option>
-            </select>
-            
-            {/* Status Filter */}
+          <div className="w-px h-6 bg-gray-600 mx-2" />
+        )}
+        
+        {/* Status Filter - Library view only */}
+        {activeView === 'library' && (
+          <div className="relative">
             <select
               value={status}
               onChange={e => setStatus(e.target.value)}
-              className="bg-library-card text-white text-sm px-3 py-1.5 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
+              className={`appearance-none px-4 py-1.5 pr-8 rounded-full text-sm cursor-pointer transition-colors ${
+                status
+                  ? 'bg-gray-700 text-white border border-gray-600'
+                  : 'bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400'
+              }`}
             >
-              <option value="">All Statuses</option>
+              <option value="">Status</option>
               <option value="Unread">Unread</option>
               <option value="In Progress">In Progress</option>
               <option value="Finished">Finished</option>
               <option value="DNF">DNF</option>
             </select>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">▼</span>
           </div>
         )}
+        
+        {/* Tags Button - Library view only, placeholder for Part B */}
+        {activeView === 'library' && (
+          <button
+            className="px-4 py-1.5 rounded-full text-sm text-gray-300 border border-gray-500 hover:border-gray-400 flex items-center gap-2"
+            onClick={() => console.log('Tags modal - Part B')}
+          >
+            Tags
+            <span className="text-xs text-gray-400">▼</span>
+          </button>
+        )}
+        
+        {/* Sort Filter - Library view only */}
+        {activeView === 'library' && (
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="appearance-none px-4 py-1.5 pr-8 rounded-full text-sm bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400 cursor-pointer"
+            >
+              <option value="title">Sort: Title</option>
+              <option value="author">Sort: Author</option>
+              <option value="series">Sort: Series</option>
+              <option value="year">Sort: Year</option>
+              <option value="updated">Sort: Updated</option>
+            </select>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">▼</span>
+          </div>
+        )}
+        
+        {/* Spacer */}
+        <div className="flex-1" />
+        
+        {/* Book/Series Count */}
+        <span className="text-gray-500 text-sm">
+          {activeView === 'library' ? `${total} books` : `${seriesTotal} series`}
+        </span>
       </div>
 
       {/* Loading State - Library */}
