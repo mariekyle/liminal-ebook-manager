@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail } from '../api'
 import GradientCover from './GradientCover'
 
@@ -14,6 +14,8 @@ const RATING_LABELS = {
 
 function BookDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [book, setBook] = useState(null)
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -271,9 +273,21 @@ function BookDetail() {
       <div className="text-center py-12">
         <div className="text-4xl mb-4">⚠️</div>
         <p className="text-red-400">{error || 'Book not found'}</p>
-        <Link to="/" className="text-library-accent mt-4 inline-block">
-          ← Back to Library
-        </Link>
+        <button 
+          onClick={() => {
+            // If we have a return URL from navigation state, use it
+            // Otherwise fall back to library root
+            const returnUrl = location.state?.returnUrl
+            if (returnUrl) {
+              navigate(returnUrl)
+            } else {
+              navigate('/')
+            }
+          }} 
+          className="text-library-accent mt-4 inline-block"
+        >
+          ← Back
+        </button>
       </div>
     )
   }
@@ -283,12 +297,21 @@ function BookDetail() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Back link */}
-      <Link 
-        to="/" 
+      <button 
+        onClick={() => {
+          // If we have a return URL from navigation state, use it
+          // Otherwise fall back to library root
+          const returnUrl = location.state?.returnUrl
+          if (returnUrl) {
+            navigate(returnUrl)
+          } else {
+            navigate('/')
+          }
+        }} 
         className="text-gray-400 hover:text-white mb-6 inline-flex items-center gap-2"
       >
-        ← Back to Library
-      </Link>
+        ← Back
+      </button>
 
       {/* Book Header */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">

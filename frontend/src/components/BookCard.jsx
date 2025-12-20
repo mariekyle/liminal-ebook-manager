@@ -12,6 +12,7 @@ function BookCard({ book }) {
   return (
     <Link 
       to={`/book/${book.id}`}
+      state={{ returnUrl: window.location.pathname + window.location.search }}
       className="group block"
     >
       <div className="relative">
