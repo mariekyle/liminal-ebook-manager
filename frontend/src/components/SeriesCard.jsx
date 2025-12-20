@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 
 function SeriesCard({ series }) {
-  // Use provided colors or generate defaults
-  const gradientColor1 = series.cover_color_1 || '#667eea'
-  const gradientColor2 = series.cover_color_2 || '#764ba2'
+  // Use provided gradient or fallback
+  const gradient = series.cover_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  const bgColor = series.cover_bg_color || '#667eea'
+  const textColor = series.cover_text_color || '#fff'
   
   // Truncate long series names
   const displayName = series.name.length > 40 
@@ -19,20 +20,28 @@ function SeriesCard({ series }) {
       <div 
         className="relative aspect-square rounded-lg overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%)`
+          backgroundImage: gradient,
+          backgroundColor: bgColor,
         }}
       >
         {/* Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
           <h3 
-            className="text-white text-center font-serif font-bold text-sm sm:text-base leading-tight mb-2"
-            style={{ textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)' }}
+            className="text-center font-serif font-bold text-sm sm:text-base leading-tight mb-2"
+            style={{ 
+              color: textColor,
+              textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)' 
+            }}
           >
             {displayName}
           </h3>
           <p 
-            className="text-white/70 text-center text-xs"
-            style={{ textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' }}
+            className="text-center text-xs"
+            style={{ 
+              color: textColor,
+              opacity: 0.7,
+              textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)' 
+            }}
           >
             {series.book_count} {series.book_count === 1 ? 'book' : 'books'}
           </p>
@@ -58,4 +67,3 @@ function SeriesCard({ series }) {
 }
 
 export default SeriesCard
-

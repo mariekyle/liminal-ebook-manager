@@ -320,8 +320,9 @@ function BookDetail() {
           <GradientCover
             title={book.title}
             author={primaryAuthor}
-            color1={book.cover_color_1}
-            color2={book.cover_color_2}
+            coverGradient={book.cover_gradient}
+            coverBgColor={book.cover_bg_color}
+            coverTextColor={book.cover_text_color}
           />
         </div>
         

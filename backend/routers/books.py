@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from database import get_db
+from services.covers import get_cover_style, Theme
 
 router = APIRouter(tags=["books"])
 
@@ -31,8 +32,9 @@ class BookSummary(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     rating: Optional[int] = None
-    cover_color_1: Optional[str] = None
-    cover_color_2: Optional[str] = None
+    cover_gradient: Optional[str] = None
+    cover_bg_color: Optional[str] = None
+    cover_text_color: Optional[str] = None
     has_notes: bool = False
 
 
@@ -53,8 +55,9 @@ class BookDetail(BaseModel):
     summary: Optional[str] = None
     tags: List[str] = []
     folder_path: Optional[str] = None
-    cover_color_1: Optional[str] = None
-    cover_color_2: Optional[str] = None
+    cover_gradient: Optional[str] = None
+    cover_bg_color: Optional[str] = None
+    cover_text_color: Optional[str] = None
 
 
 class SeriesSummary(BaseModel):
@@ -63,8 +66,9 @@ class SeriesSummary(BaseModel):
     author: str  # Primary author (from first book)
     book_count: int
     books_read: int  # Count of books with status 'Finished'
-    cover_color_1: Optional[str] = None  # From first book in series
-    cover_color_2: Optional[str] = None  # From first book in series
+    cover_gradient: Optional[str] = None
+    cover_bg_color: Optional[str] = None
+    cover_text_color: Optional[str] = None
 
 
 class SeriesListResponse(BaseModel):
@@ -154,27 +158,40 @@ def parse_json_field(value: str, default: list = None) -> list:
 
 def row_to_book_summary(row) -> BookSummary:
     """Convert a database row to BookSummary."""
+    authors = parse_json_field(row["authors"])
+    primary_author = authors[0] if authors else "Unknown Author"
+    
+    # Generate cover style from title/author
+    cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
+    
     return BookSummary(
         id=row["id"],
         title=row["title"],
-        authors=parse_json_field(row["authors"]),
+        authors=authors,
         series=row["series"],
         series_number=row["series_number"],
         category=row["category"],
         status=row["status"],
         rating=row["rating"],
-        cover_color_1=row["cover_color_1"],
-        cover_color_2=row["cover_color_2"],
+        cover_gradient=cover_style.css_gradient,
+        cover_bg_color=cover_style.background_color,
+        cover_text_color=cover_style.text_color,
         has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False
     )
 
 
 def row_to_book_detail(row) -> BookDetail:
     """Convert a database row to BookDetail."""
+    authors = parse_json_field(row["authors"])
+    primary_author = authors[0] if authors else "Unknown Author"
+    
+    # Generate cover style from title/author
+    cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
+    
     return BookDetail(
         id=row["id"],
         title=row["title"],
-        authors=parse_json_field(row["authors"]),
+        authors=authors,
         series=row["series"],
         series_number=row["series_number"],
         category=row["category"],
@@ -187,8 +204,9 @@ def row_to_book_detail(row) -> BookDetail:
         summary=row["summary"],
         tags=parse_json_field(row["tags"]),
         folder_path=row["folder_path"],
-        cover_color_1=row["cover_color_1"],
-        cover_color_2=row["cover_color_2"],
+        cover_gradient=cover_style.css_gradient,
+        cover_bg_color=cover_style.background_color,
+        cover_text_color=cover_style.text_color,
     )
 
 
@@ -553,16 +571,14 @@ async def list_series(
         category_filter = " AND b2.category = ?"
     
     # Query to get series with aggregated data
-    # Gets first book's author and colors, counts total and read books
-    # Category filter is applied to both main query AND correlated subqueries
+    # Gets first book's author, counts total and read books
+    # Cover is generated from series name + author, not stored in DB
     query = f"""
         SELECT 
             s.name,
             s.author,
             s.book_count,
-            s.books_read,
-            s.cover_color_1,
-            s.cover_color_2
+            s.books_read
         FROM (
             SELECT 
                 b.series as name,
@@ -571,23 +587,15 @@ async def list_series(
                  ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
                  LIMIT 1) as author,
                 COUNT(*) as book_count,
-                SUM(CASE WHEN b.status = 'Finished' THEN 1 ELSE 0 END) as books_read,
-                (SELECT cover_color_1 FROM books b2 
-                 WHERE b2.series = b.series{category_filter}
-                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
-                 LIMIT 1) as cover_color_1,
-                (SELECT cover_color_2 FROM books b2 
-                 WHERE b2.series = b.series{category_filter}
-                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
-                 LIMIT 1) as cover_color_2
+                SUM(CASE WHEN b.status = 'Finished' THEN 1 ELSE 0 END) as books_read
             FROM books b
             WHERE b.series IS NOT NULL AND b.series != ''
     """
     
     # Add category filter to main query and track params for subqueries
     if category:
-        # 3 subqueries need category param, plus main WHERE clause
-        params.extend([category, category, category])
+        # 1 subquery needs category param, plus main WHERE clause
+        params.append(category)
         query += " AND b.category = ?"
         params.append(category)
     
@@ -623,13 +631,17 @@ async def list_series(
         authors = parse_json_field(row["author"])
         primary_author = authors[0] if authors else "Unknown Author"
         
+        # Generate cover style from series name and author
+        cover_style = get_cover_style(row["name"], primary_author, Theme.DARK)
+        
         series_list.append(SeriesSummary(
             name=row["name"],
             author=primary_author,
             book_count=row["book_count"],
             books_read=row["books_read"] or 0,
-            cover_color_1=row["cover_color_1"],
-            cover_color_2=row["cover_color_2"]
+            cover_gradient=cover_style.css_gradient,
+            cover_bg_color=cover_style.background_color,
+            cover_text_color=cover_style.text_color
         ))
     
     return {
