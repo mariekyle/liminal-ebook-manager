@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { listBooks, getCategories, listSeries } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
@@ -6,22 +7,26 @@ import TagsModal from './TagsModal'
 import { getRandomPhrase } from '../utils/categoryPhrases'
 
 function Library() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [total, setTotal] = useState(0)
   
-  // Filter state
-  const [category, setCategory] = useState('')
-  const [status, setStatus] = useState('')
-  const [selectedTags, setSelectedTags] = useState([])
+  // Filter state - initialize from URL params
+  const [category, setCategory] = useState(searchParams.get('category') || '')
+  const [status, setStatus] = useState(searchParams.get('status') || '')
+  const [selectedTags, setSelectedTags] = useState(
+    searchParams.get('tags') ? searchParams.get('tags').split(',') : []
+  )
   const [tagsModalOpen, setTagsModalOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('title')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [sort, setSort] = useState(searchParams.get('sort') || 'title')
   const [categories, setCategories] = useState([])
   
-  // View state (tabs)
-  const [activeView, setActiveView] = useState('library')
+  // View state (tabs) - initialize from URL
+  const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
   
   // Series state
   const [seriesList, setSeriesList] = useState([])
@@ -136,6 +141,39 @@ function Library() {
     
     return () => container.removeEventListener('scroll', handleScroll)
   }, [activeView, loading, seriesLoading])
+
+  // Sync FROM URL params TO state (for browser back/forward navigation)
+  useEffect(() => {
+    const urlCategory = searchParams.get('category') || ''
+    const urlStatus = searchParams.get('status') || ''
+    const urlTags = searchParams.get('tags') ? searchParams.get('tags').split(',') : []
+    const urlSearch = searchParams.get('search') || ''
+    const urlSort = searchParams.get('sort') || 'title'
+    const urlView = searchParams.get('view') || 'library'
+    
+    // Only update state if URL value differs (prevents infinite loops)
+    if (urlCategory !== category) setCategory(urlCategory)
+    if (urlStatus !== status) setStatus(urlStatus)
+    if (urlTags.join(',') !== selectedTags.join(',')) setSelectedTags(urlTags)
+    if (urlSearch !== search) setSearch(urlSearch)
+    if (urlSort !== sort) setSort(urlSort)
+    if (urlView !== activeView) setActiveView(urlView)
+  }, [searchParams])
+
+  // Sync filter state to URL params
+  useEffect(() => {
+    const params = new URLSearchParams()
+    
+    if (category) params.set('category', category)
+    if (status) params.set('status', status)
+    if (selectedTags.length > 0) params.set('tags', selectedTags.join(','))
+    if (search) params.set('search', search)
+    if (sort && sort !== 'title') params.set('sort', sort)
+    if (activeView !== 'library') params.set('view', activeView)
+    
+    // Update URL without adding to history on every keystroke
+    setSearchParams(params, { replace: true })
+  }, [category, status, selectedTags, search, sort, activeView, setSearchParams])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
@@ -390,6 +428,7 @@ function Library() {
                 setStatus('')
                 setSearch('')
                 setSelectedTags([])
+                setSort('title')
               }}
               className="ml-auto text-library-accent text-sm hover:underline"
             >
