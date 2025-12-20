@@ -201,7 +201,7 @@ function Library() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mb-4 flex gap-8 border-b border-gray-700">
+        <div className="mb-4 flex justify-center gap-8 border-b border-gray-700">
           <button
             onClick={() => setActiveView('library')}
             className={`pb-2 text-sm font-medium transition-colors relative ${
@@ -231,7 +231,7 @@ function Library() {
         </div>
 
         {/* Unified Filter Bar */}
-        <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <div className="mb-4 flex items-center justify-center gap-2 flex-wrap">
           {/* Category Pills */}
           <button
             onClick={() => setCategory('')}
@@ -325,7 +325,7 @@ function Library() {
 
         {/* Active Filters Row - Only show when filters are active */}
         {activeView === 'library' && hasActiveFilters && (
-          <div className="mb-4 flex items-center gap-2 flex-wrap p-3 bg-gray-800/50 rounded-lg">
+          <div className="mb-4 flex items-center justify-center gap-2 flex-wrap p-3 bg-gray-800/50 rounded-lg">
             <span className="text-gray-500 text-xs uppercase tracking-wide mr-1">Filtering:</span>
             
             {/* Category filter tag */}
