@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from database import get_db
 
 
-router = APIRouter(prefix="/api", tags=["import"])
+router = APIRouter(tags=["import"])
 
 
 # --------------------------------------------------------------------------
