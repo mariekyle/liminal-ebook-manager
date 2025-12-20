@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from database import get_db
 
 
-router = APIRouter(tags=["import"])
+router = APIRouter(prefix="/api", tags=["import"])
 
 
 # --------------------------------------------------------------------------
@@ -130,15 +130,20 @@ class BatchImportResponse(BaseModel):
 # Improved Parser Functions
 # --------------------------------------------------------------------------
 
-def parse_date(date_str: str) -> Optional[str]:
+def parse_date(date_str: str, _recursed: bool = False) -> Optional[str]:
     """Parse various date formats to ISO format (YYYY-MM-DD)."""
     if not date_str:
         return None
     
-    date_str = date_str.strip()
+    date_str = str(date_str).strip()
+    
+    # Handle ISO datetime with time (2025-10-07T23:36:00)
+    if 'T' in date_str:
+        date_str = date_str.split('T')[0]
     
     formats = [
-        "%m/%d/%Y", "%m-%d-%Y", "%Y-%m-%d",
+        "%Y-%m-%d",      # ISO format first (most common in YAML)
+        "%m/%d/%Y", "%m-%d-%Y",
         "%B %d, %Y", "%b %d, %Y", "%m/%d/%y", "%d/%m/%Y",
     ]
     
@@ -149,20 +154,34 @@ def parse_date(date_str: str) -> Optional[str]:
         except ValueError:
             continue
     
-    # Try to extract date pattern from string
-    match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', date_str)
-    if match:
-        return parse_date(match.group(1))
+    # Try to extract date pattern from string (only once, no recursion)
+    if not _recursed:
+        match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', date_str)
+        if match:
+            return parse_date(match.group(1), _recursed=True)
     
     return None
 
 
-def parse_rating(rating_str: str) -> Optional[int]:
+def parse_rating(rating_input) -> Optional[int]:
     """Parse rating formats to 1-5 integer."""
-    if not rating_str:
+    if not rating_input:
         return None
     
-    rating_str = str(rating_str).strip().lower()
+    # Handle list input (from YAML multi-line list)
+    if isinstance(rating_input, list):
+        if len(rating_input) == 0:
+            return None
+        rating_input = rating_input[0]  # Take first item
+    
+    rating_str = str(rating_input).strip().lower()
+    
+    # Look for number at start: "4 (Better than good)" or "4 - Better than good"
+    match = re.match(r'^(\d)\s*[\(\-]', rating_str)
+    if match:
+        rating = int(match.group(1))
+        if 1 <= rating <= 5:
+            return rating
     
     # Look for X/5 pattern
     match = re.search(r'(\d)\s*/\s*5', rating_str)
@@ -237,19 +256,46 @@ def extract_yaml_frontmatter(content: str) -> dict:
     
     match = re.match(r'^---\s*\n(.*?)\n---\s*\n?', content, re.DOTALL)
     if match:
-        # Simple YAML parsing without external dependency
         yaml_content = match.group(1)
-        for line in yaml_content.split('\n'):
-            if ':' in line:
+        lines = yaml_content.split('\n')
+        current_key = None
+        current_list = None
+        
+        for line in lines:
+            # Check if this is a list item (starts with "  - ")
+            list_match = re.match(r'^\s+-\s+(.+)$', line)
+            if list_match and current_key:
+                if current_list is None:
+                    current_list = []
+                current_list.append(list_match.group(1).strip().strip('"\''))
+                continue
+            
+            # Check if this is a key: value line
+            if ':' in line and not line.startswith(' '):
+                # Save previous list if exists
+                if current_key and current_list is not None:
+                    frontmatter[current_key] = current_list
+                    current_list = None
+                
                 key, _, value = line.partition(':')
                 key = key.strip()
                 value = value.strip().strip('"\'')
+                current_key = key
                 
-                # Handle arrays like author: [Name]
+                # Handle inline arrays like author: [Name]
                 if value.startswith('[') and value.endswith(']'):
                     value = [v.strip().strip('"\'') for v in value[1:-1].split(',')]
-                
-                frontmatter[key] = value
+                    frontmatter[key] = value
+                    current_key = None
+                elif value:
+                    # Simple key: value
+                    frontmatter[key] = value
+                    current_key = None  # Reset if there's a value (not a list)
+                # If value is empty, might be followed by list items
+        
+        # Don't forget the last list
+        if current_key and current_list is not None:
+            frontmatter[current_key] = current_list
     
     return frontmatter
 
@@ -340,9 +386,12 @@ def parse_book_note(content: str, filename: Optional[str] = None) -> ParsedNoteD
     if not title:
         warnings.append("Could not extract title")
     
-    # Authors
+    # Authors - check both 'author' and 'authors' keys
     authors = []
-    if frontmatter.get('author'):
+    if frontmatter.get('authors'):
+        author_data = frontmatter['authors']
+        authors = author_data if isinstance(author_data, list) else [author_data]
+    elif frontmatter.get('author'):
         author_data = frontmatter['author']
         authors = author_data if isinstance(author_data, list) else [author_data]
     elif inline_meta.get('author'):
@@ -356,7 +405,7 @@ def parse_book_note(content: str, filename: Optional[str] = None) -> ParsedNoteD
     
     # Rating
     raw_rating = frontmatter.get('rating') or inline_meta.get('rating')
-    rating = parse_rating(str(raw_rating)) if raw_rating else None
+    rating = parse_rating(raw_rating) if raw_rating else None
     
     # Status
     status = parse_status(content, date_finished)
