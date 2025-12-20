@@ -6,12 +6,15 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.3.0)
+## Current State (v0.4.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
-- Display library with gradient covers
-- **Unified filter bar** — Categories, status, tags, sort on one row
+- Display library with **rich gradient covers** (10 presets, HSL color lanes, vignettes)
+- **Collapsible filter header** — Scroll down to hide, scroll up to reveal
+- **Poetic category phrases** — "780 what-ifs. Explore freely."
+- **Filter state persistence** — URL params preserve filters across navigation
+- **Unified filter bar** — Categories, status, tags, sort on one row (centered)
 - **Series tab** — Browse series with square gradient covers
 - **Series detail pages** — View all books in a series
 - **Tag filtering** — Multi-select tags with searchable modal
@@ -29,6 +32,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Auto-detect FanFiction based on metadata patterns
 - Add free-form notes to books
 - Mobile-responsive design
+- **Import reading data from Obsidian** (status, rating, dates)
 
 ---
 
@@ -92,6 +96,38 @@ You can now open Liminal on your phone, browse your library, mark books as read/
 
 ---
 
+## Phase 1.5: Obsidian Data Migration ✅ COMPLETE
+
+**Goal:** Import existing reading data from Obsidian book notes into Liminal.
+
+**Completed: December 20, 2025**
+
+### Import System ✅
+- [x] Add `/api/import/preview` endpoint — Parse Obsidian markdown files
+- [x] Add `/api/books/match` endpoint — Find books by title/author with confidence scoring
+- [x] Add `/api/import/apply` endpoint — Batch update matched books
+- [x] Drag-and-drop file upload UI
+- [x] Confidence-based matching with visual indicators
+- [x] Batch import with progress feedback
+
+### Parser Features ✅
+- [x] YAML frontmatter extraction (including multi-line lists)
+- [x] Status detection (read, DNF, finished indicators)
+- [x] Rating extraction (multiple formats: "5/5", "4 (Better than good)", etc.)
+- [x] Date parsing (multiple formats: "7/19/2025", "2025-07-19", ISO datetime)
+- [x] Author extraction from both `author` and `authors` keys
+
+### Migration Results
+- **317 books matched** and imported successfully
+- **35 books unmatched** — physical/audiobook only (no ebook file)
+- **6 partial matches** — manually corrected spelling/naming issues
+- **4 collection notes** — set aside for Phase 4 Collections feature
+
+### Milestone ✅
+Reading history from Obsidian is now in Liminal. Status, ratings, and dates are populated for 317 books.
+
+---
+
 ## Phase 2: Rich Notes & Metadata ← NEXT
 
 **Goal:** Book notes and reading data live in Liminal with the same richness as Obsidian.
@@ -107,6 +143,31 @@ You can now open Liminal on your phone, browse your library, mark books as read/
   - Believability
 - [ ] Each section expandable/collapsible
 - [ ] Markdown support in notes
+- [ ] Optional 1-10 rating per section (mirrors Obsidian format)
+
+### Phase 2.5: Notes Migration (after structured notes built)
+- [ ] Update markdown parser to extract section content
+- [ ] Map "Characters: 9" → structured characters_rating field
+- [ ] Map reading notes text → appropriate sections
+- [ ] Run notes migration script
+- [ ] Verify notes imported correctly
+
+### Editable Metadata
+- [ ] **Edit title** — Fix incorrect titles
+- [ ] **Edit author(s)** — Fix misspellings, add missing authors
+- [ ] **Edit series** — Add, change, or remove series assignment
+- [ ] **Edit series number** — Fix ordering
+- [ ] Edit publication year
+- [ ] HTML entity decoding in summaries (fix &amp; etc.)
+- [ ] "Added to library" date (pulled from file system)
+- [ ] Storage location display and validation
+
+### Book Detail Page Redesign
+- [ ] **Clean up visual layout** — Current page is chaotic
+- [ ] Logical grouping of metadata
+- [ ] Better use of space
+- [ ] Mobile-optimized layout
+- [ ] Consistent styling with library view
 
 ### Reading Stats & Estimated Time
 - [ ] **Estimated read time** displayed on book detail page (calculated from word count ÷ WPM)
@@ -121,12 +182,6 @@ You can now open Liminal on your phone, browse your library, mark books as read/
 - [ ] Display preferences (show/hide on covers: author, title, series)
 - [ ] Rows displayed in library grid
 
-### Metadata Improvements
-- [ ] Editable metadata (title, author, series, year, etc.)
-- [ ] HTML entity decoding in summaries (fix &amp; etc.)
-- [ ] "Added to library" date (pulled from file system)
-- [ ] Storage location display and validation
-
 ### Simple Author Page
 - [ ] Basic author page (name + notes)
 - [ ] **Author notes** — free-form notes about an author
@@ -134,13 +189,19 @@ You can now open Liminal on your phone, browse your library, mark books as read/
 - [ ] List of books by this author (simple list, not full grid)
 
 ### Milestone
-When Phase 2 is complete, Liminal holds all the rich reading data you currently keep in Obsidian. You can migrate existing notes and retire Obsidian for books entirely.
+When Phase 2 is complete, Liminal holds all the rich reading data you currently keep in Obsidian — including structured notes with section ratings. You can fully retire Obsidian for books.
 
 ---
 
 ## Phase 3: TBR & Wishlist
 
 **Goal:** Track books you want, not just books you have.
+
+### Manual Book Entry
+- [ ] **Add books without files** — Track physical books, audiobooks, books you no longer have
+- [ ] Manual entry form: title, author, series, category
+- [ ] Mark as "No ebook" or "Physical only"
+- [ ] Still track reading status, rating, dates, notes
 
 ### TBR List
 - [ ] Separate TBR section/view
@@ -167,6 +228,13 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
+### Multi-Series Support
+- [ ] **Books can belong to multiple series** — e.g., "Six of Crows" is both "Six of Crows #1" AND "Grishaverse #4"
+- [ ] Database schema: `book_series` junction table (many-to-many)
+- [ ] UI for managing multiple series assignments
+- [ ] Display all series on book detail page
+- [ ] Filter by any series the book belongs to
+
 ### Smart Filtering
 - [ ] Multi-filter: combine status + category + tags + rating + read time
 - [ ] Complex queries: "Unread 5-star fiction under 3 hours"
@@ -178,6 +246,7 @@ When Phase 3 is complete, you have one place to track both "books I have" and "b
 - [ ] Manual collections (curated lists: "Beach Reads", "Comfort Rereads")
 - [ ] Smart collections (auto-populate based on rules)
 - [ ] Collection cover (mosaic of book covers or custom)
+- [ ] **Import Obsidian collection notes** (4 notes set aside from Phase 1.5)
 
 ### Series Pages (Enhanced)
 - [ ] **Series mosaic covers** — 4-book grid image instead of gradient
@@ -228,34 +297,14 @@ When Phase 4 is complete, Liminal helps you *discover* your next read, not just 
 - [ ] (Future consideration: Goodreads import/export)
 
 ### Cover Improvements
+- [x] ~~Match Obsidian plugin gradient style~~ ✅ Completed December 20, 2025
 - [ ] Extract actual covers from EPUB files
 - [ ] Ability to upload custom covers
-- [ ] **Match Obsidian plugin gradient style** (see reference notes below)
+- [ ] Series info displayed on cover: "(ROYAL ELITE 4)"
 - [ ] Theme-based cover generation (genre-appropriate colors)
-
-**Obsidian Gradient Reference Notes:**
-
-The Obsidian plugin produces superior gradients that should be replicated. Key differences observed:
-
-*Color Quality:*
-- Deeper, more saturated colors (rich teals, warm terracottas, deep purples)
-- More solid/subtle gradients (almost monochromatic with gentle variation)
-- Current Liminal gradients are too pastel and have too obvious two-tone effect
-
-*Typography:*
-- Stronger text presence with bolder feel
-- Series info displayed on cover: "(ROYAL ELITE 4)", "(ALL MY SINS 1)"
-- Font appears to be serif (possibly Prata or similar)
-
-*Source Code to Reference:*
-- `gradient_covers.ts` - Color palettes and generation algorithm
-- `CoverRenderer.ts` - Cover composition logic
-- `NoteCoverProcessor.ts` - Color selection logic (hash-based? author-based?)
-- Location: `.obsidian/plugins/nas-book-importer/` or development source folder
 
 ### UI Polish
 - [ ] Clear search button (X icon)
-- [ ] Sort direction indicators (↑↓)
 - [ ] Rows per page setting
 - [ ] Loading states and animations
 - [ ] Error handling improvements
@@ -317,11 +366,13 @@ Track known issues that need fixing:
   - *Priority:* Low (3 books affected, can fix via folder rename)
 
 ### UX Issues
-- [ ] **Filter/sort state doesn't persist** — Navigating to book detail and back resets category, status, and sort selections. Consider URL params or localStorage to maintain state.
+- [x] ~~Filter/sort state doesn't persist~~ ✅ Fixed December 20, 2025 (URL params)
+- [ ] **Sort direction unclear** — No visual indicator if sorting asc or desc (add ↑↓ arrows)
+- [ ] **Status filter on Series page** — Filter series by reading status (e.g., "In Progress" series, "Completed" series)
+- [ ] **Redundant title below covers** — Title shown on cover AND below card; remove text below for cleaner look
 
 ### Display Issues
 - [ ] HTML entities not decoded in summaries (&amp; showing)
-- [ ] Sort options don't clearly indicate direction
 
 ### Sync Issues
 - [ ] Sync Library button in UI not working for new books
@@ -337,12 +388,13 @@ Track known issues that need fixing:
 | v0.1.1 | Dec 16, 2025 | Single folder migration, category preservation |
 | v0.1.2 | Dec 17, 2025 | Phase 0 complete — Editable categories, fanfic auto-detection |
 | v0.2.0 | Dec 17, 2025 | Phase 1 core tracking — Status, ratings, dates |
-| v0.3.0 | Dec 19, 2025 | **Phase 1 complete** — Series system, tag filtering, unified UI |
-| v0.4.0 | TBD | Phase 2 — Rich notes & metadata |
-| v0.5.0 | TBD | Phase 3 — TBR & Wishlist |
-| v0.6.0 | TBD | Phase 4 — Discovery & Collections |
+| v0.3.0 | Dec 19, 2025 | Phase 1 complete — Series system, tag filtering, unified UI |
+| v0.4.0 | Dec 20, 2025 | **Phase 1.5 complete** — Obsidian import, rich gradients, collapsible header |
+| v0.5.0 | TBD | Phase 2 — Rich notes & metadata |
+| v0.6.0 | TBD | Phase 3 — TBR & Wishlist |
+| v0.7.0 | TBD | Phase 4 — Discovery & Collections |
 | v1.0.0 | TBD | Phase 5 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 19, 2025*
+*Last updated: December 20, 2025*

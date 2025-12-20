@@ -11,6 +11,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2025-12-20
+
+### Added
+
+#### Obsidian Import System
+- **Import UI page** — Drag-and-drop file upload for Obsidian markdown notes
+- **Markdown parser** — Extracts status, rating, dates from YAML frontmatter
+- **Book matching** — Confidence-based matching by title/author
+- **Batch import** — Apply metadata to multiple books at once
+- **Parser features**:
+  - YAML multi-line list support (`authors:\n  - Name`)
+  - Multiple rating formats (`5/5`, `4 (Better than good)`, descriptive)
+  - Multiple date formats (`7/19/2025`, `2025-07-19`, ISO datetime)
+  - Both `author` and `authors` frontmatter keys
+  - Status detection from multiple indicators
+
+#### Collapsible Filter Header
+- **Scroll-to-hide header** — Filter bar hides when scrolling down, reveals on scroll up
+- **Collapsed state** — Shows search term and filter count in minimal bar
+- **Tap to expand** — Click collapsed bar to show full filters
+- **Poetic category phrases** — Random phrases above book grid:
+  - All: "doors. Wander freely.", "stories waiting to be remembered."
+  - Fiction: "invented worlds.", "portals. No passport required."
+  - Non-Fiction: "ways to understand the world.", "teachers on your shelf."
+  - FanFiction: "what-ifs. Explore freely.", "reunions. Welcome back."
+  - Uncategorized: "journeys uncharted.", "wildcards. Browse and discover."
+
+#### Filter State Persistence
+- **URL parameter sync** — Filters saved in URL (`?category=FanFiction&status=Finished`)
+- **Browser back/forward support** — Navigation preserves filter state
+- **Shareable filtered views** — Copy URL to share specific filters
+- **Bidirectional sync** — URL updates state, state updates URL
+
+#### Rich Gradient Cover System
+- **10 gradient presets** — 6 calm + 4 accent (conic, radial, mesh)
+- **HSL color lanes** — 8 base hues for cohesive library appearance
+- **Same author = similar colors** — Books grouped visually by author
+- **Vignette overlay** — Subtle edge darkening for text readability
+- **Deterministic generation** — Same book always gets same gradient
+- **Constrained saturation/lightness** — Rich but not garish colors
+
+#### Smart Back Navigation
+- **React Router state** — Return URL passed when navigating to book detail
+- **Filter preservation** — Back button returns to exact filtered state
+- **Fallback handling** — Direct URL access falls back to library root
+
+### Changed
+
+#### UI Improvements
+- **Centered filter bar** — Tabs, categories, filters centered to match search and phrase
+- **Back link renamed** — "Back to Library" → "Back" for consistency
+- **Separate scroll refs** — Library and Series views have independent scroll tracking
+
+#### Backend Updates
+- **Cover API response** — Returns `cover_gradient`, `cover_bg_color`, `cover_text_color` instead of `cover_color_1`, `cover_color_2`
+- **On-the-fly generation** — Covers generated from title/author, not stored in database
+
+### Fixed
+
+#### Obsidian Parser
+- **Infinite recursion** — ISO datetime strings no longer cause stack overflow
+- **YAML multi-line lists** — `authors:\n  - Name` now parsed correctly
+- **Rating list format** — `rating:\n  - 4 (Better than good)` handled
+- **Authors key mismatch** — Both `author` and `authors` frontmatter keys checked
+- **Duplicate API prefix** — `/api/api/import` → `/api/import`
+
+#### Scroll Behavior
+- **Scroll position reset** — `lastScrollY` resets when switching Library/Series tabs
+- **Cleanup on tab switch** — Separate refs prevent listener conflicts
+- **Memory leak prevention** — Proper cleanup of scroll event listeners
+
+#### Navigation
+- **Back button with filters** — No longer clears filters when returning from book detail
+- **History check reliability** — Uses React Router state instead of `window.history.length`
+- **Referrer check replacement** — Uses navigation state instead of unreliable `document.referrer`
+
+### Technical
+
+#### New Files
+- `backend/services/covers.py` — Complete rewrite with Obsidian gradient algorithm port
+- `backend/routers/import_metadata.py` — Obsidian import API endpoints
+- `frontend/src/utils/categoryPhrases.js` — Poetic phrase arrays and selection
+
+#### Dependencies
+- Backend: No new dependencies (pure Python implementation)
+- Frontend: Uses existing `react-router-dom` for URL params
+
+### Migration Results
+- **317 books matched** from Obsidian notes
+- **35 unmatched** (physical/audiobook only)
+- **6 manually corrected** (spelling issues)
+- **4 collection notes** saved for Phase 4
+
+---
+
 ## [0.3.0] - 2025-12-19
 
 ### Added
@@ -191,7 +286,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.3.0 | 2025-12-19 | **Phase 1 complete** — Series system, tag filtering, unified UI |
+| 0.4.0 | 2025-12-20 | **Phase 1.5 complete** — Obsidian import, rich gradients, collapsible header |
+| 0.3.0 | 2025-12-19 | Phase 1 complete — Series system, tag filtering, unified UI |
 | 0.2.0 | 2025-12-17 | Phase 1 core tracking — Status, ratings, dates |
 | 0.1.2 | 2025-12-17 | Phase 0 complete — Editable categories, fanfic auto-detection |
 | 0.1.1 | 2025-12-16 | Single folder migration, category preservation |
@@ -200,6 +296,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.4.0
+**Backend:**
+- Replace `backend/services/covers.py` with new file (complete rewrite)
+- Add `backend/routers/import_metadata.py` (new file)
+- Register import router in `main.py`
+- Update `books.py` to use new cover API
+
+**Frontend:**
+- Update `GradientCover.jsx` — new props (`coverGradient`, `coverBgColor`, `coverTextColor`)
+- Update `BookCard.jsx` — pass new cover props
+- Update `SeriesCard.jsx` — use new cover props
+- Update `Library.jsx` — add collapsible header, URL params, scroll detection
+- Add `frontend/src/utils/categoryPhrases.js` (new file)
+
+**Database:**
+- No migrations required
 
 ### Upgrading to 0.3.0
 No database migrations required. Deploy updated backend and frontend.
@@ -225,5 +338,6 @@ No migration required. Deploy updated backend and frontend.
 
 ## Links
 
-- [Roadmap](./ROADMAP.md)
-- [Development Guidelines](./docs/DEVELOPMENT_GUIDELINES.md)
+- [Roadmap](./20251220_ROADMAP.md)
+- [Development Guidelines](./20251031_DEVELOPMENT_GUIDELINES.md)
+- [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
