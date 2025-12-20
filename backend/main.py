@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db, get_db
 from routers import books, sync
+from routers.import_metadata import router as import_router
 
 # Configuration from environment
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
@@ -47,6 +48,7 @@ app.add_middleware(
 # Include API routers
 app.include_router(books.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
+app.include_router(import_router, prefix="/api")
 
 
 # Health check endpoint
