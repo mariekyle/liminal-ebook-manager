@@ -4,7 +4,7 @@
 
 Liminal is a self-hosted web application for managing your ebook library. It runs on your Synology NAS (or any Docker-capable machine), scans your book folders, extracts metadata, and provides a mobile-friendly interface for browsing and taking notes.
 
-**Key principle:** The app never modifies your book files. It only reads them to extract metadata. All app data (library index, notes, settings) lives in a separate SQLite database.
+**Key principle:** The app only modifies your book files when you upload new books. Existing books are never modified—only read for metadata extraction. All app data (library index, notes, settings) lives in a separate SQLite database.
 
 ---
 
@@ -62,7 +62,7 @@ Liminal is a self-hosted web application for managing your ebook library. It run
 │  └────────────────────────────────────────────────────────┘ │
 │                                                              │
 └──────────────────────────┬──────────────────────────────────┘
-                           │ Volume mount (read-only)
+                           │ Volume mount (read-write for uploads)
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Your Book Storage                         │

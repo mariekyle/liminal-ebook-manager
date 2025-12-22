@@ -7,7 +7,7 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      - /volume1/Media/Reading/Books:/books:ro
+      - /volume1/Media/Reading/Books:/books
     environment:
       - BOOKS_PATH=/books
       - DATABASE_PATH=/app/data/library.db

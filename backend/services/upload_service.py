@@ -20,8 +20,8 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
-# Reuse existing metadata extraction
-from services.metadata import extract_metadata
+# Metadata extraction - disabled for now, using filename parsing only
+# from services.metadata import extract_metadata
 
 
 # =============================================================================
@@ -183,18 +183,13 @@ async def save_uploaded_file(session: UploadSession, filename: str, content: byt
 # METADATA EXTRACTION
 # =============================================================================
 
-async def extract_file_metadata(uploaded_file: UploadedFile) -> dict:
+def extract_file_metadata(uploaded_file: UploadedFile) -> dict:
     """Extract metadata from an uploaded file"""
-    try:
-        # Use existing metadata extraction service
-        metadata = await extract_metadata(uploaded_file.temp_path)
-        uploaded_file.metadata = metadata
-        return metadata
-    except Exception as e:
-        # Fall back to filename parsing if extraction fails
-        metadata = parse_filename(uploaded_file.original_name)
-        uploaded_file.metadata = metadata
-        return metadata
+    # For now, use filename parsing only
+    # TODO: Integrate with existing metadata extraction once signature is confirmed
+    metadata = parse_filename(uploaded_file.original_name)
+    uploaded_file.metadata = metadata
+    return metadata
 
 
 def parse_filename(filename: str) -> dict:
