@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { listBooks, getCategories, listSeries } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
@@ -8,6 +8,7 @@ import { getRandomPhrase } from '../utils/categoryPhrases'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -265,6 +266,12 @@ function Library() {
             {activeView === 'series' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-library-accent" />
             )}
+          </button>
+          <button
+            onClick={() => navigate('/upload')}
+            className="pb-2 text-sm font-medium transition-colors relative text-gray-400 hover:text-gray-300"
+          >
+            Upload
           </button>
         </div>
 

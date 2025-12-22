@@ -197,3 +197,84 @@ export async function syncLibrary(full = false) {
 export async function getSyncStatus() {
   return apiFetch('/sync/status')
 }
+
+// =============================================================================
+// UPLOAD API
+// =============================================================================
+
+/**
+ * Upload files for analysis
+ * @param {File[]} files - Array of File objects to upload
+ * @param {function} onProgress - Optional progress callback (0-100)
+ * @returns {Promise<Object>} Analysis results with session_id and books
+ */
+export async function analyzeUploadedFiles(files, onProgress = null) {
+  const formData = new FormData()
+  
+  for (const file of files) {
+    formData.append('files', file)
+  }
+  
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    
+    xhr.open('POST', `${API_BASE}/upload/analyze-batch`)
+    
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100)
+          onProgress(percent)
+        }
+      }
+    }
+    
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText))
+        } catch (e) {
+          reject(new Error('Invalid response from server'))
+        }
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText)
+          reject(new Error(error.detail || 'Upload failed'))
+        } catch (e) {
+          reject(new Error(`Upload failed: ${xhr.status}`))
+        }
+      }
+    }
+    
+    xhr.onerror = () => reject(new Error('Network error'))
+    xhr.send(formData)
+  })
+}
+
+/**
+ * Finalize the upload - move files to NAS
+ * @param {string} sessionId - Session ID from analyzeUploadedFiles
+ * @param {Array} books - Array of book actions
+ */
+export async function finalizeUpload(sessionId, books) {
+  return apiFetch('/upload/finalize-batch', {
+    method: 'POST',
+    body: JSON.stringify({
+      session_id: sessionId,
+      books: books,
+    }),
+  })
+}
+
+/**
+ * Cancel an upload session
+ * @param {string} sessionId - Session ID to cancel
+ */
+export async function cancelUpload(sessionId) {
+  return apiFetch('/upload/cancel', {
+    method: 'POST',
+    body: JSON.stringify({
+      session_id: sessionId,
+    }),
+  })
+}

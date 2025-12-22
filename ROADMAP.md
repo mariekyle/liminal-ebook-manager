@@ -391,6 +391,9 @@ These are interesting but not essential to the core vision:
 - **In-app reading** – Moon Reader handles this well
 - **Audiobook support** – Different workflow, different app
 - **Library lending/borrowing tracking** – Edge case
+- **Split incorrectly grouped files** — Separate files into different books
+- **Merge books** — Combine separately detected books into one
+- **Undo split/merge** — Revert grouping changes
 
 These can be revisited once the core experience is solid.
 
