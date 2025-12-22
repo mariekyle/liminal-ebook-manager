@@ -193,36 +193,78 @@ def extract_file_metadata(uploaded_file: UploadedFile) -> dict:
 
 
 def parse_filename(filename: str) -> dict:
-    """Parse metadata from filename as fallback"""
+    """
+    Parse metadata from filename.
+    
+    Supports formats:
+    - "Author - Title.ext" (most common)
+    - "Author - [Series ##] Title.ext"
+    - "12345678_work_title.ext" (AO3 download)
+    - "work_id12345678.ext" (AO3 variant)
+    - "Title.ext" (fallback)
+    """
     # Remove extension
     name = os.path.splitext(filename)[0]
     
-    # Common patterns:
-    # "Author - Title"
-    # "Author - [Series ##] Title"
-    # "Title - Author"
-    # "Title"
+    # Replace underscores with spaces for display
+    display_name = name.replace('_', ' ')
     
-    # Replace underscores with spaces
-    name = name.replace('_', ' ')
+    # --- Check for AO3 patterns first ---
+    # Pattern 1: Numeric ID at start (e.g., "12345678_some_title" or "12345678 - Author - Title")
+    ao3_pattern1 = re.match(r'^(\d{6,})[\s_-]+(.+)$', name)
+    if ao3_pattern1:
+        work_id = ao3_pattern1.group(1)
+        rest = ao3_pattern1.group(2).replace('_', ' ')
+        # Check if rest has author info
+        if ' - ' in rest:
+            parts = rest.split(' - ', 1)
+            return {
+                'title': parts[1].strip() if len(parts) > 1 else rest.strip(),
+                'author': parts[0].strip(),
+                'ao3_work_id': work_id,
+                'is_fanfiction': True
+            }
+        return {
+            'title': rest.strip(),
+            'author': 'Unknown',
+            'ao3_work_id': work_id,
+            'is_fanfiction': True
+        }
     
-    # Try "Author - Title" pattern
+    # Pattern 2: "work_id" followed by numbers
+    ao3_pattern2 = re.match(r'^work[_\s]*id[_\s]*(\d+).*$', name, re.IGNORECASE)
+    if ao3_pattern2:
+        return {
+            'title': display_name,
+            'author': 'Unknown',
+            'ao3_work_id': ao3_pattern2.group(1),
+            'is_fanfiction': True
+        }
+    
+    # --- Standard "Author - Title" pattern ---
     if ' - ' in name:
         parts = name.split(' - ', 1)
-        # Heuristic: if first part looks like an author name (shorter, no numbers)
-        if len(parts[0]) < len(parts[1]) and not re.search(r'\d', parts[0]):
+        author_part = parts[0].strip().replace('_', ' ')
+        title_part = parts[1].strip().replace('_', ' ') if len(parts) > 1 else 'Unknown Title'
+        
+        # Check for series pattern: [Series ##] Title
+        series_match = re.match(r'^\[(.+?)\s+(\d+(?:\.\d+)?)\]\s*(.+)$', title_part)
+        if series_match:
             return {
-                'author': parts[0].strip(),
-                'title': parts[1].strip()
+                'author': author_part,
+                'title': series_match.group(3).strip(),
+                'series': series_match.group(1).strip(),
+                'series_number': series_match.group(2)
             }
-        else:
-            return {
-                'title': parts[0].strip(),
-                'author': parts[1].strip() if len(parts) > 1 else 'Unknown'
-            }
+        
+        return {
+            'author': author_part,
+            'title': title_part
+        }
     
+    # --- Fallback: just title ---
     return {
-        'title': name.strip(),
+        'title': display_name.strip(),
         'author': 'Unknown'
     }
 
@@ -364,7 +406,7 @@ def create_book_group(files: list[UploadedFile]) -> BookGroup:
     return BookGroup(
         id=group_id,
         title=best_metadata.get('title', 'Unknown Title'),
-        author=best_metadata.get('author', 'Unknown Author'),
+        author=best_metadata.get('author', 'Unknown'),
         series=best_metadata.get('series'),
         series_number=best_metadata.get('series_number'),
         files=file_list
@@ -372,80 +414,180 @@ def create_book_group(files: list[UploadedFile]) -> BookGroup:
 
 
 # =============================================================================
-# CATEGORY AUTO-DETECTION
+# CATEGORY AUTO-DETECTION (IMPROVED)
 # =============================================================================
 
-# Fanfiction indicators (high confidence)
-FANFIC_INDICATORS = {
-    'tags': ['fanworks', 'ao3', 'fanfiction', 'fandom', 'ship'],
-    'author_patterns': [r'_', r'\d{2,}', r'^[a-z]+\d+$'],  # underscores, numbers in name
-    'summary_keywords': [
-        'this fic', 'slow burn', 'enemies to lovers', 'friends to lovers',
-        'one shot', 'oneshot', 'drabble', 'fluff', 'angst', 'smut',
-        'AU', 'alternate universe', 'canon divergence', 'fix-it',
-        'OTP', 'pairing', 'ship', 'x reader', 'reader insert'
-    ],
-    'ship_pattern': r'\b\w+/\w+\b'  # Name/Name pattern
-}
-
-# Non-fiction indicators
-NONFICTION_INDICATORS = {
-    'tags': ['non-fiction', 'nonfiction', 'biography', 'memoir', 'self-help', 
-             'business', 'science', 'history', 'psychology', 'philosophy',
-             'economics', 'politics', 'health', 'finance'],
-    'title_keywords': ['how to', 'guide to', 'introduction to', 'the art of',
-                       'principles of', 'the science of', 'the history of']
-}
-
-
-def detect_category(metadata: dict) -> tuple[str, float]:
+def detect_fanfiction_from_filename(filename: str, author: str) -> tuple[bool, float, str]:
     """
-    Detect category from metadata.
+    Detect if a file is FanFiction based on filename and author patterns.
+    
+    Returns:
+        (is_fanfiction, confidence, reason)
+    """
+    filename_lower = filename.lower()
+    reasons = []
+    confidence = 0.0
+    
+    # --- High confidence indicators (from filename) ---
+    
+    # AO3 numeric ID at start (very strong indicator)
+    if re.match(r'^\d{6,}[\s_-]', filename):
+        reasons.append("AO3-style numeric ID in filename")
+        confidence += 0.9
+    
+    # Contains "ao3" or "archiveofourown"
+    if 'ao3' in filename_lower or 'archiveofourown' in filename_lower:
+        reasons.append("contains 'ao3' or 'archiveofourown'")
+        confidence += 0.9
+    
+    # Contains "fanfic" or "fanfiction"
+    if 'fanfic' in filename_lower:
+        reasons.append("contains 'fanfic'")
+        confidence += 0.8
+    
+    # Contains "work_id" pattern
+    if re.search(r'work[_\s]*id', filename_lower):
+        reasons.append("contains 'work_id'")
+        confidence += 0.85
+    
+    # FFN (FanFiction.net) pattern
+    if re.search(r'ffn|fanfiction\.net', filename_lower):
+        reasons.append("FanFiction.net indicator")
+        confidence += 0.85
+    
+    # Wattpad pattern
+    if 'wattpad' in filename_lower:
+        reasons.append("Wattpad indicator")
+        confidence += 0.8
+    
+    # --- Medium confidence indicators ---
+    
+    # Ship patterns in filename: "Character x Character" or "Character_Character"
+    # Common in fanfic downloads
+    ship_pattern = re.search(r'(\w+)\s*[x×]\s*(\w+)', filename_lower)
+    if ship_pattern:
+        reasons.append(f"ship pattern in filename: '{ship_pattern.group(0)}'")
+        confidence += 0.5
+    
+    # Multiple underscores in a row (common in AO3 downloads)
+    if re.search(r'_{2,}', filename) or filename.count('_') >= 4:
+        reasons.append("multiple underscores (common in fanfic downloads)")
+        confidence += 0.3
+    
+    # --- Author pattern analysis ---
+    if author and author != 'Unknown':
+        author_lower = author.lower()
+        
+        # Username patterns: contains underscore
+        if '_' in author:
+            reasons.append(f"author has underscore: '{author}'")
+            confidence += 0.4
+        
+        # Alphanumeric with digit and no spaces (username pattern)
+        elif re.match(r'^[a-zA-Z0-9]+$', author) and re.search(r'\d', author) and len(author) > 3:
+            reasons.append(f"author looks like username: '{author}'")
+            confidence += 0.35
+        
+        # All lowercase, no spaces (likely username)
+        elif re.match(r'^[a-z0-9]+$', author) and len(author) > 3:
+            reasons.append(f"author is all lowercase (username pattern): '{author}'")
+            confidence += 0.35
+        
+        # Has hyphen AND digit AND no space (e.g., "rock-the-casbah18")
+        elif '-' in author and re.search(r'\d', author) and ' ' not in author:
+            reasons.append(f"author looks like username: '{author}'")
+            confidence += 0.35
+    
+    # --- Low confidence but suggestive ---
+    
+    # Common fanfic trope words in title
+    trope_words = ['oneshot', 'one-shot', 'drabble', 'ficlet', 'pwp', 'smut', 
+                   'fluff', 'angst', 'au ', ' au', 'alternate universe', 
+                   'reader insert', 'x reader', 'self insert']
+    for trope in trope_words:
+        if trope in filename_lower:
+            reasons.append(f"contains trope word: '{trope}'")
+            confidence += 0.3
+            break
+    
+    is_fanfiction = confidence >= 0.5
+    reason_str = "; ".join(reasons) if reasons else ""
+    
+    return is_fanfiction, min(confidence, 1.0), reason_str
+
+
+def detect_nonfiction_from_filename(filename: str, title: str) -> tuple[bool, float, str]:
+    """
+    Detect if a file is Non-Fiction based on filename and title patterns.
+    
+    Returns:
+        (is_nonfiction, confidence, reason)
+    """
+    check_text = f"{filename} {title}".lower()
+    reasons = []
+    confidence = 0.0
+    
+    # Strong non-fiction indicators in title
+    nonfiction_title_patterns = [
+        (r'\bhow to\b', "title contains 'how to'", 0.6),
+        (r'\bguide to\b', "title contains 'guide to'", 0.5),
+        (r'\bintroduction to\b', "title contains 'introduction to'", 0.5),
+        (r'\bthe art of\b', "title contains 'the art of'", 0.4),
+        (r'\bprinciples of\b', "title contains 'principles of'", 0.5),
+        (r'\bthe science of\b', "title contains 'the science of'", 0.5),
+        (r'\bthe history of\b', "title contains 'the history of'", 0.5),
+        (r'\bmemoir\b', "contains 'memoir'", 0.6),
+        (r'\bbiography\b', "contains 'biography'", 0.6),
+        (r'\bautobiography\b', "contains 'autobiography'", 0.7),
+        (r'\bself[- ]help\b', "contains 'self-help'", 0.6),
+        (r'\btextbook\b', "contains 'textbook'", 0.7),
+        (r'\bmanual\b', "contains 'manual'", 0.4),
+        (r'\bhandbook\b', "contains 'handbook'", 0.5),
+    ]
+    
+    for pattern, reason, score in nonfiction_title_patterns:
+        if re.search(pattern, check_text):
+            reasons.append(reason)
+            confidence += score
+    
+    is_nonfiction = confidence >= 0.5
+    reason_str = "; ".join(reasons) if reasons else ""
+    
+    return is_nonfiction, min(confidence, 1.0), reason_str
+
+
+def detect_category(metadata: dict, filename: str = "") -> tuple[str, float]:
+    """
+    Detect category from metadata and filename.
+    
+    Priority:
+    1. Explicit is_fanfiction flag from parsing
+    2. Filename-based FanFiction detection
+    3. Filename-based Non-Fiction detection
+    4. Default to Fiction with low confidence
+    
     Returns (category, confidence) where confidence is 0.0 to 1.0
     """
-    title = (metadata.get('title') or '').lower()
-    author = (metadata.get('author') or '').lower()
-    summary = (metadata.get('summary') or '').lower()
-    tags = [t.lower() for t in (metadata.get('tags') or [])]
+    title = metadata.get('title', '')
+    author = metadata.get('author', '')
     
-    # Check for FanFiction
-    fanfic_score = 0.0
+    # Check if already flagged as fanfiction from parsing (e.g., AO3 pattern)
+    if metadata.get('is_fanfiction'):
+        return ('FanFiction', 0.9)
     
-    # Tag matches (high confidence)
-    for tag in tags:
-        if any(indicator in tag for indicator in FANFIC_INDICATORS['tags']):
-            fanfic_score += 0.4
+    # Try filename-based FanFiction detection
+    is_fanfic, fanfic_conf, fanfic_reason = detect_fanfiction_from_filename(filename, author)
+    if is_fanfic:
+        if fanfic_reason:
+            print(f"Auto-detected FanFiction: '{title}' - {fanfic_reason}")
+        return ('FanFiction', fanfic_conf)
     
-    # Author pattern matches
-    for pattern in FANFIC_INDICATORS['author_patterns']:
-        if re.search(pattern, author):
-            fanfic_score += 0.2
-    
-    # Summary keyword matches
-    for keyword in FANFIC_INDICATORS['summary_keywords']:
-        if keyword.lower() in summary:
-            fanfic_score += 0.15
-    
-    # Ship pattern in tags or title
-    if re.search(FANFIC_INDICATORS['ship_pattern'], ' '.join(tags) + ' ' + title):
-        fanfic_score += 0.3
-    
-    if fanfic_score >= 0.5:
-        return ('FanFiction', min(fanfic_score, 1.0))
-    
-    # Check for Non-Fiction
-    nonfic_score = 0.0
-    
-    for tag in tags:
-        if any(indicator in tag for indicator in NONFICTION_INDICATORS['tags']):
-            nonfic_score += 0.3
-    
-    for keyword in NONFICTION_INDICATORS['title_keywords']:
-        if keyword in title:
-            nonfic_score += 0.25
-    
-    if nonfic_score >= 0.4:
-        return ('Non-Fiction', min(nonfic_score, 1.0))
+    # Try Non-Fiction detection
+    is_nonfic, nonfic_conf, nonfic_reason = detect_nonfiction_from_filename(filename, title)
+    if is_nonfic:
+        if nonfic_reason:
+            print(f"Auto-detected Non-Fiction: '{title}' - {nonfic_reason}")
+        return ('Non-Fiction', nonfic_conf)
     
     # Default to Fiction with low confidence
     return ('Fiction', 0.3)
@@ -453,28 +595,31 @@ def detect_category(metadata: dict) -> tuple[str, float]:
 
 def apply_category_detection(books: list[BookGroup], files: list[UploadedFile]):
     """Apply category detection to all book groups"""
-    # Build a map of file id to metadata
-    file_metadata = {f.id: f.metadata or {} for f in files}
+    # Build a map of file id to (metadata, filename)
+    file_info = {f.id: (f.metadata or {}, f.original_name) for f in files}
     
     for book in books:
-        # Combine metadata from all files in the group
-        combined_metadata = {
-            'title': book.title,
-            'author': book.author,
-            'summary': '',
-            'tags': []
-        }
+        # Get the first file's info for detection
+        # (all files in a group should be the same book)
+        first_file_id = book.files[0]['id'] if book.files else None
         
-        for file_info in book.files:
-            file_id = file_info['id']
-            if file_id in file_metadata:
-                meta = file_metadata[file_id]
-                if meta.get('summary'):
-                    combined_metadata['summary'] += ' ' + meta['summary']
-                if meta.get('tags'):
-                    combined_metadata['tags'].extend(meta['tags'])
+        if first_file_id and first_file_id in file_info:
+            metadata, filename = file_info[first_file_id]
+            # Merge book-level metadata
+            combined_metadata = {
+                'title': book.title,
+                'author': book.author,
+                'is_fanfiction': metadata.get('is_fanfiction', False),
+                **metadata
+            }
+            category, confidence = detect_category(combined_metadata, filename)
+        else:
+            # Fallback
+            category, confidence = detect_category({
+                'title': book.title,
+                'author': book.author
+            })
         
-        category, confidence = detect_category(combined_metadata)
         book.category = category
         book.category_confidence = round(confidence, 2)
 

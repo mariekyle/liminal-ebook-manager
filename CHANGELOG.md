@@ -7,7 +7,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Phase 2 features (see ROADMAP.md)
+- Metadata extraction from uploaded EPUB/PDF files (using existing extractor)
+- Move "Sync Library" button to Settings page
+
+---
+
+## [0.5.1] - 2025-12-22
+
+### Fixed
+
+#### Background Sync After Upload
+- **Auto-sync now works** — Uploaded books automatically appear in library
+- **Standalone sync function** — Created `run_sync_standalone()` that creates its own database connection via aiosqlite, bypassing FastAPI's Depends limitation
+- **Background task wrapper** — `trigger_library_sync()` safely calls sync from background tasks
+
+#### Category Auto-Detection (Greatly Improved)
+- **Filename-based FanFiction detection** — Now detects:
+  - AO3 numeric IDs at start of filename (e.g., `12345678_story_title.epub`)
+  - AO3/Archive of Our Own mentions in filename
+  - FanFiction.net (FFN) indicators
+  - Wattpad indicators
+  - `work_id` patterns
+  - Ship patterns like "Character x Character"
+  - Common trope words (oneshot, drabble, fluff, angst, AU, etc.)
+- **Author username pattern detection** — Identifies fanfic-style usernames:
+  - Contains underscores (e.g., `some_author_name`)
+  - Alphanumeric with numbers (e.g., `writer123`)
+  - All lowercase with no spaces (e.g., `coolwriter`)
+  - Hyphen with numbers (e.g., `rock-the-casbah18`)
+- **Non-Fiction title detection** — Recognizes patterns like:
+  - "How to...", "Guide to...", "Introduction to..."
+  - "The Art of...", "The Science of...", "The History of..."
+  - Keywords: memoir, biography, autobiography, self-help, textbook, handbook
+- **Confidence scoring** — Each detection method contributes to a confidence score; category assigned when threshold reached
+
+#### Author Auto-fill in Upload UI
+- **Fixed filename parsing** — Now correctly extracts author from "Author - Title" format
+- **Removed bad heuristic** — No longer requires author to be shorter than title
+- **AO3 filename support** — Handles `12345678_title.epub` and `12345678 - Author - Title.epub` patterns
+- **Series extraction** — Correctly parses `[Series ##] Title` format from filenames
+
+### Changed
+
+- **Sync module** — Added `aiosqlite` import and `DATABASE_PATH` import from database module
+- **Upload router** — Now imports and calls `run_sync_standalone` for background sync
+
+### Technical
+
+#### Modified Files
+- `backend/database.py`:
+  - Added `get_db_path()` function to expose database path for standalone functions
+  
+- `backend/services/upload_service.py`:
+  - Rewrote `parse_filename()` with better pattern matching
+  - Added `detect_fanfiction_from_filename()` function
+  - Added `detect_nonfiction_from_filename()` function
+  - Rewrote `detect_category()` to use filename-based detection
+  - Updated `apply_category_detection()` to pass filename to detector
+  
+- `backend/routers/sync.py`:
+  - Added `run_sync_standalone()` async function
+  - Added `aiosqlite` import for standalone database connections
+  - Added `DATABASE_PATH` import from database module
+  
+- `backend/routers/upload.py`:
+  - Added import for `run_sync_standalone`
+  - Added `trigger_library_sync()` background task wrapper
+  - Updated `finalize_batch_endpoint()` to trigger sync when books are uploaded
+
+### Database Changes
+- None required
+
+### Dependencies
+- Requires `DATABASE_PATH` export from `database.py` (see upgrade notes)
+
+---
+
+## [0.5.0] - 2025-12-22
+
+### Added
+
+#### Book Upload System (Phase 2)
+- **Upload page** — New `/upload` route accessible from Library navigation
+- **Drag-and-drop zone** — Drop files or click to select from device
+- **Multi-file upload** — Upload multiple books in one session
+- **Smart file grouping** — Auto-groups related files (e.g., EPUB + PDF + MOBI of same book) using fuzzy title/author matching (0.80 similarity threshold)
+- **Category auto-detection** — Detects FanFiction, Fiction, Non-Fiction with confidence scores based on:
+  - Filename patterns (AO3 indicators, author formatting)
+  - File metadata when available
+  - Falls back to "Uncategorized" when uncertain
+- **Duplicate detection** — Warns when uploading books that already exist in library with three options:
+  - Add Format — Add new file format to existing book
+  - Replace — Replace existing book with new upload
+  - Skip — Don't upload this book
+- **Inline metadata editing** — Edit title, author, series, category before finalizing upload
+- **Per-book progress** — Visual progress indicator for each book during upload
+- **Session management** — Upload sessions with 1-hour timeout, automatic temp file cleanup
+- **Upload constraints** — 100MB per file, 500MB per batch, supported formats: EPUB, PDF, MOBI, AZW3, HTML
+
+#### Navigation
+- **Upload tab** — Added to Library navigation alongside Library and Series tabs
+- Navigates to dedicated upload page (not a tab switch)
+
+### Changed
+
+#### Docker Configuration
+- **Books volume now read-write** — Removed `:ro` flag to allow file uploads
+- Updated ARCHITECTURE.md to reflect new write permissions for uploads
+
+#### Documentation
+- Updated ARCHITECTURE.md key principle to mention upload capability
+- Updated volume mount diagram to show read-write access
+
+### Technical
+
+#### New Backend Files
+- `backend/routers/upload.py` — Upload API endpoints
+- `backend/services/upload_service.py` — Upload business logic
+
+#### New Frontend Files
+- `frontend/src/pages/UploadPage.jsx` — Main upload page with 6-screen workflow
+- `frontend/src/components/upload/` — 8 component files for upload UI
 
 ---
 
@@ -20,265 +140,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Markdown parser** — Extracts status, rating, dates from YAML frontmatter
 - **Book matching** — Confidence-based matching by title/author
 - **Batch import** — Apply metadata to multiple books at once
-- **Parser features**:
-  - YAML multi-line list support (`authors:\n  - Name`)
-  - Multiple rating formats (`5/5`, `4 (Better than good)`, descriptive)
-  - Multiple date formats (`7/19/2025`, `2025-07-19`, ISO datetime)
-  - Both `author` and `authors` frontmatter keys
-  - Status detection from multiple indicators
 
 #### Collapsible Filter Header
 - **Scroll-to-hide header** — Filter bar hides when scrolling down, reveals on scroll up
 - **Collapsed state** — Shows search term and filter count in minimal bar
 - **Tap to expand** — Click collapsed bar to show full filters
-- **Poetic category phrases** — Random phrases above book grid:
-  - All: "doors. Wander freely.", "stories waiting to be remembered."
-  - Fiction: "invented worlds.", "portals. No passport required."
-  - Non-Fiction: "ways to understand the world.", "teachers on your shelf."
-  - FanFiction: "what-ifs. Explore freely.", "reunions. Welcome back."
-  - Uncategorized: "journeys uncharted.", "wildcards. Browse and discover."
+- **Poetic category phrases** — Random phrases above book grid
 
 #### Filter State Persistence
-- **URL parameter sync** — Filters saved in URL (`?category=FanFiction&status=Finished`)
+- **URL parameter sync** — Filters saved in URL
 - **Browser back/forward support** — Navigation preserves filter state
 - **Shareable filtered views** — Copy URL to share specific filters
-- **Bidirectional sync** — URL updates state, state updates URL
 
 #### Rich Gradient Cover System
-- **10 gradient presets** — 6 calm + 4 accent (conic, radial, mesh)
+- **10 gradient presets** — 6 calm + 4 accent
 - **HSL color lanes** — 8 base hues for cohesive library appearance
 - **Same author = similar colors** — Books grouped visually by author
 - **Vignette overlay** — Subtle edge darkening for text readability
 - **Deterministic generation** — Same book always gets same gradient
-- **Constrained saturation/lightness** — Rich but not garish colors
-
-#### Smart Back Navigation
-- **React Router state** — Return URL passed when navigating to book detail
-- **Filter preservation** — Back button returns to exact filtered state
-- **Fallback handling** — Direct URL access falls back to library root
-
-### Changed
-
-#### UI Improvements
-- **Centered filter bar** — Tabs, categories, filters centered to match search and phrase
-- **Back link renamed** — "Back to Library" → "Back" for consistency
-- **Separate scroll refs** — Library and Series views have independent scroll tracking
-
-#### Backend Updates
-- **Cover API response** — Returns `cover_gradient`, `cover_bg_color`, `cover_text_color` instead of `cover_color_1`, `cover_color_2`
-- **On-the-fly generation** — Covers generated from title/author, not stored in database
-
-### Fixed
-
-#### Obsidian Parser
-- **Infinite recursion** — ISO datetime strings no longer cause stack overflow
-- **YAML multi-line lists** — `authors:\n  - Name` now parsed correctly
-- **Rating list format** — `rating:\n  - 4 (Better than good)` handled
-- **Authors key mismatch** — Both `author` and `authors` frontmatter keys checked
-- **Duplicate API prefix** — `/api/api/import` → `/api/import`
-
-#### Scroll Behavior
-- **Scroll position reset** — `lastScrollY` resets when switching Library/Series tabs
-- **Cleanup on tab switch** — Separate refs prevent listener conflicts
-- **Memory leak prevention** — Proper cleanup of scroll event listeners
-
-#### Navigation
-- **Back button with filters** — No longer clears filters when returning from book detail
-- **History check reliability** — Uses React Router state instead of `window.history.length`
-- **Referrer check replacement** — Uses navigation state instead of unreliable `document.referrer`
-
-### Technical
-
-#### New Files
-- `backend/services/covers.py` — Complete rewrite with Obsidian gradient algorithm port
-- `backend/routers/import_metadata.py` — Obsidian import API endpoints
-- `frontend/src/utils/categoryPhrases.js` — Poetic phrase arrays and selection
-
-#### Dependencies
-- Backend: No new dependencies (pure Python implementation)
-- Frontend: Uses existing `react-router-dom` for URL params
-
-### Migration Results
-- **317 books matched** from Obsidian notes
-- **35 unmatched** (physical/audiobook only)
-- **6 manually corrected** (spelling issues)
-- **4 collection notes** saved for Phase 4
 
 ---
 
 ## [0.3.0] - 2025-12-19
 
 ### Added
-
-#### Library UI Redesign
-- **Unified filter bar** — All filters on single row with consistent pill styling
-- **Navigation tabs** — Library and Series tabs with underline indicator
-- **Category pills** — Quick-select category filtering with active state
-- **Visual separator** — Clean division between categories and advanced filters
-- **Active filters row** — Shows all active filters with individual × remove buttons
-- **Clear all button** — One-click reset of all filters
-
-#### Series System
-- **Series tab** — Dedicated view for browsing series
-- **Series Library View** — Grid of square series covers with gradient from first book
-- **Series cards** — Display series name, book count, author
-- **Series Detail Page** — Full page showing series info and book list in order
-- **Series section on Book Detail** — Shows other books in series with current highlighted
-- **View Series link** — Navigate from book detail to full series page
-- **GET /series endpoint** — List all series with metadata (name, author, book count, colors)
-- **GET /series/{name} endpoint** — Get series details with ordered book list
-
-#### Tag Filtering
-- **Tags modal** — Searchable popup for selecting multiple tags
-- **Tag checkboxes** — Multi-select with visual feedback
-- **Tag counts** — Shows number of books per tag
-- **Tag search** — Filter tags by name in modal
-- **GET /tags endpoint** — List all tags with counts, filterable by category
-- **Exact tag matching** — Fixed substring matching bug (e.g., "fan" no longer matches "fantasy")
-- **Tags badge** — Shows count of selected tags on filter button
-
-#### Backend Improvements
-- **SeriesSummary model** — Series data for library view
-- **SeriesDetail model** — Full series data with book list
-- **SeriesBookItem model** — Book data within series context
-- **TagSummary model** — Tag with count
-- **SeriesListResponse model** — Proper response serialization
-
-### Changed
-- Filter bar consolidated from multiple rows to single unified row
-- Category filter changed from dropdown to pill buttons
-- Status filter styled as pill dropdown
-- Sort filter styled as pill dropdown
-- Book count moved to right side of filter bar
-- Status/Tags/Sort hidden on Series view (not applicable)
-
-### Fixed
-- Race condition in series loading on Book Detail page (cleanup flag pattern)
-- SQL column reference error in series endpoint (`s.name` → `s.series`)
-- Tag substring matching returning incorrect results
+- Library UI redesign with unified filter bar
+- Navigation tabs (Library, Series)
+- Series system with detail pages
+- Tag filtering with searchable modal
+- Series section on Book Detail page
 
 ---
 
 ## [0.2.0] - 2025-12-17
 
 ### Added
-
-#### Read Status System
-- **Status field** on books: Unread, In Progress, Finished, DNF
-- **Status dropdown** on book detail page
-- **Status filter** in library view
-- **Finished checkmark indicator** on book covers in library grid
-- Backend endpoint `PATCH /books/{book_id}/status`
-- `updateBookStatus()` API function in frontend
-- `GET /statuses` endpoint returning valid status options
-
-#### Rating System
-- **1-5 star rating** on book detail page
-- **Custom rating labels**: Disliked, Disappointing, Decent/Fine, Better than Good, All-time Fav
-- Rating dropdown with visual stars (★★★★★ to ★☆☆☆☆)
-- Backend endpoint `PATCH /books/{book_id}/rating`
-- `updateBookRating()` API function in frontend
-
-#### Reading Dates
-- **Date started** field on book detail page
-- **Date finished** field on book detail page
-- Native date picker inputs
-- Backend endpoint `PATCH /books/{book_id}/dates`
-- `updateBookDates()` API function in frontend
-
-#### Database Migrations
-- Added `run_migrations()` function for automatic schema updates
-- Migration system handles adding new columns to existing databases
-- Migrations are idempotent (safe to run multiple times)
-
-### Changed
-- Database schema now includes: status, rating, date_started, date_finished columns
-- Book detail page layout updated with new tracking fields
-- Empty state message in library now accounts for status filter
-
-### Technical
-- Added database migration pattern for future schema changes
-- Migrations run automatically on app startup
-- Schema and migrations kept in sync for new vs existing databases
-
-### Removed
-- Notes indicator (📝) removed from book covers in library view (cleaner UI)
+- Read status system (Unread, In Progress, Finished, DNF)
+- 1-5 star rating system
+- Reading dates (started, finished)
+- Database migrations
 
 ---
 
 ## [0.1.2] - 2025-12-17
 
 ### Added
-- **Category dropdown** on book detail page for manual category editing
-- **FanFiction auto-detection** for new books based on:
-  - Tags containing "fanworks", "ao3", "fandom", ship patterns (Name/Name)
-  - Author names with underscores, digits, or username patterns
-  - Summary containing fanfic-related terms ("this fic", "slow burn", "enemies to lovers", etc.)
-- Backend endpoint `PATCH /books/{book_id}/category` for updating categories
-- `updateBookCategory()` API function in frontend
-- Categories loaded on book detail page for dropdown population
-
-### Changed
-- Category display changed from static pill to interactive dropdown
-- Error handling improved: categories fetch failure no longer blocks book detail page
-
-### Fixed
-- Empty string vs NULL consistency for uncategorized books
-- Duplicate "Uncategorized" options prevented in dropdown
+- Category dropdown on book detail page
+- FanFiction auto-detection
 
 ---
 
 ## [0.1.1] - 2025-12-16
 
 ### Added
-- **Single folder scanning** — books no longer require Fiction/Non-Fiction/FanFiction subfolders
-- **Content matching** — existing books matched by title+author when folder paths change
-- `find_existing_book_by_content()` function for migration support
-- `detect_fanfiction()` function with heuristic detection
-- Guard against "Unknown Author" in content matching to prevent false matches
-
-### Changed
-- `determine_category_from_path()` updated for flat folder structure
-- Category priority: existing (preserved) → path-based → fanfic detection → "Uncategorized"
-- Sync now updates `folder_path` for migrated books while preserving categories
-
-### Fixed
-- Books no longer duplicated when moved between folders
-- Categories preserved during library reorganization
-
-### Migration Notes
-- All 1688 books successfully migrated from subfolder structure
-- 0 duplicates created
-- All existing categories preserved
+- Single folder scanning
+- Content matching for moved books
 
 ---
 
 ## [0.1.0] - 2025-12-14
 
 ### Added
-- **Library browsing** with gradient covers
-- **Search** by title and author
-- **Filter by category** (Fiction, Non-Fiction, FanFiction)
-- **Sort by title**
-- **Book detail page** with metadata display:
-  - Title, authors, series, series number
-  - Publication year, word count
-  - Summary, tags
-  - File location
-- **Notes system** — add free-form notes to books
-- **Gradient cover generation** based on title and author
-- **Mobile-responsive design**
-- **Text shadows** on covers for readability
-- Docker deployment configuration
-- SQLite database for library data
-- Metadata extraction from EPUB files
-- Sync endpoint for scanning NAS folders
-
-### Technical
-- FastAPI backend with async SQLite
-- React frontend with Vite
-- Tailwind CSS for styling
-- Docker Compose for deployment on Synology NAS
+- Initial release
+- Library browsing with gradient covers
+- Search, filter, sort
+- Book detail page
+- Notes system
+- Docker deployment
 
 ---
 
@@ -286,58 +214,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.4.0 | 2025-12-20 | **Phase 1.5 complete** — Obsidian import, rich gradients, collapsible header |
-| 0.3.0 | 2025-12-19 | Phase 1 complete — Series system, tag filtering, unified UI |
+| 0.5.1 | 2025-12-22 | **Phase 2.1 complete** — Upload polish, auto-sync, better detection |
+| 0.5.0 | 2025-12-22 | Phase 2 complete — Book upload system |
+| 0.4.0 | 2025-12-20 | Phase 1.5 complete — Obsidian import, rich gradients |
+| 0.3.0 | 2025-12-19 | Phase 1 complete — Series system, tag filtering |
 | 0.2.0 | 2025-12-17 | Phase 1 core tracking — Status, ratings, dates |
-| 0.1.2 | 2025-12-17 | Phase 0 complete — Editable categories, fanfic auto-detection |
-| 0.1.1 | 2025-12-16 | Single folder migration, category preservation |
-| 0.1.0 | 2025-12-14 | Initial release — Library browsing, search, detail pages |
+| 0.1.2 | 2025-12-17 | Phase 0 complete — Editable categories |
+| 0.1.1 | 2025-12-16 | Single folder migration |
+| 0.1.0 | 2025-12-14 | Initial release |
 
 ---
 
 ## Upgrade Notes
 
-### Upgrading to 0.4.0
+### Upgrading to 0.5.1
+
+**Backend Changes Required:**
+
+1. **Replace these files:**
+   - `backend/database.py` — New version with `get_db_path()` function
+   - `backend/services/upload_service.py` — New version with improved detection
+   - `backend/routers/sync.py` — New version with standalone sync function
+   - `backend/routers/upload.py` — New version that triggers background sync
+
+2. **Rebuild Docker container** after uploading files
+
+**No database migrations required.**
+
+### Upgrading to 0.5.0
+
+**Docker:**
+- Update `docker-compose.yml` — Remove `:ro` from books volume mount
+- Rebuild container after update
+
 **Backend:**
-- Replace `backend/services/covers.py` with new file (complete rewrite)
-- Add `backend/routers/import_metadata.py` (new file)
-- Register import router in `main.py`
-- Update `books.py` to use new cover API
+- Add new files: `backend/routers/upload.py`, `backend/services/upload_service.py`
+- Register upload router in `main.py`
 
 **Frontend:**
-- Update `GradientCover.jsx` — new props (`coverGradient`, `coverBgColor`, `coverTextColor`)
-- Update `BookCard.jsx` — pass new cover props
-- Update `SeriesCard.jsx` — use new cover props
-- Update `Library.jsx` — add collapsible header, URL params, scroll detection
-- Add `frontend/src/utils/categoryPhrases.js` (new file)
+- Add new files: `frontend/src/pages/UploadPage.jsx`, `frontend/src/components/upload/` (8 files)
+- Update `api.js` with upload functions
+- Update `App.jsx` with /upload route
+- Update `Library.jsx` with Upload tab
 
 **Database:**
 - No migrations required
-
-### Upgrading to 0.3.0
-No database migrations required. Deploy updated backend and frontend.
-- New endpoints: GET /series, GET /series/{name}, GET /tags
-- Frontend components: SeriesCard, SeriesDetail, TagsModal
-- Library.jsx significantly refactored (unified filter bar)
-
-### Upgrading to 0.2.0
-Database migrations run automatically on startup. No manual steps required.
-- New columns (status, rating, date_started, date_finished) added automatically
-- Existing books default to status "Unread" and no rating
-
-### Upgrading to 0.1.2
-No migration required. Deploy updated backend and frontend.
-
-### Upgrading to 0.1.1 from 0.1.0
-1. Backup database before migration
-2. Move books to single folder structure (optional but recommended)
-3. Run full sync: `curl -X POST "http://your-nas:3000/api/sync?full=true"`
-4. Verify categories preserved
 
 ---
 
 ## Links
 
-- [Roadmap](./20251220_ROADMAP.md)
-- [Development Guidelines](./20251031_DEVELOPMENT_GUIDELINES.md)
+- [Roadmap](./ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
+- [Architecture](./ARCHITECTURE.md)

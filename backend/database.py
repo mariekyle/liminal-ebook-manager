@@ -12,6 +12,15 @@ from typing import AsyncGenerator
 _db_path: str = None
 
 
+def get_db_path() -> str:
+    """
+    Get the current database path.
+    Used by standalone functions that need to create their own connections
+    (e.g., background tasks that can't use FastAPI's Depends).
+    """
+    return _db_path
+
+
 async def init_db(db_path: str) -> None:
     """
     Initialize the database with schema.

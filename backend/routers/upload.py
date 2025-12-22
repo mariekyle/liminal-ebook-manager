@@ -28,6 +28,9 @@ from services.upload_service import (
     BookGroup,
 )
 
+# Import the standalone sync function
+from routers.sync import run_sync_standalone
+
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 # Configure your NAS books directory
@@ -109,6 +112,23 @@ class CancelRequest(BaseModel):
 class CancelResponse(BaseModel):
     success: bool
     files_cleaned: int
+
+
+# =============================================================================
+# BACKGROUND TASK WRAPPER
+# =============================================================================
+
+async def trigger_library_sync():
+    """
+    Background task to sync library after upload.
+    Uses the standalone sync function that creates its own DB connection.
+    """
+    try:
+        print("Starting background library sync after upload...")
+        result = await run_sync_standalone(full=False)
+        print(f"Background sync complete: {result.message}")
+    except Exception as e:
+        print(f"Background sync failed: {e}")
 
 
 # =============================================================================
@@ -228,7 +248,7 @@ async def finalize_batch_endpoint(
     - 'replace': Delete existing and create new
     - 'skip': Don't upload this book
     
-    After successful upload, triggers a library sync.
+    After successful upload, triggers a library sync in the background.
     """
     session = get_session(request.session_id)
     if not session:
@@ -247,13 +267,14 @@ async def finalize_batch_endpoint(
         # Clean up session
         cleanup_session(request.session_id)
         
-        # Trigger library sync in background
+        # Check if any books were actually uploaded (not all skipped/errored)
+        books_uploaded = any(r['status'] in ('created', 'format_added') for r in results)
+        
+        # Trigger library sync in background if we uploaded anything
         sync_triggered = False
-        if background_tasks:
-            # Note: Background tasks can't use FastAPI Depends
-            # The sync will need to create its own db connection
-            # For now, just set flag - user can manually sync if needed
-            sync_triggered = False
+        if background_tasks and books_uploaded:
+            background_tasks.add_task(trigger_library_sync)
+            sync_triggered = True
         
         # Build response
         result_models = [
