@@ -7,8 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Metadata extraction from uploaded EPUB/PDF files (using existing extractor)
+- Metadata extraction from uploaded EPUB/PDF files (author from file metadata)
 - Move "Sync Library" button to Settings page
+- Mobile file picker improvements for .mobi/.azw3 (MIME type issues on some devices)
+
+---
+
+## [0.5.2] - 2025-12-22
+
+### Fixed
+
+#### FanFiction Category Detection
+- **AO3-style filename detection** — Now correctly detects files with underscores as word separators (e.g., `The_Hemorrhagic_Magicae.epub`) as FanFiction
+- **Removed false positives** — No longer marks all underscore filenames as FanFiction with 90% confidence; detection now uses proper confidence scoring (~70% for underscore pattern)
+- **Expanded trope detection** — Added more trope keywords: `slow_burn`, `fix_it`, `canon_divergence`, `enemies_to_lovers`, etc.
+
+#### File Type Support
+- **Added .azw support** — Amazon Kindle .azw files now accepted (frontend + backend + priority order)
+- **Added MIME types to file picker** — Better compatibility with mobile browsers for ebook formats
+- **Priority order consistency** — `.azw` added to metadata extraction priority
+
+#### Filename Parsing
+- **Improved author extraction** — Better handling of "Author - Title" format
+- **Underscore variant support** — Handles `Author_Name_-_Title.epub` format
+- **AO3 work ID parsing** — Correctly parses `12345678_Title.epub` patterns
+
+### Changed
+
+- `parse_filename()` no longer sets `is_fanfiction` flag — category detection delegated to dedicated function with proper confidence scoring
+- Frontend file picker now uses combined extensions + MIME types for better mobile support
+
+### Technical
+
+#### Modified Files
+- `backend/services/upload_service.py`:
+  - Rewrote `detect_fanfiction_from_filename()` with underscore-based detection
+  - Rewrote `parse_filename()` to handle more filename patterns
+  - Added `.azw` to `ALLOWED_EXTENSIONS`
+  - Added `.azw` to `priority_order` in `create_book_group()`
+  
+- `frontend/src/components/upload/UploadZone.jsx`:
+  - Replaced `ALLOWED_EXTENSIONS` array with `ACCEPT_TYPES` string
+  - Added MIME types for ebook formats
+  - Added `.azw` extension support
+
+### Known Limitations
+
+- **Mobile file picker** — Some Android devices may still not show .mobi/.azw3 files due to MIME type handling; workaround is to use "All files" filter
+- **Author detection** — Files without "Author - " in filename show "Unknown" author; EPUB metadata extraction planned for future release
 
 ---
 
@@ -18,39 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Background Sync After Upload
 - **Auto-sync now works** — Uploaded books automatically appear in library
-- **Standalone sync function** — Created `run_sync_standalone()` that creates its own database connection via aiosqlite, bypassing FastAPI's Depends limitation
+- **Standalone sync function** — Created `run_sync_standalone()` that creates its own database connection via aiosqlite
 - **Background task wrapper** — `trigger_library_sync()` safely calls sync from background tasks
-
-#### Category Auto-Detection (Greatly Improved)
-- **Filename-based FanFiction detection** — Now detects:
-  - AO3 numeric IDs at start of filename (e.g., `12345678_story_title.epub`)
-  - AO3/Archive of Our Own mentions in filename
-  - FanFiction.net (FFN) indicators
-  - Wattpad indicators
-  - `work_id` patterns
-  - Ship patterns like "Character x Character"
-  - Common trope words (oneshot, drabble, fluff, angst, AU, etc.)
-- **Author username pattern detection** — Identifies fanfic-style usernames:
-  - Contains underscores (e.g., `some_author_name`)
-  - Alphanumeric with numbers (e.g., `writer123`)
-  - All lowercase with no spaces (e.g., `coolwriter`)
-  - Hyphen with numbers (e.g., `rock-the-casbah18`)
-- **Non-Fiction title detection** — Recognizes patterns like:
-  - "How to...", "Guide to...", "Introduction to..."
-  - "The Art of...", "The Science of...", "The History of..."
-  - Keywords: memoir, biography, autobiography, self-help, textbook, handbook
-- **Confidence scoring** — Each detection method contributes to a confidence score; category assigned when threshold reached
-
-#### Author Auto-fill in Upload UI
-- **Fixed filename parsing** — Now correctly extracts author from "Author - Title" format
-- **Removed bad heuristic** — No longer requires author to be shorter than title
-- **AO3 filename support** — Handles `12345678_title.epub` and `12345678 - Author - Title.epub` patterns
-- **Series extraction** — Correctly parses `[Series ##] Title` format from filenames
-
-### Changed
-
-- **Sync module** — Added `aiosqlite` import and `DATABASE_PATH` import from database module
-- **Upload router** — Now imports and calls `run_sync_standalone` for background sync
 
 ### Technical
 
@@ -58,28 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `backend/database.py`:
   - Added `get_db_path()` function to expose database path for standalone functions
   
-- `backend/services/upload_service.py`:
-  - Rewrote `parse_filename()` with better pattern matching
-  - Added `detect_fanfiction_from_filename()` function
-  - Added `detect_nonfiction_from_filename()` function
-  - Rewrote `detect_category()` to use filename-based detection
-  - Updated `apply_category_detection()` to pass filename to detector
-  
 - `backend/routers/sync.py`:
   - Added `run_sync_standalone()` async function
   - Added `aiosqlite` import for standalone database connections
-  - Added `DATABASE_PATH` import from database module
   
 - `backend/routers/upload.py`:
   - Added import for `run_sync_standalone`
   - Added `trigger_library_sync()` background task wrapper
   - Updated `finalize_batch_endpoint()` to trigger sync when books are uploaded
-
-### Database Changes
-- None required
-
-### Dependencies
-- Requires `DATABASE_PATH` export from `database.py` (see upgrade notes)
 
 ---
 
@@ -91,43 +92,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Upload page** — New `/upload` route accessible from Library navigation
 - **Drag-and-drop zone** — Drop files or click to select from device
 - **Multi-file upload** — Upload multiple books in one session
-- **Smart file grouping** — Auto-groups related files (e.g., EPUB + PDF + MOBI of same book) using fuzzy title/author matching (0.80 similarity threshold)
-- **Category auto-detection** — Detects FanFiction, Fiction, Non-Fiction with confidence scores based on:
-  - Filename patterns (AO3 indicators, author formatting)
-  - File metadata when available
-  - Falls back to "Uncategorized" when uncertain
-- **Duplicate detection** — Warns when uploading books that already exist in library with three options:
-  - Add Format — Add new file format to existing book
-  - Replace — Replace existing book with new upload
-  - Skip — Don't upload this book
-- **Inline metadata editing** — Edit title, author, series, category before finalizing upload
+- **Smart file grouping** — Auto-groups related files (e.g., EPUB + PDF + MOBI of same book)
+- **Category auto-detection** — Detects FanFiction, Fiction, Non-Fiction with confidence scores
+- **Duplicate detection** — Warns when uploading books that already exist
+- **Inline metadata editing** — Edit title, author, series, category before finalizing
 - **Per-book progress** — Visual progress indicator for each book during upload
-- **Session management** — Upload sessions with 1-hour timeout, automatic temp file cleanup
-- **Upload constraints** — 100MB per file, 500MB per batch, supported formats: EPUB, PDF, MOBI, AZW3, HTML
+- **Session management** — Upload sessions with 1-hour timeout, automatic cleanup
 
 #### Navigation
 - **Upload tab** — Added to Library navigation alongside Library and Series tabs
-- Navigates to dedicated upload page (not a tab switch)
 
 ### Changed
 
-#### Docker Configuration
 - **Books volume now read-write** — Removed `:ro` flag to allow file uploads
-- Updated ARCHITECTURE.md to reflect new write permissions for uploads
-
-#### Documentation
-- Updated ARCHITECTURE.md key principle to mention upload capability
-- Updated volume mount diagram to show read-write access
-
-### Technical
-
-#### New Backend Files
-- `backend/routers/upload.py` — Upload API endpoints
-- `backend/services/upload_service.py` — Upload business logic
-
-#### New Frontend Files
-- `frontend/src/pages/UploadPage.jsx` — Main upload page with 6-screen workflow
-- `frontend/src/components/upload/` — 8 component files for upload UI
 
 ---
 
@@ -143,20 +120,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Collapsible Filter Header
 - **Scroll-to-hide header** — Filter bar hides when scrolling down, reveals on scroll up
-- **Collapsed state** — Shows search term and filter count in minimal bar
-- **Tap to expand** — Click collapsed bar to show full filters
 - **Poetic category phrases** — Random phrases above book grid
 
 #### Filter State Persistence
 - **URL parameter sync** — Filters saved in URL
 - **Browser back/forward support** — Navigation preserves filter state
-- **Shareable filtered views** — Copy URL to share specific filters
 
 #### Rich Gradient Cover System
 - **10 gradient presets** — 6 calm + 4 accent
 - **HSL color lanes** — 8 base hues for cohesive library appearance
-- **Same author = similar colors** — Books grouped visually by author
-- **Vignette overlay** — Subtle edge darkening for text readability
 - **Deterministic generation** — Same book always gets same gradient
 
 ---
@@ -168,7 +140,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Navigation tabs (Library, Series)
 - Series system with detail pages
 - Tag filtering with searchable modal
-- Series section on Book Detail page
 
 ---
 
@@ -214,7 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.5.1 | 2025-12-22 | **Phase 2.1 complete** — Upload polish, auto-sync, better detection |
+| 0.5.2 | 2025-12-22 | **Phase 2.1 complete** — Category detection, .azw support, filename parsing |
+| 0.5.1 | 2025-12-22 | Background sync fix |
 | 0.5.0 | 2025-12-22 | Phase 2 complete — Book upload system |
 | 0.4.0 | 2025-12-20 | Phase 1.5 complete — Obsidian import, rich gradients |
 | 0.3.0 | 2025-12-19 | Phase 1 complete — Series system, tag filtering |
@@ -227,38 +199,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upgrade Notes
 
-### Upgrading to 0.5.1
-
-**Backend Changes Required:**
-
-1. **Replace these files:**
-   - `backend/database.py` — New version with `get_db_path()` function
-   - `backend/services/upload_service.py` — New version with improved detection
-   - `backend/routers/sync.py` — New version with standalone sync function
-   - `backend/routers/upload.py` — New version that triggers background sync
-
-2. **Rebuild Docker container** after uploading files
-
-**No database migrations required.**
-
-### Upgrading to 0.5.0
-
-**Docker:**
-- Update `docker-compose.yml` — Remove `:ro` from books volume mount
-- Rebuild container after update
+### Upgrading to 0.5.2
 
 **Backend:**
-- Add new files: `backend/routers/upload.py`, `backend/services/upload_service.py`
-- Register upload router in `main.py`
+- Replace `backend/services/upload_service.py`
 
 **Frontend:**
-- Add new files: `frontend/src/pages/UploadPage.jsx`, `frontend/src/components/upload/` (8 files)
-- Update `api.js` with upload functions
-- Update `App.jsx` with /upload route
-- Update `Library.jsx` with Upload tab
+- Replace `frontend/src/components/upload/UploadZone.jsx`
 
-**Database:**
-- No migrations required
+**Rebuild Docker container after update.**
+
+### Upgrading to 0.5.1
+
+**Backend:**
+- Replace `backend/database.py` (adds `get_db_path()`)
+- Replace `backend/routers/sync.py` (adds `run_sync_standalone()`)
+- Replace `backend/routers/upload.py` (triggers background sync)
+
+**Rebuild Docker container after update.**
 
 ---
 

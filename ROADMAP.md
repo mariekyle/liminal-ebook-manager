@@ -6,12 +6,12 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.5.1)
+## Current State (v0.5.2)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
-- **Upload new books directly through the app** with auto-sync
-- **Smart category detection** — Auto-detects FanFiction from filename patterns
+- **Upload new books directly through the app** with auto-sync ✨
+- **Smart FanFiction detection** from filename patterns (AO3, FFN, tropes) ✨
 - Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
 - Collapsible filter header — Scroll down to hide, scroll up to reveal
 - Poetic category phrases — "780 what-ifs. Explore freely."
@@ -74,38 +74,40 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 **Completed: December 22, 2025**
 
-### Auto-Sync Fix ✅
-- [x] **Refactor background sync** — Created standalone `run_sync_standalone()` function
-- [x] **New sync approach** — Background task creates its own database connection via aiosqlite
-- [x] **Re-enable auto-sync** — Uploaded books appear in library immediately
+### Background Sync ✅
+- [x] **Standalone sync function** — `run_sync_standalone()` with own DB connection
+- [x] **Auto-sync after upload** — Books appear in library immediately
+- [x] **Database path accessor** — `get_db_path()` for background tasks
 
-### Improved Category Detection ✅
-- [x] **Filename-based FanFiction detection** — Detects AO3, FFN, Wattpad patterns
-- [x] **Author username pattern detection** — Underscores, alphanumeric with numbers, all lowercase
+### Category Detection Improvements ✅
+- [x] **AO3-style filename detection** — Underscores as word separators
+- [x] **Expanded trope keywords** — slow_burn, fix_it, enemies_to_lovers, etc.
+- [x] **Proper confidence scoring** — No more false positives
 - [x] **Ship pattern detection** — "Character x Character" in filenames
-- [x] **Trope word detection** — oneshot, drabble, fluff, angst, AU, etc.
-- [x] **Non-Fiction title detection** — "How to", "Guide to", memoir, biography, etc.
 
-### Author Auto-fill Fix ✅
-- [x] **Improved filename parsing** — Default to "Author - Title" format
-- [x] **AO3 filename support** — Handles numeric IDs at start of filename
-- [x] **Series extraction** — Parses "[Series ##] Title" format
-- [x] **Removed restrictive heuristics** — No longer requires author to be shorter than title
+### File Type Support ✅
+- [x] **Added .azw support** — Frontend + backend + priority order
+- [x] **MIME types in file picker** — Better mobile browser compatibility
 
-### Future Improvements (moved to Phase 3)
+### Filename Parsing ✅
+- [x] **Improved author extraction** — Better "Author - Title" handling
+- [x] **Underscore variant support** — `Author_Name_-_Title.epub`
+- [x] **AO3 work ID parsing** — `12345678_Title.epub` patterns
+
+### Remaining Items (moved to Phase 3)
 - [ ] **Metadata extraction from EPUB** — Extract author/title from file metadata
-- [ ] **Progress during analysis** — Show which file is being analyzed
-- [ ] **Better error messages** — More helpful when upload fails
-- [ ] **Retry failed uploads** — Button to retry individual failed books
-
-### UI Improvements (moved to Phase 6)
-- [ ] **Move "Sync Library" button** — Relocate from header to Settings/Profile page
+- [ ] **Mobile file picker fixes** — Some devices don't show .mobi/.azw3
 
 ---
 
-## Phase 3: Rich Notes & Metadata
+## Phase 3: Rich Notes & Metadata ← NEXT
 
 **Goal:** Book notes and reading data live in Liminal with the same richness as Obsidian.
+
+### Metadata Extraction
+- [ ] **Extract author from EPUB** — Use existing metadata extractor on upload
+- [ ] **Extract title from EPUB** — Prefer file metadata over filename
+- [ ] **Fallback chain** — Try EPUB metadata → filename parsing → Unknown
 
 ### Structured Notes
 - [ ] Replace single notes field with structured sections:
@@ -241,7 +243,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 **Goal:** Streamline workflows. Reduce remaining friction points.
 
 ### Storage & Sync
-- [ ] **Move "Sync Library" button to Settings page** ← Moved from Phase 2.1
+- [ ] **Move "Sync Library" button to Settings page**
 - [ ] Settings: view/change storage location
 - [ ] Sync progress indicator
 - [ ] Incremental sync
@@ -286,10 +288,8 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ## Technical Debt & Bugs
 
-### High Priority
-- [ ] **Metadata extraction from EPUB** — Integrate existing extractor with upload service
-
 ### Medium Priority
+- [ ] Mobile file picker doesn't show .mobi/.azw3 on some Android devices
 - [ ] Folder name parsing too strict on dash separator
 - [ ] Sort direction unclear (no visual indicator)
 - [ ] Status filter on Series page
@@ -332,7 +332,8 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.3.0 | Dec 19, 2025 | Phase 1 complete |
 | v0.4.0 | Dec 20, 2025 | Phase 1.5 complete |
 | v0.5.0 | Dec 22, 2025 | Phase 2 complete — Book upload system |
-| v0.5.1 | Dec 22, 2025 | **Phase 2.1 complete** — Upload polish, auto-sync fix |
+| v0.5.1 | Dec 22, 2025 | Background sync fix |
+| v0.5.2 | Dec 22, 2025 | **Phase 2.1 complete** — Category detection, .azw support |
 | v0.6.0 | TBD | Phase 3 — Rich notes & metadata |
 | v0.7.0 | TBD | Phase 4 — TBR & Wishlist |
 | v0.8.0 | TBD | Phase 5 — Discovery & Collections |
@@ -341,4 +342,4 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-*Last updated: December 22, 2025 (Phase 2.1 complete — Upload polish, auto-sync, improved category detection)*
+*Last updated: December 22, 2025 (v0.5.2 — Phase 2.1 complete)*
