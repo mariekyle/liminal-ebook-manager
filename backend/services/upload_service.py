@@ -136,7 +136,7 @@ def cleanup_expired_sessions():
 # FILE HANDLING
 # =============================================================================
 
-ALLOWED_EXTENSIONS = {'.epub', '.pdf', '.mobi', '.azw3', '.html', '.htm'}
+ALLOWED_EXTENSIONS = {'.epub', '.pdf', '.mobi', '.azw', '.azw3', '.html', '.htm'}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 MAX_BATCH_SIZE = 500 * 1024 * 1024  # 500 MB
 
@@ -197,51 +197,47 @@ def parse_filename(filename: str) -> dict:
     Parse metadata from filename.
     
     Supports formats:
-    - "Author - Title.ext" (most common)
-    - "Author - [Series ##] Title.ext"
-    - "12345678_work_title.ext" (AO3 download)
-    - "work_id12345678.ext" (AO3 variant)
+    - "Author - Title.ext" (standard)
+    - "Author - [Series ##] Title.ext" (with series)
+    - "Author_Name_-_Title.ext" (underscore variant)
+    - "12345678_Title.ext" (AO3 with work ID)
+    - "Title_With_Underscores.ext" (AO3 without author - most common)
     - "Title.ext" (fallback)
     """
     # Remove extension
     name = os.path.splitext(filename)[0]
+    original_name = name  # Keep original for pattern detection
     
-    # Replace underscores with spaces for display
-    display_name = name.replace('_', ' ')
-    
-    # --- Check for AO3 patterns first ---
-    # Pattern 1: Numeric ID at start (e.g., "12345678_some_title" or "12345678 - Author - Title")
-    ao3_pattern1 = re.match(r'^(\d{6,})[\s_-]+(.+)$', name)
-    if ao3_pattern1:
-        work_id = ao3_pattern1.group(1)
-        rest = ao3_pattern1.group(2).replace('_', ' ')
-        # Check if rest has author info
+    # --- Check for AO3 numeric ID pattern first ---
+    # Pattern: "12345678_title" or "12345678 - Author - Title"
+    ao3_id_match = re.match(r'^(\d{5,})[\s_-]+(.+)$', name)
+    if ao3_id_match:
+        work_id = ao3_id_match.group(1)
+        rest = ao3_id_match.group(2)
+        
+        # Check if rest has author info (contains " - " or "_-_")
         if ' - ' in rest:
             parts = rest.split(' - ', 1)
             return {
-                'title': parts[1].strip() if len(parts) > 1 else rest.strip(),
-                'author': parts[0].strip(),
-                'ao3_work_id': work_id,
-                'is_fanfiction': True
+                'title': parts[1].strip().replace('_', ' ') if len(parts) > 1 else rest.replace('_', ' '),
+                'author': parts[0].strip().replace('_', ' '),
+                'ao3_work_id': work_id
             }
+        elif '_-_' in rest:
+            parts = rest.split('_-_', 1)
+            return {
+                'title': parts[1].strip().replace('_', ' ') if len(parts) > 1 else rest.replace('_', ' '),
+                'author': parts[0].strip().replace('_', ' '),
+                'ao3_work_id': work_id
+            }
+        # No author separator - just title
         return {
-            'title': rest.strip(),
+            'title': rest.replace('_', ' ').strip(),
             'author': 'Unknown',
-            'ao3_work_id': work_id,
-            'is_fanfiction': True
+            'ao3_work_id': work_id
         }
     
-    # Pattern 2: "work_id" followed by numbers
-    ao3_pattern2 = re.match(r'^work[_\s]*id[_\s]*(\d+).*$', name, re.IGNORECASE)
-    if ao3_pattern2:
-        return {
-            'title': display_name,
-            'author': 'Unknown',
-            'ao3_work_id': ao3_pattern2.group(1),
-            'is_fanfiction': True
-        }
-    
-    # --- Standard "Author - Title" pattern ---
+    # --- Check for "Author - Title" pattern (standard) ---
     if ' - ' in name:
         parts = name.split(' - ', 1)
         author_part = parts[0].strip().replace('_', ' ')
@@ -262,9 +258,27 @@ def parse_filename(filename: str) -> dict:
             'title': title_part
         }
     
-    # --- Fallback: just title ---
+    # --- Check for underscore-separated "Author_-_Title" pattern ---
+    if '_-_' in name:
+        parts = name.split('_-_', 1)
+        return {
+            'author': parts[0].strip().replace('_', ' '),
+            'title': parts[1].strip().replace('_', ' ') if len(parts) > 1 else 'Unknown Title'
+        }
+    
+    # --- Underscores as word separators (no author) ---
+    # Could be AO3-style or just a regular title with underscores
+    # Let detect_fanfiction_from_filename() determine category with proper confidence
+    if '_' in name and name.count('_') >= 2:
+        return {
+            'title': name.replace('_', ' ').strip(),
+            'author': 'Unknown'
+        }
+    
+    # --- Fallback: just a title ---
+    display_name = name.replace('_', ' ').strip()
     return {
-        'title': display_name.strip(),
+        'title': display_name,
         'author': 'Unknown'
     }
 
@@ -371,7 +385,7 @@ def create_book_group(files: list[UploadedFile]) -> BookGroup:
     
     # Find best metadata source (prefer EPUB, then PDF)
     best_metadata = None
-    priority_order = ['.epub', '.pdf', '.mobi', '.azw3', '.html']
+    priority_order = ['.epub', '.pdf', '.mobi', '.azw3', '.azw', '.html']
     
     for ext in priority_order:
         for f in files:
@@ -425,13 +439,14 @@ def detect_fanfiction_from_filename(filename: str, author: str) -> tuple[bool, f
         (is_fanfiction, confidence, reason)
     """
     filename_lower = filename.lower()
+    name_without_ext = os.path.splitext(filename)[0]
     reasons = []
     confidence = 0.0
     
-    # --- High confidence indicators (from filename) ---
+    # --- HIGH CONFIDENCE: Explicit indicators ---
     
-    # AO3 numeric ID at start (very strong indicator)
-    if re.match(r'^\d{6,}[\s_-]', filename):
+    # AO3 numeric ID at start (e.g., "12345678_story_title.epub")
+    if re.match(r'^\d{5,}[\s_-]', filename):
         reasons.append("AO3-style numeric ID in filename")
         confidence += 0.9
     
@@ -460,50 +475,50 @@ def detect_fanfiction_from_filename(filename: str, author: str) -> tuple[bool, f
         reasons.append("Wattpad indicator")
         confidence += 0.8
     
-    # --- Medium confidence indicators ---
+    # --- MEDIUM CONFIDENCE: AO3 download pattern ---
+    # Key insight: AO3 downloads use underscores as spaces and have NO author separator
+    # Pattern: "Title_With_Underscores.epub" (no " - " anywhere)
     
-    # Ship patterns in filename: "Character x Character" or "Character_Character"
-    # Common in fanfic downloads
+    has_underscores = '_' in name_without_ext
+    has_author_separator = ' - ' in filename or '_-_' in filename
+    underscore_count = name_without_ext.count('_')
+    
+    # Strong AO3 indicator: multiple underscores, no author separator
+    if has_underscores and not has_author_separator and underscore_count >= 2:
+        reasons.append(f"AO3-style filename (underscores as spaces, no author): {underscore_count} underscores")
+        confidence += 0.7
+    
+    # Ship patterns in filename: "Character x Character" or "CharacterxCharacter"
     ship_pattern = re.search(r'(\w+)\s*[x×]\s*(\w+)', filename_lower)
     if ship_pattern:
         reasons.append(f"ship pattern in filename: '{ship_pattern.group(0)}'")
         confidence += 0.5
     
-    # Multiple underscores in a row (common in AO3 downloads)
-    if re.search(r'_{2,}', filename) or filename.count('_') >= 4:
-        reasons.append("multiple underscores (common in fanfic downloads)")
-        confidence += 0.3
-    
-    # --- Author pattern analysis ---
-    if author and author != 'Unknown':
+    # --- MEDIUM CONFIDENCE: Author pattern analysis ---
+    if author and author not in ('Unknown', 'Unknown Author', ''):
         author_lower = author.lower()
         
-        # Username patterns: contains underscore
+        # Username patterns
         if '_' in author:
             reasons.append(f"author has underscore: '{author}'")
             confidence += 0.4
-        
-        # Alphanumeric with digit and no spaces (username pattern)
         elif re.match(r'^[a-zA-Z0-9]+$', author) and re.search(r'\d', author) and len(author) > 3:
             reasons.append(f"author looks like username: '{author}'")
             confidence += 0.35
-        
-        # All lowercase, no spaces (likely username)
         elif re.match(r'^[a-z0-9]+$', author) and len(author) > 3:
             reasons.append(f"author is all lowercase (username pattern): '{author}'")
             confidence += 0.35
-        
-        # Has hyphen AND digit AND no space (e.g., "rock-the-casbah18")
         elif '-' in author and re.search(r'\d', author) and ' ' not in author:
             reasons.append(f"author looks like username: '{author}'")
             confidence += 0.35
     
-    # --- Low confidence but suggestive ---
-    
-    # Common fanfic trope words in title
-    trope_words = ['oneshot', 'one-shot', 'drabble', 'ficlet', 'pwp', 'smut', 
-                   'fluff', 'angst', 'au ', ' au', 'alternate universe', 
-                   'reader insert', 'x reader', 'self insert']
+    # --- LOW CONFIDENCE: Trope words ---
+    trope_words = ['oneshot', 'one-shot', 'one_shot', 'drabble', 'ficlet', 'pwp', 
+                   'smut', 'fluff', 'angst', 'lemon', 'lime', 'slash',
+                   'au_', '_au', 'alternate_universe', 'alt_universe',
+                   'reader_insert', 'x_reader', 'self_insert',
+                   'enemies_to_lovers', 'friends_to_lovers', 'slow_burn',
+                   'fix_it', 'fix-it', 'canon_divergence']
     for trope in trope_words:
         if trope in filename_lower:
             reasons.append(f"contains trope word: '{trope}'")
