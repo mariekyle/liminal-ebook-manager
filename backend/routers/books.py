@@ -136,6 +136,16 @@ class BookDatesUpdate(BaseModel):
     date_finished: Optional[str] = None  # ISO format: YYYY-MM-DD or null
 
 
+class BookMetadataUpdate(BaseModel):
+    """Request body for updating book metadata fields."""
+    title: Optional[str] = None
+    authors: Optional[List[str]] = None
+    series: Optional[str] = None
+    series_number: Optional[str] = None
+    category: Optional[str] = None
+    publication_year: Optional[int] = None
+
+
 class BooksListResponse(BaseModel):
     """Response for book list endpoint."""
     books: List[BookSummary]
@@ -442,6 +452,73 @@ async def update_book_dates(
         "date_started": update.date_started,
         "date_finished": update.date_finished
     }
+
+
+@router.put("/books/{book_id}/metadata")
+async def update_book_metadata(
+    book_id: int,
+    update: BookMetadataUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update book metadata fields.
+    Only provided fields are updated; others remain unchanged.
+    """
+    # Build dynamic update query based on provided fields
+    updates = []
+    params = []
+    
+    if update.title is not None:
+        updates.append("title = ?")
+        params.append(update.title)
+    
+    if update.authors is not None:
+        # Store as JSON array
+        updates.append("authors = ?")
+        params.append(json.dumps(update.authors))
+    
+    if update.series is not None:
+        # Empty string means remove series
+        updates.append("series = ?")
+        params.append(update.series if update.series else None)
+    
+    if update.series_number is not None:
+        updates.append("series_number = ?")
+        params.append(update.series_number if update.series_number else None)
+    
+    if update.category is not None:
+        updates.append("category = ?")
+        params.append(update.category if update.category else None)
+    
+    if update.publication_year is not None:
+        # 0 or negative means remove year
+        updates.append("publication_year = ?")
+        params.append(update.publication_year if update.publication_year > 0 else None)
+    
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    # Add updated_at timestamp
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    
+    # Add book_id to params
+    params.append(book_id)
+    
+    query = f"UPDATE books SET {', '.join(updates)} WHERE id = ?"
+    
+    await db.execute(query, params)
+    await db.commit()
+    
+    # Return updated book using existing helper
+    cursor = await db.execute(
+        "SELECT * FROM books WHERE id = ?", (book_id,)
+    )
+    row = await cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    return row_to_book_detail(row)
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])

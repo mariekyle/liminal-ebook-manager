@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail } from '../api'
 import GradientCover from './GradientCover'
+import EditBookModal from './EditBookModal'
 
 // Rating labels - can be customized in future settings
 const RATING_LABELS = {
@@ -51,6 +52,9 @@ function BookDetail() {
   // Series data (for books in a series)
   const [seriesBooks, setSeriesBooks] = useState([])
   const [seriesLoading, setSeriesLoading] = useState(false)
+  
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -259,6 +263,12 @@ function BookDetail() {
     }
   }
 
+  const handleMetadataSave = (updatedBook) => {
+    setBook(updatedBook)
+    // Update local state that might be affected
+    setSelectedCategory(updatedBook.category || '')
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -332,9 +342,21 @@ function BookDetail() {
             {book.title}
           </h1>
           
-          <p className="text-gray-400 mb-4">
-            by {book.authors?.join(', ') || 'Unknown Author'}
-          </p>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-gray-400">
+              by {book.authors?.join(', ') || 'Unknown Author'}
+            </p>
+            <button
+              onClick={() => setEditModalOpen(true)}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0"
+              aria-label="Edit book details"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Edit
+            </button>
+          </div>
           
           {/* Metadata pills */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -588,6 +610,14 @@ function BookDetail() {
           ) : null}
         </div>
       )}
+
+      {/* Edit Metadata Modal */}
+      <EditBookModal
+        book={book}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSave={handleMetadataSave}
+      />
     </div>
   )
 }

@@ -161,6 +161,24 @@ export async function updateBookDates(bookId, dateStarted, dateFinished) {
 }
 
 /**
+ * Update book metadata (title, authors, series, etc.)
+ * @param {number} bookId - Book ID
+ * @param {Object} metadata - Fields to update
+ * @param {string} [metadata.title] - Book title
+ * @param {string[]} [metadata.authors] - List of authors
+ * @param {string} [metadata.series] - Series name (empty string to remove)
+ * @param {string} [metadata.series_number] - Series number
+ * @param {string} [metadata.category] - Category
+ * @param {number} [metadata.publication_year] - Publication year (0 to remove)
+ */
+export async function updateBookMetadata(bookId, metadata) {
+  return apiFetch(`/books/${bookId}/metadata`, {
+    method: 'PUT',
+    body: JSON.stringify(metadata)
+  })
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {
