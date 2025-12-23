@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
+import { getReadTimeData } from '../utils/readTime'
 
 // Rating labels - can be customized in future settings
 const RATING_LABELS = {
@@ -21,6 +22,9 @@ function BookDetail() {
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // Settings
+  const [wpm, setWpm] = useState(250)
   
   // Note editor state
   const [noteContent, setNoteContent] = useState('')
@@ -55,6 +59,17 @@ function BookDetail() {
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
+
+  // Load settings (for WPM)
+  useEffect(() => {
+    getSettings()
+      .then(settings => {
+        if (settings.reading_wpm) {
+          setWpm(parseInt(settings.reading_wpm, 10) || 250)
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
+  }, [])
 
   // Load book and notes (essential for page)
   useEffect(() => {
@@ -285,8 +300,6 @@ function BookDetail() {
         <p className="text-red-400">{error || 'Book not found'}</p>
         <button 
           onClick={() => {
-            // If we have a return URL from navigation state, use it
-            // Otherwise fall back to library root
             const returnUrl = location.state?.returnUrl
             if (returnUrl) {
               navigate(returnUrl)
@@ -303,14 +316,13 @@ function BookDetail() {
   }
 
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
+  const readTimeData = getReadTimeData(book.word_count, wpm)
 
   return (
     <div className="max-w-4xl mx-auto">
       {/* Back link */}
       <button 
         onClick={() => {
-          // If we have a return URL from navigation state, use it
-          // Otherwise fall back to library root
           const returnUrl = location.state?.returnUrl
           if (returnUrl) {
             navigate(returnUrl)
@@ -324,9 +336,9 @@ function BookDetail() {
       </button>
 
       {/* Book Header */}
-      <div className="flex flex-col sm:flex-row gap-6 mb-8">
+      <div className="flex flex-col sm:flex-row gap-6 mb-6">
         {/* Cover */}
-        <div className="w-40 shrink-0">
+        <div className="w-32 sm:w-40 shrink-0">
           <GradientCover
             title={book.title}
             author={primaryAuthor}
@@ -336,16 +348,12 @@ function BookDetail() {
           />
         </div>
         
-        {/* Info */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white mb-2">
-            {book.title}
-          </h1>
-          
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <p className="text-gray-400">
-              by {book.authors?.join(', ') || 'Unknown Author'}
-            </p>
+        {/* Title, Author, Read Time */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-4 mb-1">
+            <h1 className="text-2xl font-bold text-white">
+              {book.title}
+            </h1>
             <button
               onClick={() => setEditModalOpen(true)}
               className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0"
@@ -358,130 +366,139 @@ function BookDetail() {
             </button>
           </div>
           
-          {/* Metadata pills */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <select
-              value={selectedCategory}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              disabled={categoryLoading}
-              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-            >
-              <option value="">Uncategorized</option>
-              <option value="Fiction">Fiction</option>
-              <option value="Non-Fiction">Non-Fiction</option>
-              <option value="FanFiction">FanFiction</option>
-              {/* Include any other categories from the database */}
-              {categories
-                .filter(cat => cat && !['Fiction', 'Non-Fiction', 'FanFiction', 'Uncategorized', ''].includes(cat))
-                .map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))
-              }
-            </select>
-            {categoryStatus === 'saved' && (
-              <span className="text-green-400 text-sm">✓</span>
-            )}
-            {categoryStatus === 'error' && (
-              <span className="text-red-400 text-sm">Failed</span>
-            )}
-            {/* Status dropdown */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              disabled={statusLoading}
-              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-            >
-              <option value="Unread">Unread</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Finished">Finished</option>
-              <option value="DNF">DNF</option>
-            </select>
-            {statusStatus === 'saved' && (
-              <span className="text-green-400 text-sm">✓</span>
-            )}
-            {statusStatus === 'error' && (
-              <span className="text-red-400 text-sm">Failed</span>
-            )}
-            {/* Rating dropdown */}
-            <select
-              value={selectedRating ?? ''}
-              onChange={(e) => handleRatingChange(e.target.value)}
-              disabled={ratingLoading}
-              className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-            >
-              <option value="">No Rating</option>
-              {[5, 4, 3, 2, 1].map(num => (
-                <option key={num} value={num}>
-                  {'★'.repeat(num)}{'☆'.repeat(5-num)} {RATING_LABELS[num]}
-                </option>
-              ))}
-            </select>
-            {ratingStatus === 'saved' && (
-              <span className="text-green-400 text-sm">✓</span>
-            )}
-            {ratingStatus === 'error' && (
-              <span className="text-red-400 text-sm">Failed</span>
-            )}
-            {book.series && (
-              <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">
-                {book.series} #{book.series_number}
-              </span>
-            )}
-            {book.publication_year && (
-              <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">
-                {book.publication_year}
-              </span>
-            )}
-            {book.word_count && (
-              <span className="bg-library-card px-3 py-1 rounded text-sm text-gray-300">
-                {book.word_count.toLocaleString()} words
-              </span>
-            )}
-          </div>
+          <p className="text-gray-400 mb-4">
+            by {book.authors?.join(', ') || 'Unknown Author'}
+          </p>
           
-          {/* Reading Dates */}
-          <div className="flex flex-wrap gap-4 mb-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-gray-400 text-sm">Started:</label>
-              <input
-                type="date"
-                value={dateStarted}
-                onChange={(e) => handleDateChange('started', e.target.value)}
-                disabled={datesLoading}
-                className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-              />
+          {/* Estimated Read Time - Prominent Display */}
+          {readTimeData && (
+            <div className="bg-library-card rounded-lg px-4 py-3 inline-block">
+              <div className="text-2xl font-semibold text-white">
+                {readTimeData.display}
+              </div>
+              <div className="text-gray-400 text-sm">
+                {readTimeData.microcopy}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-gray-400 text-sm">Finished:</label>
-              <input
-                type="date"
-                value={dateFinished}
-                onChange={(e) => handleDateChange('finished', e.target.value)}
-                disabled={datesLoading}
-                className="bg-library-card px-3 py-1 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-              />
-            </div>
-            {datesStatus === 'saved' && (
-              <span className="text-green-400 text-sm">✓ Saved</span>
-            )}
-            {datesStatus === 'error' && (
-              <span className="text-red-400 text-sm">Failed to save</span>
-            )}
+          )}
+        </div>
+      </div>
+
+      {/* Reading Tracker Card */}
+      <div className="bg-library-card rounded-lg p-4 mb-6">
+        <div className="flex flex-wrap gap-3 items-center mb-4">
+          {/* Status */}
+          <select
+            value={selectedStatus}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            disabled={statusLoading}
+            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+          >
+            <option value="Unread">Unread</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Finished">Finished</option>
+            <option value="DNF">DNF</option>
+          </select>
+          {statusStatus === 'saved' && (
+            <span className="text-green-400 text-sm">✓</span>
+          )}
+          {statusStatus === 'error' && (
+            <span className="text-red-400 text-sm">Failed</span>
+          )}
+          
+          {/* Rating */}
+          <select
+            value={selectedRating ?? ''}
+            onChange={(e) => handleRatingChange(e.target.value)}
+            disabled={ratingLoading}
+            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+          >
+            <option value="">No Rating</option>
+            {[5, 4, 3, 2, 1].map(num => (
+              <option key={num} value={num}>
+                {'★'.repeat(num)}{'☆'.repeat(5-num)} {RATING_LABELS[num]}
+              </option>
+            ))}
+          </select>
+          {ratingStatus === 'saved' && (
+            <span className="text-green-400 text-sm">✓</span>
+          )}
+          {ratingStatus === 'error' && (
+            <span className="text-red-400 text-sm">Failed</span>
+          )}
+          
+          {/* Category */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            disabled={categoryLoading}
+            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
+          >
+            <option value="">Uncategorized</option>
+            <option value="Fiction">Fiction</option>
+            <option value="Non-Fiction">Non-Fiction</option>
+            <option value="FanFiction">FanFiction</option>
+            {categories
+              .filter(cat => cat && !['Fiction', 'Non-Fiction', 'FanFiction', 'Uncategorized', ''].includes(cat))
+              .map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))
+            }
+          </select>
+          {categoryStatus === 'saved' && (
+            <span className="text-green-400 text-sm">✓</span>
+          )}
+          {categoryStatus === 'error' && (
+            <span className="text-red-400 text-sm">Failed</span>
+          )}
+        </div>
+        
+        {/* Reading Dates */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-gray-400 text-sm">Started:</label>
+            <input
+              type="date"
+              value={dateStarted}
+              onChange={(e) => handleDateChange('started', e.target.value)}
+              disabled={datesLoading}
+              className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+            />
           </div>
+          <div className="flex items-center gap-2">
+            <label className="text-gray-400 text-sm">Finished:</label>
+            <input
+              type="date"
+              value={dateFinished}
+              onChange={(e) => handleDateChange('finished', e.target.value)}
+              disabled={datesLoading}
+              className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+            />
+          </div>
+          {datesStatus === 'saved' && (
+            <span className="text-green-400 text-sm">✓</span>
+          )}
+          {datesStatus === 'error' && (
+            <span className="text-red-400 text-sm">Failed</span>
+          )}
+        </div>
+      </div>
+
+      {/* About This Book Card */}
+      {(book.summary || (book.tags && book.tags.length > 0) || book.word_count || book.publication_year || book.series) && (
+        <div className="bg-library-card rounded-lg p-4 mb-6">
+          <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
           
           {/* Summary */}
           {book.summary && (
-            <div className="bg-library-card rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-400 mb-2">Summary</h3>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {book.summary}
-              </p>
-            </div>
+            <p className="text-gray-300 text-sm leading-relaxed mb-4">
+              {book.summary}
+            </p>
           )}
           
           {/* Tags */}
           {book.tags && book.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-4">
               {book.tags.map(tag => (
                 <span 
                   key={tag}
@@ -492,13 +509,26 @@ function BookDetail() {
               ))}
             </div>
           )}
+          
+          {/* Book Details Footer */}
+          <div className="text-gray-500 text-xs flex flex-wrap gap-x-3 gap-y-1 pt-2 border-t border-gray-700">
+            {book.word_count && (
+              <span>{book.word_count.toLocaleString()} words</span>
+            )}
+            {book.publication_year && (
+              <span>{book.publication_year}</span>
+            )}
+            {book.series && (
+              <span>{book.series} #{book.series_number || '?'}</span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Notes Section */}
-      <div className="bg-library-card rounded-lg p-6">
+      <div className="bg-library-card rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">📝 Notes</h2>
+          <h2 className="text-sm font-medium text-gray-400">Notes</h2>
           
           {/* Save status indicator */}
           <div className="flex items-center gap-2">
@@ -513,7 +543,7 @@ function BookDetail() {
               onClick={handleSaveNote}
               disabled={saving}
               className={`
-                px-4 py-2 rounded text-sm font-medium
+                px-4 py-1.5 rounded text-sm font-medium
                 ${saving 
                   ? 'bg-gray-600 cursor-not-allowed' 
                   : 'bg-library-accent hover:opacity-90'
@@ -521,7 +551,7 @@ function BookDetail() {
                 text-white transition-opacity
               `}
             >
-              {saving ? 'Saving...' : 'Save Note'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
@@ -530,31 +560,16 @@ function BookDetail() {
         <textarea
           value={noteContent}
           onChange={e => setNoteContent(e.target.value)}
-          placeholder="Write your notes here... Use [[Book Title]] to link to other books."
-          className="w-full h-64 bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-y font-mono text-sm"
+          placeholder="Write your notes here..."
+          className="w-full h-48 bg-library-bg text-white p-3 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-y text-sm"
         />
-        
-        {/* Linking hint */}
-        <p className="text-gray-500 text-xs mt-2">
-          Tip: Use [[Book Title]] to create links to other books in your library.
-        </p>
       </div>
-
-      {/* File Location (for debugging/reference) */}
-      {book.folder_path && (
-        <div className="mt-6 text-gray-500 text-xs">
-          <span className="font-medium">Location: </span>
-          <code className="bg-library-card px-2 py-1 rounded">
-            {book.folder_path}
-          </code>
-        </div>
-      )}
 
       {/* Series Section */}
       {book.series && (
-        <div className="mt-8 bg-library-card rounded-lg overflow-hidden">
+        <div className="bg-library-card rounded-lg overflow-hidden mb-6">
           <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-            <h2 className="text-white font-medium">
+            <h2 className="text-sm font-medium text-gray-400">
               {book.series}
             </h2>
             <Link 
@@ -576,8 +591,7 @@ function BookDetail() {
                 return (
                   <li key={seriesBook.id}>
                     {isCurrentBook ? (
-                      // Current book - highlighted, not a link
-                      <div className="flex items-center gap-4 px-4 py-3 bg-gray-800">
+                      <div className="flex items-center gap-4 px-4 py-3 bg-gray-800/50">
                         <span className="text-gray-500 text-sm w-8 flex-shrink-0">
                           {seriesBook.series_number || '—'}
                         </span>
@@ -587,10 +601,9 @@ function BookDetail() {
                         <span className="text-gray-500 text-xs">You are here</span>
                       </div>
                     ) : (
-                      // Other books - clickable links
                       <Link
                         to={`/book/${seriesBook.id}`}
-                        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-colors"
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-800/50 transition-colors"
                       >
                         <span className="text-gray-500 text-sm w-8 flex-shrink-0">
                           {seriesBook.series_number || '—'}
@@ -608,6 +621,16 @@ function BookDetail() {
               })}
             </ul>
           ) : null}
+        </div>
+      )}
+
+      {/* File Location */}
+      {book.folder_path && (
+        <div className="text-gray-500 text-xs">
+          <span className="font-medium">Location: </span>
+          <code className="bg-library-card px-2 py-1 rounded">
+            {book.folder_path}
+          </code>
         </div>
       )}
 

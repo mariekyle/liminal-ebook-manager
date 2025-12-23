@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { listBooks, getCategories, listSeries } from '../api'
+import { listBooks, getCategories, listSeries, getSettings } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
 import TagsModal from './TagsModal'
 import { getRandomPhrase } from '../utils/categoryPhrases'
+import { READ_TIME_FILTERS, matchesReadTimeFilter } from '../utils/readTime'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -25,6 +26,8 @@ function Library() {
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sort, setSort] = useState(searchParams.get('sort') || 'title')
   const [categories, setCategories] = useState([])
+  const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
+  const [wpm, setWpm] = useState(250)
   
   // View state (tabs) - initialize from URL
   const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
@@ -45,18 +48,37 @@ function Library() {
   const [phraseKey, setPhraseKey] = useState(0)
 
   // Check if any filters are active (excluding "All" category and default sort)
-  const hasActiveFilters = category || status || selectedTags.length > 0 || search
+  const hasActiveFilters = category || status || selectedTags.length > 0 || search || readTimeFilter
 
-  // Get random phrase - regenerates when phraseKey, category, or total changes
+  // Filter books by read time (client-side filtering since backend doesn't support it)
+  // Defined early so we can use filteredBooks.length for the phrase
+  const filteredBooks = useMemo(() => {
+    if (!readTimeFilter) return books
+    return books.filter(book => matchesReadTimeFilter(book.word_count, readTimeFilter, wpm))
+  }, [books, readTimeFilter, wpm])
+
+  // Get random phrase - regenerates when phraseKey, category, or displayed count changes
+  // Uses filteredBooks.length to account for client-side read time filtering
   const currentPhrase = useMemo(() => {
-    return getRandomPhrase(category, total)
-  }, [category, total, phraseKey])
+    return getRandomPhrase(category, filteredBooks.length)
+  }, [category, filteredBooks.length, phraseKey])
 
   // Load categories on mount
   useEffect(() => {
     getCategories()
       .then(setCategories)
       .catch(err => console.error('Failed to load categories:', err))
+  }, [])
+
+  // Load WPM setting
+  useEffect(() => {
+    getSettings()
+      .then(settings => {
+        if (settings.reading_wpm) {
+          setWpm(parseInt(settings.reading_wpm, 10) || 250)
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
   }, [])
 
   // Load books when filters change
@@ -108,7 +130,7 @@ function Library() {
   // Regenerate phrase when filters change
   useEffect(() => {
     setPhraseKey(k => k + 1)
-  }, [category, status, selectedTags, search, activeView])
+  }, [category, status, selectedTags, search, activeView, readTimeFilter])
 
   // Scroll detection for collapsible header
   // Dependencies: activeView (tab switch), loading states (container appears after load)
@@ -151,6 +173,7 @@ function Library() {
     const urlSearch = searchParams.get('search') || ''
     const urlSort = searchParams.get('sort') || 'title'
     const urlView = searchParams.get('view') || 'library'
+    const urlReadTime = searchParams.get('readTime') || ''
     
     // Only update state if URL value differs (prevents infinite loops)
     if (urlCategory !== category) setCategory(urlCategory)
@@ -159,6 +182,7 @@ function Library() {
     if (urlSearch !== search) setSearch(urlSearch)
     if (urlSort !== sort) setSort(urlSort)
     if (urlView !== activeView) setActiveView(urlView)
+    if (urlReadTime !== readTimeFilter) setReadTimeFilter(urlReadTime)
   }, [searchParams])
 
   // Sync filter state to URL params
@@ -171,10 +195,11 @@ function Library() {
     if (search) params.set('search', search)
     if (sort && sort !== 'title') params.set('sort', sort)
     if (activeView !== 'library') params.set('view', activeView)
+    if (readTimeFilter) params.set('readTime', readTimeFilter)
     
     // Update URL without adding to history on every keystroke
     setSearchParams(params, { replace: true })
-  }, [category, status, selectedTags, search, sort, activeView, setSearchParams])
+  }, [category, status, selectedTags, search, sort, activeView, readTimeFilter, setSearchParams])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
@@ -366,6 +391,28 @@ function Library() {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">▼</span>
             </div>
           )}
+          
+          {/* Read Time Filter - Library view only */}
+          {activeView === 'library' && (
+            <div className="relative">
+              <select
+                value={readTimeFilter}
+                onChange={e => setReadTimeFilter(e.target.value)}
+                className={`appearance-none px-4 py-1.5 pr-8 rounded-full text-sm cursor-pointer transition-colors ${
+                  readTimeFilter
+                    ? 'bg-gray-700 text-white border border-gray-600'
+                    : 'bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400'
+                }`}
+              >
+                {READ_TIME_FILTERS.map(filter => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">▼</span>
+            </div>
+          )}
         </div>
 
         {/* Active Filters Row - Only show when filters are active */}
@@ -428,6 +475,19 @@ function Library() {
               </span>
             ))}
             
+            {/* Read time filter tag */}
+            {readTimeFilter && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
+                {READ_TIME_FILTERS.find(f => f.value === readTimeFilter)?.label}
+                <button
+                  onClick={() => setReadTimeFilter('')}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            
             {/* Clear All button */}
             <button
               onClick={() => {
@@ -436,6 +496,7 @@ function Library() {
                 setSearch('')
                 setSelectedTags([])
                 setSort('title')
+                setReadTimeFilter('')
               }}
               className="ml-auto text-library-accent text-sm hover:underline"
             >
@@ -462,12 +523,12 @@ function Library() {
       )}
 
       {/* Empty State - Library */}
-      {activeView === 'library' && !loading && !error && books.length === 0 && (
+      {activeView === 'library' && !loading && !error && filteredBooks.length === 0 && (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">🔭</div>
           <p className="text-gray-400 mb-4">No books found</p>
           <p className="text-gray-500 text-sm">
-            {search || category || status
+            {search || category || status || readTimeFilter
               ? 'Try adjusting your filters' 
               : 'Click "Sync Library" to scan your book folders'
             }
@@ -476,7 +537,7 @@ function Library() {
       )}
 
       {/* Book Grid - Library View */}
-      {activeView === 'library' && !loading && !error && books.length > 0 && (
+      {activeView === 'library' && !loading && !error && filteredBooks.length > 0 && (
         <div ref={libraryScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* Poetic phrase */}
           <div className="text-center py-4 mb-2">
@@ -486,7 +547,7 @@ function Library() {
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4">
-            {books.map(book => (
+            {filteredBooks.map(book => (
               <BookCard key={book.id} book={book} />
             ))}
           </div>
