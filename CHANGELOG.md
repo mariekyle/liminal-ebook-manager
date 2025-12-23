@@ -8,7 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Move "Sync Library" button to Settings page
-- Fix mobile file picker for .mobi/.azw3 (works on desktop, Android browser issue)
+
+---
+
+## [0.5.4] - 2025-12-23
+
+### Fixed
+
+#### Mobile File Picker for .mobi/.azw3
+- **Android document picker now works** — Uses broad MIME types (`application/*,text/*`) to trigger document browser instead of photo picker
+- **All ebook formats selectable on mobile** — .mobi, .azw3, .azw, .epub, .pdf, .html now all work on Android
+
+### Technical
+
+#### Modified Files
+- `frontend/src/components/upload/UploadZone.jsx`:
+  - Updated `accept` attribute to use `application/*,text/*` plus explicit extensions
+  - Forces Android to open document picker (Material Files) instead of photo picker
 
 ---
 
@@ -33,21 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `extract_file_metadata()` is now async to support EPUB/PDF parsing
 - Upload analysis calls metadata extractor for `.epub` and `.pdf` files
 
-### Technical
-
-#### Modified Files
-- `backend/services/upload_service.py`:
-  - Added import for `extract_metadata` from metadata service
-  - Rewrote `extract_file_metadata()` as async function with EPUB/PDF extraction
-  - Added logging for extracted metadata
-  
-- `backend/routers/upload.py`:
-  - Updated `analyze_batch` to await `extract_file_metadata()`
-  
-- `frontend/src/components/upload/BookCard.jsx`:
-  - Added "Not a match?" link in DuplicateBanner component
-  - Added confirmation state for `action === 'new'`
-
 ---
 
 ## [0.5.2] - 2025-12-22
@@ -68,9 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Improved author extraction** — Better "Author - Title" handling
 - **Underscore variant support** — Handles `Author_Name_-_Title.epub` format
 - **AO3 work ID parsing** — Correctly parses `12345678_Title.epub` patterns
-
-### Known Limitations
-- **Mobile file picker** — .mobi/.azw3 files can be uploaded from desktop but not from Android mobile browsers due to MIME type filtering issues
 
 ---
 
@@ -179,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.5.4 | 2025-12-23 | Mobile file picker fix for .mobi/.azw3 |
 | 0.5.3 | 2025-12-23 | EPUB metadata extraction, "Upload as New" option |
 | 0.5.2 | 2025-12-22 | Category detection, .azw support, filename parsing |
 | 0.5.1 | 2025-12-22 | Background sync fix |
@@ -194,14 +193,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upgrade Notes
 
-### Upgrading to 0.5.3
-
-**Backend:**
-- Replace `backend/services/upload_service.py`
-- Replace `backend/routers/upload.py`
+### Upgrading to 0.5.4
 
 **Frontend:**
-- Replace `frontend/src/components/upload/BookCard.jsx`
+- Replace `frontend/src/components/upload/UploadZone.jsx`
 
 **Rebuild Docker container after update.**
 

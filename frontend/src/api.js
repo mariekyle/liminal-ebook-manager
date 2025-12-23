@@ -278,3 +278,33 @@ export async function cancelUpload(sessionId) {
     }),
   })
 }
+
+// =============================================================================
+// SETTINGS API
+// =============================================================================
+
+/**
+ * Get all settings as key-value pairs
+ */
+export async function getSettings() {
+  return apiFetch('/settings')
+}
+
+/**
+ * Get a single setting by key
+ */
+export async function getSetting(key) {
+  return apiFetch(`/settings/${key}`)
+}
+
+/**
+ * Update or create a setting
+ * @param {string} key - Setting key
+ * @param {string|number} value - Setting value (will be converted to string)
+ */
+export async function updateSetting(key, value) {
+  return apiFetch(`/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value: String(value) })
+  })
+}

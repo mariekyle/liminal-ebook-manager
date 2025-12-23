@@ -6,14 +6,15 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.5.3)
+## Current State (v0.5.4)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
-- **Upload new books directly through the app** with auto-sync ✨
+- **Upload new books directly from mobile or desktop** ✨
 - **Extract metadata from EPUB/PDF files** (author, title, summary, tags) ✨
+- **All ebook formats work on mobile** (.epub, .pdf, .mobi, .azw3, .azw, .html) ✨
 - **Smart FanFiction detection** from filename patterns (AO3, FFN, tropes)
-- **Override false duplicate matches** with "Upload as New" option ✨
+- **Override false duplicate matches** with "Upload as New" option
 - Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
 - Collapsible filter header — Scroll down to hide, scroll up to reveal
 - Poetic category phrases — "780 what-ifs. Explore freely."
@@ -25,7 +26,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Active filters row — Clear individual filters or all at once
 - Search and filter by category, status, tags
 - Sort by title, author, series, year, recently updated
-- Scroll through full library (1690+ books)
+- Scroll through full library (1700+ books)
 - View book detail page with full metadata
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
@@ -42,35 +43,9 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ## Phase 2: Book Uploader ✅ COMPLETE
 
-**Completed: December 22, 2025**
+**Completed: December 22-23, 2025**
 
-### Smart Upload System ✅
-- [x] Multi-file upload — Select multiple files at once from phone Downloads
-- [x] Drag-and-drop (desktop) — Drop files into upload zone
-- [x] Mobile file picker — Native file picker with supported file types
-- [x] Smart file grouping — Auto-group formats (EPUB+PDF+MOBI+AZW3+HTML) into single book
-- [x] Batch upload — Upload multiple files → Auto-groups into books → Review → Done
-- [x] Mixed uploads — Multiple books in same session
-
-### Metadata & Category Detection ✅
-- [x] Category auto-detection — FanFiction/Fiction/Non-Fiction with confidence scoring
-- [x] Manual override — Category dropdown per book (edit before upload)
-- [x] Smart defaults — Auto-fill author/title from filename
-- [x] Inline editing — Edit metadata before finalizing upload
-- [x] **EPUB/PDF metadata extraction** — Author, title, tags from file metadata
-
-### Duplicate Handling ✅
-- [x] Enhanced duplicate detection — Distinguish "new format" from "exact duplicate"
-- [x] Smart actions — Skip duplicates, add new formats, or replace existing
-- [x] Visual warnings — Show which files exist, which are new
-- [x] User choice — Control duplicate behavior per file
-- [x] **"Upload as New" option** — Override false duplicate matches
-
-### Progress & Feedback ✅
-- [x] Upload progress — Per-book progress bars
-- [x] Success summary — List all uploaded books with results
-- [x] Error recovery — Show errors clearly
-- [x] Navigation — "View Library" or "Upload More" after completion
+All upload features working including mobile file picker for all formats.
 
 ---
 
@@ -78,34 +53,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 **Completed: December 23, 2025**
 
-### Background Sync ✅
-- [x] **Standalone sync function** — `run_sync_standalone()` with own DB connection
-- [x] **Auto-sync after upload** — Books appear in library immediately
-- [x] **Database path accessor** — `get_db_path()` for background tasks
-
-### Category Detection Improvements ✅
-- [x] **AO3-style filename detection** — Underscores as word separators
-- [x] **Expanded trope keywords** — slow_burn, fix_it, enemies_to_lovers, etc.
-- [x] **Proper confidence scoring** — No more false positives
-- [x] **Ship pattern detection** — "Character x Character" in filenames
-
-### File Type Support ✅
-- [x] **Added .azw support** — Frontend + backend + priority order
-- [x] **MIME types in file picker** — Better browser compatibility
-
-### Filename Parsing ✅
-- [x] **Improved author extraction** — Better "Author - Title" handling
-- [x] **Underscore variant support** — `Author_Name_-_Title.epub`
-- [x] **AO3 work ID parsing** — `12345678_Title.epub` patterns
-
-### Metadata Extraction ✅
-- [x] **EPUB metadata during upload** — Author, title from file metadata
-- [x] **PDF metadata support** — Extracts available metadata
-- [x] **Graceful fallback** — Falls back to filename if extraction fails
-- [x] **Override false matches** — "Upload as New" for incorrect duplicates
-
-### Known Limitations
-- [ ] **Mobile file picker** — .mobi/.azw3 work on desktop but not Android browsers (MIME type issue)
+- ✅ Background sync after upload
+- ✅ EPUB/PDF metadata extraction
+- ✅ Category detection improvements
+- ✅ "Upload as New" for false duplicates
+- ✅ Mobile file picker for .mobi/.azw3
 
 ---
 
@@ -271,7 +223,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] Error handling improvements
 
 ### Advanced Upload Features
-- [ ] Fix mobile file picker for .mobi/.azw3
+- [x] ~~Fix mobile file picker for .mobi/.azw3~~ ✅
 - [ ] Background uploads
 - [ ] Upload queue management
 - [ ] Resume interrupted uploads
@@ -294,7 +246,6 @@ Liminal is a personal reading companion that eliminates the friction of managing
 ## Technical Debt & Bugs
 
 ### Medium Priority
-- [ ] Mobile file picker doesn't show .mobi/.azw3 on Android browsers
 - [ ] Folder name parsing too strict on dash separator
 - [ ] Sort direction unclear (no visual indicator)
 - [ ] Status filter on Series page
@@ -339,7 +290,8 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.5.0 | Dec 22, 2025 | Phase 2 complete — Book upload system |
 | v0.5.1 | Dec 22, 2025 | Background sync fix |
 | v0.5.2 | Dec 22, 2025 | Category detection, .azw support |
-| v0.5.3 | Dec 23, 2025 | **Phase 2.1 complete** — EPUB metadata, "Upload as New" |
+| v0.5.3 | Dec 23, 2025 | EPUB metadata, "Upload as New" |
+| v0.5.4 | Dec 23, 2025 | **Phase 2.1 complete** — Mobile file picker fixed |
 | v0.6.0 | TBD | Phase 3 — Rich notes & metadata |
 | v0.7.0 | TBD | Phase 4 — TBR & Wishlist |
 | v0.8.0 | TBD | Phase 5 — Discovery & Collections |
@@ -348,4 +300,4 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-*Last updated: December 23, 2025 (v0.5.3 — Phase 2.1 complete)*
+*Last updated: December 23, 2025 (v0.5.4 — Phase 2.1 complete, upload system fully functional)*

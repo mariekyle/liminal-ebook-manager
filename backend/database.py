@@ -87,6 +87,22 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
     # Ensure indexes exist (these are idempotent)
     await db.execute("CREATE INDEX IF NOT EXISTS idx_books_status ON books(status)")
     
+    # Migration: Add settings table (for existing databases)
+    try:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Insert default WPM if not exists
+        await db.execute("""
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('reading_wpm', '250')
+        """)
+    except Exception as e:
+        print(f"Settings migration note: {e}")
+    
     await db.commit()
 
 
@@ -161,4 +177,11 @@ CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
 CREATE INDEX IF NOT EXISTS idx_links_to_book ON links(to_book_id);
 CREATE INDEX IF NOT EXISTS idx_links_from_note ON links(from_note_id);
+
+-- Settings table for user preferences
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
