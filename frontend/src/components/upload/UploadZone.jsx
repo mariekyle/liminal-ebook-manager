@@ -6,28 +6,6 @@
 
 import { useState, useCallback } from 'react';
 
-// File extensions and MIME types for the file picker
-// Note: We include MIME types because mobile browsers often filter by MIME type, not extension
-const ACCEPT_TYPES = [
-  // Extensions
-  '.epub',
-  '.pdf', 
-  '.mobi',
-  '.azw3',
-  '.azw',
-  '.html',
-  '.htm',
-  // MIME types
-  'application/epub+zip',
-  'application/pdf',
-  'application/x-mobipocket-ebook',
-  'application/vnd.amazon.ebook',
-  'application/vnd.amazon.mobi8-ebook',
-  'text/html',
-  // Generic fallback for ebook readers
-  'application/octet-stream',
-].join(',');
-
 export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -64,7 +42,6 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
         ref={fileInputRef}
         type="file"
         multiple
-        accept={ACCEPT_TYPES}
         onChange={handleInputChange}
         className="hidden"
       />
