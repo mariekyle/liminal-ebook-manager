@@ -42,6 +42,7 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
         ref={fileInputRef}
         type="file"
         multiple
+        accept="application/*,text/*,.epub,.pdf,.mobi,.azw3,.azw,.html,.htm"
         onChange={handleInputChange}
         className="hidden"
       />
