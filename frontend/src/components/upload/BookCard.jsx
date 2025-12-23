@@ -234,6 +234,14 @@ function DuplicateBanner({ duplicate, action, onActionClick }) {
             Skip
           </ActionButton>
         </div>
+        <div className="mt-2 pt-2 border-t border-[#4a4a3a]">
+          <button
+            onClick={() => onActionClick('new')}
+            className="text-[12px] text-[#888] hover:text-[#667eea] underline"
+          >
+            Not a match? Upload as separate book
+          </button>
+        </div>
       </div>
     );
   }
@@ -289,6 +297,20 @@ function DuplicateBanner({ duplicate, action, onActionClick }) {
           This file will not be uploaded.
         </p>
         <ActionButton onClick={() => onActionClick(null)}>Undo</ActionButton>
+      </div>
+    );
+  }
+
+  if (action === 'new') {
+    return (
+      <div className="mt-4 p-4 rounded-lg bg-[#2a3a2a] border border-[#28a745]">
+        <div className="font-medium flex items-center gap-2 mb-2 text-[#28a745]">
+          ✓ Uploading as New Book
+        </div>
+        <p className="text-sm text-[#aaa] mb-3">
+          This will be uploaded as a separate book, ignoring the duplicate match.
+        </p>
+        <ActionButton onClick={() => onActionClick(null)}>Change</ActionButton>
       </div>
     );
   }

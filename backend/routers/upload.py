@@ -190,9 +190,9 @@ async def analyze_batch(
                 detail="No valid files uploaded"
             )
         
-        # Extract metadata from each file
+        # Extract metadata from each file (async for EPUB/PDF extraction)
         for uploaded_file in uploaded_files:
-            extract_file_metadata(uploaded_file)
+            await extract_file_metadata(uploaded_file)
         
         # Group files into books
         books = group_files(uploaded_files)

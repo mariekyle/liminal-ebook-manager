@@ -20,8 +20,8 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
-# Metadata extraction - disabled for now, using filename parsing only
-# from services.metadata import extract_metadata
+# Metadata extraction from EPUB/PDF files
+from services.metadata import extract_metadata as extract_epub_metadata
 
 
 # =============================================================================
@@ -183,11 +183,49 @@ async def save_uploaded_file(session: UploadSession, filename: str, content: byt
 # METADATA EXTRACTION
 # =============================================================================
 
-def extract_file_metadata(uploaded_file: UploadedFile) -> dict:
-    """Extract metadata from an uploaded file"""
-    # For now, use filename parsing only
-    # TODO: Integrate with existing metadata extraction once signature is confirmed
+async def extract_file_metadata(uploaded_file: UploadedFile) -> dict:
+    """
+    Extract metadata from an uploaded file.
+    
+    Priority:
+    1. EPUB/PDF metadata (author, title from file)
+    2. Filename parsing (fallback)
+    """
+    # Start with filename parsing as base
     metadata = parse_filename(uploaded_file.original_name)
+    
+    # Try to extract richer metadata from EPUB/PDF files
+    if uploaded_file.extension in ('.epub', '.pdf'):
+        try:
+            file_path = Path(uploaded_file.temp_path)
+            extracted = await extract_epub_metadata(file_path)
+            
+            # Merge extracted data (prefer extracted over filename-parsed)
+            if extracted.get('title'):
+                metadata['title'] = extracted['title']
+            
+            if extracted.get('authors') and len(extracted['authors']) > 0:
+                # Join multiple authors with ", "
+                metadata['author'] = ', '.join(extracted['authors'])
+            
+            if extracted.get('publication_year'):
+                metadata['publication_year'] = extracted['publication_year']
+            
+            if extracted.get('summary'):
+                metadata['summary'] = extracted['summary']
+            
+            if extracted.get('tags'):
+                metadata['tags'] = extracted['tags']
+            
+            if extracted.get('word_count'):
+                metadata['word_count'] = extracted['word_count']
+            
+            print(f"Extracted metadata from {uploaded_file.original_name}: author='{metadata.get('author')}', title='{metadata.get('title')}'")
+                
+        except Exception as e:
+            print(f"Metadata extraction failed for {uploaded_file.original_name}: {e}")
+            # Continue with filename-parsed metadata
+    
     uploaded_file.metadata = metadata
     return metadata
 
