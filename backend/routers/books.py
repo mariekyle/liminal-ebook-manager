@@ -32,6 +32,7 @@ class BookSummary(BaseModel):
     category: Optional[str] = None
     status: Optional[str] = None
     rating: Optional[int] = None
+    word_count: Optional[int] = None
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
@@ -183,6 +184,7 @@ def row_to_book_summary(row) -> BookSummary:
         category=row["category"],
         status=row["status"],
         rating=row["rating"],
+        word_count=row["word_count"] if "word_count" in row.keys() else None,
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
@@ -210,7 +212,7 @@ def row_to_book_detail(row) -> BookDetail:
         date_started=row["date_started"],
         date_finished=row["date_finished"],
         publication_year=row["publication_year"],
-        word_count=row["word_count"],
+        word_count=row["word_count"] if "word_count" in row.keys() else None,
         summary=row["summary"],
         tags=parse_json_field(row["tags"]),
         folder_path=row["folder_path"],
