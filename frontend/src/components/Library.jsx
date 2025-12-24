@@ -170,6 +170,7 @@ function Library() {
   }, [activeView, loading, seriesLoading])
 
   // Sync FROM URL params TO state (for browser back/forward navigation)
+  // Only runs when searchParams changes (from browser navigation), not when state changes
   useEffect(() => {
     const urlCategory = searchParams.get('category') || ''
     const urlStatus = searchParams.get('status') || ''
@@ -179,31 +180,36 @@ function Library() {
     const urlView = searchParams.get('view') || 'library'
     const urlReadTime = searchParams.get('readTime') || ''
     
-    // Only update state if URL value differs (prevents infinite loops)
-    if (urlCategory !== category) setCategory(urlCategory)
-    if (urlStatus !== status) setStatus(urlStatus)
-    if (urlTags.join(',') !== selectedTags.join(',')) setSelectedTags(urlTags)
-    if (urlSearch !== search) setSearch(urlSearch)
-    if (urlSort !== sort) setSort(urlSort)
-    if (urlView !== activeView) setActiveView(urlView)
-    if (urlReadTime !== readTimeFilter) setReadTimeFilter(urlReadTime)
+    // Update state from URL values
+    setCategory(urlCategory)
+    setStatus(urlStatus)
+    setSelectedTags(urlTags)
+    setSearch(urlSearch)
+    setSort(urlSort)
+    setActiveView(urlView)
+    setReadTimeFilter(urlReadTime)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  // Sync filter state to URL params
-  useEffect(() => {
-    const params = new URLSearchParams()
+  // Update URL params without triggering re-sync
+  const updateUrlParams = useCallback((updates) => {
+    const params = new URLSearchParams(searchParams)
     
-    if (category) params.set('category', category)
-    if (status) params.set('status', status)
-    if (selectedTags.length > 0) params.set('tags', selectedTags.join(','))
-    if (search) params.set('search', search)
-    if (sort && sort !== 'title') params.set('sort', sort)
-    if (activeView !== 'library') params.set('view', activeView)
-    if (readTimeFilter) params.set('readTime', readTimeFilter)
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === '' || value === null || value === undefined || 
+          (Array.isArray(value) && value.length === 0) ||
+          (key === 'sort' && value === 'title') ||
+          (key === 'view' && value === 'library')) {
+        params.delete(key)
+      } else if (Array.isArray(value)) {
+        params.set(key, value.join(','))
+      } else {
+        params.set(key, value)
+      }
+    })
     
-    // Update URL without adding to history on every keystroke
     setSearchParams(params, { replace: true })
-  }, [category, status, selectedTags, search, sort, activeView, readTimeFilter, setSearchParams])
+  }, [searchParams, setSearchParams])
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
@@ -254,12 +260,18 @@ function Library() {
               type="text"
               placeholder="Search books..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => {
+                setSearch(e.target.value)
+                updateUrlParams({ search: e.target.value })
+              }}
               className="w-full bg-library-card text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
             />
             {search && (
               <button 
-                onClick={() => setSearch('')}
+                onClick={() => {
+                  setSearch('')
+                  updateUrlParams({ search: '' })
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
               >
                 ✕
@@ -271,7 +283,10 @@ function Library() {
         {/* Navigation Tabs */}
         <div className="mb-4 flex justify-center gap-8 border-b border-gray-700">
           <button
-            onClick={() => setActiveView('library')}
+            onClick={() => {
+              setActiveView('library')
+              updateUrlParams({ view: 'library' })
+            }}
             className={`pb-2 text-sm font-medium transition-colors relative ${
               activeView === 'library'
                 ? 'text-white'
@@ -284,7 +299,10 @@ function Library() {
             )}
           </button>
           <button
-            onClick={() => setActiveView('series')}
+            onClick={() => {
+              setActiveView('series')
+              updateUrlParams({ view: 'series' })
+            }}
             className={`pb-2 text-sm font-medium transition-colors relative ${
               activeView === 'series'
                 ? 'text-white'
@@ -308,7 +326,10 @@ function Library() {
         <div className="mb-4 flex items-center justify-center gap-2 flex-wrap">
           {/* Category Pills */}
           <button
-            onClick={() => setCategory('')}
+            onClick={() => {
+              setCategory('')
+              updateUrlParams({ category: '' })
+            }}
             className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
               category === ''
                 ? 'bg-library-accent text-white'
@@ -320,7 +341,10 @@ function Library() {
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setCategory(cat)}
+              onClick={() => {
+                setCategory(cat)
+                updateUrlParams({ category: cat })
+              }}
               className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
                 category === cat
                   ? 'bg-library-accent text-white'
@@ -341,7 +365,10 @@ function Library() {
             <div className="relative">
               <select
                 value={status}
-                onChange={e => setStatus(e.target.value)}
+                onChange={e => {
+                  setStatus(e.target.value)
+                  updateUrlParams({ status: e.target.value })
+                }}
                 className={`appearance-none px-4 py-1.5 pr-8 rounded-full text-sm cursor-pointer transition-colors ${
                   status
                     ? 'bg-gray-700 text-white border border-gray-600'
@@ -383,7 +410,10 @@ function Library() {
             <div className="relative">
               <select
                 value={sort}
-                onChange={e => setSort(e.target.value)}
+                onChange={e => {
+                  setSort(e.target.value)
+                  updateUrlParams({ sort: e.target.value })
+                }}
                 className="appearance-none px-4 py-1.5 pr-8 rounded-full text-sm bg-transparent text-gray-300 border border-gray-500 hover:border-gray-400 cursor-pointer"
               >
                 <option value="title">Sort: Title</option>
@@ -401,7 +431,10 @@ function Library() {
             <div className="relative">
               <select
                 value={readTimeFilter}
-                onChange={e => setReadTimeFilter(e.target.value)}
+                onChange={e => {
+                  setReadTimeFilter(e.target.value)
+                  updateUrlParams({ readTime: e.target.value })
+                }}
                 className={`appearance-none px-4 py-1.5 pr-8 rounded-full text-sm cursor-pointer transition-colors ${
                   readTimeFilter
                     ? 'bg-gray-700 text-white border border-gray-600'
@@ -429,7 +462,10 @@ function Library() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
                 {category}
                 <button
-                  onClick={() => setCategory('')}
+                  onClick={() => {
+                    setCategory('')
+                    updateUrlParams({ category: '' })
+                  }}
                   className="text-gray-400 hover:text-white"
                 >
                   ×
@@ -442,7 +478,10 @@ function Library() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
                 status: {status}
                 <button
-                  onClick={() => setStatus('')}
+                  onClick={() => {
+                    setStatus('')
+                    updateUrlParams({ status: '' })
+                  }}
                   className="text-gray-400 hover:text-white"
                 >
                   ×
@@ -455,7 +494,10 @@ function Library() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
                 search: "{search}"
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => {
+                    setSearch('')
+                    updateUrlParams({ search: '' })
+                  }}
                   className="text-gray-400 hover:text-white"
                 >
                   ×
@@ -471,7 +513,11 @@ function Library() {
               >
                 {tag}
                 <button
-                  onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                  onClick={() => {
+                    const newTags = selectedTags.filter(t => t !== tag)
+                    setSelectedTags(newTags)
+                    updateUrlParams({ tags: newTags })
+                  }}
                   className="text-gray-400 hover:text-white"
                 >
                   ×
@@ -484,7 +530,10 @@ function Library() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-700 rounded text-sm text-gray-200">
                 {READ_TIME_FILTERS.find(f => f.value === readTimeFilter)?.label}
                 <button
-                  onClick={() => setReadTimeFilter('')}
+                  onClick={() => {
+                    setReadTimeFilter('')
+                    updateUrlParams({ readTime: '' })
+                  }}
                   className="text-gray-400 hover:text-white"
                 >
                   ×
@@ -501,6 +550,7 @@ function Library() {
                 setSelectedTags([])
                 setSort('title')
                 setReadTimeFilter('')
+                setSearchParams({}, { replace: true })
               }}
               className="ml-auto text-library-accent text-sm hover:underline"
             >
@@ -611,7 +661,10 @@ function Library() {
         isOpen={tagsModalOpen}
         onClose={() => setTagsModalOpen(false)}
         selectedTags={selectedTags}
-        onApply={setSelectedTags}
+        onApply={(tags) => {
+          setSelectedTags(tags)
+          updateUrlParams({ tags })
+        }}
         category={category}
       />
     </div>
