@@ -5,6 +5,14 @@ import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import { getReadTimeData } from '../utils/readTime'
 
+// Decode HTML entities in text (e.g., &amp; -> &, &quot; -> ")
+function decodeHtmlEntities(text) {
+  if (!text) return text
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = text
+  return textarea.value
+}
+
 // Rating labels - can be customized in future settings
 const RATING_LABELS = {
   1: 'Disliked',
@@ -590,7 +598,7 @@ function BookDetail() {
           {/* Summary */}
           {book.summary && (
             <p className="text-gray-300 text-sm leading-relaxed mb-4">
-              {book.summary}
+              {decodeHtmlEntities(book.summary)}
             </p>
           )}
           
@@ -609,9 +617,14 @@ function BookDetail() {
           )}
           
           {/* Book Details Footer */}
-          {book.word_count && (
-            <div className="text-gray-500 text-xs pt-2 border-t border-gray-700">
-              {book.word_count.toLocaleString()} words
+          {(book.word_count || book.created_at) && (
+            <div className="text-gray-500 text-xs pt-2 border-t border-gray-700 flex justify-between">
+              {book.word_count && (
+                <span>{book.word_count.toLocaleString()} words</span>
+              )}
+              {book.created_at && (
+                <span>Added {new Date(book.created_at).toLocaleDateString()}</span>
+              )}
             </div>
           )}
         </div>

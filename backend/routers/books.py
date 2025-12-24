@@ -37,6 +37,7 @@ class BookSummary(BaseModel):
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
     has_notes: bool = False
+    created_at: Optional[str] = None
 
 
 class BookDetail(BaseModel):
@@ -59,6 +60,7 @@ class BookDetail(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 class SeriesSummary(BaseModel):
@@ -188,7 +190,8 @@ def row_to_book_summary(row) -> BookSummary:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
-        has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False
+        has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False,
+        created_at=row["created_at"] if "created_at" in row.keys() else None
     )
 
 
@@ -219,6 +222,7 @@ def row_to_book_detail(row) -> BookDetail:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
+        created_at=row["created_at"] if "created_at" in row.keys() else None,
     )
 
 
@@ -280,16 +284,21 @@ async def list_books(
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
-    # Validate sort field to prevent SQL injection
-    valid_sorts = {
-        "title": "title",
-        "author": "authors",
-        "series": "series",
-        "updated": "updated_at",
-        "year": "publication_year"
-    }
-    sort_field = valid_sorts.get(sort, "title")
+    # Build ORDER BY clause with case-insensitive sorting for text columns
     sort_order = "DESC" if order.lower() == "desc" else "ASC"
+    
+    if sort == 'title':
+        order_clause = f"title COLLATE NOCASE {sort_order}"
+    elif sort == 'author':
+        order_clause = f"authors COLLATE NOCASE {sort_order}"
+    elif sort == 'series':
+        order_clause = f"series COLLATE NOCASE {sort_order}, series_number {sort_order}"
+    elif sort == 'year':
+        order_clause = f"publication_year {sort_order}"
+    elif sort == 'updated':
+        order_clause = f"updated_at {sort_order}"
+    else:
+        order_clause = f"title COLLATE NOCASE {sort_order}"
     
     # Get total count
     count_sql = f"SELECT COUNT(*) as total FROM books WHERE {where_sql}"
@@ -303,7 +312,7 @@ async def list_books(
                (SELECT COUNT(*) FROM notes WHERE book_id = b.id) as note_count
         FROM books b
         WHERE {where_sql}
-        ORDER BY {sort_field} {sort_order}
+        ORDER BY {order_clause}
         LIMIT ? OFFSET ?
     """
     params.extend([limit, offset])

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { listBooks, getCategories, listSeries, getSettings } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
@@ -314,6 +314,12 @@ function Library() {
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-library-accent" />
             )}
           </button>
+          <Link
+            to="/authors"
+            className="pb-2 text-sm font-medium transition-colors relative text-gray-400 hover:text-gray-300"
+          >
+            Authors
+          </Link>
           <button
             onClick={() => navigate('/upload')}
             className="pb-2 text-sm font-medium transition-colors relative text-gray-400 hover:text-gray-300"
