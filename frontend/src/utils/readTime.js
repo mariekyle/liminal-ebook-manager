@@ -104,7 +104,7 @@ export function matchesReadTimeFilter(wordCount, filterValue, wpm = 250) {
   const minutes = calculateReadTimeMinutes(wordCount, wpm)
   const filter = READ_TIME_FILTERS.find(f => f.value === filterValue)
   
-  if (!filter) return true
+  if (!filter || filter.minMinutes === undefined) return true
   
   return minutes >= filter.minMinutes && minutes <= filter.maxMinutes
 }
