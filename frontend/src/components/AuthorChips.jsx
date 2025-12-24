@@ -1,25 +1,101 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { listAuthors } from '../api'
 
 function AuthorChips({ authors, onChange }) {
   const [newAuthor, setNewAuthor] = useState('')
   const [draggedIndex, setDraggedIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [allAuthors, setAllAuthors] = useState([])
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const inputRef = useRef(null)
+  const suggestionsRef = useRef(null)
 
-  const handleAddAuthor = () => {
-    const trimmed = newAuthor.trim()
-    if (trimmed && !authors.includes(trimmed)) {
+  // Load all authors on mount for autocomplete
+  useEffect(() => {
+    listAuthors()
+      .then(data => {
+        setAllAuthors(data.authors.map(a => a.name))
+      })
+      .catch(err => console.error('Failed to load authors:', err))
+  }, [])
+
+  // Filter suggestions based on input
+  useEffect(() => {
+    if (!newAuthor.trim()) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    const query = newAuthor.toLowerCase()
+    const authorsLower = authors.map(a => a.toLowerCase())
+    const filtered = allAuthors
+      .filter(author => 
+        author.toLowerCase().includes(query) && 
+        !authorsLower.includes(author.toLowerCase()) // Case-insensitive exclusion
+      )
+      .slice(0, 8) // Limit to 8 suggestions
+
+    setSuggestions(filtered)
+    setShowSuggestions(filtered.length > 0)
+    setSelectedSuggestionIndex(-1)
+  }, [newAuthor, allAuthors, authors])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleAddAuthor = (authorName = newAuthor) => {
+    const trimmed = authorName.trim()
+    const authorsLower = authors.map(a => a.toLowerCase())
+    if (trimmed && !authorsLower.includes(trimmed.toLowerCase())) {
       onChange([...authors, trimmed])
       setNewAuthor('')
+      setSuggestions([])
+      setShowSuggestions(false)
       inputRef.current?.focus()
     }
   }
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault()
-      handleAddAuthor()
+      setSelectedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+        handleAddAuthor(suggestions[selectedSuggestionIndex])
+      } else {
+        handleAddAuthor()
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
     }
+  }
+
+  const handleSuggestionClick = (author) => {
+    handleAddAuthor(author)
   }
 
   const handleRemoveAuthor = (index) => {
@@ -32,7 +108,6 @@ function AuthorChips({ authors, onChange }) {
   const handleDragStart = (e, index) => {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
-    // Required for Firefox
     e.dataTransfer.setData('text/plain', index.toString())
   }
 
@@ -118,25 +193,53 @@ function AuthorChips({ authors, onChange }) {
         ))}
       </div>
 
-      {/* Add author input */}
-      <div className="flex gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={newAuthor}
-          onChange={(e) => setNewAuthor(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Add author..."
-          className="flex-1 bg-library-card px-3 py-2 rounded text-white text-sm border border-gray-600 focus:border-library-accent focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={handleAddAuthor}
-          disabled={!newAuthor.trim()}
-          className="px-3 py-2 bg-library-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-        >
-          + Add
-        </button>
+      {/* Add author input with autocomplete */}
+      <div className="relative">
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={newAuthor}
+            onChange={(e) => setNewAuthor(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => newAuthor.trim() && suggestions.length > 0 && setShowSuggestions(true)}
+            placeholder="Add author..."
+            className="flex-1 bg-library-card px-3 py-2 rounded text-white text-sm border border-gray-600 focus:border-library-accent focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => handleAddAuthor()}
+            disabled={!newAuthor.trim()}
+            className="px-3 py-2 bg-library-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          >
+            + Add
+          </button>
+        </div>
+
+        {/* Autocomplete dropdown */}
+        {showSuggestions && (
+          <div
+            ref={suggestionsRef}
+            className="absolute top-full left-0 right-12 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto"
+          >
+            {suggestions.map((author, index) => (
+              <button
+                key={author}
+                type="button"
+                onClick={() => handleSuggestionClick(author)}
+                className={`
+                  w-full text-left px-3 py-2 text-sm transition-colors
+                  ${index === selectedSuggestionIndex 
+                    ? 'bg-library-accent/20 text-library-accent' 
+                    : 'text-gray-300 hover:bg-gray-700'
+                  }
+                `}
+              >
+                {author}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Helper text */}
@@ -148,4 +251,3 @@ function AuthorChips({ authors, onChange }) {
 }
 
 export default AuthorChips
-
