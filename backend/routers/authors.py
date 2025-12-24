@@ -20,6 +20,11 @@ class AuthorNotesUpdate(BaseModel):
     notes: str
 
 
+class AuthorUpdate(BaseModel):
+    new_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class AuthorBookItem(BaseModel):
     id: int
     title: str
@@ -104,13 +109,15 @@ async def get_author(author_name: str, db=Depends(get_db)):
     
     # Get all books by this author
     # We need to search within JSON arrays
+    # Escape quotes for JSON pattern matching
+    escaped_name = author_name.replace('"', '\\"')
     cursor = await db.execute("""
         SELECT id, title, authors, series, series_number, category, status, rating,
                publication_year
         FROM books 
         WHERE authors LIKE ?
         ORDER BY series, CAST(series_number AS FLOAT), title
-    """, (f'%"{author_name}"%',))
+    """, (f'%"{escaped_name}"%',))
     
     rows = await cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
@@ -172,4 +179,124 @@ async def update_author_notes(author_name: str, update: AuthorNotesUpdate, db=De
     await db.commit()
     
     return {"author_name": author_name, "notes": update.notes}
+
+
+@router.put("/{author_name}")
+async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_db)):
+    """Update author name and/or notes. Renaming updates all books with this author."""
+    from urllib.parse import unquote
+    author_name = unquote(author_name)
+    
+    new_name = update.new_name.strip() if update.new_name else None
+    
+    # Validate new name if provided
+    if new_name is not None:
+        if not new_name:
+            raise HTTPException(status_code=400, detail="Author name cannot be empty")
+        if new_name == author_name:
+            new_name = None  # No rename needed
+    
+    # Handle rename if new name provided
+    if new_name:
+        # Get all books with this author
+        # Escape quotes for JSON pattern matching
+        escaped_old_name = author_name.replace('"', '\\"')
+        cursor = await db.execute(
+            "SELECT id, authors FROM books WHERE authors LIKE ?",
+            (f'%"{escaped_old_name}"%',)
+        )
+        rows = await cursor.fetchall()
+        
+        # Update each book's authors array
+        books_updated_count = 0
+        for row in rows:
+            book_id = row[0]
+            try:
+                authors = json.loads(row[1]) if row[1] else []
+            except:
+                authors = [row[1]] if row[1] else []
+            
+            # Replace old name with new name in array
+            if author_name in authors:
+                authors = [new_name if a == author_name else a for a in authors]
+                await db.execute(
+                    "UPDATE books SET authors = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (json.dumps(authors), book_id)
+                )
+                books_updated_count += 1
+        
+        # Handle author_notes: delete old, insert/update new
+        # First get existing notes for old name
+        cursor = await db.execute(
+            "SELECT notes FROM author_notes WHERE author_name = ?",
+            (author_name,)
+        )
+        old_notes_row = await cursor.fetchone()
+        old_notes = old_notes_row[0] if old_notes_row else None
+        
+        # Delete old author_notes entry
+        await db.execute(
+            "DELETE FROM author_notes WHERE author_name = ?",
+            (author_name,)
+        )
+        
+        # Determine final notes (prefer new notes if provided, else keep old)
+        # Normalize empty string to None
+        final_notes = update.notes if update.notes is not None else old_notes
+        if final_notes == '':
+            final_notes = None
+        
+        # Insert new author_notes entry if there are notes
+        if final_notes:
+            await db.execute("""
+                INSERT INTO author_notes (author_name, notes, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(author_name) DO UPDATE SET
+                    notes = excluded.notes,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (new_name, final_notes))
+        
+        await db.commit()
+        
+        return {
+            "old_name": author_name,
+            "new_name": new_name,
+            "notes": final_notes,
+            "books_updated": books_updated_count
+        }
+    
+    # No rename, just update notes
+    elif update.notes is not None:
+        # Normalize empty string to None
+        notes_value = update.notes if update.notes else None
+        
+        if notes_value:
+            await db.execute("""
+                INSERT INTO author_notes (author_name, notes, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(author_name) DO UPDATE SET
+                    notes = excluded.notes,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (author_name, notes_value))
+        else:
+            # Clear notes by deleting the entry
+            await db.execute(
+                "DELETE FROM author_notes WHERE author_name = ?",
+                (author_name,)
+            )
+        await db.commit()
+        
+        return {
+            "old_name": author_name,
+            "new_name": author_name,
+            "notes": notes_value,
+            "books_updated": 0
+        }
+    
+    return {
+        "old_name": author_name,
+        "new_name": author_name,
+        "notes": None,
+        "books_updated": 0
+    }
 

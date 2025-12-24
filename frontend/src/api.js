@@ -357,3 +357,20 @@ export async function updateAuthorNotes(name, notes) {
     body: JSON.stringify({ notes })
   })
 }
+
+/**
+ * Update author (rename and/or update notes)
+ * @param {string} name - Current author name
+ * @param {Object} data - Update data
+ * @param {string} [data.newName] - New author name (null to keep current)
+ * @param {string} [data.notes] - Updated notes
+ */
+export async function updateAuthor(name, { newName, notes }) {
+  return apiFetch(`/authors/${encodeURIComponent(name)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ 
+      new_name: newName,
+      notes: notes
+    })
+  })
+}
