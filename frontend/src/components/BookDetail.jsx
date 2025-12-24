@@ -378,7 +378,22 @@ function BookDetail() {
           </div>
           
           <p className="text-gray-400 mb-1">
-            by {book.authors?.join(', ') || 'Unknown Author'}
+            by{' '}
+            {book.authors?.length > 0 ? (
+              book.authors.map((author, index) => (
+                <span key={`${author}-${index}`}>
+                  <Link
+                    to={`/author/${encodeURIComponent(author)}`}
+                    className="hover:text-library-accent transition-colors"
+                  >
+                    {author}
+                  </Link>
+                  {index < book.authors.length - 1 && ', '}
+                </span>
+              ))
+            ) : (
+              'Unknown Author'
+            )}
           </p>
           
           {/* Year - below author */}

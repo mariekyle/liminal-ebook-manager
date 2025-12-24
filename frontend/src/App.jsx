@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Library from './components/Library'
 import BookDetail from './components/BookDetail'
 import SeriesDetail from './components/SeriesDetail'
+import AuthorDetail from './components/AuthorDetail'
 import ImportPage from './pages/ImportPage'
 import UploadPage from './pages/UploadPage'
 import Header from './components/Header'
@@ -68,6 +69,7 @@ function App() {
           <Route path="/" element={<Library />} />
           <Route path="/book/:id" element={<BookDetail />} />
           <Route path="/series/:name" element={<SeriesDetail />} />
+          <Route path="/author/:name" element={<AuthorDetail />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/upload" element={<UploadPage />} />
         </Routes>

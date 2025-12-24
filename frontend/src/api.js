@@ -326,3 +326,34 @@ export async function updateSetting(key, value) {
     body: JSON.stringify({ value: String(value) })
   })
 }
+
+// =============================================================================
+// AUTHORS API
+// =============================================================================
+
+/**
+ * List all unique authors with book counts
+ */
+export async function listAuthors() {
+  return apiFetch('/authors')
+}
+
+/**
+ * Get author details with their books
+ * @param {string} name - Author name
+ */
+export async function getAuthor(name) {
+  return apiFetch(`/authors/${encodeURIComponent(name)}`)
+}
+
+/**
+ * Update or create notes for an author
+ * @param {string} name - Author name
+ * @param {string} notes - Notes content
+ */
+export async function updateAuthorNotes(name, notes) {
+  return apiFetch(`/authors/${encodeURIComponent(name)}/notes`, {
+    method: 'PUT',
+    body: JSON.stringify({ notes })
+  })
+}

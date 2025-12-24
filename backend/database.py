@@ -103,6 +103,19 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
     except Exception as e:
         print(f"Settings migration note: {e}")
     
+    # Migration: Add author_notes table
+    try:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS author_notes (
+                author_name TEXT PRIMARY KEY,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    except Exception as e:
+        print(f"Author notes migration note: {e}")
+    
     await db.commit()
 
 
