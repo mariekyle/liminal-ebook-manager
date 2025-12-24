@@ -59,6 +59,10 @@ function BookDetail() {
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
+  
+  // Popup state for status and rating
+  const [statusPopupOpen, setStatusPopupOpen] = useState(false)
+  const [ratingPopupOpen, setRatingPopupOpen] = useState(false)
 
   // Load settings (for WPM)
   useEffect(() => {
@@ -350,6 +354,13 @@ function BookDetail() {
         
         {/* Title, Author, Read Time */}
         <div className="flex-1 min-w-0">
+          {/* Series badge - above title */}
+          {book.series && (
+            <div className="text-gray-500 text-xs mb-1">
+              {book.series} #{book.series_number || '?'}
+            </div>
+          )}
+          
           <div className="flex items-start justify-between gap-4 mb-1">
             <h1 className="text-2xl font-bold text-white">
               {book.title}
@@ -366,9 +377,16 @@ function BookDetail() {
             </button>
           </div>
           
-          <p className="text-gray-400 mb-4">
+          <p className="text-gray-400 mb-1">
             by {book.authors?.join(', ') || 'Unknown Author'}
           </p>
+          
+          {/* Year - below author */}
+          {book.publication_year && (
+            <p className="text-gray-500 text-sm mb-4">
+              {book.publication_year}
+            </p>
+          )}
           
           {/* Estimated Read Time - Prominent Display */}
           {readTimeData && (
@@ -387,69 +405,134 @@ function BookDetail() {
       {/* Reading Tracker Card */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
         <div className="flex flex-wrap gap-3 items-center mb-4">
-          {/* Status */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            disabled={statusLoading}
-            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-          >
-            <option value="Unread">Unread</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Finished">Finished</option>
-            <option value="DNF">DNF</option>
-          </select>
-          {statusStatus === 'saved' && (
-            <span className="text-green-400 text-sm">✓</span>
-          )}
-          {statusStatus === 'error' && (
-            <span className="text-red-400 text-sm">Failed</span>
-          )}
+          {/* Status Chip + Popup */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setStatusPopupOpen(!statusPopupOpen)
+                setRatingPopupOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+            >
+              <span className={`text-sm ${
+                selectedStatus === 'Finished' ? 'text-green-400' :
+                selectedStatus === 'In Progress' ? 'text-blue-400' :
+                selectedStatus === 'DNF' ? 'text-red-400' :
+                'text-gray-300'
+              }`}>
+                {selectedStatus}
+              </span>
+              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {statusPopupOpen && (
+              <>
+                {/* Backdrop to close popup */}
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setStatusPopupOpen(false)}
+                />
+                {/* Popup */}
+                <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                  {['Unread', 'In Progress', 'Finished', 'DNF'].map(status => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        handleStatusChange(status)
+                        setStatusPopupOpen(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                        selectedStatus === status ? 'text-library-accent' : 'text-gray-300'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            
+            {statusStatus === 'saved' && (
+              <span className="text-green-400 text-sm ml-1">✓</span>
+            )}
+            {statusStatus === 'error' && (
+              <span className="text-red-400 text-sm ml-1">!</span>
+            )}
+          </div>
           
-          {/* Rating */}
-          <select
-            value={selectedRating ?? ''}
-            onChange={(e) => handleRatingChange(e.target.value)}
-            disabled={ratingLoading}
-            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-          >
-            <option value="">No Rating</option>
-            {[5, 4, 3, 2, 1].map(num => (
-              <option key={num} value={num}>
-                {'★'.repeat(num)}{'☆'.repeat(5-num)} {RATING_LABELS[num]}
-              </option>
-            ))}
-          </select>
-          {ratingStatus === 'saved' && (
-            <span className="text-green-400 text-sm">✓</span>
-          )}
-          {ratingStatus === 'error' && (
-            <span className="text-red-400 text-sm">Failed</span>
-          )}
+          {/* Rating Chip + Popup */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setRatingPopupOpen(!ratingPopupOpen)
+                setStatusPopupOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+            >
+              <span className="text-sm text-gray-300">
+                {selectedRating 
+                  ? `${'★'.repeat(selectedRating)}${'☆'.repeat(5-selectedRating)}`
+                  : 'No Rating'
+                }
+              </span>
+              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {ratingPopupOpen && (
+              <>
+                {/* Backdrop to close popup */}
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setRatingPopupOpen(false)}
+                />
+                {/* Popup */}
+                <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[180px]">
+                  <button
+                    onClick={() => {
+                      handleRatingChange('')
+                      setRatingPopupOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                      !selectedRating ? 'text-library-accent' : 'text-gray-300'
+                    }`}
+                  >
+                    No Rating
+                  </button>
+                  {[5, 4, 3, 2, 1].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        handleRatingChange(num.toString())
+                        setRatingPopupOpen(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                        selectedRating === num ? 'text-library-accent' : 'text-gray-300'
+                      }`}
+                    >
+                      {'★'.repeat(num)}{'☆'.repeat(5-num)} <span className="text-gray-500 ml-1">{RATING_LABELS[num]}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            
+            {ratingStatus === 'saved' && (
+              <span className="text-green-400 text-sm ml-1">✓</span>
+            )}
+            {ratingStatus === 'error' && (
+              <span className="text-red-400 text-sm ml-1">!</span>
+            )}
+          </div>
           
-          {/* Category */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            disabled={categoryLoading}
-            className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer disabled:opacity-50"
-          >
-            <option value="">Uncategorized</option>
-            <option value="Fiction">Fiction</option>
-            <option value="Non-Fiction">Non-Fiction</option>
-            <option value="FanFiction">FanFiction</option>
-            {categories
-              .filter(cat => cat && !['Fiction', 'Non-Fiction', 'FanFiction', 'Uncategorized', ''].includes(cat))
-              .map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))
-            }
-          </select>
-          {categoryStatus === 'saved' && (
-            <span className="text-green-400 text-sm">✓</span>
-          )}
-          {categoryStatus === 'error' && (
-            <span className="text-red-400 text-sm">Failed</span>
+          {/* Category - Read Only Chip */}
+          {selectedCategory && (
+            <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
+              {selectedCategory}
+            </span>
           )}
         </div>
         
@@ -485,7 +568,7 @@ function BookDetail() {
       </div>
 
       {/* About This Book Card */}
-      {(book.summary || (book.tags && book.tags.length > 0) || book.word_count || book.publication_year || book.series) && (
+      {(book.summary || (book.tags && book.tags.length > 0) || book.word_count) && (
         <div className="bg-library-card rounded-lg p-4 mb-6">
           <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
           
@@ -511,17 +594,11 @@ function BookDetail() {
           )}
           
           {/* Book Details Footer */}
-          <div className="text-gray-500 text-xs flex flex-wrap gap-x-3 gap-y-1 pt-2 border-t border-gray-700">
-            {book.word_count && (
-              <span>{book.word_count.toLocaleString()} words</span>
-            )}
-            {book.publication_year && (
-              <span>{book.publication_year}</span>
-            )}
-            {book.series && (
-              <span>{book.series} #{book.series_number || '?'}</span>
-            )}
-          </div>
+          {book.word_count && (
+            <div className="text-gray-500 text-xs pt-2 border-t border-gray-700">
+              {book.word_count.toLocaleString()} words
+            </div>
+          )}
         </div>
       )}
 

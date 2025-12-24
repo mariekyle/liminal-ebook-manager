@@ -54,7 +54,11 @@ function Library() {
   // Defined early so we can use filteredBooks.length for the phrase
   const filteredBooks = useMemo(() => {
     if (!readTimeFilter) return books
-    return books.filter(book => matchesReadTimeFilter(book.word_count, readTimeFilter, wpm))
+    return books.filter(book => {
+      // Books without word count are excluded when a filter is active
+      if (!book.word_count) return false
+      return matchesReadTimeFilter(book.word_count, readTimeFilter, wpm)
+    })
   }, [books, readTimeFilter, wpm])
 
   // Get random phrase - regenerates when phraseKey, category, or displayed count changes
