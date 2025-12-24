@@ -7,7 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Move "Sync Library" button to Settings page
+- Custom status labels in settings
+- "No summary" notice on book detail page
+- Checkmark on finished books on author page
+
+---
+
+## [0.6.0] - 2025-12-24
+
+### Added
+
+#### Settings System
+- **Settings drawer** — Slide-out panel from gear icon in header
+- **WPM setting** — Configurable words-per-minute (50-2000) for read time calculations
+- **Relocated Sync Library button** — Moved from header to settings drawer
+
+#### Edit Book Metadata
+- **Edit metadata modal** — Full book editing from BookDetail page
+- **Draggable author chips** — Reorder authors with drag-and-drop
+- **Author autocomplete** — Suggests existing library authors when typing
+- **Editable fields** — Title, authors, series, series number, category, publication year
+
+#### Estimated Read Time
+- **Read time display** — Shows estimated duration on BookDetail page
+- **Poetic microcopy** — Tier labels like "a quick visit", "a slow unfolding", "a true saga"
+- **Read time filter** — 8 filter tiers in library from "Under 30 min" to "30+ hours"
+- **WPM-aware calculations** — Respects user's reading speed setting
+
+#### Author System
+- **Author pages** — View author with notes and all their books
+- **Author notes** — Free-form notes about any author
+- **Author rename** — Update author name across all books
+- **Authors list page** — Alphabetical list with search, accessible from main nav
+- **Clickable author links** — Author names on BookDetail link to author pages
+
+#### BookDetail Redesign
+- **Reorganized layout** — Series above title, year below author
+- **Chip+popup controls** — Status and rating use chip display with popup selectors
+- **Estimated read time card** — Prominent display with microcopy
+- **"About This Book" card** — Summary, tags, word count, and "added to library" date
+
+#### Other Improvements
+- **HTML entity decoding** — Summaries display &amp; correctly as &
+- **Case-insensitive sorting** — Lowercase titles now sort alphabetically with others
+- **"Added to library" date** — Shows when book was added in BookDetail footer
+
+### Fixed
+
+#### Performance
+- **Infinite re-render loop** — Fixed URL sync causing 50+ API calls on page load
+- **Flickering book count** — Stable phrase display, no more count jumping
+
+#### Author System
+- **JSON quote escaping** — Author names with double quotes can be found and renamed
+- **Empty notes handling** — Returns null instead of empty string for consistency
+- **Accurate books_updated count** — Reports actual updates, not LIKE query matches
+
+#### Other Fixes
+- **Case-insensitive duplicate check** — Can't add "John Smith" and "john smith" as separate authors
+- **React key collision** — Fixed potential key duplicates in author rendering
+- **word_count in API** — Books list now includes word_count for read time filtering
+- **Defensive column access** — Handles databases without word_count column gracefully
+
+### Technical
+
+#### New Files
+- `backend/routers/settings.py` — Settings API endpoints
+- `backend/routers/authors.py` — Authors API endpoints
+- `frontend/src/components/SettingsDrawer.jsx` — Settings drawer component
+- `frontend/src/components/EditBookModal.jsx` — Book metadata editor
+- `frontend/src/components/AuthorChips.jsx` — Draggable author management
+- `frontend/src/components/EditAuthorModal.jsx` — Author name/notes editor
+- `frontend/src/pages/AuthorDetail.jsx` — Individual author page
+- `frontend/src/pages/AuthorsList.jsx` — Authors directory page
+- `frontend/src/utils/readTime.js` — Read time calculations and microcopy
+
+#### Database
+- Added `settings` table for key-value configuration storage
+- Added `author_notes` table for author notes storage
+- Added `created_at` to API responses
+
+#### Modified Files
+- `backend/database.py` — Settings and author_notes tables, migrations
+- `backend/routers/books.py` — Metadata update endpoint, word_count in responses, COLLATE NOCASE sorting
+- `backend/main.py` — Register settings and authors routers
+- `frontend/src/api/index.js` — Settings, authors, and metadata API functions
+- `frontend/src/pages/BookDetail.jsx` — Complete redesign with new layout
+- `frontend/src/pages/Library.jsx` — Read time filter, Authors tab, URL sync fix
+- `frontend/src/App.jsx` — Settings drawer, author routes
 
 ---
 
@@ -16,15 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 #### Mobile File Picker for .mobi/.azw3
-- **Android document picker now works** — Uses broad MIME types (`application/*,text/*`) to trigger document browser instead of photo picker
-- **All ebook formats selectable on mobile** — .mobi, .azw3, .azw, .epub, .pdf, .html now all work on Android
-
-### Technical
-
-#### Modified Files
-- `frontend/src/components/upload/UploadZone.jsx`:
-  - Updated `accept` attribute to use `application/*,text/*` plus explicit extensions
-  - Forces Android to open document picker (Material Files) instead of photo picker
+- **Android document picker now works** — Uses broad MIME types to trigger document browser
+- **All ebook formats selectable on mobile** — .mobi, .azw3, .azw, .epub, .pdf, .html
 
 ---
 
@@ -33,21 +113,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### EPUB/PDF Metadata Extraction During Upload
-- **Author auto-population** — Authors now extracted from EPUB/PDF metadata instead of showing "Unknown"
+- **Author auto-population** — Authors extracted from EPUB/PDF metadata
 - **Title from metadata** — Prefers embedded title over filename parsing
-- **Rich metadata** — Extracts publication year, summary, tags, and word count from files
-- **Graceful fallback** — Falls back to filename parsing if metadata extraction fails
-- **Debug logging** — Logs extracted metadata for troubleshooting
+- **Rich metadata** — Extracts publication year, summary, tags, and word count
 
 #### "Upload as New Book" for False Duplicate Matches
-- **Override incorrect matches** — "Not a match? Upload as separate book" link below duplicate actions
-- **Confirmation UI** — Green "Uploading as New Book" banner when selected
-- **Backend support** — Uses existing `action: 'new'` to create separate book folder
-
-### Changed
-
-- `extract_file_metadata()` is now async to support EPUB/PDF parsing
-- Upload analysis calls metadata extractor for `.epub` and `.pdf` files
+- **Override incorrect matches** — "Not a match? Upload as separate book" link
+- **Confirmation UI** — Green banner when uploading as new
 
 ---
 
@@ -56,19 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 #### FanFiction Category Detection
-- **AO3-style filename detection** — Now correctly detects files with underscores as word separators
-- **Removed false positives** — Proper confidence scoring (~70% for underscore pattern)
+- **AO3-style filename detection** — Correctly detects files with underscores
 - **Expanded trope detection** — Added more trope keywords
 
 #### File Type Support
 - **Added .azw support** — Amazon Kindle .azw files now accepted
-- **Added MIME types to file picker** — Better compatibility with browsers
-- **Priority order consistency** — `.azw` added to metadata extraction priority
-
-#### Filename Parsing
-- **Improved author extraction** — Better "Author - Title" handling
-- **Underscore variant support** — Handles `Author_Name_-_Title.epub` format
-- **AO3 work ID parsing** — Correctly parses `12345678_Title.epub` patterns
 
 ---
 
@@ -78,8 +142,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Background Sync After Upload
 - **Auto-sync now works** — Uploaded books automatically appear in library
-- **Standalone sync function** — `run_sync_standalone()` with own DB connection
-- **Background task wrapper** — `trigger_library_sync()` for post-upload sync
 
 ---
 
@@ -91,37 +153,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Upload page** — New `/upload` route accessible from Library navigation
 - **Drag-and-drop zone** — Drop files or click to select from device
 - **Multi-file upload** — Upload multiple books in one session
-- **Smart file grouping** — Auto-groups related files (e.g., EPUB + PDF + MOBI)
+- **Smart file grouping** — Auto-groups related files
 - **Category auto-detection** — FanFiction, Fiction, Non-Fiction with confidence scores
 - **Duplicate detection** — Warns when uploading books that already exist
-- **Inline metadata editing** — Edit title, author, series, category before finalizing
-- **Per-book progress** — Visual progress indicator during upload
-- **Session management** — 1-hour timeout, automatic cleanup
+- **Inline metadata editing** — Edit before finalizing
 
 ---
 
 ## [0.4.0] - 2025-12-20
 
 ### Added
-
-#### Obsidian Import System
-- Import UI page with drag-and-drop
-- Markdown parser for YAML frontmatter
-- Book matching by title/author
-- Batch import support
-
-#### Collapsible Filter Header
-- Scroll-to-hide header
-- Poetic category phrases
-
-#### Filter State Persistence
-- URL parameter sync
-- Browser back/forward support
-
-#### Rich Gradient Cover System
-- 10 gradient presets
-- HSL color lanes
-- Deterministic generation
+- Obsidian import system
+- Collapsible filter header
+- Filter state persistence
+- Rich gradient cover system (10 presets, HSL color lanes)
 
 ---
 
@@ -141,7 +186,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Read status system (Unread, In Progress, Finished, DNF)
 - 1-5 star rating system
 - Reading dates (started, finished)
-- Database migrations
 
 ---
 
@@ -177,9 +221,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.6.0 | 2025-12-24 | **Phase 3 complete** — Settings, metadata editing, read time, author pages |
 | 0.5.4 | 2025-12-23 | Mobile file picker fix for .mobi/.azw3 |
 | 0.5.3 | 2025-12-23 | EPUB metadata extraction, "Upload as New" option |
-| 0.5.2 | 2025-12-22 | Category detection, .azw support, filename parsing |
+| 0.5.2 | 2025-12-22 | Category detection, .azw support |
 | 0.5.1 | 2025-12-22 | Background sync fix |
 | 0.5.0 | 2025-12-22 | Phase 2 complete — Book upload system |
 | 0.4.0 | 2025-12-20 | Phase 1.5 complete — Obsidian import, rich gradients |
@@ -193,10 +238,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upgrade Notes
 
-### Upgrading to 0.5.4
+### Upgrading to 0.6.0
+
+**Backend:**
+- New files: `routers/settings.py`, `routers/authors.py`
+- Modified: `database.py`, `routers/books.py`, `main.py`
 
 **Frontend:**
-- Replace `frontend/src/components/upload/UploadZone.jsx`
+- New files in `components/`: SettingsDrawer, EditBookModal, AuthorChips, EditAuthorModal
+- New files in `pages/`: AuthorDetail, AuthorsList
+- New file: `utils/readTime.js`
+- Modified: BookDetail.jsx (major redesign), Library.jsx, App.jsx, api/index.js
+
+**Database migrations run automatically on startup.**
 
 **Rebuild Docker container after update.**
 
@@ -204,6 +258,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Roadmap](./ROADMAP.md)
+- [Roadmap](./20251224_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)

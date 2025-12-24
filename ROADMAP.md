@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.5.4)
+## Current State (v0.6.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -20,22 +20,32 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
 - Unified filter bar — Categories, status, tags, sort on one row (centered)
+- **Read time filter** — 8 tiers from "Under 30 min" to "30+ hours" ✨
 - Series tab — Browse series with square gradient covers
+- **Authors tab** — Browse all authors alphabetically with search ✨
 - Series detail pages — View all books in a series
+- **Author detail pages** — View author with notes and all their books ✨
 - Tag filtering — Multi-select tags with searchable modal
 - Active filters row — Clear individual filters or all at once
-- Search and filter by category, status, tags
-- Sort by title, author, series, year, recently updated
+- Search and filter by category, status, tags, read time
+- Sort by title, author, series, year, recently updated (case-insensitive)
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
+- **Edit book metadata** — Title, authors, series, category, year ✨
+- **Draggable author chips** — Reorder authors, first appears on cover ✨
+- **Author autocomplete** — Suggests existing authors when editing ✨
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
 - Track reading dates (started, finished)
+- **Estimated read time** — Based on word count and WPM setting ✨
 - Finished checkmark on book covers
 - Series section on book detail — Navigate between books in series
-- Edit book category via dropdown
 - Auto-detect FanFiction based on metadata patterns
 - Add free-form notes to books
+- **Author notes** — Free-form notes about any author ✨
+- **Author rename** — Update author name across all books ✨
+- **Settings drawer** — WPM, sync controls ✨
+- **"Added to library" date** — Shows when book was added ✨
 - Mobile-responsive design
 - Import reading data from Obsidian (status, rating, dates)
 
@@ -61,69 +71,56 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 3: Rich Notes & Metadata ← NEXT
+## Phase 3: Rich Notes & Metadata ✅ COMPLETE
 
-**Goal:** Book notes and reading data live in Liminal with the same richness as Obsidian.
+**Completed: December 24, 2025**
 
-### Structured Notes
-- [ ] Replace single notes field with structured sections:
-  - Hot Take (1-3 sentence summary)
-  - Characters
-  - Atmosphere/World
-  - Writing
-  - Plot
-  - Steam
-  - Believability
-- [ ] Each section expandable/collapsible
-- [ ] Markdown support in notes
-- [ ] Optional 1-10 rating per section (mirrors Obsidian format)
+### Editable Metadata ✅
+- ✅ **Edit title** — Fix incorrect titles
+- ✅ **Edit author(s)** — Fix misspellings, add missing authors
+- ✅ **Edit series** — Add, change, or remove series assignment
+- ✅ **Edit series number** — Fix ordering
+- ✅ Edit publication year
+- ✅ HTML entity decoding in summaries (fix &amp; etc.)
+- ✅ "Added to library" date (pulled from created_at)
 
-### Phase 3.5: Notes Migration (after structured notes built)
-- [ ] Update markdown parser to extract section content
-- [ ] Map "Characters: 9" → structured characters_rating field
-- [ ] Map reading notes text → appropriate sections
-- [ ] Run notes migration script
-- [ ] Verify notes imported correctly
+### Book Detail Page Redesign ✅
+- ✅ **Clean up visual layout** — Reorganized with logical grouping
+- ✅ Logical grouping of metadata
+- ✅ Better use of space
+- ✅ Mobile-optimized layout
+- ✅ Consistent styling with library view
+- ✅ Chip+popup controls for status/rating
 
-### Editable Metadata
-- [ ] **Edit title** — Fix incorrect titles
-- [ ] **Edit author(s)** — Fix misspellings, add missing authors
-- [ ] **Edit series** — Add, change, or remove series assignment
-- [ ] **Edit series number** — Fix ordering
-- [ ] Edit publication year
-- [ ] HTML entity decoding in summaries (fix &amp; etc.)
-- [ ] "Added to library" date (pulled from file system)
-- [ ] Storage location display and validation
+### Reading Stats & Estimated Time ✅
+- ✅ **Estimated read time** displayed on book detail page
+- ✅ **Estimated read time filter** in library (8 tiers)
+- ✅ Poetic microcopy tiers ("a quick visit" to "a true saga")
 
-### Book Detail Page Redesign
-- [ ] **Clean up visual layout** — Current page is chaotic
-- [ ] Logical grouping of metadata
-- [ ] Better use of space
-- [ ] Mobile-optimized layout
-- [ ] Consistent styling with library view
+### Settings Screen ✅
+- ✅ **Reading speed (WPM) setting** for estimated read time calculations
+- ✅ **Move "Sync Library" button here**
 
-### Reading Stats & Estimated Time
-- [ ] **Estimated read time** displayed on book detail page
-- [ ] **Estimated read time filter** in library
+### Simple Author Page ✅
+- ✅ Basic author page (name + notes)
+- ✅ GET /api/authors endpoint (unique authors list)
+- ✅ Author autocomplete when editing book authors
+- ✅ **Author notes** — free-form notes about an author
+- ✅ Link from book detail page
+- ✅ List of books by this author
+- ✅ Authors list page with search and alphabetical grouping
+- ✅ Author rename functionality
+
+### Deferred to Later Phases
+- [ ] Structured notes sections (Hot Take, Characters, Writing, etc.)
+- [ ] Notes migration from Obsidian format
+- [ ] Customizable rating labels
+- [ ] Light/dark mode toggle
 - [ ] Actual WPM field (manual entry from Moon Reader)
-- [ ] Actual read time field
-
-### Settings Screen
-- [ ] **Reading speed (WPM) setting** for estimated read time calculations
-- [ ] **Customizable rating labels**
-- [ ] **Light/dark mode toggle**
-- [ ] Display preferences
-- [ ] **Move "Sync Library" button here**
-
-### Simple Author Page
-- [ ] Basic author page (name + notes)
-- [ ] **Author notes** — free-form notes about an author
-- [ ] Link from book detail page
-- [ ] List of books by this author
 
 ---
 
-## Phase 4: TBR & Wishlist
+## Phase 4: TBR & Wishlist ← NEXT
 
 **Goal:** Track books you want, not just books you have.
 
@@ -180,10 +177,9 @@ All upload features working including mobile file picker for all formats.
 - [ ] Navigate between books in series (prev/next)
 
 ### Author Pages (Enhanced)
-- [ ] Full author detail page
-- [ ] Author statistics
-- [ ] Books by author grid view
+- [ ] Author statistics (books read, average rating)
 - [ ] Author photo/avatar support
+- [ ] Finished checkmark on author page book grid
 
 ### Statistics Dashboard
 - [ ] Books read per month/year
@@ -221,6 +217,14 @@ All upload features working including mobile file picker for all formats.
 - [ ] Rows per page setting
 - [ ] Loading states and animations
 - [ ] Error handling improvements
+- [ ] "No summary available" notice on book detail page
+- [ ] Virtual scrolling for library grid (performance)
+
+### Settings Enhancements
+- [ ] Customizable rating labels
+- [ ] Custom status labels
+- [ ] Light/dark mode toggle
+- [ ] Display preferences
 
 ### Advanced Upload Features
 - [x] ~~Fix mobile file picker for .mobi/.azw3~~ ✅
@@ -250,7 +254,7 @@ All upload features working including mobile file picker for all formats.
 - [ ] Sort direction unclear (no visual indicator)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
-- [ ] HTML entities not decoded in summaries
+- [ ] Storage location display and validation
 
 ### Low Priority
 - [ ] Some non-book files getting scanned
@@ -291,8 +295,8 @@ All upload features working including mobile file picker for all formats.
 | v0.5.1 | Dec 22, 2025 | Background sync fix |
 | v0.5.2 | Dec 22, 2025 | Category detection, .azw support |
 | v0.5.3 | Dec 23, 2025 | EPUB metadata, "Upload as New" |
-| v0.5.4 | Dec 23, 2025 | **Phase 2.1 complete** — Mobile file picker fixed |
-| v0.6.0 | TBD | Phase 3 — Rich notes & metadata |
+| v0.5.4 | Dec 23, 2025 | Phase 2.1 complete — Mobile file picker fixed |
+| v0.6.0 | Dec 24, 2025 | **Phase 3 complete** — Settings, metadata editing, read time, author pages |
 | v0.7.0 | TBD | Phase 4 — TBR & Wishlist |
 | v0.8.0 | TBD | Phase 5 — Discovery & Collections |
 | v0.9.0 | TBD | Phase 6 — Integration & Polish |
@@ -300,4 +304,4 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-*Last updated: December 23, 2025 (v0.5.4 — Phase 2.1 complete, upload system fully functional)*
+*Last updated: December 24, 2025 (v0.6.0 — Phase 3 complete)*
