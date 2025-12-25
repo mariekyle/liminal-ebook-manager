@@ -235,7 +235,7 @@ function Library() {
         <div className="flex flex-col gap-2">
           {/* Top row: phrase and sort */}
           <div className="flex items-center justify-between">
-            <p className="text-gray-400 text-sm italic">
+            <p className="text-gray-500 text-xs">
               {activeView === 'series' 
                 ? `${seriesTotal} series. Stories that needed more than one book.`
                 : currentPhrase
@@ -244,22 +244,22 @@ function Library() {
             
             {/* Sort dropdown */}
             {activeView === 'library' && (
-              <div className="relative flex-shrink-0">
+              <div className="relative flex items-center flex-shrink-0">
                 <select
                   value={sort}
                   onChange={(e) => {
                     setSort(e.target.value)
                     updateUrlParams({ sort: e.target.value })
                   }}
-                  className="appearance-none bg-transparent text-gray-400 text-sm pr-5 cursor-pointer hover:text-white focus:outline-none"
+                  className="appearance-none bg-transparent text-gray-500 text-xs pr-5 cursor-pointer hover:text-white focus:outline-none"
                 >
-                  <option value="title">Sort: Title</option>
-                  <option value="author">Sort: Author</option>
-                  <option value="series">Sort: Series</option>
-                  <option value="year">Sort: Year</option>
-                  <option value="updated">Sort: Updated</option>
+                  <option value="title">Title</option>
+                  <option value="author">Author</option>
+                  <option value="series">Series</option>
+                  <option value="year">Year</option>
+                  <option value="updated">Updated</option>
                 </select>
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">▼</span>
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">↑</span>
               </div>
             )}
           </div>
