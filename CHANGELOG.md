@@ -13,6 +13,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2025-12-25
+
+### Added
+
+#### Navigation Redesign
+- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload tabs
+- **Desktop header navigation** — Centered nav tabs on single line with logo and settings
+- **Filter drawer** — Slides up from bottom on mobile, slides in from right on desktop
+- **Unified SearchBar** — Combined search input and filter icon in single component
+- **Sort inline with phrase** — Sort dropdown moved next to book/series count, separate from filters
+
+#### Settings Enhancements
+- **Books per row setting** — Choose 2, 3, or 4 columns on mobile (desktop unchanged)
+- **Real-time grid sync** — Grid columns update immediately when setting changes
+
+#### Edit Book Modal
+- **Series autocomplete** — Suggests existing series names when typing in series field
+
+### Changed
+
+- **Filter drawer replaces inline filters** — All filters now accessed via drawer instead of filter bar
+- **Sort separated from filters** — Sort is now independent; "Clear all" no longer resets sort
+- **Poetic phrase styling** — Unified size/color with sort dropdown, removed italics
+- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses ↑ arrow icon
+
+### Fixed
+
+#### Navigation & Layout
+- **Sub-page padding** — BookDetail, SeriesDetail, AuthorDetail now have proper horizontal padding
+- **Sticky header positioning** — Alphabetical section headers in AuthorsList position correctly below search bar
+- **Filter drawer visibility** — Drawer fully hides when closed (no peeking through bottom)
+
+#### Filter System
+- **View-aware filter count** — Badge only counts filters relevant to current view (library vs series)
+- **Search included in series filter count** — Filter badge now includes search on series view
+- **Clear filters preserves sort** — "Clear all" no longer resets sort order
+
+### Technical
+
+#### New Files
+- `frontend/src/components/BottomNav.jsx` — Mobile bottom navigation component
+- `frontend/src/components/FilterDrawer.jsx` — Responsive filter drawer component
+- `frontend/src/components/SearchBar.jsx` — Unified search bar component
+
+#### Modified Files
+- `frontend/src/App.jsx` — Added BottomNav, responsive layout padding
+- `frontend/src/components/Header.jsx` — Desktop navigation, responsive design
+- `frontend/src/components/Library.jsx` — Filter drawer integration, inline sort, grid columns setting
+- `frontend/src/components/SettingsDrawer.jsx` — Grid columns setting with event dispatch
+- `frontend/src/components/EditBookModal.jsx` — Series autocomplete
+- `frontend/src/pages/AuthorsList.jsx` — Shared SearchBar, fixed sticky positioning
+- `frontend/src/pages/UploadPage.jsx` — Shared navigation integration
+- `backend/database.py` — Default grid_columns setting
+
+---
+
 ## [0.6.0] - 2025-12-24
 
 ### Added
@@ -221,7 +277,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.6.0 | 2025-12-24 | **Phase 3 complete** — Settings, metadata editing, read time, author pages |
+| 0.7.0 | 2025-12-25 | **Phase 3.5 complete** — Navigation redesign, filter drawer, grid settings |
+| 0.6.0 | 2025-12-24 | Phase 3 complete — Settings, metadata editing, read time, author pages |
 | 0.5.4 | 2025-12-23 | Mobile file picker fix for .mobi/.azw3 |
 | 0.5.3 | 2025-12-23 | EPUB metadata extraction, "Upload as New" option |
 | 0.5.2 | 2025-12-22 | Category detection, .azw support |
@@ -237,6 +294,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.7.0
+
+**Backend:**
+- Modified: `database.py` (grid_columns default setting)
+
+**Frontend:**
+- New files: `BottomNav.jsx`, `FilterDrawer.jsx`, `SearchBar.jsx`
+- Modified: `App.jsx`, `Header.jsx`, `Library.jsx`, `SettingsDrawer.jsx`, `EditBookModal.jsx`, `AuthorsList.jsx`, `UploadPage.jsx`
+
+**Database migrations run automatically on startup.**
+
+**Rebuild Docker container after update.**
 
 ### Upgrading to 0.6.0
 
@@ -258,6 +328,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Roadmap](./20251224_ROADMAP.md)
+- [Roadmap](./20251225_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)

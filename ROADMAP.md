@@ -6,46 +6,51 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.6.0)
+## Current State (v0.7.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
-- **Upload new books directly from mobile or desktop** ✨
-- **Extract metadata from EPUB/PDF files** (author, title, summary, tags) ✨
-- **All ebook formats work on mobile** (.epub, .pdf, .mobi, .azw3, .azw, .html) ✨
-- **Smart FanFiction detection** from filename patterns (AO3, FFN, tropes)
-- **Override false duplicate matches** with "Upload as New" option
+- Upload new books directly from mobile or desktop
+- Extract metadata from EPUB/PDF files (author, title, summary, tags)
+- All ebook formats work on mobile (.epub, .pdf, .mobi, .azw3, .azw, .html)
+- Smart FanFiction detection from filename patterns (AO3, FFN, tropes)
+- Override false duplicate matches with "Upload as New" option
 - Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
-- Collapsible filter header — Scroll down to hide, scroll up to reveal
+- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload ✨
+- **Desktop header navigation** — Centered nav tabs on single line ✨
+- **Filter drawer** — Slides up on mobile, slides from right on desktop ✨
+- **Unified search bar** — Combined search input and filter icon ✨
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
-- Unified filter bar — Categories, status, tags, sort on one row (centered)
-- **Read time filter** — 8 tiers from "Under 30 min" to "30+ hours" ✨
+- Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
 - Series tab — Browse series with square gradient covers
-- **Authors tab** — Browse all authors alphabetically with search ✨
+- Authors tab — Browse all authors alphabetically with search
 - Series detail pages — View all books in a series
-- **Author detail pages** — View author with notes and all their books ✨
+- Author detail pages — View author with notes and all their books
 - Tag filtering — Multi-select tags with searchable modal
 - Active filters row — Clear individual filters or all at once
 - Search and filter by category, status, tags, read time
+- **Sort inline with count** — Sort dropdown next to book/series count ✨
 - Sort by title, author, series, year, recently updated (case-insensitive)
+- **Books per row setting** — Choose 2, 3, or 4 columns on mobile ✨
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
-- **Edit book metadata** — Title, authors, series, category, year ✨
-- **Draggable author chips** — Reorder authors, first appears on cover ✨
-- **Author autocomplete** — Suggests existing authors when editing ✨
+- Edit book metadata — Title, authors, series, category, year
+- Draggable author chips — Reorder authors, first appears on cover
+- Author autocomplete — Suggests existing authors when editing
+- **Series autocomplete** — Suggests existing series when editing ✨
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
 - Track reading dates (started, finished)
-- **Estimated read time** — Based on word count and WPM setting ✨
+- Estimated read time — Based on word count and WPM setting
 - Finished checkmark on book covers
 - Series section on book detail — Navigate between books in series
 - Auto-detect FanFiction based on metadata patterns
 - Add free-form notes to books
-- **Author notes** — Free-form notes about any author ✨
-- **Author rename** — Update author name across all books ✨
-- **Settings drawer** — WPM, sync controls ✨
-- **"Added to library" date** — Shows when book was added ✨
+- Author notes — Free-form notes about any author
+- Author rename — Update author name across all books
+- Settings drawer — WPM, grid columns, sync controls
+- "Added to library" date — Shows when book was added
 - Mobile-responsive design
 - Import reading data from Obsidian (status, rating, dates)
 
@@ -117,6 +122,32 @@ All upload features working including mobile file picker for all formats.
 - [ ] Customizable rating labels
 - [ ] Light/dark mode toggle
 - [ ] Actual WPM field (manual entry from Moon Reader)
+
+---
+
+## Phase 3.5: Navigation Redesign ✅ COMPLETE
+
+**Completed: December 25, 2025**
+
+### Mobile Navigation ✅
+- ✅ **Bottom navigation bar** — Fixed position with Library, Series, Authors, Upload
+- ✅ **Filter drawer** — Slides up from bottom, rounded top corners
+- ✅ **Unified search bar** — Search icon + input + filter icon in single component
+
+### Desktop Navigation ✅
+- ✅ **Header navigation** — Logo + centered nav tabs + settings on single line
+- ✅ **Filter drawer** — Slides in from right, 320px width
+- ✅ **Full-width search bar** — Spans page width
+
+### Filter System Improvements ✅
+- ✅ **Sort separated from filters** — Sort dropdown inline with book/series count
+- ✅ **View-aware filter count** — Badge only counts relevant filters per view
+- ✅ **Clear filters preserves sort** — Sorting is independent of filtering
+
+### Display Settings ✅
+- ✅ **Books per row** — User can choose 2, 3, or 4 columns on mobile
+- ✅ **Real-time sync** — Grid updates immediately when setting changes
+- ✅ **Series autocomplete** — Edit modal suggests existing series names
 
 ---
 
@@ -214,7 +245,7 @@ All upload features working including mobile file picker for all formats.
 
 ### UI Polish
 - [ ] Clear search button (X icon)
-- [ ] Rows per page setting
+- [x] ~~Books per row setting~~ ✅
 - [ ] Loading states and animations
 - [ ] Error handling improvements
 - [ ] "No summary available" notice on book detail page
@@ -251,7 +282,7 @@ All upload features working including mobile file picker for all formats.
 
 ### Medium Priority
 - [ ] Folder name parsing too strict on dash separator
-- [ ] Sort direction unclear (no visual indicator)
+- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
@@ -296,12 +327,13 @@ All upload features working including mobile file picker for all formats.
 | v0.5.2 | Dec 22, 2025 | Category detection, .azw support |
 | v0.5.3 | Dec 23, 2025 | EPUB metadata, "Upload as New" |
 | v0.5.4 | Dec 23, 2025 | Phase 2.1 complete — Mobile file picker fixed |
-| v0.6.0 | Dec 24, 2025 | **Phase 3 complete** — Settings, metadata editing, read time, author pages |
-| v0.7.0 | TBD | Phase 4 — TBR & Wishlist |
-| v0.8.0 | TBD | Phase 5 — Discovery & Collections |
-| v0.9.0 | TBD | Phase 6 — Integration & Polish |
+| v0.6.0 | Dec 24, 2025 | Phase 3 complete — Settings, metadata editing, read time, author pages |
+| v0.7.0 | Dec 25, 2025 | **Phase 3.5 complete** — Navigation redesign, filter drawer, grid settings |
+| v0.8.0 | TBD | Phase 4 — TBR & Wishlist |
+| v0.9.0 | TBD | Phase 5 — Discovery & Collections |
+| v0.10.0 | TBD | Phase 6 — Integration & Polish |
 | v1.0.0 | TBD | Phase 7 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 24, 2025 (v0.6.0 — Phase 3 complete)*
+*Last updated: December 25, 2025 (v0.7.0 — Phase 3.5 complete)*

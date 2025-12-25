@@ -4,6 +4,7 @@ import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, upd
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import { getReadTimeData } from '../utils/readTime'
+import ReactMarkdown from 'react-markdown'
 
 // Decode HTML entities in text (e.g., &amp; -> &, &quot; -> ")
 function decodeHtmlEntities(text) {
@@ -22,6 +23,43 @@ const RATING_LABELS = {
   5: 'All-time Fav'
 }
 
+// Note templates
+const NOTE_TEMPLATES = {
+  structured: {
+    label: 'Structured Review',
+    content: `## Characters
+
+
+## Atmosphere/World
+
+
+## Writing
+
+
+## Plot
+
+
+## Enjoyment
+
+
+## Steam
+
+
+## Believability
+
+`
+  },
+  reading: {
+    label: 'Reading Notes',
+    content: `## Thoughts While Reading
+
+
+## Reactions After Finishing
+
+`
+  }
+}
+
 function BookDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -36,6 +74,8 @@ function BookDetail() {
   
   // Note editor state
   const [noteContent, setNoteContent] = useState('')
+  const [originalNoteContent, setOriginalNoteContent] = useState('')
+  const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
   
@@ -102,7 +142,9 @@ function BookDetail() {
         setDateFinished(bookData.date_finished || '')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
-          setNoteContent(notesData[0].content || '')
+          const content = notesData[0].content || ''
+          setNoteContent(content)
+          setOriginalNoteContent(content)
         }
       })
       .catch(err => setError(err.message))
@@ -158,7 +200,9 @@ function BookDetail() {
     try {
       const savedNote = await saveNote(id, noteContent)
       setNotes([savedNote])
+      setOriginalNoteContent(noteContent)
       setSaveStatus('saved')
+      setIsEditingNotes(false)
       setTimeout(() => setSaveStatus(null), 2000)
     } catch (err) {
       setSaveStatus('error')
@@ -166,6 +210,11 @@ function BookDetail() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancelEdit = () => {
+    setNoteContent(originalNoteContent)
+    setIsEditingNotes(false)
   }
 
   const handleCategoryChange = async (newCategory) => {
@@ -294,6 +343,20 @@ function BookDetail() {
     setBook(updatedBook)
     // Update local state that might be affected
     setSelectedCategory(updatedBook.category || '')
+  }
+
+  const handleTemplateSelect = (templateKey) => {
+    if (!templateKey || !NOTE_TEMPLATES[templateKey]) return
+    
+    const template = NOTE_TEMPLATES[templateKey]
+    
+    setNoteContent(prev => {
+      if (prev.trim()) {
+        // Append with separator if there's existing content
+        return prev + '\n\n---\n\n' + template.content
+      }
+      return template.content
+    })
   }
 
   if (loading) {
@@ -633,9 +696,27 @@ function BookDetail() {
       {/* Notes Section */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-gray-400">Notes</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-medium text-gray-400">Notes</h2>
+            
+            {/* Template dropdown - only in edit mode */}
+            {isEditingNotes && (
+              <select
+                onChange={(e) => {
+                  handleTemplateSelect(e.target.value)
+                  e.target.value = '' // Reset to placeholder after selection
+                }}
+                className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
+                defaultValue=""
+              >
+                <option value="" disabled>+ Template</option>
+                <option value="structured">Structured Review</option>
+                <option value="reading">Reading Notes</option>
+              </select>
+            )}
+          </div>
           
-          {/* Save status indicator */}
+          {/* Action buttons */}
           <div className="flex items-center gap-2">
             {saveStatus === 'saved' && (
               <span className="text-green-400 text-sm">✓ Saved</span>
@@ -644,30 +725,74 @@ function BookDetail() {
               <span className="text-red-400 text-sm">Failed to save</span>
             )}
             
-            <button
-              onClick={handleSaveNote}
-              disabled={saving}
-              className={`
-                px-4 py-1.5 rounded text-sm font-medium
-                ${saving 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-library-accent hover:opacity-90'
-                }
-                text-white transition-opacity
-              `}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            {isEditingNotes ? (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  className="px-3 py-1.5 rounded text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNote}
+                  disabled={saving}
+                  className={`
+                    px-4 py-1.5 rounded text-sm font-medium
+                    ${saving 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-library-accent hover:opacity-90'
+                    }
+                    text-white transition-opacity
+                  `}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditingNotes(true)}
+                className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+                aria-label="Edit notes"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit
+              </button>
+            )}
           </div>
         </div>
         
-        {/* Note Editor */}
-        <textarea
-          value={noteContent}
-          onChange={e => setNoteContent(e.target.value)}
-          placeholder="Write your notes here..."
-          className="w-full h-48 bg-library-bg text-white p-3 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-y text-sm"
-        />
+        {/* Note Content - Read or Edit mode */}
+        {isEditingNotes ? (
+          <textarea
+            value={noteContent}
+            onChange={e => setNoteContent(e.target.value)}
+            placeholder="Write your notes here..."
+            className="w-full h-48 bg-library-bg text-white p-3 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-y text-sm"
+            autoFocus
+          />
+        ) : noteContent ? (
+          <div className="prose prose-invert prose-sm max-w-none text-gray-300">
+            <ReactMarkdown
+              components={{
+                h2: ({children}) => <h2 className="text-base font-semibold text-white mt-4 mb-2 first:mt-0">{children}</h2>,
+                h3: ({children}) => <h3 className="text-sm font-semibold text-white mt-3 mb-1">{children}</h3>,
+                p: ({children}) => <p className="text-gray-300 text-sm mb-2">{children}</p>,
+                hr: () => <hr className="border-gray-600 my-4" />,
+                strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
+                em: ({children}) => <em className="text-gray-300">{children}</em>,
+                ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-300 mb-2">{children}</ul>,
+                ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-300 mb-2">{children}</ol>,
+              }}
+            >
+              {noteContent}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm italic">No notes yet. Click Edit to add some.</p>
+        )}
       </div>
 
       {/* Series Section */}
