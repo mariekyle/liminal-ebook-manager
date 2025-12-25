@@ -96,9 +96,12 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Insert default WPM if not exists
+        # Insert default settings if not exists
         await db.execute("""
             INSERT OR IGNORE INTO settings (key, value) VALUES ('reading_wpm', '250')
+        """)
+        await db.execute("""
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('grid_columns', '2')
         """)
     except Exception as e:
         print(f"Settings migration note: {e}")

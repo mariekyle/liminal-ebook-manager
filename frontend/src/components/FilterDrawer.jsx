@@ -75,9 +75,9 @@ function FilterDrawer({
       {/* Mobile Drawer - slides up from bottom */}
       <div 
         className={`fixed bottom-16 left-0 right-0 bg-library-card rounded-t-2xl z-50 transition-transform duration-300 md:hidden ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
+          isOpen ? 'translate-y-0' : 'translate-y-[calc(100%+4rem)]'
         }`}
-        style={{ maxHeight: '80vh', overflowY: 'auto' }}
+        style={{ maxHeight: '70vh', overflowY: 'auto' }}
       >
         <div className="p-4">
           {/* Handle bar */}

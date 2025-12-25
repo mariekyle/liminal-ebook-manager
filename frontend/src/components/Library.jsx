@@ -30,6 +30,7 @@ function Library() {
   const [categories, setCategories] = useState([])
   const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
   const [wpm, setWpm] = useState(250)
+  const [gridColumns, setGridColumns] = useState('2')
   
   // View state (tabs) - initialize from URL
   const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
@@ -78,15 +79,30 @@ function Library() {
       .catch(err => console.error('Failed to load categories:', err))
   }, [])
 
-  // Load WPM setting
+  // Load settings (WPM, grid columns)
   useEffect(() => {
     getSettings()
       .then(settings => {
         if (settings.reading_wpm) {
           setWpm(parseInt(settings.reading_wpm, 10) || 250)
         }
+        if (settings.grid_columns) {
+          setGridColumns(settings.grid_columns)
+        }
       })
       .catch(err => console.error('Failed to load settings:', err))
+  }, [])
+
+  // Listen for settings changes from SettingsDrawer
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail.grid_columns) {
+        setGridColumns(event.detail.grid_columns)
+      }
+    }
+    
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
   // Load books when filters change
@@ -333,7 +349,11 @@ function Library() {
 
         {/* Book Grid - Library View */}
         {activeView === 'library' && !loading && !error && filteredBooks.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className={`grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 ${
+            gridColumns === '2' ? 'grid-cols-2' :
+            gridColumns === '3' ? 'grid-cols-3' :
+            'grid-cols-4'
+          }`}>
             {filteredBooks.map(book => (
               <BookCard key={book.id} book={book} />
             ))}
@@ -372,7 +392,11 @@ function Library() {
 
         {/* Series Grid - Series View */}
         {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className={`grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 ${
+            gridColumns === '2' ? 'grid-cols-2' :
+            gridColumns === '3' ? 'grid-cols-3' :
+            'grid-cols-4'
+          }`}>
             {seriesList.map(series => (
               <SeriesCard key={series.name} series={series} />
             ))}

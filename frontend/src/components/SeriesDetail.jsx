@@ -46,7 +46,7 @@ function SeriesDetail() {
   if (!series) return null
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto px-4 md:px-8">
       {/* Back link */}
       <Link 
         to="/"

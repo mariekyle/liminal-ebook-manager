@@ -8,6 +8,7 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [wpmStatus, setWpmStatus] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
+  const [gridColumns, setGridColumns] = useState('2')
   const drawerRef = useRef(null)
 
   // Load settings when drawer opens
@@ -18,6 +19,9 @@ function SettingsDrawer({ isOpen, onClose }) {
         .then(data => {
           setSettings(data)
           setWpmInput(data.reading_wpm || '250')
+          if (data.grid_columns) {
+            setGridColumns(data.grid_columns)
+          }
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
@@ -93,6 +97,20 @@ function SettingsDrawer({ isOpen, onClose }) {
       console.error('Failed to save WPM:', err)
       setWpmStatus('error')
       setTimeout(() => setWpmStatus(null), 3000)
+    }
+  }
+
+  const handleGridColumnsChange = async (value) => {
+    setGridColumns(value)
+    try {
+      await updateSetting('grid_columns', value)
+      setSettings(prev => ({ ...prev, grid_columns: value }))
+      // Notify other components of the change
+      window.dispatchEvent(new CustomEvent('settingsChanged', { 
+        detail: { grid_columns: value } 
+      }))
+    } catch (err) {
+      console.error('Failed to save grid columns:', err)
     }
   }
 
@@ -199,6 +217,36 @@ function SettingsDrawer({ isOpen, onClose }) {
               
               <p className="text-gray-500 text-xs mt-2">
                 💡 Average adult: 200–300 WPM
+              </p>
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Grid Columns Setting */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Books per row (mobile)</h3>
+              <p className="text-gray-400 text-sm mb-3">
+                Choose how many book covers to show per row on mobile devices.
+              </p>
+              
+              <div className="flex gap-2">
+                {['2', '3', '4'].map((cols) => (
+                  <button
+                    key={cols}
+                    onClick={() => handleGridColumnsChange(cols)}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      gridColumns === cols
+                        ? 'bg-library-accent text-white'
+                        : 'bg-library-card text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {cols}
+                  </button>
+                ))}
+              </div>
+              <p className="text-gray-500 text-xs mt-2">
+                Desktop always shows 4–6 columns
               </p>
             </section>
 

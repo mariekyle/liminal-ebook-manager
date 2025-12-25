@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { updateBookMetadata } from '../api'
+import { updateBookMetadata, listSeries } from '../api'
 import AuthorChips from './AuthorChips'
 
 function EditBookModal({ book, isOpen, onClose, onSave }) {
@@ -13,6 +13,9 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [allSeries, setAllSeries] = useState([])
+  const [seriesSuggestions, setSeriesSuggestions] = useState([])
+  const [showSeriesSuggestions, setShowSeriesSuggestions] = useState(false)
   const modalRef = useRef(null)
 
   // Initialize form when book changes or modal opens
@@ -27,8 +30,19 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
         publication_year: book.publication_year?.toString() || ''
       })
       setError(null)
+      setShowSeriesSuggestions(false)
     }
   }, [book, isOpen])
+
+  // Load all series for autocomplete
+  useEffect(() => {
+    listSeries({ limit: 10000 })
+      .then(data => {
+        const names = data.series.map(s => s.name)
+        setAllSeries(names)
+      })
+      .catch(err => console.error('Failed to load series:', err))
+  }, [])
 
   // Handle click outside
   useEffect(() => {
@@ -68,6 +82,27 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSeriesInput = (value) => {
+    setFormData(prev => ({ ...prev, series: value }))
+    
+    if (value.trim().length > 0) {
+      const filtered = allSeries.filter(s =>
+        s.toLowerCase().includes(value.toLowerCase())
+      )
+      setSeriesSuggestions(filtered.slice(0, 8))
+      setShowSeriesSuggestions(filtered.length > 0)
+    } else {
+      setSeriesSuggestions([])
+      setShowSeriesSuggestions(false)
+    }
+  }
+
+  const handleSeriesSelect = (selectedSeries) => {
+    setFormData(prev => ({ ...prev, series: selectedSeries }))
+    setShowSeriesSuggestions(false)
+    setSeriesSuggestions([])
   }
 
   const handleSubmit = async (e) => {
@@ -176,17 +211,43 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
 
             {/* Series row */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
+              <div className="col-span-2 relative">
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">
                   Series
                 </label>
                 <input
                   type="text"
                   value={formData.series}
-                  onChange={(e) => handleInputChange('series', e.target.value)}
+                  onChange={(e) => handleSeriesInput(e.target.value)}
+                  onFocus={() => {
+                    if (formData.series && seriesSuggestions.length > 0) {
+                      setShowSeriesSuggestions(true)
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay to allow click on suggestion
+                    setTimeout(() => setShowSeriesSuggestions(false), 200)
+                  }}
                   placeholder="None"
                   className="w-full bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none"
+                  autoComplete="off"
                 />
+                
+                {/* Series Autocomplete Dropdown */}
+                {showSeriesSuggestions && seriesSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {seriesSuggestions.map((s, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSeriesSelect(s)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">
