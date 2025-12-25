@@ -23,21 +23,13 @@ function FilterDrawer({
   statuses = ['Any', 'Unread', 'In Progress', 'Finished', 'DNF'],
   selectedStatus,
   onStatusChange,
-  sortOptions = [
-    { value: 'title', label: 'Title' },
-    { value: 'author', label: 'Author' },
-    { value: 'updated', label: 'Recently Updated' },
-    { value: 'year', label: 'Year' },
-  ],
-  selectedSort,
-  onSortChange,
   readTimeTiers = [],
   selectedReadTime,
   onReadTimeChange,
   onOpenTagsModal,
   selectedTagsCount = 0,
   onClearAll,
-  showLibraryFilters = true, // Show status/sort/readTime/tags (false for Series view)
+  showLibraryFilters = true, // Show status/readTime/tags (false for Series view)
 }) {
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -97,9 +89,6 @@ function FilterDrawer({
             statuses={statuses}
             selectedStatus={selectedStatus}
             onStatusChange={onStatusChange}
-            sortOptions={sortOptions}
-            selectedSort={selectedSort}
-            onSortChange={onSortChange}
             readTimeTiers={readTimeTiers}
             selectedReadTime={selectedReadTime}
             onReadTimeChange={onReadTimeChange}
@@ -133,9 +122,6 @@ function FilterDrawer({
             statuses={statuses}
             selectedStatus={selectedStatus}
             onStatusChange={onStatusChange}
-            sortOptions={sortOptions}
-            selectedSort={selectedSort}
-            onSortChange={onSortChange}
             readTimeTiers={readTimeTiers}
             selectedReadTime={selectedReadTime}
             onReadTimeChange={onReadTimeChange}
@@ -158,9 +144,6 @@ function FilterContent({
   statuses,
   selectedStatus,
   onStatusChange,
-  sortOptions,
-  selectedSort,
-  onSortChange,
   readTimeTiers,
   selectedReadTime,
   onReadTimeChange,
@@ -227,20 +210,6 @@ function FilterContent({
                 )
               })}
             </div>
-          </div>
-          
-          {/* Sort */}
-          <div className="mb-4">
-            <p className="text-gray-400 text-sm mb-2">Sort by</p>
-            <select 
-              value={selectedSort}
-              onChange={(e) => onSortChange(e.target.value)}
-              className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border-none focus:ring-2 focus:ring-library-accent"
-            >
-              {sortOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
           </div>
           
           {/* Read Time */}

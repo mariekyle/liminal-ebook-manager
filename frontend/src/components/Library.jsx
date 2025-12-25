@@ -198,16 +198,20 @@ function Library() {
     setSearchParams(params, { replace: true })
   }, [searchParams, setSearchParams])
 
-  // Clear all filters
+  // Clear all filters (preserves sort)
   const handleClearFilters = useCallback(() => {
     setCategory('')
     setStatus('')
     setSelectedTags([])
     setReadTimeFilter('')
     setSearch('')
-    setSort('title')
-    setSearchParams({}, { replace: true })
-  }, [setSearchParams])
+    // Preserve current sort - don't reset it
+    const params = new URLSearchParams()
+    if (sort !== 'title') {
+      params.set('sort', sort)
+    }
+    setSearchParams(params, { replace: true })
+  }, [setSearchParams, sort])
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-120px)]">
@@ -226,17 +230,41 @@ function Library() {
         />
       </div>
 
-      {/* Poetic phrase + Active filters */}
+      {/* Poetic phrase + Sort + Active filters */}
       <div className="px-4 md:px-8 py-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <p className="text-gray-400 text-sm italic">
-            {activeView === 'series' 
-              ? `${seriesTotal} series. Stories that needed more than one book.`
-              : currentPhrase
-            }
-          </p>
+        <div className="flex flex-col gap-2">
+          {/* Top row: phrase and sort */}
+          <div className="flex items-center justify-between">
+            <p className="text-gray-400 text-sm italic">
+              {activeView === 'series' 
+                ? `${seriesTotal} series. Stories that needed more than one book.`
+                : currentPhrase
+              }
+            </p>
+            
+            {/* Sort dropdown */}
+            {activeView === 'library' && (
+              <div className="relative flex-shrink-0">
+                <select
+                  value={sort}
+                  onChange={(e) => {
+                    setSort(e.target.value)
+                    updateUrlParams({ sort: e.target.value })
+                  }}
+                  className="appearance-none bg-transparent text-gray-400 text-sm pr-5 cursor-pointer hover:text-white focus:outline-none"
+                >
+                  <option value="title">Sort: Title</option>
+                  <option value="author">Sort: Author</option>
+                  <option value="series">Sort: Series</option>
+                  <option value="year">Sort: Year</option>
+                  <option value="updated">Sort: Updated</option>
+                </select>
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">▼</span>
+              </div>
+            )}
+          </div>
           
-          {/* Active filter pills */}
+          {/* Active filter pills row */}
           {hasActiveFilters && (
             <div className="flex flex-wrap items-center gap-2">
               {category && (
@@ -419,18 +447,6 @@ function Library() {
         onStatusChange={(s) => {
           setStatus(s)
           updateUrlParams({ status: s })
-        }}
-        sortOptions={[
-          { value: 'title', label: 'Title' },
-          { value: 'author', label: 'Author' },
-          { value: 'series', label: 'Series' },
-          { value: 'year', label: 'Year' },
-          { value: 'updated', label: 'Recently Updated' },
-        ]}
-        selectedSort={sort}
-        onSortChange={(s) => {
-          setSort(s)
-          updateUrlParams({ sort: s })
         }}
         readTimeTiers={READ_TIME_FILTERS.filter(f => f.value !== '')}
         selectedReadTime={readTimeFilter}
