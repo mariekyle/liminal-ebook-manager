@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { listAuthors } from '../api'
+import SearchBar from '../components/SearchBar'
 
 function AuthorsList() {
   const [authors, setAuthors] = useState([])
@@ -59,66 +60,60 @@ function AuthorsList() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Back to Library */}
-      <Link 
-        to="/"
-        className="text-gray-400 hover:text-white mb-6 inline-flex items-center gap-2"
-      >
-        ← Back to Library
-      </Link>
-
-      {/* Search */}
-      <div className="mb-6">
-        <input
-          type="text"
+    <div>
+      {/* Search Bar */}
+      <div className="sticky top-[57px] z-30 bg-library-bg pt-3 md:pt-0">
+        <SearchBar
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder="Search authors..."
-          className="w-full px-4 py-3 bg-library-card text-white rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none"
+          showFilter={false}
         />
       </div>
 
       {/* Stats */}
-      <p className="text-gray-400 text-sm italic text-center mb-6">
-        {filteredAuthors.length} authors. {filteredAuthors.length === authors.length ? 'So many voices.' : `Showing matches for "${search}"`}
-      </p>
+      <div className="px-4 md:px-8 py-3">
+        <p className="text-gray-400 text-sm italic">
+          {filteredAuthors.length} authors. {filteredAuthors.length === authors.length ? 'So many voices.' : `Showing matches for "${search}"`}
+        </p>
+      </div>
 
-      {/* Author list grouped alphabetically */}
-      {sortedKeys.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-400">No authors found</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {sortedKeys.map(letter => (
-            <div key={letter}>
-              <h2 className="text-lg font-bold text-library-accent mb-2 sticky top-0 bg-library-bg py-1">
-                {letter}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {groupedAuthors[letter].map(author => (
-                  <Link
-                    key={author.name}
-                    to={`/author/${encodeURIComponent(author.name)}`}
-                    className="flex items-center justify-between px-3 py-2 bg-library-card rounded hover:bg-gray-700 transition-colors group"
-                  >
-                    <span className="text-white group-hover:text-library-accent transition-colors truncate">
-                      {author.name}
-                    </span>
-                    <span className="text-gray-500 text-sm flex-shrink-0 ml-2">
-                      {author.book_count}
-                    </span>
-                  </Link>
-                ))}
+      {/* Author list */}
+      <div className="px-4 md:px-8 pb-8">
+        {sortedKeys.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400">No authors found</p>
+          </div>
+        ) : (
+          <div className="space-y-6 max-w-4xl">
+            {sortedKeys.map(letter => (
+              <div key={letter}>
+                <h2 className="text-lg font-bold text-library-accent mb-2 sticky top-[113px] md:top-[105px] bg-library-bg py-1 z-20">
+                  {letter}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {groupedAuthors[letter].map(author => (
+                    <Link
+                      key={author.name}
+                      to={`/author/${encodeURIComponent(author.name)}`}
+                      className="flex items-center justify-between px-3 py-2 bg-library-card rounded hover:bg-gray-700 transition-colors group"
+                    >
+                      <span className="text-white group-hover:text-library-accent transition-colors truncate">
+                        {author.name}
+                      </span>
+                      <span className="text-gray-500 text-sm flex-shrink-0 ml-2">
+                        {author.book_count}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 export default AuthorsList
-

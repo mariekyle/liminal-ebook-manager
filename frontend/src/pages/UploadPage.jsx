@@ -273,29 +273,21 @@ export default function UploadPage() {
   // ==========================================================================
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-[#e0e0e0]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[#3a3a3a] bg-[#1a1a1a] px-4 py-4">
+    <div className="text-[#e0e0e0]">
+      {/* Page Header */}
+      <div className="px-4 md:px-8 py-4 border-b border-gray-700">
         <div className="flex items-center max-w-2xl mx-auto">
           {currentScreen !== SCREENS.SELECT && 
            currentScreen !== SCREENS.UPLOADING && 
            currentScreen !== SCREENS.SUCCESS && (
             <button
               onClick={handleBack}
-              className="text-[#667eea] mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
+              className="text-library-accent mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
             >
               ← Back
             </button>
           )}
-          {currentScreen === SCREENS.SELECT && (
-            <button
-              onClick={handleGoToLibrary}
-              className="text-[#667eea] mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
-            >
-              ← Library
-            </button>
-          )}
-          <h1 className="flex-1 text-lg font-semibold">
+          <h1 className="flex-1 text-lg font-semibold text-white">
             {currentScreen === SCREENS.REVIEW 
               ? `Review (${books.length} books)`
               : currentScreen === SCREENS.SUCCESS
@@ -303,7 +295,7 @@ export default function UploadPage() {
               : 'Upload Books'}
           </h1>
         </div>
-      </header>
+      </div>
 
       {/* Error Banner */}
       {error && (
