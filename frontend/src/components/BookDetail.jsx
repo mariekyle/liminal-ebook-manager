@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
+import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 
@@ -76,6 +77,9 @@ function BookDetail() {
   const [noteContent, setNoteContent] = useState('')
   const [originalNoteContent, setOriginalNoteContent] = useState('')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
+  // Book link popup state
+  const [linkPopup, setLinkPopup] = useState({ open: false, x: 0, y: 0, cursorPos: 0 })
+  const textareaRef = useRef(null)
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
   
@@ -215,6 +219,137 @@ function BookDetail() {
   const handleCancelEdit = () => {
     setNoteContent(originalNoteContent)
     setIsEditingNotes(false)
+    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+  }
+
+  // Calculate pixel position of cursor in textarea
+  const getCursorPixelPosition = (textarea, currentValue, cursorPos) => {
+    // Create a mirror div to measure text
+    const mirror = document.createElement('div')
+    const style = window.getComputedStyle(textarea)
+    
+    // Copy relevant styles
+    const stylesToCopy = [
+      'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
+      'padding', 'border', 'boxSizing', 'width', 'wordWrap', 'whiteSpace'
+    ]
+    stylesToCopy.forEach(prop => {
+      mirror.style[prop] = style[prop]
+    })
+    
+    mirror.style.position = 'absolute'
+    mirror.style.visibility = 'hidden'
+    mirror.style.whiteSpace = 'pre-wrap'
+    mirror.style.wordWrap = 'break-word'
+    
+    // Use passed-in value and cursor position (not stale DOM values)
+    const textBeforeCursor = currentValue.substring(0, cursorPos)
+    
+    // Escape HTML entities to prevent interpretation as markup
+    const escapeHtml = (text) => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+    }
+    
+    // Escape text, replace newlines, and add cursor marker
+    const escapedText = escapeHtml(textBeforeCursor).replace(/\n/g, '<br>')
+    mirror.innerHTML = escapedText + '<span id="cursor-marker">|</span>'
+    
+    document.body.appendChild(mirror)
+    
+    const marker = mirror.querySelector('#cursor-marker')
+    const markerRect = marker.getBoundingClientRect()
+    const textareaRect = textarea.getBoundingClientRect()
+    
+    document.body.removeChild(mirror)
+    
+    // Calculate line height in pixels (handles unitless, "normal", or px values)
+    let lineHeightPx = parseFloat(style.lineHeight)
+    if (isNaN(lineHeightPx) || style.lineHeight === 'normal') {
+      // "normal" is typically 1.2x font size
+      lineHeightPx = parseFloat(style.fontSize) * 1.2
+    } else if (!style.lineHeight.includes('px')) {
+      // Unitless value like "1.5" - multiply by font size
+      lineHeightPx = parseFloat(style.fontSize) * lineHeightPx
+    }
+    
+    // Calculate position relative to textarea, accounting for scroll
+    return {
+      x: markerRect.left - textareaRect.left + textarea.scrollLeft,
+      y: markerRect.top - textareaRect.top - textarea.scrollTop + lineHeightPx
+    }
+  }
+
+  const handleNoteChange = (e) => {
+    const value = e.target.value
+    const cursorPos = e.target.selectionStart
+    setNoteContent(value)
+    
+    const textBeforeCursor = value.substring(0, cursorPos)
+    
+    // Check if user just typed [[
+    if (textBeforeCursor.endsWith('[[')) {
+      const textarea = textareaRef.current
+      if (textarea) {
+        const pos = getCursorPixelPosition(textarea, value, cursorPos)
+        setLinkPopup({ open: true, x: pos.x, y: pos.y, cursorPos: cursorPos })
+      }
+    } 
+    // Close popup if [[ is no longer at the expected position
+    else if (linkPopup.open) {
+      const storedPos = linkPopup.cursorPos
+      
+      // Check if [[ is still at the stored position (storedPos - 2 to storedPos)
+      const expectedMarker = value.substring(storedPos - 2, storedPos)
+      
+      if (expectedMarker !== '[[') {
+        // Text before [[ was modified, or [[ was deleted - close popup
+        setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+      } else {
+        // [[ is still there, but check if it's been closed with ]]
+        const textAfterMarker = value.substring(storedPos, cursorPos)
+        if (textAfterMarker.includes(']]')) {
+          setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+        }
+      }
+    }
+  }
+
+  const handleBookSelect = (bookTitle) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    
+    // Position right after [[ was typed
+    const linkMarkerEnd = linkPopup.cursorPos
+    // Current cursor position (may have moved if user typed in textarea)
+    const currentCursorPos = textarea.selectionStart
+    
+    // Text before [[ (linkMarkerEnd - 2 gives us position before [[)
+    const beforeLink = noteContent.substring(0, linkMarkerEnd - 2)
+    // Text after current cursor (skips any characters typed after [[)
+    const textAfter = noteContent.substring(currentCursorPos)
+    
+    const link = `[[${bookTitle}]]`
+    const newText = beforeLink + link + textAfter
+    const newCursorPos = beforeLink.length + link.length
+    
+    setNoteContent(newText)
+    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+    
+    // Refocus textarea and set cursor position after the inserted link
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
+  const handleLinkPopupClose = () => {
+    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+    textareaRef.current?.focus()
   }
 
   const handleCategoryChange = async (newCategory) => {
@@ -788,13 +923,26 @@ function BookDetail() {
             
             {/* Editor Area */}
             <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <textarea
-                value={noteContent}
-                onChange={e => setNoteContent(e.target.value)}
-                placeholder="Write your notes here..."
-                className="flex-1 w-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed"
-                autoFocus
-              />
+              <div className="flex-1 relative">
+                <textarea
+                  ref={textareaRef}
+                  value={noteContent}
+                  onChange={handleNoteChange}
+                  onScroll={() => linkPopup.open && setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })}
+                  placeholder="Write your notes here... (Type [[ to link to a book)"
+                  className="absolute inset-0 w-full h-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed"
+                  autoFocus
+                />
+                
+                {/* Book Link Popup */}
+                {linkPopup.open && (
+                  <BookLinkPopup
+                    position={{ x: linkPopup.x, y: linkPopup.y }}
+                    onSelect={handleBookSelect}
+                    onClose={handleLinkPopupClose}
+                  />
+                )}
+              </div>
             </div>
             
             {/* Panel Footer */}
