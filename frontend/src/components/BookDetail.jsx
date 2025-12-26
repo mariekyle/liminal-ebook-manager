@@ -78,7 +78,7 @@ function BookDetail() {
   const [originalNoteContent, setOriginalNoteContent] = useState('')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   // Book link popup state
-  const [linkPopup, setLinkPopup] = useState({ open: false, x: 0, y: 0, cursorPos: 0 })
+  const [linkPopup, setLinkPopup] = useState({ open: false, cursorPos: 0 })
   const textareaRef = useRef(null)
   // Linked books lookup (for rendering [[Book Title]] in read mode)
   const [linkedBooks, setLinkedBooks] = useState({})
@@ -261,79 +261,7 @@ function BookDetail() {
   const handleCancelEdit = () => {
     setNoteContent(originalNoteContent)
     setIsEditingNotes(false)
-    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
-  }
-
-  // Calculate pixel position of cursor in textarea
-  const getCursorPixelPosition = (textarea, currentValue, cursorPos) => {
-    // Create a mirror div to measure text
-    const mirror = document.createElement('div')
-    const style = window.getComputedStyle(textarea)
-    
-    // Copy relevant styles
-    const stylesToCopy = [
-      'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
-      'padding', 'border', 'boxSizing', 'width', 'wordWrap', 'whiteSpace'
-    ]
-    stylesToCopy.forEach(prop => {
-      mirror.style[prop] = style[prop]
-    })
-    
-    mirror.style.position = 'absolute'
-    mirror.style.visibility = 'hidden'
-    mirror.style.whiteSpace = 'pre-wrap'
-    mirror.style.wordWrap = 'break-word'
-    
-    // Use passed-in value and cursor position (not stale DOM values)
-    const textBeforeCursor = currentValue.substring(0, cursorPos)
-    
-    // Escape HTML entities to prevent interpretation as markup
-    const escapeHtml = (text) => {
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-    }
-    
-    // Escape text, replace newlines, and add cursor marker
-    const escapedText = escapeHtml(textBeforeCursor).replace(/\n/g, '<br>')
-    mirror.innerHTML = escapedText + '<span id="cursor-marker">|</span>'
-    
-    document.body.appendChild(mirror)
-    
-    const marker = mirror.querySelector('#cursor-marker')
-    const markerRect = marker.getBoundingClientRect()
-    const textareaRect = textarea.getBoundingClientRect()
-    
-    document.body.removeChild(mirror)
-    
-    // Calculate line height in pixels (handles unitless, "normal", or px values)
-    let lineHeightPx = parseFloat(style.lineHeight)
-    if (isNaN(lineHeightPx) || style.lineHeight === 'normal') {
-      // "normal" is typically 1.2x font size
-      lineHeightPx = parseFloat(style.fontSize) * 1.2
-    } else if (!style.lineHeight.includes('px')) {
-      // Unitless value like "1.5" - multiply by font size
-      lineHeightPx = parseFloat(style.fontSize) * lineHeightPx
-    }
-    
-    // Calculate raw position relative to textarea
-    let x = markerRect.left - textareaRect.left + textarea.scrollLeft
-    let y = markerRect.top - textareaRect.top - textarea.scrollTop + lineHeightPx
-
-    // Clamp x to stay within textarea (leave room for popup width ~288px)
-    // Use Math.max(0, ...) to handle narrow viewports
-    const maxX = Math.max(0, textareaRect.width - 290)
-    x = Math.max(0, Math.min(x, maxX))
-
-    // Clamp y to stay within textarea (leave room for popup height ~250px)
-    // Use Math.max(0, ...) to handle short viewports
-    const maxY = Math.max(0, textareaRect.height - 260)
-    y = Math.max(0, Math.min(y, maxY))
-
-    return { x, y }
+    setLinkPopup({ open: false, cursorPos: 0 })
   }
 
   const handleNoteChange = (e) => {
@@ -345,27 +273,19 @@ function BookDetail() {
     
     // Check if user just typed [[
     if (textBeforeCursor.endsWith('[[')) {
-      const textarea = textareaRef.current
-      if (textarea) {
-        const pos = getCursorPixelPosition(textarea, value, cursorPos)
-        setLinkPopup({ open: true, x: pos.x, y: pos.y, cursorPos: cursorPos })
-      }
+      setLinkPopup({ open: true, cursorPos: cursorPos })
     } 
     // Close popup if [[ is no longer at the expected position
     else if (linkPopup.open) {
       const storedPos = linkPopup.cursorPos
-      
-      // Check if [[ is still at the stored position (storedPos - 2 to storedPos)
       const expectedMarker = value.substring(storedPos - 2, storedPos)
       
       if (expectedMarker !== '[[') {
-        // Text before [[ was modified, or [[ was deleted - close popup
-        setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+        setLinkPopup({ open: false, cursorPos: 0 })
       } else {
-        // [[ is still there, but check if it's been closed with ]]
         const textAfterMarker = value.substring(storedPos, cursorPos)
         if (textAfterMarker.includes(']]')) {
-          setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+          setLinkPopup({ open: false, cursorPos: 0 })
         }
       }
     }
@@ -390,7 +310,7 @@ function BookDetail() {
     const newCursorPos = beforeLink.length + link.length
     
     setNoteContent(newText)
-    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+    setLinkPopup({ open: false, cursorPos: 0 })
     
     // Refocus textarea and set cursor position after the inserted link
     setTimeout(() => {
@@ -400,7 +320,7 @@ function BookDetail() {
   }
 
   const handleLinkPopupClose = () => {
-    setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })
+    setLinkPopup({ open: false, cursorPos: 0 })
     textareaRef.current?.focus()
   }
 
@@ -1022,105 +942,79 @@ function BookDetail() {
         )}
       </div>
 
-      {/* Notes Editor Slide-Up Panel */}
+      {/* Notes Editor Full-Screen Modal */}
       {isEditingNotes && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/60 z-40"
-            onClick={saving ? undefined : handleCancelEdit}
-          />
-          
-          {/* Panel */}
-          <div className="fixed bottom-0 left-0 right-0 h-[80vh] bg-library-card rounded-t-2xl z-50 flex flex-col animate-slide-up">
-            {/* Panel Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-medium text-white">Edit Notes</h2>
-                
-                {/* Template dropdown */}
-                <select
-                  onChange={(e) => {
-                    handleTemplateSelect(e.target.value)
-                    e.target.value = ''
-                  }}
-                  className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
-                  defaultValue=""
-                >
-                  <option value="" disabled>+ Template</option>
-                  <option value="structured">Structured Review</option>
-                  <option value="reading">Reading Notes</option>
-                </select>
-              </div>
-              
-              {/* Close button */}
-              <button
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className={`p-1 transition-colors ${saving ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
-                aria-label="Close editor"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 bg-library-bg flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-library-card">
+            <button
+              onClick={saving ? undefined : handleCancelEdit}
+              disabled={saving}
+              className={`p-1 ${saving ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+              aria-label="Close editor"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             
-            {/* Editor Area */}
-            <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <div className="flex-1 relative overflow-hidden">
-                <textarea
-                  ref={textareaRef}
-                  value={noteContent}
-                  onChange={handleNoteChange}
-                  onScroll={() => linkPopup.open && setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })}
-                  placeholder="Write your notes here... (Type [[ to link to a book)"
-                  className="absolute inset-0 w-full h-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed z-0"
-                  autoFocus
-                />
-                
-                {/* Book Link Popup */}
-                {linkPopup.open && (
-                  <div className="absolute z-10" style={{ left: linkPopup.x, top: linkPopup.y }}>
-                    <BookLinkPopup
-                      onSelect={handleBookSelect}
-                      onClose={handleLinkPopupClose}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <h2 className="text-lg font-medium text-white">Edit Notes</h2>
             
-            {/* Panel Footer */}
-            <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-700">
-              {saveStatus === 'error' && (
-                <span className="text-red-400 text-sm mr-auto">Failed to save</span>
-              )}
-              
-              <button
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveNote}
-                disabled={saving}
-                className={`
-                  px-6 py-2 rounded-lg text-sm font-medium
-                  ${saving 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-library-accent hover:opacity-90'
-                  }
-                  text-white transition-opacity
-                `}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
+            <button
+              onClick={handleSaveNote}
+              disabled={saving}
+              className={`
+                px-4 py-1.5 rounded-lg text-sm font-medium
+                ${saving 
+                  ? 'bg-gray-600 cursor-not-allowed text-gray-400' 
+                  : 'bg-library-accent hover:opacity-90 text-white'
+                }
+              `}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
           </div>
-        </>
+          
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-700">
+            <select
+              onChange={(e) => {
+                handleTemplateSelect(e.target.value)
+                e.target.value = ''
+              }}
+              className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
+              defaultValue=""
+            >
+              <option value="" disabled>+ Template</option>
+              <option value="structured">Structured Review</option>
+              <option value="reading">Reading Notes</option>
+            </select>
+            
+            {saveStatus === 'error' && (
+              <span className="text-red-400 text-sm ml-auto">Failed to save</span>
+            )}
+          </div>
+          
+          {/* Editor Area */}
+          <div className="flex-1 p-4 overflow-hidden">
+            <textarea
+              ref={textareaRef}
+              value={noteContent}
+              onChange={handleNoteChange}
+              placeholder="Write your notes here... (Type [[ to link to a book)"
+              className="w-full h-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed"
+              autoFocus
+            />
+          </div>
+          
+          {/* Book Link Modal */}
+          {linkPopup.open && (
+            <BookLinkPopup
+              onSelect={handleBookSelect}
+              onClose={handleLinkPopupClose}
+            />
+          )}
+        </div>
       )}
 
       {/* Series Section */}
