@@ -996,13 +996,13 @@ function BookDetail() {
           </div>
           
           {/* Editor Area */}
-          <div className="flex-1 p-4 overflow-hidden">
+          <div className="flex-1 min-h-0 p-4">
             <textarea
               ref={textareaRef}
               value={noteContent}
               onChange={handleNoteChange}
               placeholder="Write your notes here... (Type [[ to link to a book)"
-              className="w-full h-full bg-library-bg text-white p-4 rounded-lg focus:outline-none resize-none text-sm leading-relaxed overflow-y-auto"
+              className="w-full h-full bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed overflow-y-auto"
               autoFocus
             />
           </div>
