@@ -1002,7 +1002,7 @@ function BookDetail() {
               value={noteContent}
               onChange={handleNoteChange}
               placeholder="Write your notes here... (Type [[ to link to a book)"
-              className="w-full h-full bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed overflow-y-auto"
+              className="w-full h-full bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed"
               autoFocus
             />
           </div>
