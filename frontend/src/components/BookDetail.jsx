@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -80,6 +80,8 @@ function BookDetail() {
   // Book link popup state
   const [linkPopup, setLinkPopup] = useState({ open: false, x: 0, y: 0, cursorPos: 0 })
   const textareaRef = useRef(null)
+  // Linked books lookup (for rendering [[Book Title]] in read mode)
+  const [linkedBooks, setLinkedBooks] = useState({})
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
   
@@ -194,6 +196,46 @@ function BookDetail() {
       cancelled = true
     }
   }, [book?.series])
+
+  // Look up books referenced in notes with [[Book Title]] syntax
+  useEffect(() => {
+    // Extract all [[...]] patterns from note content
+    const linkPattern = /\[\[([^\]]+)\]\]/g
+    const matches = []
+    let match
+    
+    while ((match = linkPattern.exec(noteContent)) !== null) {
+      matches.push(match[1])
+    }
+    
+    // Remove duplicates
+    const uniqueTitles = [...new Set(matches)]
+    
+    if (uniqueTitles.length === 0) {
+      setLinkedBooks({})
+      return
+    }
+    
+    let cancelled = false
+    
+    // Look up books
+    lookupBooksByTitles(uniqueTitles)
+      .then(results => {
+        if (!cancelled) {
+          setLinkedBooks(results)
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          console.error('Failed to lookup linked books:', err)
+          setLinkedBooks({})
+        }
+      })
+    
+    return () => {
+      cancelled = true
+    }
+  }, [noteContent])
 
   const handleSaveNote = async () => {
     if (saving) return
@@ -523,6 +565,71 @@ function BookDetail() {
         </button>
       </div>
     )
+  }
+
+  // Render note content with [[Book Title]] converted to links/spans
+  const renderNoteWithLinks = (text, keyPrefix = '') => {
+    if (!text) return null
+    
+    // Split text by [[...]] pattern, keeping the matches
+    const parts = []
+    let lastIndex = 0
+    const linkPattern = /\[\[([^\]]+)\]\]/g
+    let match
+    
+    while ((match = linkPattern.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: text.substring(lastIndex, match.index)
+        })
+      }
+      
+      // Add the link
+      const title = match[1]
+      const book = linkedBooks[title]
+      parts.push({
+        type: 'link',
+        title: title,
+        book: book
+      })
+      
+      lastIndex = match.index + match[0].length
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push({
+        type: 'text',
+        content: text.substring(lastIndex)
+      })
+    }
+    
+    return parts.map((part, index) => {
+      const key = `${keyPrefix}${index}`
+      if (part.type === 'text') {
+        return <span key={key}>{part.content}</span>
+      } else if (part.book) {
+        // Book exists - render as link
+        return (
+          <Link
+            key={key}
+            to={`/book/${part.book.id}`}
+            className="text-library-accent hover:underline"
+          >
+            {part.title}
+          </Link>
+        )
+      } else {
+        // Book not found - render as gray text
+        return (
+          <span key={key} className="text-gray-500">
+            {part.title}
+          </span>
+        )
+      }
+    })
   }
 
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
@@ -861,12 +968,40 @@ function BookDetail() {
               components={{
                 h2: ({children}) => <h2 className="text-base font-semibold text-white mt-4 mb-2 first:mt-0">{children}</h2>,
                 h3: ({children}) => <h3 className="text-sm font-semibold text-white mt-3 mb-1">{children}</h3>,
-                p: ({children}) => <p className="text-gray-300 text-sm mb-2">{children}</p>,
+                p: ({children}) => {
+                  // Process children to handle [[Book Title]] links
+                  const processChildren = (child, childIndex) => {
+                    if (typeof child === 'string') {
+                      return renderNoteWithLinks(child, `p-${childIndex}-`)
+                    }
+                    return child
+                  }
+                  
+                  const processed = Array.isArray(children) 
+                    ? children.map((child, i) => processChildren(child, i)).flat()
+                    : processChildren(children, 0)
+                  
+                  return <p className="text-gray-300 text-sm mb-2">{processed}</p>
+                },
                 hr: () => <hr className="border-gray-600 my-4" />,
                 strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
                 em: ({children}) => <em className="text-gray-300">{children}</em>,
                 ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-300 mb-2">{children}</ul>,
                 ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-300 mb-2">{children}</ol>,
+                li: ({children}) => {
+                  const processChildren = (child, childIndex) => {
+                    if (typeof child === 'string') {
+                      return renderNoteWithLinks(child, `li-${childIndex}-`)
+                    }
+                    return child
+                  }
+                  
+                  const processed = Array.isArray(children) 
+                    ? children.map((child, i) => processChildren(child, i)).flat()
+                    : processChildren(children, 0)
+                  
+                  return <li>{processed}</li>
+                },
               }}
             >
               {noteContent}

@@ -64,6 +64,38 @@ export async function listBooks(params = {}) {
 }
 
 /**
+ * Search for books by exact titles
+ * Returns a map of title -> book (or null if not found)
+ * 
+ * @param {string[]} titles - Array of book titles to look up
+ */
+export async function lookupBooksByTitles(titles) {
+  if (!titles || titles.length === 0) return {}
+  
+  // Search for each title and collect results
+  const results = {}
+  
+  // Do individual searches since we need exact matches
+  await Promise.all(
+    titles.map(async (title) => {
+      try {
+        const data = await listBooks({ search: title, limit: 5 })
+        // Find exact match (case-insensitive)
+        const exactMatch = data.books?.find(
+          book => book.title.toLowerCase() === title.toLowerCase()
+        )
+        results[title] = exactMatch || null
+      } catch (err) {
+        console.error(`Failed to lookup book "${title}":`, err)
+        results[title] = null
+      }
+    })
+  )
+  
+  return results
+}
+
+/**
  * List all series with metadata
  */
 export async function listSeries({ category, search } = {}) {
