@@ -8,6 +8,7 @@ Handles all book-related endpoints:
 """
 
 import json
+import re
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -224,6 +225,44 @@ def row_to_book_detail(row) -> BookDetail:
         cover_text_color=cover_style.text_color,
         created_at=row["created_at"] if "created_at" in row.keys() else None,
     )
+
+
+async def parse_and_store_links(db, note_id: int, content: str) -> None:
+    """
+    Parse [[Book Title]] patterns from note content and store links.
+    
+    - Extracts all [[...]] patterns
+    - Looks up books by exact title match (case-insensitive)
+    - Clears existing links for this note
+    - Inserts new links
+    """
+    # Extract all [[...]] patterns (non-greedy to handle brackets in titles)
+    link_pattern = r'\[\[(.+?)\]\]'
+    matches = re.findall(link_pattern, content or '')
+    
+    # Remove duplicates while preserving order
+    unique_titles = list(dict.fromkeys(matches))
+    
+    # Clear existing links for this note
+    await db.execute("DELETE FROM links WHERE from_note_id = ?", [note_id])
+    
+    if not unique_titles:
+        return
+    
+    # Look up books by title (case-insensitive)
+    for link_text in unique_titles:
+        cursor = await db.execute(
+            "SELECT id FROM books WHERE LOWER(title) = LOWER(?)",
+            [link_text.strip()]
+        )
+        book_row = await cursor.fetchone()
+        
+        if book_row:
+            # Insert link
+            await db.execute(
+                "INSERT INTO links (from_note_id, to_book_id, link_text) VALUES (?, ?, ?)",
+                [note_id, book_row["id"], link_text]
+            )
 
 
 # --------------------------------------------------------------------------
@@ -601,10 +640,11 @@ async def create_or_update_note(
         )
         note_id = cursor.lastrowid
     
-    await db.commit()
+    # Parse [[links]] from content and update links table
+    await parse_and_store_links(db, note_id, note_data.content)
     
-    # TODO: Parse [[links]] from content and update links table
-    # This will be implemented in Phase 5
+    # Commit everything together (note + links)
+    await db.commit()
     
     # Return the updated note
     cursor = await db.execute("SELECT * FROM notes WHERE id = ?", [note_id])
