@@ -140,6 +140,14 @@ export async function getBookNotes(bookId) {
 }
 
 /**
+ * Get backlinks for a book (other books that link to this one)
+ */
+export async function getBookBacklinks(bookId) {
+  const data = await apiFetch(`/books/${bookId}/backlinks`)
+  return data.backlinks || []
+}
+
+/**
  * Create or update a note for a book
  */
 export async function saveNote(bookId, content) {

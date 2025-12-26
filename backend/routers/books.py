@@ -114,6 +114,13 @@ class Note(BaseModel):
     updated_at: str
 
 
+class BacklinkItem(BaseModel):
+    """A book that links to another book."""
+    id: int
+    title: str
+    authors: List[str]
+
+
 class NoteCreate(BaseModel):
     """Request body for creating/updating a note."""
     content: str
@@ -657,6 +664,46 @@ async def create_or_update_note(
         created_at=row["created_at"],
         updated_at=row["updated_at"]
     )
+
+
+@router.get("/books/{book_id}/backlinks")
+async def get_book_backlinks(
+    book_id: int,
+    db = Depends(get_db)
+):
+    """
+    Get all books that link to this book via [[Book Title]] in their notes.
+    Returns books whose notes contain a link to the specified book.
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Find all books that have notes linking to this book
+    cursor = await db.execute(
+        """
+        SELECT DISTINCT b.id, b.title, b.authors
+        FROM links l
+        JOIN notes n ON l.from_note_id = n.id
+        JOIN books b ON n.book_id = b.id
+        WHERE l.to_book_id = ?
+        ORDER BY b.title COLLATE NOCASE
+        """,
+        [book_id]
+    )
+    rows = await cursor.fetchall()
+    
+    backlinks = []
+    for row in rows:
+        authors = parse_json_field(row["authors"])
+        backlinks.append({
+            "id": row["id"],
+            "title": row["title"],
+            "authors": authors
+        })
+    
+    return {"backlinks": backlinks, "total": len(backlinks)}
 
 
 @router.get("/categories")

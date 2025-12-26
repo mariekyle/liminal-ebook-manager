@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -82,6 +82,11 @@ function BookDetail() {
   const textareaRef = useRef(null)
   // Linked books lookup (for rendering [[Book Title]] in read mode)
   const [linkedBooks, setLinkedBooks] = useState({})
+  
+  // Backlinks (books that reference this book)
+  const [backlinks, setBacklinks] = useState([])
+  const [backlinksLoading, setBacklinksLoading] = useState(false)
+  
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
   
@@ -196,6 +201,36 @@ function BookDetail() {
       cancelled = true
     }
   }, [book?.series])
+
+  // Load backlinks (books that reference this book)
+  useEffect(() => {
+    if (!id) return
+    
+    let cancelled = false
+    setBacklinksLoading(true)
+    
+    getBookBacklinks(id)
+      .then(data => {
+        if (!cancelled) {
+          setBacklinks(data)
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          console.error('Failed to load backlinks:', err)
+          setBacklinks([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBacklinksLoading(false)
+        }
+      })
+    
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   // Look up books referenced in notes with [[Book Title]] syntax
   useEffect(() => {
@@ -1029,6 +1064,36 @@ function BookDetail() {
               onSelect={handleBookSelect}
               onClose={handleLinkPopupClose}
             />
+          )}
+        </div>
+      )}
+
+      {/* Backlinks Section */}
+      {(backlinks.length > 0 || backlinksLoading) && (
+        <div className="bg-library-card rounded-lg p-4 mb-6">
+          <h2 className="text-sm font-medium text-gray-400 mb-3">
+            Referenced by {!backlinksLoading && <span className="text-gray-500">({backlinks.length})</span>}
+          </h2>
+          
+          {backlinksLoading ? (
+            <p className="text-gray-500 text-sm">Loading...</p>
+          ) : (
+            <ul className="space-y-2">
+              {backlinks.map(book => (
+                <li key={book.id}>
+                  <Link
+                    to={`/book/${book.id}`}
+                    className="flex items-center gap-2 text-sm hover:bg-gray-800/50 -mx-2 px-2 py-1 rounded transition-colors"
+                  >
+                    <span className="text-library-accent">←</span>
+                    <span className="text-white truncate">{book.title}</span>
+                    <span className="text-gray-500 truncate text-xs">
+                      {book.authors?.[0]}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
