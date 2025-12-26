@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { listBooks } from '../api'
 
-function BookLinkPopup({ position, onSelect, onClose }) {
+function BookLinkPopup({ onSelect, onClose }) {
   const [query, setQuery] = useState('')
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -77,11 +77,7 @@ function BookLinkPopup({ position, onSelect, onClose }) {
 
   return (
     <div
-      className="absolute bg-library-card border border-gray-600 rounded-lg shadow-xl z-50 w-72"
-      style={{
-        left: position.x,
-        top: position.y,
-      }}
+      className="bg-library-card border border-gray-600 rounded-lg shadow-xl w-72"
     >
       {/* Search input */}
       <div className="p-2 border-b border-gray-700">

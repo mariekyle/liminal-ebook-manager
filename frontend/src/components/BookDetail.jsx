@@ -319,11 +319,21 @@ function BookDetail() {
       lineHeightPx = parseFloat(style.fontSize) * lineHeightPx
     }
     
-    // Calculate position relative to textarea, accounting for scroll
-    return {
-      x: markerRect.left - textareaRect.left + textarea.scrollLeft,
-      y: markerRect.top - textareaRect.top - textarea.scrollTop + lineHeightPx
-    }
+    // Calculate raw position relative to textarea
+    let x = markerRect.left - textareaRect.left + textarea.scrollLeft
+    let y = markerRect.top - textareaRect.top - textarea.scrollTop + lineHeightPx
+
+    // Clamp x to stay within textarea (leave room for popup width ~288px)
+    // Use Math.max(0, ...) to handle narrow viewports
+    const maxX = Math.max(0, textareaRect.width - 290)
+    x = Math.max(0, Math.min(x, maxX))
+
+    // Clamp y to stay within textarea (leave room for popup height ~250px)
+    // Use Math.max(0, ...) to handle short viewports
+    const maxY = Math.max(0, textareaRect.height - 260)
+    y = Math.max(0, Math.min(y, maxY))
+
+    return { x, y }
   }
 
   const handleNoteChange = (e) => {
@@ -1058,24 +1068,25 @@ function BookDetail() {
             
             {/* Editor Area */}
             <div className="flex-1 p-4 overflow-hidden flex flex-col">
-              <div className="flex-1 relative">
+              <div className="flex-1 relative overflow-hidden">
                 <textarea
                   ref={textareaRef}
                   value={noteContent}
                   onChange={handleNoteChange}
                   onScroll={() => linkPopup.open && setLinkPopup({ open: false, x: 0, y: 0, cursorPos: 0 })}
                   placeholder="Write your notes here... (Type [[ to link to a book)"
-                  className="absolute inset-0 w-full h-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed"
+                  className="absolute inset-0 w-full h-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed z-0"
                   autoFocus
                 />
                 
                 {/* Book Link Popup */}
                 {linkPopup.open && (
-                  <BookLinkPopup
-                    position={{ x: linkPopup.x, y: linkPopup.y }}
-                    onSelect={handleBookSelect}
-                    onClose={handleLinkPopupClose}
-                  />
+                  <div className="absolute z-10" style={{ left: linkPopup.x, top: linkPopup.y }}>
+                    <BookLinkPopup
+                      onSelect={handleBookSelect}
+                      onClose={handleLinkPopupClose}
+                    />
+                  </div>
                 )}
               </div>
             </div>
