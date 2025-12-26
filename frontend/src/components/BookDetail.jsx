@@ -696,27 +696,8 @@ function BookDetail() {
       {/* Notes Section */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-medium text-gray-400">Notes</h2>
-            
-            {/* Template dropdown - only in edit mode */}
-            {isEditingNotes && (
-              <select
-                onChange={(e) => {
-                  handleTemplateSelect(e.target.value)
-                  e.target.value = '' // Reset to placeholder after selection
-                }}
-                className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
-                defaultValue=""
-              >
-                <option value="" disabled>+ Template</option>
-                <option value="structured">Structured Review</option>
-                <option value="reading">Reading Notes</option>
-              </select>
-            )}
-          </div>
+          <h2 className="text-sm font-medium text-gray-400">Notes</h2>
           
-          {/* Action buttons */}
           <div className="flex items-center gap-2">
             {saveStatus === 'saved' && (
               <span className="text-green-400 text-sm">✓ Saved</span>
@@ -725,55 +706,21 @@ function BookDetail() {
               <span className="text-red-400 text-sm">Failed to save</span>
             )}
             
-            {isEditingNotes ? (
-              <>
-                <button
-                  onClick={handleCancelEdit}
-                  disabled={saving}
-                  className="px-3 py-1.5 rounded text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveNote}
-                  disabled={saving}
-                  className={`
-                    px-4 py-1.5 rounded text-sm font-medium
-                    ${saving 
-                      ? 'bg-gray-600 cursor-not-allowed' 
-                      : 'bg-library-accent hover:opacity-90'
-                    }
-                    text-white transition-opacity
-                  `}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditingNotes(true)}
-                className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
-                aria-label="Edit notes"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit
-              </button>
-            )}
+            <button
+              onClick={() => setIsEditingNotes(true)}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+              aria-label="Edit notes"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Edit
+            </button>
           </div>
         </div>
         
-        {/* Note Content - Read or Edit mode */}
-        {isEditingNotes ? (
-          <textarea
-            value={noteContent}
-            onChange={e => setNoteContent(e.target.value)}
-            placeholder="Write your notes here..."
-            className="w-full h-48 bg-library-bg text-white p-3 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-y text-sm"
-            autoFocus
-          />
-        ) : noteContent ? (
+        {/* Note Content - Read mode only */}
+        {noteContent ? (
           <div className="prose prose-invert prose-sm max-w-none text-gray-300">
             <ReactMarkdown
               components={{
@@ -794,6 +741,93 @@ function BookDetail() {
           <p className="text-gray-500 text-sm italic">No notes yet. Click Edit to add some.</p>
         )}
       </div>
+
+      {/* Notes Editor Slide-Up Panel */}
+      {isEditingNotes && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 z-40"
+            onClick={saving ? undefined : handleCancelEdit}
+          />
+          
+          {/* Panel */}
+          <div className="fixed bottom-0 left-0 right-0 h-[80vh] bg-library-card rounded-t-2xl z-50 flex flex-col animate-slide-up">
+            {/* Panel Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-medium text-white">Edit Notes</h2>
+                
+                {/* Template dropdown */}
+                <select
+                  onChange={(e) => {
+                    handleTemplateSelect(e.target.value)
+                    e.target.value = ''
+                  }}
+                  className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
+                  defaultValue=""
+                >
+                  <option value="" disabled>+ Template</option>
+                  <option value="structured">Structured Review</option>
+                  <option value="reading">Reading Notes</option>
+                </select>
+              </div>
+              
+              {/* Close button */}
+              <button
+                onClick={handleCancelEdit}
+                disabled={saving}
+                className={`p-1 transition-colors ${saving ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+                aria-label="Close editor"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Editor Area */}
+            <div className="flex-1 p-4 overflow-hidden flex flex-col">
+              <textarea
+                value={noteContent}
+                onChange={e => setNoteContent(e.target.value)}
+                placeholder="Write your notes here..."
+                className="flex-1 w-full bg-library-bg text-white p-4 rounded-lg border border-gray-600 focus:border-library-accent focus:outline-none resize-none text-sm leading-relaxed"
+                autoFocus
+              />
+            </div>
+            
+            {/* Panel Footer */}
+            <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-700">
+              {saveStatus === 'error' && (
+                <span className="text-red-400 text-sm mr-auto">Failed to save</span>
+              )}
+              
+              <button
+                onClick={handleCancelEdit}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNote}
+                disabled={saving}
+                className={`
+                  px-6 py-2 rounded-lg text-sm font-medium
+                  ${saving 
+                    ? 'bg-gray-600 cursor-not-allowed' 
+                    : 'bg-library-accent hover:opacity-90'
+                  }
+                  text-white transition-opacity
+                `}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Series Section */}
       {book.series && (
