@@ -237,6 +237,22 @@ function BookDetail() {
     }
   }, [noteContent])
 
+  // Lock body scroll when notes editor is open
+  useEffect(() => {
+    if (isEditingNotes) {
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+  }, [isEditingNotes])
+
   const handleSaveNote = async () => {
     if (saving) return
     
@@ -944,7 +960,7 @@ function BookDetail() {
 
       {/* Notes Editor Full-Screen Modal */}
       {isEditingNotes && (
-        <div className="fixed inset-0 z-50 bg-library-bg flex flex-col">
+        <div className="fixed inset-0 z-50 bg-library-bg flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-library-card">
             <button
@@ -996,13 +1012,13 @@ function BookDetail() {
           </div>
           
           {/* Editor Area */}
-          <div className="flex-1 min-h-0 p-4">
+          <div className="flex-1 min-h-0 relative">
             <textarea
               ref={textareaRef}
               value={noteContent}
               onChange={handleNoteChange}
               placeholder="Write your notes here... (Type [[ to link to a book)"
-              className="w-full h-full bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed"
+              className="absolute inset-0 m-4 bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed"
               autoFocus
             />
           </div>
