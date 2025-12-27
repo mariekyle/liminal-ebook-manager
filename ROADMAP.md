@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.8.0)
+## Current State (v0.8.2)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -44,6 +44,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Track reading dates (started, finished)
 - Estimated read time — Based on word count and WPM setting
 - Finished checkmark on book covers
+- **Finished checkmarks on author pages** ✨
 - Series section on book detail — Navigate between books in series
 - Auto-detect FanFiction based on metadata patterns
 - **Full-screen notes editor** — Distraction-free writing ✨
@@ -51,12 +52,14 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Book linking** — Type `[[` to search and link books ✨
 - **Rendered markdown** — Notes display with formatting in read mode ✨
 - **Backlinks** — "Referenced by" shows which books link to current book ✨
+- **251 book notes imported from Obsidian** ✨
+- **Custom status labels** — Personalize status names in Settings ✨
 - Author notes — Free-form notes about any author
 - Author rename — Update author name across all books
-- Settings drawer — WPM, grid columns, sync controls
+- Settings drawer — WPM, grid columns, status labels, sync controls
 - "Added to library" date — Shows when book was added
 - Mobile-responsive design
-- Import reading data from Obsidian (status, rating, dates)
+- Import reading data from Obsidian (status, rating, dates, notes)
 
 ---
 
@@ -192,6 +195,35 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
+## Phase 4.5: Obsidian Notes Migration ✅ COMPLETE
+
+**Completed: December 26, 2025**
+
+### Migration System ✅
+- ✅ **Book matching endpoint** — `GET /books/match` with confidence scoring
+- ✅ **Notes import endpoint** — `POST /books/{id}/notes/import` with append support
+- ✅ **Migration script** — `migrate_notes.py` for bulk importing
+- ✅ **Dry run mode** — Preview imports before committing
+- ✅ **Detailed reports** — Markdown report of matched/unmatched files
+
+### Migration Features ✅
+- ✅ **Fuzzy matching** — Exact, partial, and reverse partial title matching
+- ✅ **Confidence scoring** — 95-100% exact, 70-85% partial
+- ✅ **Author boost** — +10% when author also matches
+- ✅ **Append mode** — New notes added below existing with separator
+- ✅ **Empty section cleanup** — Removes unfilled template placeholders
+
+### Results
+| Metric | Count |
+|--------|-------|
+| Notes imported automatically | 236 |
+| Notes imported manually | 15 |
+| **Total notes migrated** | **251** |
+
+**🎉 Obsidian migration complete! All reading data and notes now in Liminal.**
+
+---
+
 ## Phase 5: TBR & Wishlist ← NEXT
 
 **Goal:** Track books you want, not just books you have.
@@ -224,34 +256,11 @@ All upload features working including mobile file picker for all formats.
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
-### Multi-Series Support
-- [ ] Books can belong to multiple series
-- [ ] Database schema: `book_series` junction table
-- [ ] UI for managing multiple series assignments
-- [ ] Display all series on book detail page
-
-### Smart Filtering
-- [ ] Multi-filter: combine status + category + tags + rating + read time
-- [ ] Complex queries: "Unread 5-star fiction under 3 hours"
-- [ ] Sort direction toggle (asc/desc)
-- [ ] Clear search button (X icon)
-
 ### Collections
 - [ ] Manual collections (curated lists)
 - [ ] Smart collections (auto-populate based on rules)
 - [ ] Collection cover (mosaic or custom)
 - [ ] Import Obsidian collection notes
-
-### Series Pages (Enhanced)
-- [ ] Series mosaic covers
-- [ ] Progress bar on series cover
-- [ ] Series completion tracking
-- [ ] Navigate between books in series (prev/next)
-
-### Author Pages (Enhanced)
-- [ ] Author statistics (books read, average rating)
-- [ ] Author photo/avatar support
-- [ ] Finished checkmark on author page book grid
 
 ### Statistics Dashboard
 - [ ] Books read per month/year
@@ -261,11 +270,77 @@ All upload features working including mobile file picker for all formats.
 - [ ] Reading streak/pace
 - [ ] Total reading time
 
+### Author Pages (Enhanced)
+- [ ] Author statistics (books read, average rating)
+- [ ] Author photo/avatar support
+- [x] ~~Finished checkmark on author page book grid~~ ✅
+- [ ] **Improved series display** — Series books cluttering author page need better organization
+- [ ] **Series grouping option** — Show series cover instead of individual books, or use tabs (Standalone / Series)
+- [ ] **Sort by publication date** — Default to newest first
+- [ ] **Visual hierarchy** — Cleaner separation between standalone titles and series
+
+### Multi-Series Support
+- [ ] Books can belong to multiple series
+- [ ] Database schema: `book_series` junction table
+- [ ] UI for managing multiple series assignments
+- [ ] Display all series on book detail page
+
+### Series Pages (Enhanced)
+- [ ] Series mosaic covers
+- [ ] Progress bar on series cover
+- [ ] Series completion tracking
+- [ ] Navigate between books in series (prev/next)
+
+### Smart Filtering
+- [ ] Multi-filter: combine status + category + tags + rating + read time
+- [ ] Complex queries: "Unread 5-star fiction under 3 hours"
+- [ ] Sort direction toggle (asc/desc)
+- [ ] Clear search button (X icon)
+
+
 ---
 
 ## Phase 7: Integration & Polish
 
 **Goal:** Streamline workflows. Reduce remaining friction points.
+
+### Book Detail Enhancements
+- [ ] **Download link** — Make stored book location a clickable download link (prefer EPUB, fallback to MOBI)
+- [ ] **Edit/add tags** — Add, remove, or edit tags directly from book detail page
+
+### Cover Improvements
+- [x] ~~Match Obsidian plugin gradient style~~ ✅
+- [ ] Extract actual covers from EPUB files
+- [ ] Ability to upload custom covers
+- [ ] Series info displayed on cover
+- [ ] Theme-based cover generation
+
+### Metadata Extraction
+- [ ] **Extract series from ebooks** — Parse series info from EPUB/MOBI metadata
+- [ ] **Extract fanfiction URL from ebooks** — Parse source URL from AO3/FFN downloads
+
+### UI Polish
+- [ ] Clear search button (X icon)
+- [x] ~~Books per row setting~~ ✅
+- [ ] **Sort direction toggle** — Asc/desc option for all sort fields in library view
+- [ ] Loading states and animations
+- [ ] Error handling improvements
+- [ ] "No summary available" notice on book detail page
+- [ ] Virtual scrolling for library grid (performance)
+
+
+### Settings Enhancements
+- [ ] Customizable rating labels
+- [x] ~~Custom status labels~~ ✅
+- [ ] Light/dark mode toggle
+- [ ] Display preferences
+- [ ] **Cover display settings:**
+  - [ ] Show/hide title below cover
+  - [ ] Show/hide series below cover
+  - [ ] Show/hide author below cover
+  - [ ] Show/hide title on cover
+  - [ ] Show/hide author on cover
+  - [ ] Show/hide series on cover
 
 ### Storage & Sync
 - [ ] Settings: view/change storage location
@@ -277,26 +352,6 @@ All upload features working including mobile file picker for all formats.
 - [ ] Full database backup/restore
 - [ ] Import from spreadsheet
 
-### Cover Improvements
-- [x] ~~Match Obsidian plugin gradient style~~ ✅
-- [ ] Extract actual covers from EPUB files
-- [ ] Ability to upload custom covers
-- [ ] Series info displayed on cover
-- [ ] Theme-based cover generation
-
-### UI Polish
-- [ ] Clear search button (X icon)
-- [x] ~~Books per row setting~~ ✅
-- [ ] Loading states and animations
-- [ ] Error handling improvements
-- [ ] "No summary available" notice on book detail page
-- [ ] Virtual scrolling for library grid (performance)
-
-### Settings Enhancements
-- [ ] Customizable rating labels
-- [ ] Custom status labels
-- [ ] Light/dark mode toggle
-- [ ] Display preferences
 
 ### Advanced Upload Features
 - [x] ~~Fix mobile file picker for .mobi/.azw3~~ ✅
@@ -304,6 +359,9 @@ All upload features working including mobile file picker for all formats.
 - [ ] Upload queue management
 - [ ] Resume interrupted uploads
 - [ ] PWA notifications for upload completion
+
+### Data Import (Low Priority)
+- [ ] **In-app notes import UI** — Drag & drop .md files, preview matches, import with confirmation (replaces command-line migration script)
 
 ---
 
@@ -323,7 +381,7 @@ All upload features working including mobile file picker for all formats.
 
 ### Medium Priority
 - [ ] Folder name parsing too strict on dash separator
-- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows → arrow)
+- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
@@ -371,7 +429,9 @@ All upload features working including mobile file picker for all formats.
 | v0.5.4 | Dec 23, 2025 | Phase 2.1 complete — Mobile file picker fixed |
 | v0.6.0 | Dec 24, 2025 | Phase 3 complete — Settings, metadata editing, read time, author pages |
 | v0.7.0 | Dec 25, 2025 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
-| v0.8.0 | Dec 26, 2025 | **Phase 4 complete** — Notes enhancement, templates, book linking, backlinks |
+| v0.8.0 | Dec 26, 2025 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
+| v0.8.1 | Dec 26, 2025 | **Phase 4.5 complete** — Obsidian notes migration (251 notes) |
+| v0.8.2 | Dec 27, 2025 | Custom status labels, finished checkmarks on author pages |
 | v0.9.0 | TBD | Phase 5 — TBR & Wishlist |
 | v0.10.0 | TBD | Phase 6 — Discovery & Collections |
 | v0.11.0 | TBD | Phase 7 — Integration & Polish |
@@ -379,4 +439,4 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-*Last updated: December 26, 2025 (v0.8.0 — Phase 4 complete)*
+*Last updated: December 27, 2025 (v0.8.2 — Custom status labels, author page checkmarks)*

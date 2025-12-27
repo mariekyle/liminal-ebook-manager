@@ -7,9 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Custom status labels in settings
 - "No summary" notice on book detail page
-- Checkmark on finished books on author page
+
+---
+
+## [0.8.2] - 2025-12-27
+
+### Added
+
+#### Finished Checkmarks on Author Pages
+- **Green checkmark badge** — Finished books now show checkmark overlay on AuthorDetail page
+- Matches the checkmark style used in Library view
+
+#### Custom Status Labels
+- **Status Labels settings** — Customize display names for Unread, In Progress, Finished, DNF
+- **useStatusLabels hook** — Centralized hook for fetching and applying custom labels app-wide
+- **Labels in BookDetail** — Status chip and popup show custom labels
+- **Labels in FilterDrawer** — Status filter buttons show custom labels
+- **Persistence** — Labels save to database and load on app start
+
+### Technical
+
+#### New Files
+- `frontend/src/hooks/useStatusLabels.js` — Hook for status label management
+
+#### Modified Files
+- `frontend/src/components/AuthorDetail.jsx` — Added checkmark overlay
+- `frontend/src/components/SettingsDrawer.jsx` — Added Status Labels UI section
+- `frontend/src/components/BookDetail.jsx` — Integrated useStatusLabels hook
+- `frontend/src/components/FilterDrawer.jsx` — Integrated useStatusLabels hook
+- `backend/database.py` — Added default status label settings in migrations
+
+---
+
+## [0.8.1] - 2025-12-26
+
+### Added
+
+#### Obsidian Notes Migration
+- **Notes import endpoint** — `POST /books/{id}/notes/import` for bulk importing notes
+- **Book matching endpoint** — `GET /books/match` for fuzzy title/author matching with confidence scores
+- **Migration script** — `migrate_notes.py` for importing Obsidian book notes to Liminal
+- **Append mode** — Imported notes append to existing notes with `---` separator
+- **Source tracking** — Imported notes labeled with "*Imported from obsidian*"
+
+#### Migration Features
+- **Fuzzy matching** — Matches books by exact title, partial title, or reverse partial
+- **Confidence scoring** — 95-100% for exact matches, 70-85% for partial matches
+- **Author boost** — +10% confidence when author also matches
+- **Dry run mode** — Preview imports before committing
+- **Detailed reports** — Markdown report of matched/unmatched files
+- **Empty section cleanup** — Removes unfilled template placeholders from notes
+
+### Migration Results
+
+| Metric | Count |
+|--------|-------|
+| Notes imported automatically | 236 |
+| Notes imported manually | 15 |
+| **Total notes migrated** | **251** |
+
+### Technical
+
+#### Backend Changes
+- `backend/routers/books.py` — Added `match_book()` endpoint with multi-strategy matching
+- `backend/routers/books.py` — Added `import_book_note()` endpoint with append support
+
+#### New Files
+- `migrate_notes.py` — Standalone Python script for bulk note migration
+
+#### Dependencies (Migration Script)
+- `requests` — HTTP client for API calls
+- `pyyaml` — YAML frontmatter parsing
+
+### Notes
+
+This completes the Obsidian-to-Liminal migration. All reading data (status, ratings, dates) was imported in Phase 1.5, and now all book notes have been migrated as well.
 
 ---
 
@@ -102,7 +175,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Filter drawer replaces inline filters** — All filters now accessed via drawer instead of filter bar
 - **Sort separated from filters** — Sort is now independent; "Clear all" no longer resets sort
 - **Poetic phrase styling** — Unified size/color with sort dropdown, removed italics
-- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses → arrow icon
+- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses ↑ arrow icon
 
 ### Fixed
 
@@ -343,7 +416,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.8.0 | 2025-12-26 | **Phase 4 complete** — Notes enhancement, templates, book linking, backlinks |
+| 0.8.2 | 2025-12-27 | Custom status labels, finished checkmarks on author pages |
+| 0.8.1 | 2025-12-26 | **Phase 4.5 complete** — Obsidian notes migration (251 notes) |
+| 0.8.0 | 2025-12-26 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
 | 0.7.0 | 2025-12-25 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
 | 0.6.0 | 2025-12-24 | Phase 3 complete — Settings, metadata editing, read time, author pages |
 | 0.5.4 | 2025-12-23 | Mobile file picker fix for .mobi/.azw3 |
@@ -361,6 +436,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.8.2
+
+**Frontend:**
+- New file: `hooks/useStatusLabels.js`
+- Modified: `components/AuthorDetail.jsx` (checkmark overlay)
+- Modified: `components/SettingsDrawer.jsx` (status labels UI)
+- Modified: `components/BookDetail.jsx` (useStatusLabels integration)
+- Modified: `components/FilterDrawer.jsx` (useStatusLabels integration)
+
+**Backend:**
+- Modified: `database.py` (default status label settings)
+
+**Database migrations run automatically on startup.**
+
+**Rebuild Docker container after update.**
+
+### Upgrading to 0.8.1
+
+**Backend:**
+- Modified: `routers/books.py` (added match endpoint, notes import endpoint)
+
+**Migration Script:**
+- New file: `migrate_notes.py` (runs on Mac, not on NAS)
+- Install: `pip install requests pyyaml`
+
+**No database changes required.**
+
+**Rebuild Docker container after update.**
 
 ### Upgrading to 0.8.0
 
@@ -411,6 +515,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Roadmap](./20251226_ROADMAP.md)
+- [Roadmap](./20251227_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
+
+---
+
+*Last updated: December 27, 2025*
