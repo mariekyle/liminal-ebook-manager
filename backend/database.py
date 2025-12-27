@@ -103,6 +103,18 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
         await db.execute("""
             INSERT OR IGNORE INTO settings (key, value) VALUES ('grid_columns', '2')
         """)
+        # Default status labels
+        default_status_labels = [
+            ('status_label_unread', 'Unread'),
+            ('status_label_in_progress', 'In Progress'),
+            ('status_label_finished', 'Finished'),
+            ('status_label_dnf', 'DNF'),
+        ]
+        for key, value in default_status_labels:
+            await db.execute(
+                "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+                (key, value)
+            )
     except Exception as e:
         print(f"Settings migration note: {e}")
     

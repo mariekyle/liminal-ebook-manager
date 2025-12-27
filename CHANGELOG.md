@@ -13,6 +13,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2025-12-26
+
+### Added
+
+#### Full-Screen Notes Editor
+- **Full-screen modal** — Replaces 80% slide-up panel for distraction-free writing
+- **Header controls** — X (close) on left, Save on right — always accessible with mobile keyboard
+- **Transparent textarea** — No border, seamless with modal background
+- **Template dropdown** — Quick-apply templates from toolbar
+
+#### Note Templates
+- **Structured Review** — Characters, Atmosphere/World, Writing, Plot, Enjoyment, Steam, Believability sections
+- **Reading Notes** — Thoughts While Reading, Reactions After Finishing sections
+- **Append with separator** — Templates add to existing content with `---` divider
+
+#### Book Linking System
+- **`[[` trigger** — Type `[[` to open book search modal
+- **Modal search overlay** — Full-screen search with backdrop
+- **Rich search results** — Shows title, author, and category (20 results)
+- **Keyboard navigation** — Arrow keys to navigate, Enter/Tab to select, Escape to close
+- **Insert as plain text** — Option to insert search text even if no book matches
+
+#### Rendered Notes (Read Mode)
+- **Markdown rendering** — Notes display with headers, bold, italic, lists
+- **Clickable book links** — `[[Book Title]]` renders as purple links to book detail
+- **Unmatched links** — Books not in library show as gray text (no brackets)
+- **Case-insensitive matching** — Links match regardless of title capitalization
+
+#### Backlinks
+- **Link storage** — `[[Book Title]]` patterns parsed and stored in `links` table
+- **GET /books/{id}/backlinks** — API endpoint to find books referencing current book
+- **"Referenced by" section** — Shows on book detail when other books link to it
+- **Clickable backlinks** — Navigate directly to the referencing book
+
+### Changed
+
+- **Notes editor UX** — From inline editing to full-screen modal
+- **Book search popup** — From floating cursor-positioned to modal overlay
+
+### Fixed
+
+- **Mobile keyboard handling** — Full-screen modal prevents keyboard from pushing content off-screen
+- **Link regex** — Non-greedy pattern handles book titles containing brackets
+
+### Technical
+
+#### Backend Changes
+- `backend/routers/books.py` — Added `parse_and_store_links()` function, backlinks endpoint
+- Links stored atomically with note save (single transaction)
+
+#### Frontend Changes
+- `frontend/src/pages/BookDetail.jsx` — Full-screen modal, template dropdown, backlinks section, markdown rendering
+- `frontend/src/components/BookLinkPopup.jsx` — Complete rewrite as modal overlay
+- `frontend/src/api/index.js` — Added `getBookBacklinks()`, `lookupBooksByTitles()`
+- Added `react-markdown` dependency for note rendering
+
+#### Database
+- `links` table now populated when notes are saved
+- Stores `from_note_id`, `to_book_id`, `link_text`
+
+### Known Issues
+
+- Scrollbar appears on mobile notes editor even when content doesn't overflow (cosmetic only)
+
+---
+
 ## [0.7.0] - 2025-12-25
 
 ### Added
@@ -36,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Filter drawer replaces inline filters** — All filters now accessed via drawer instead of filter bar
 - **Sort separated from filters** — Sort is now independent; "Clear all" no longer resets sort
 - **Poetic phrase styling** — Unified size/color with sort dropdown, removed italics
-- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses ↑ arrow icon
+- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses → arrow icon
 
 ### Fixed
 
@@ -277,7 +343,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.7.0 | 2025-12-25 | **Phase 3.5 complete** — Navigation redesign, filter drawer, grid settings |
+| 0.8.0 | 2025-12-26 | **Phase 4 complete** — Notes enhancement, templates, book linking, backlinks |
+| 0.7.0 | 2025-12-25 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
 | 0.6.0 | 2025-12-24 | Phase 3 complete — Settings, metadata editing, read time, author pages |
 | 0.5.4 | 2025-12-23 | Mobile file picker fix for .mobi/.azw3 |
 | 0.5.3 | 2025-12-23 | EPUB metadata extraction, "Upload as New" option |
@@ -294,6 +361,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.8.0
+
+**Backend:**
+- Modified: `routers/books.py` (link parsing, backlinks endpoint)
+
+**Frontend:**
+- Modified: `pages/BookDetail.jsx` (full-screen editor, templates, backlinks)
+- Modified: `components/BookLinkPopup.jsx` (complete rewrite as modal)
+- Modified: `api/index.js` (backlinks, lookup functions)
+- Added: `react-markdown` dependency
+
+**Database:**
+- `links` table now populated automatically when saving notes
+
+**Rebuild Docker container after update.**
 
 ### Upgrading to 0.7.0
 
@@ -328,6 +411,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Roadmap](./20251225_ROADMAP.md)
+- [Roadmap](./20251226_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)

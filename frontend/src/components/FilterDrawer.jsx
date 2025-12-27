@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useStatusLabels } from '../hooks/useStatusLabels'
 
 const XIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
@@ -153,6 +154,8 @@ function FilterContent({
   onClose,
   showLibraryFilters = true,
 }) {
+  const { getLabel } = useStatusLabels()
+  
   const handleCategoryClick = (cat) => {
     onCategoryChange(cat === 'All' ? '' : cat)
   }
@@ -205,7 +208,7 @@ function FilterContent({
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    {status}
+                    {status === 'Any' ? 'Any' : getLabel(status)}
                   </button>
                 )
               })}

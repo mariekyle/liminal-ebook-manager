@@ -126,6 +126,13 @@ class NoteCreate(BaseModel):
     content: str
 
 
+class NoteImportRequest(BaseModel):
+    """Request body for importing notes from external sources (e.g., Obsidian)."""
+    content: str
+    append: bool = True  # If True, append to existing; if False, replace
+    source: Optional[str] = None  # e.g., "obsidian"
+
+
 class BookCategoryUpdate(BaseModel):
     """Request body for updating a book's category."""
     category: str
@@ -369,6 +376,113 @@ async def list_books(
     books = [row_to_book_summary(row) for row in rows]
     
     return BooksListResponse(books=books, total=total)
+
+
+@router.get("/books/match")
+async def match_book(
+    title: str = Query(..., description="Book title to match"),
+    author: Optional[str] = Query(None, description="Author name (optional, improves matching)"),
+    db = Depends(get_db)
+):
+    """
+    Find books matching a title/author query with confidence scoring.
+    
+    Used by the migration script to match Obsidian notes to library books.
+    Returns up to 5 best matches with confidence scores.
+    """
+    matches = []
+    
+    # Normalize search terms
+    title_lower = title.lower().strip()
+    author_lower = author.lower().strip() if author else None
+    
+    # Strategy 1: Exact title match (case-insensitive)
+    cursor = await db.execute(
+        "SELECT id, title, authors FROM books WHERE LOWER(title) = ?",
+        [title_lower]
+    )
+    exact_matches = await cursor.fetchall()
+    
+    for row in exact_matches:
+        authors = parse_json_field(row["authors"])
+        confidence = 0.95  # High confidence for exact title match
+        
+        # Boost if author also matches
+        if author_lower and authors:
+            if any(author_lower in a.lower() for a in authors):
+                confidence = 1.0
+        
+        matches.append({
+            "id": row["id"],
+            "title": row["title"],
+            "authors": authors,
+            "confidence": confidence
+        })
+    
+    # Strategy 2: Title contains search (for partial matches)
+    if not matches:
+        cursor = await db.execute(
+            "SELECT id, title, authors FROM books WHERE LOWER(title) LIKE ?",
+            [f"%{title_lower}%"]
+        )
+        partial_matches = await cursor.fetchall()
+        
+        for row in partial_matches:
+            authors = parse_json_field(row["authors"])
+            
+            # Calculate confidence based on how much of the title matched
+            book_title_lower = row["title"].lower()
+            if title_lower == book_title_lower:
+                confidence = 0.95
+            elif book_title_lower.startswith(title_lower) or book_title_lower.endswith(title_lower):
+                confidence = 0.85
+            else:
+                # Partial match somewhere in the middle
+                confidence = 0.7
+            
+            # Boost if author matches
+            if author_lower and authors:
+                if any(author_lower in a.lower() for a in authors):
+                    confidence = min(confidence + 0.1, 1.0)
+            
+            matches.append({
+                "id": row["id"],
+                "title": row["title"],
+                "authors": authors,
+                "confidence": confidence
+            })
+    
+    # Strategy 3: Search in title contains the book's title (reverse partial)
+    if not matches:
+        cursor = await db.execute(
+            "SELECT id, title, authors FROM books"
+        )
+        all_books = await cursor.fetchall()
+        
+        for row in all_books:
+            book_title_lower = row["title"].lower()
+            if book_title_lower in title_lower:
+                authors = parse_json_field(row["authors"])
+                confidence = 0.6  # Lower confidence for reverse partial
+                
+                if author_lower and authors:
+                    if any(author_lower in a.lower() for a in authors):
+                        confidence = 0.75
+                
+                matches.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "authors": authors,
+                    "confidence": confidence
+                })
+    
+    # Sort by confidence and return top 5
+    matches.sort(key=lambda x: x["confidence"], reverse=True)
+    
+    return {
+        "matches": matches[:5],
+        "query": {"title": title, "author": author}
+    }
 
 
 @router.get("/books/{book_id}", response_model=BookDetail)
@@ -664,6 +778,103 @@ async def create_or_update_note(
         created_at=row["created_at"],
         updated_at=row["updated_at"]
     )
+
+
+@router.post("/books/{book_id}/notes/import")
+async def import_book_note(
+    book_id: int,
+    request: NoteImportRequest,
+    db = Depends(get_db)
+):
+    """
+    Import a note for a book from an external source (e.g., Obsidian).
+    
+    Supports appending to existing notes with a separator, or replacing entirely.
+    Used by the migrate_notes.py script for bulk importing Obsidian notes.
+    """
+    # Verify book exists
+    cursor = await db.execute(
+        "SELECT id, title FROM books WHERE id = ?",
+        [book_id]
+    )
+    book = await cursor.fetchone()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Check for existing notes
+    cursor = await db.execute(
+        "SELECT id, content FROM notes WHERE book_id = ? ORDER BY created_at DESC LIMIT 1",
+        [book_id]
+    )
+    existing_note = await cursor.fetchone()
+    
+    new_content = request.content.strip()
+    final_content = new_content
+    
+    if existing_note and request.append:
+        # Append to existing note
+        existing_content = existing_note['content'] or ''
+        
+        # Add separator if existing content is not empty
+        if existing_content.strip():
+            source_label = request.source or 'external source'
+            separator = f"\n\n---\n\n*Imported from {source_label}*\n\n"
+            final_content = existing_content.strip() + separator + new_content
+        else:
+            final_content = new_content
+        
+        # Update existing note
+        await db.execute(
+            """
+            UPDATE notes 
+            SET content = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            """,
+            [final_content, existing_note['id']]
+        )
+        note_id = existing_note['id']
+        
+    elif existing_note and not request.append:
+        # Replace existing note
+        await db.execute(
+            """
+            UPDATE notes 
+            SET content = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            """,
+            [new_content, existing_note['id']]
+        )
+        note_id = existing_note['id']
+        final_content = new_content
+        
+    else:
+        # Create new note
+        cursor = await db.execute(
+            """
+            INSERT INTO notes (book_id, content, created_at, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            [book_id, new_content]
+        )
+        note_id = cursor.lastrowid
+        final_content = new_content
+    
+    await db.commit()
+    
+    # Parse and store [[links]] from the note content
+    try:
+        await parse_and_store_links(db, note_id, final_content)
+        await db.commit()
+    except Exception as e:
+        # Don't fail the import if link parsing fails
+        print(f"Warning: Link parsing failed for note {note_id}: {e}")
+    
+    return {
+        "success": True,
+        "note_id": note_id,
+        "book_id": book_id,
+        "appended": bool(existing_note and request.append)
+    }
 
 
 @router.get("/books/{book_id}/backlinks")

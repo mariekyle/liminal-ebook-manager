@@ -124,7 +124,7 @@ function AuthorDetail() {
               to={`/book/${book.id}`}
               className="group"
             >
-              <div className="aspect-[2/3] mb-2">
+              <div className="aspect-[2/3] mb-2 relative">
                 <GradientCover
                   title={book.title}
                   author={book.authors?.[0] || author.name}
@@ -133,6 +133,14 @@ function AuthorDetail() {
                   coverTextColor={book.cover_text_color}
                   showFinished={book.status === 'Finished'}
                 />
+                {/* Finished checkmark badge */}
+                {book.status === 'Finished' && (
+                  <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1 shadow-lg">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
               </div>
               <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
                 {book.title}

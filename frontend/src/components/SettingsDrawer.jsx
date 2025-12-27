@@ -9,6 +9,12 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
   const [gridColumns, setGridColumns] = useState('2')
+  const [statusLabels, setStatusLabels] = useState({
+    unread: 'Unread',
+    in_progress: 'In Progress',
+    finished: 'Finished',
+    dnf: 'DNF'
+  })
   const drawerRef = useRef(null)
 
   // Load settings when drawer opens
@@ -22,6 +28,13 @@ function SettingsDrawer({ isOpen, onClose }) {
           if (data.grid_columns) {
             setGridColumns(data.grid_columns)
           }
+          // Load status labels
+          setStatusLabels({
+            unread: data.status_label_unread || 'Unread',
+            in_progress: data.status_label_in_progress || 'In Progress',
+            finished: data.status_label_finished || 'Finished',
+            dnf: data.status_label_dnf || 'DNF'
+          })
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
@@ -111,6 +124,23 @@ function SettingsDrawer({ isOpen, onClose }) {
       }))
     } catch (err) {
       console.error('Failed to save grid columns:', err)
+    }
+  }
+
+  const handleStatusLabelChange = (key, value) => {
+    setStatusLabels(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleStatusLabelBlur = async (key) => {
+    const value = statusLabels[key]
+    const defaults = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'DNF' }
+    
+    if (!value.trim()) {
+      // Reset to default if empty
+      setStatusLabels(prev => ({ ...prev, [key]: defaults[key] }))
+      await updateSetting(`status_label_${key}`, defaults[key])
+    } else {
+      await updateSetting(`status_label_${key}`, value.trim())
     }
   }
 
@@ -247,6 +277,44 @@ function SettingsDrawer({ isOpen, onClose }) {
               </div>
               <p className="text-gray-500 text-xs mt-2">
                 Desktop always shows 4–6 columns
+              </p>
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Status Labels Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Status Labels</h3>
+              <p className="text-gray-400 text-sm mb-3">
+                Customize the names shown for each reading status.
+              </p>
+              
+              <div className="space-y-3">
+                {[
+                  { key: 'unread', placeholder: 'Unread' },
+                  { key: 'in_progress', placeholder: 'In Progress' },
+                  { key: 'finished', placeholder: 'Finished' },
+                  { key: 'dnf', placeholder: 'DNF' }
+                ].map(({ key, placeholder }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <span className="text-gray-500 text-sm w-24 capitalize">
+                      {key.replace('_', ' ')}
+                    </span>
+                    <input
+                      type="text"
+                      value={statusLabels[key]}
+                      onChange={(e) => handleStatusLabelChange(key, e.target.value)}
+                      onBlur={() => handleStatusLabelBlur(key)}
+                      placeholder={placeholder}
+                      className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-gray-500 text-xs mt-2">
+                💡 Changes apply throughout the app
               </p>
             </section>
 

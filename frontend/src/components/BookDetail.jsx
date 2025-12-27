@@ -6,6 +6,7 @@ import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
+import { useStatusLabels } from '../hooks/useStatusLabels'
 
 // Decode HTML entities in text (e.g., &amp; -> &, &quot; -> ")
 function decodeHtmlEntities(text) {
@@ -122,6 +123,9 @@ function BookDetail() {
   // Popup state for status and rating
   const [statusPopupOpen, setStatusPopupOpen] = useState(false)
   const [ratingPopupOpen, setRatingPopupOpen] = useState(false)
+
+  // Custom status labels
+  const { getLabel, getStatusOptions } = useStatusLabels()
 
   // Load settings (for WPM)
   useEffect(() => {
@@ -729,7 +733,7 @@ function BookDetail() {
                 selectedStatus === 'DNF' ? 'text-red-400' :
                 'text-gray-300'
               }`}>
-                {selectedStatus}
+                {getLabel(selectedStatus)}
               </span>
               <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -745,18 +749,18 @@ function BookDetail() {
                 />
                 {/* Popup */}
                 <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
-                  {['Unread', 'In Progress', 'Finished', 'DNF'].map(status => (
+                  {getStatusOptions().map(({ value, label }) => (
                     <button
-                      key={status}
+                      key={value}
                       onClick={() => {
-                        handleStatusChange(status)
+                        handleStatusChange(value)
                         setStatusPopupOpen(false)
                       }}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        selectedStatus === status ? 'text-library-accent' : 'text-gray-300'
+                        selectedStatus === value ? 'text-library-accent' : 'text-gray-300'
                       }`}
                     >
-                      {status}
+                      {label}
                     </button>
                   ))}
                 </div>

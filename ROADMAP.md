@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.7.0)
+## Current State (v0.8.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -16,10 +16,10 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Smart FanFiction detection from filename patterns (AO3, FFN, tropes)
 - Override false duplicate matches with "Upload as New" option
 - Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
-- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload ✨
-- **Desktop header navigation** — Centered nav tabs on single line ✨
-- **Filter drawer** — Slides up on mobile, slides from right on desktop ✨
-- **Unified search bar** — Combined search input and filter icon ✨
+- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload
+- **Desktop header navigation** — Centered nav tabs on single line
+- **Filter drawer** — Slides up on mobile, slides from right on desktop
+- **Unified search bar** — Combined search input and filter icon
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
 - Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
@@ -30,15 +30,15 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Tag filtering — Multi-select tags with searchable modal
 - Active filters row — Clear individual filters or all at once
 - Search and filter by category, status, tags, read time
-- **Sort inline with count** — Sort dropdown next to book/series count ✨
+- **Sort inline with count** — Sort dropdown next to book/series count
 - Sort by title, author, series, year, recently updated (case-insensitive)
-- **Books per row setting** — Choose 2, 3, or 4 columns on mobile ✨
+- **Books per row setting** — Choose 2, 3, or 4 columns on mobile
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
 - Edit book metadata — Title, authors, series, category, year
 - Draggable author chips — Reorder authors, first appears on cover
 - Author autocomplete — Suggests existing authors when editing
-- **Series autocomplete** — Suggests existing series when editing ✨
+- **Series autocomplete** — Suggests existing series when editing
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
 - Track reading dates (started, finished)
@@ -46,7 +46,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Finished checkmark on book covers
 - Series section on book detail — Navigate between books in series
 - Auto-detect FanFiction based on metadata patterns
-- Add free-form notes to books
+- **Full-screen notes editor** — Distraction-free writing ✨
+- **Note templates** — Structured Review, Reading Notes ✨
+- **Book linking** — Type `[[` to search and link books ✨
+- **Rendered markdown** — Notes display with formatting in read mode ✨
+- **Backlinks** — "Referenced by" shows which books link to current book ✨
 - Author notes — Free-form notes about any author
 - Author rename — Update author name across all books
 - Settings drawer — WPM, grid columns, sync controls
@@ -117,8 +121,6 @@ All upload features working including mobile file picker for all formats.
 - ✅ Author rename functionality
 
 ### Deferred to Later Phases
-- [ ] Structured notes sections (Hot Take, Characters, Writing, etc.)
-- [ ] Notes migration from Obsidian format
 - [ ] Customizable rating labels
 - [ ] Light/dark mode toggle
 - [ ] Actual WPM field (manual entry from Moon Reader)
@@ -151,7 +153,46 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 4: TBR & Wishlist ← NEXT
+## Phase 4: Notes Enhancement ✅ COMPLETE
+
+**Completed: December 26, 2025**
+
+### Note Templates ✅
+- ✅ **Structured Review template** — Characters, Atmosphere/World, Writing, Plot, Enjoyment, Steam, Believability
+- ✅ **Reading Notes template** — Thoughts While Reading, Reactions After Finishing
+- ✅ **Template dropdown** — Quick-apply from editor toolbar
+
+### Full-Screen Editor ✅
+- ✅ **Full-screen modal** — Replaces 80% slide-up panel
+- ✅ **Header controls** — X (close) left, Save right — accessible with keyboard open
+- ✅ **Distraction-free writing** — No border, transparent background
+- ✅ **Mobile keyboard friendly** — Controls always accessible
+
+### Book Linking ✅
+- ✅ **`[[` trigger** — Type `[[` to open book search modal
+- ✅ **Modal search** — Full overlay with search input and results
+- ✅ **20 search results** — Shows title, author, category
+- ✅ **Keyboard navigation** — Arrow keys, Enter, Escape
+- ✅ **Insert as plain text** — Option for books not in library
+
+### Rendered Notes ✅
+- ✅ **Markdown rendering** — Notes display with formatting in read mode
+- ✅ **Clickable book links** — `[[Book Title]]` renders as purple links
+- ✅ **Unmatched links** — Non-existent books show as gray text
+- ✅ **Case-insensitive matching** — Links match regardless of capitalization
+
+### Backlinks ✅
+- ✅ **Link storage** — `[[Book Title]]` parsed and stored in database
+- ✅ **Backlinks endpoint** — GET /books/{id}/backlinks
+- ✅ **"Referenced by" section** — Shows books that link to current book
+- ✅ **Clickable backlinks** — Navigate to referencing book
+
+### Known Issues
+- [ ] Scrollbar appears on mobile notes editor (cosmetic only)
+
+---
+
+## Phase 5: TBR & Wishlist ← NEXT
 
 **Goal:** Track books you want, not just books you have.
 
@@ -179,7 +220,7 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 5: Discovery & Collections
+## Phase 6: Discovery & Collections
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
@@ -222,7 +263,7 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 6: Integration & Polish
+## Phase 7: Integration & Polish
 
 **Goal:** Streamline workflows. Reduce remaining friction points.
 
@@ -266,7 +307,7 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 7: AI Enhancements
+## Phase 8: AI Enhancements
 
 **Goal:** Let AI reduce manual work and enhance discovery.
 
@@ -282,10 +323,11 @@ All upload features working including mobile file picker for all formats.
 
 ### Medium Priority
 - [ ] Folder name parsing too strict on dash separator
-- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
+- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows → arrow)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
+- [ ] Mobile notes editor scrollbar (cosmetic)
 
 ### Low Priority
 - [ ] Some non-book files getting scanned
@@ -328,12 +370,13 @@ All upload features working including mobile file picker for all formats.
 | v0.5.3 | Dec 23, 2025 | EPUB metadata, "Upload as New" |
 | v0.5.4 | Dec 23, 2025 | Phase 2.1 complete — Mobile file picker fixed |
 | v0.6.0 | Dec 24, 2025 | Phase 3 complete — Settings, metadata editing, read time, author pages |
-| v0.7.0 | Dec 25, 2025 | **Phase 3.5 complete** — Navigation redesign, filter drawer, grid settings |
-| v0.8.0 | TBD | Phase 4 — TBR & Wishlist |
-| v0.9.0 | TBD | Phase 5 — Discovery & Collections |
-| v0.10.0 | TBD | Phase 6 — Integration & Polish |
-| v1.0.0 | TBD | Phase 7 — Full Obsidian replacement complete |
+| v0.7.0 | Dec 25, 2025 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
+| v0.8.0 | Dec 26, 2025 | **Phase 4 complete** — Notes enhancement, templates, book linking, backlinks |
+| v0.9.0 | TBD | Phase 5 — TBR & Wishlist |
+| v0.10.0 | TBD | Phase 6 — Discovery & Collections |
+| v0.11.0 | TBD | Phase 7 — Integration & Polish |
+| v1.0.0 | TBD | Phase 8 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 25, 2025 (v0.7.0 — Phase 3.5 complete)*
+*Last updated: December 26, 2025 (v0.8.0 — Phase 4 complete)*
