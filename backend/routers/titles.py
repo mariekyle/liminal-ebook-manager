@@ -1,10 +1,15 @@
 """
-Books API Router
+Titles API Router
 
-Handles all book-related endpoints:
-- List books with filtering/sorting
-- Get single book details
-- Book notes CRUD
+Handles all title-related endpoints:
+- List titles with filtering/sorting
+- Get single title details
+- Title notes CRUD
+- Series and tags queries
+
+Note: This was renamed from books.py in Phase 5.
+The API endpoints still use /books for backward compatibility with frontend,
+but internally query the 'titles' table.
 """
 
 import json
@@ -16,15 +21,25 @@ from pydantic import BaseModel
 from database import get_db
 from services.covers import get_cover_style, Theme
 
-router = APIRouter(tags=["books"])
+router = APIRouter(tags=["titles"])
 
 
 # --------------------------------------------------------------------------
 # Pydantic Models (API request/response schemas)
 # --------------------------------------------------------------------------
 
-class BookSummary(BaseModel):
-    """Book data for list view (lighter weight)."""
+class EditionSummary(BaseModel):
+    """Edition data for API responses."""
+    id: int
+    format: str
+    file_path: Optional[str] = None
+    folder_path: Optional[str] = None
+    narrators: Optional[List[str]] = None
+    acquired_date: Optional[str] = None
+
+
+class TitleSummary(BaseModel):
+    """Title data for list view (lighter weight)."""
     id: int
     title: str
     authors: List[str]
@@ -41,8 +56,8 @@ class BookSummary(BaseModel):
     created_at: Optional[str] = None
 
 
-class BookDetail(BaseModel):
-    """Full book data for detail view."""
+class TitleDetail(BaseModel):
+    """Full title data for detail view."""
     id: int
     title: str
     authors: List[str]
@@ -57,11 +72,16 @@ class BookDetail(BaseModel):
     word_count: Optional[int] = None
     summary: Optional[str] = None
     tags: List[str] = []
-    folder_path: Optional[str] = None
+    source_url: Optional[str] = None
+    folder_path: Optional[str] = None  # From primary edition
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
     created_at: Optional[str] = None
+    is_tbr: bool = False
+    tbr_priority: Optional[str] = None
+    tbr_reason: Optional[str] = None
+    editions: List[EditionSummary] = []
 
 
 class SeriesSummary(BaseModel):
@@ -106,16 +126,16 @@ class TagSummary(BaseModel):
 
 
 class Note(BaseModel):
-    """A note attached to a book."""
+    """A note attached to a title."""
     id: int
-    book_id: int
+    title_id: int
     content: str
     created_at: str
     updated_at: str
 
 
 class BacklinkItem(BaseModel):
-    """A book that links to another book."""
+    """A title that links to another title."""
     id: int
     title: str
     authors: List[str]
@@ -134,28 +154,28 @@ class NoteImportRequest(BaseModel):
 
 
 class BookCategoryUpdate(BaseModel):
-    """Request body for updating a book's category."""
+    """Request body for updating a title's category."""
     category: str
 
 
 class BookStatusUpdate(BaseModel):
-    """Request body for updating a book's read status."""
+    """Request body for updating a title's read status."""
     status: str
 
 
 class BookRatingUpdate(BaseModel):
-    """Request body for updating a book's rating."""
+    """Request body for updating a title's rating."""
     rating: Optional[int] = None  # None to clear rating, 1-5 to set
 
 
 class BookDatesUpdate(BaseModel):
-    """Request body for updating a book's reading dates."""
+    """Request body for updating a title's reading dates."""
     date_started: Optional[str] = None   # ISO format: YYYY-MM-DD or null
     date_finished: Optional[str] = None  # ISO format: YYYY-MM-DD or null
 
 
 class BookMetadataUpdate(BaseModel):
-    """Request body for updating book metadata fields."""
+    """Request body for updating title metadata fields."""
     title: Optional[str] = None
     authors: Optional[List[str]] = None
     series: Optional[str] = None
@@ -164,9 +184,9 @@ class BookMetadataUpdate(BaseModel):
     publication_year: Optional[int] = None
 
 
-class BooksListResponse(BaseModel):
-    """Response for book list endpoint."""
-    books: List[BookSummary]
+class TitlesListResponse(BaseModel):
+    """Response for title list endpoint."""
+    books: List[TitleSummary]  # Keep as 'books' for frontend compatibility
     total: int
 
 
@@ -184,15 +204,15 @@ def parse_json_field(value: str, default: list = None) -> list:
         return default or []
 
 
-def row_to_book_summary(row) -> BookSummary:
-    """Convert a database row to BookSummary."""
+def row_to_title_summary(row) -> TitleSummary:
+    """Convert a database row to TitleSummary."""
     authors = parse_json_field(row["authors"])
     primary_author = authors[0] if authors else "Unknown Author"
     
     # Generate cover style from title/author
     cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
     
-    return BookSummary(
+    return TitleSummary(
         id=row["id"],
         title=row["title"],
         authors=authors,
@@ -210,15 +230,38 @@ def row_to_book_summary(row) -> BookSummary:
     )
 
 
-def row_to_book_detail(row) -> BookDetail:
-    """Convert a database row to BookDetail."""
+async def row_to_title_detail(row, db) -> TitleDetail:
+    """Convert a database row to TitleDetail, including editions."""
     authors = parse_json_field(row["authors"])
     primary_author = authors[0] if authors else "Unknown Author"
     
     # Generate cover style from title/author
     cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
     
-    return BookDetail(
+    # Get editions for this title
+    cursor = await db.execute(
+        "SELECT * FROM editions WHERE title_id = ? ORDER BY format",
+        [row["id"]]
+    )
+    edition_rows = await cursor.fetchall()
+    
+    editions = []
+    folder_path = None
+    for ed in edition_rows:
+        narrators = parse_json_field(ed["narrators"]) if ed["narrators"] else None
+        editions.append(EditionSummary(
+            id=ed["id"],
+            format=ed["format"],
+            file_path=ed["file_path"],
+            folder_path=ed["folder_path"],
+            narrators=narrators,
+            acquired_date=ed["acquired_date"]
+        ))
+        # Use first ebook edition's folder_path for backward compatibility
+        if ed["format"] == "ebook" and ed["folder_path"] and not folder_path:
+            folder_path = ed["folder_path"]
+    
+    return TitleDetail(
         id=row["id"],
         title=row["title"],
         authors=authors,
@@ -233,20 +276,25 @@ def row_to_book_detail(row) -> BookDetail:
         word_count=row["word_count"] if "word_count" in row.keys() else None,
         summary=row["summary"],
         tags=parse_json_field(row["tags"]),
-        folder_path=row["folder_path"],
+        source_url=row["source_url"] if "source_url" in row.keys() else None,
+        folder_path=folder_path,
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
         created_at=row["created_at"] if "created_at" in row.keys() else None,
+        is_tbr=bool(row["is_tbr"]) if "is_tbr" in row.keys() else False,
+        tbr_priority=row["tbr_priority"] if "tbr_priority" in row.keys() else None,
+        tbr_reason=row["tbr_reason"] if "tbr_reason" in row.keys() else None,
+        editions=editions
     )
 
 
 async def parse_and_store_links(db, note_id: int, content: str) -> None:
     """
-    Parse [[Book Title]] patterns from note content and store links.
+    Parse [[Title]] patterns from note content and store links.
     
     - Extracts all [[...]] patterns
-    - Looks up books by exact title match (case-insensitive)
+    - Looks up titles by exact title match (case-insensitive)
     - Clears existing links for this note
     - Inserts new links
     """
@@ -263,19 +311,19 @@ async def parse_and_store_links(db, note_id: int, content: str) -> None:
     if not unique_titles:
         return
     
-    # Look up books by title (case-insensitive)
+    # Look up titles by title (case-insensitive)
     for link_text in unique_titles:
         cursor = await db.execute(
-            "SELECT id FROM books WHERE LOWER(title) = LOWER(?)",
+            "SELECT id FROM titles WHERE LOWER(title) = LOWER(?)",
             [link_text.strip()]
         )
-        book_row = await cursor.fetchone()
+        title_row = await cursor.fetchone()
         
-        if book_row:
+        if title_row:
             # Insert link
             await db.execute(
-                "INSERT INTO links (from_note_id, to_book_id, link_text) VALUES (?, ?, ?)",
-                [note_id, book_row["id"], link_text]
+                "INSERT INTO links (from_note_id, to_title_id, link_text) VALUES (?, ?, ?)",
+                [note_id, title_row["id"], link_text]
             )
 
 
@@ -283,8 +331,8 @@ async def parse_and_store_links(db, note_id: int, content: str) -> None:
 # Endpoints
 # --------------------------------------------------------------------------
 
-@router.get("/books", response_model=BooksListResponse)
-async def list_books(
+@router.get("/titles", response_model=TitlesListResponse)
+async def list_titles(
     category: Optional[str] = Query(None, description="Filter by category"),
     status: Optional[str] = Query(None, description="Filter by read status"),
     series: Optional[str] = Query(None, description="Filter by series"),
@@ -297,12 +345,12 @@ async def list_books(
     db = Depends(get_db)
 ):
     """
-    List all books with optional filtering and sorting.
+    List all titles with optional filtering and sorting.
     
     This is the main endpoint for the library grid view.
     """
     # Build query dynamically based on filters
-    where_clauses = []
+    where_clauses = ["is_tbr = 0"]  # Exclude TBR items from main library
     params = []
     
     if category:
@@ -326,7 +374,6 @@ async def list_books(
     if tags:
         tag_list = [t.strip().lower() for t in tags.split(',') if t.strip()]
         for tag in tag_list:
-            # Exact match in JSON array - tag must be followed by comma or closing bracket
             where_clauses.append(
                 '(LOWER(tags) LIKE ? OR LOWER(tags) LIKE ?)'
             )
@@ -335,7 +382,7 @@ async def list_books(
                 f'%"{tag}"]%',     # Tag followed by ] (last item)
             ])
     
-    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+    where_sql = " AND ".join(where_clauses)
     
     # Build ORDER BY clause with case-insensitive sorting for text columns
     sort_order = "DESC" if order.lower() == "desc" else "ASC"
@@ -354,16 +401,16 @@ async def list_books(
         order_clause = f"title COLLATE NOCASE {sort_order}"
     
     # Get total count
-    count_sql = f"SELECT COUNT(*) as total FROM books WHERE {where_sql}"
+    count_sql = f"SELECT COUNT(*) as total FROM titles WHERE {where_sql}"
     cursor = await db.execute(count_sql, params)
     total_row = await cursor.fetchone()
     total = total_row["total"] if total_row else 0
     
-    # Get books with note count
+    # Get titles with note count
     query = f"""
-        SELECT b.*, 
-               (SELECT COUNT(*) FROM notes WHERE book_id = b.id) as note_count
-        FROM books b
+        SELECT t.*, 
+               (SELECT COUNT(*) FROM notes WHERE title_id = t.id) as note_count
+        FROM titles t
         WHERE {where_sql}
         ORDER BY {order_clause}
         LIMIT ? OFFSET ?
@@ -373,9 +420,27 @@ async def list_books(
     cursor = await db.execute(query, params)
     rows = await cursor.fetchall()
     
-    books = [row_to_book_summary(row) for row in rows]
+    titles = [row_to_title_summary(row) for row in rows]
     
-    return BooksListResponse(books=books, total=total)
+    return TitlesListResponse(books=titles, total=total)
+
+
+# Backward compatibility: /books redirects to /titles
+@router.get("/books", response_model=TitlesListResponse)
+async def list_books(
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    series: Optional[str] = Query(None),
+    tags: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    sort: str = Query("title"),
+    order: str = Query("asc"),
+    limit: int = Query(50, ge=1, le=10000),
+    offset: int = Query(0, ge=0),
+    db = Depends(get_db)
+):
+    """Backward compatible endpoint - calls list_titles."""
+    return await list_titles(category, status, series, tags, search, sort, order, limit, offset, db)
 
 
 @router.get("/books/match")
@@ -385,9 +450,9 @@ async def match_book(
     db = Depends(get_db)
 ):
     """
-    Find books matching a title/author query with confidence scoring.
+    Find titles matching a title/author query with confidence scoring.
     
-    Used by the migration script to match Obsidian notes to library books.
+    Used by the migration script to match Obsidian notes to library titles.
     Returns up to 5 best matches with confidence scores.
     """
     matches = []
@@ -398,7 +463,7 @@ async def match_book(
     
     # Strategy 1: Exact title match (case-insensitive)
     cursor = await db.execute(
-        "SELECT id, title, authors FROM books WHERE LOWER(title) = ?",
+        "SELECT id, title, authors FROM titles WHERE LOWER(title) = ?",
         [title_lower]
     )
     exact_matches = await cursor.fetchall()
@@ -422,7 +487,7 @@ async def match_book(
     # Strategy 2: Title contains search (for partial matches)
     if not matches:
         cursor = await db.execute(
-            "SELECT id, title, authors FROM books WHERE LOWER(title) LIKE ?",
+            "SELECT id, title, authors FROM titles WHERE LOWER(title) LIKE ?",
             [f"%{title_lower}%"]
         )
         partial_matches = await cursor.fetchall()
@@ -437,7 +502,6 @@ async def match_book(
             elif book_title_lower.startswith(title_lower) or book_title_lower.endswith(title_lower):
                 confidence = 0.85
             else:
-                # Partial match somewhere in the middle
                 confidence = 0.7
             
             # Boost if author matches
@@ -452,14 +516,12 @@ async def match_book(
                 "confidence": confidence
             })
     
-    # Strategy 3: Search in title contains the book's title (reverse partial)
+    # Strategy 3: Search in title contains the title's title (reverse partial)
     if not matches:
-        cursor = await db.execute(
-            "SELECT id, title, authors FROM books"
-        )
-        all_books = await cursor.fetchall()
+        cursor = await db.execute("SELECT id, title, authors FROM titles")
+        all_titles = await cursor.fetchall()
         
-        for row in all_books:
+        for row in all_titles:
             book_title_lower = row["title"].lower()
             if book_title_lower in title_lower:
                 authors = parse_json_field(row["authors"])
@@ -485,13 +547,13 @@ async def match_book(
     }
 
 
-@router.get("/books/{book_id}", response_model=BookDetail)
+@router.get("/books/{book_id}")
 async def get_book(book_id: int, db = Depends(get_db)):
     """
-    Get full details for a single book.
+    Get full details for a single title.
     """
     cursor = await db.execute(
-        "SELECT * FROM books WHERE id = ?",
+        "SELECT * FROM titles WHERE id = ?",
         [book_id]
     )
     row = await cursor.fetchone()
@@ -499,7 +561,7 @@ async def get_book(book_id: int, db = Depends(get_db)):
     if not row:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    return row_to_book_detail(row)
+    return await row_to_title_detail(row, db)
 
 
 @router.patch("/books/{book_id}/category")
@@ -509,19 +571,19 @@ async def update_book_category(
     db = Depends(get_db)
 ):
     """
-    Update a book's category.
+    Update a title's category.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
-    # Convert empty string to NULL for consistency with getCategories filter
+    # Convert empty string to NULL for consistency
     category_value = update.category if update.category else None
     
     # Update category
     await db.execute(
-        "UPDATE books SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE titles SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         [category_value, book_id]
     )
     await db.commit()
@@ -536,11 +598,11 @@ async def update_book_status(
     db = Depends(get_db)
 ):
     """
-    Update a book's read status.
+    Update a title's read status.
     Valid statuses: Unread, In Progress, Finished, DNF
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
@@ -554,7 +616,7 @@ async def update_book_status(
     
     # Update status
     await db.execute(
-        "UPDATE books SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE titles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         [update.status, book_id]
     )
     await db.commit()
@@ -569,11 +631,11 @@ async def update_book_rating(
     db = Depends(get_db)
 ):
     """
-    Update a book's rating.
+    Update a title's rating.
     Valid ratings: 1-5, or null to clear.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
@@ -586,7 +648,7 @@ async def update_book_rating(
     
     # Update rating
     await db.execute(
-        "UPDATE books SET rating = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE titles SET rating = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         [update.rating, book_id]
     )
     await db.commit()
@@ -601,17 +663,17 @@ async def update_book_dates(
     db = Depends(get_db)
 ):
     """
-    Update a book's reading dates.
+    Update a title's reading dates.
     Dates should be in ISO format (YYYY-MM-DD) or null to clear.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
     # Update dates
     await db.execute(
-        """UPDATE books 
+        """UPDATE titles 
            SET date_started = ?, date_finished = ?, updated_at = CURRENT_TIMESTAMP 
            WHERE id = ?""",
         [update.date_started, update.date_finished, book_id]
@@ -632,7 +694,7 @@ async def update_book_metadata(
     db = Depends(get_db)
 ):
     """
-    Update book metadata fields.
+    Update title metadata fields.
     Only provided fields are updated; others remain unchanged.
     """
     # Build dynamic update query based on provided fields
@@ -675,35 +737,33 @@ async def update_book_metadata(
     # Add book_id to params
     params.append(book_id)
     
-    query = f"UPDATE books SET {', '.join(updates)} WHERE id = ?"
+    query = f"UPDATE titles SET {', '.join(updates)} WHERE id = ?"
     
     await db.execute(query, params)
     await db.commit()
     
-    # Return updated book using existing helper
-    cursor = await db.execute(
-        "SELECT * FROM books WHERE id = ?", (book_id,)
-    )
+    # Return updated title using existing helper
+    cursor = await db.execute("SELECT * FROM titles WHERE id = ?", (book_id,))
     row = await cursor.fetchone()
     
     if not row:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    return row_to_book_detail(row)
+    return await row_to_title_detail(row, db)
 
 
 @router.get("/books/{book_id}/notes", response_model=List[Note])
 async def get_book_notes(book_id: int, db = Depends(get_db)):
     """
-    Get all notes for a specific book.
+    Get all notes for a specific title.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
     cursor = await db.execute(
-        "SELECT * FROM notes WHERE book_id = ? ORDER BY updated_at DESC",
+        "SELECT * FROM notes WHERE title_id = ? ORDER BY updated_at DESC",
         [book_id]
     )
     rows = await cursor.fetchall()
@@ -711,7 +771,7 @@ async def get_book_notes(book_id: int, db = Depends(get_db)):
     return [
         Note(
             id=row["id"],
-            book_id=row["book_id"],
+            title_id=row["title_id"],
             content=row["content"] or "",
             created_at=row["created_at"],
             updated_at=row["updated_at"]
@@ -727,19 +787,19 @@ async def create_or_update_note(
     db = Depends(get_db)
 ):
     """
-    Create or update a note for a book.
+    Create or update a note for a title.
     
-    For simplicity, each book has one note. If a note exists, it's updated.
+    For simplicity, each title has one note. If a note exists, it's updated.
     If not, a new one is created.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
     # Check if note already exists
     cursor = await db.execute(
-        "SELECT id FROM notes WHERE book_id = ?",
+        "SELECT id FROM notes WHERE title_id = ?",
         [book_id]
     )
     existing = await cursor.fetchone()
@@ -749,31 +809,30 @@ async def create_or_update_note(
         await db.execute(
             """UPDATE notes 
                SET content = ?, updated_at = CURRENT_TIMESTAMP 
-               WHERE id = ?""",
-            [note_data.content, existing["id"]]
+               WHERE title_id = ?""",
+            [note_data.content, book_id]
         )
         note_id = existing["id"]
     else:
         # Create new note
         cursor = await db.execute(
-            "INSERT INTO notes (book_id, content) VALUES (?, ?)",
+            "INSERT INTO notes (title_id, content) VALUES (?, ?)",
             [book_id, note_data.content]
         )
         note_id = cursor.lastrowid
     
-    # Parse [[links]] from content and update links table
+    # Parse and store links from the note content
     await parse_and_store_links(db, note_id, note_data.content)
     
-    # Commit everything together (note + links)
     await db.commit()
     
-    # Return the updated note
+    # Return the note
     cursor = await db.execute("SELECT * FROM notes WHERE id = ?", [note_id])
     row = await cursor.fetchone()
     
     return Note(
         id=row["id"],
-        book_id=row["book_id"],
+        title_id=row["title_id"],
         content=row["content"] or "",
         created_at=row["created_at"],
         updated_at=row["updated_at"]
@@ -787,87 +846,54 @@ async def import_book_note(
     db = Depends(get_db)
 ):
     """
-    Import a note for a book from an external source (e.g., Obsidian).
+    Import a note from an external source (e.g., Obsidian).
     
-    Supports appending to existing notes with a separator, or replacing entirely.
-    Used by the migrate_notes.py script for bulk importing Obsidian notes.
+    If append=True and a note exists, the new content is appended with a separator.
+    If append=False, the existing note is replaced.
     """
-    # Verify book exists
-    cursor = await db.execute(
-        "SELECT id, title FROM books WHERE id = ?",
-        [book_id]
-    )
-    book = await cursor.fetchone()
-    if not book:
+    # Verify title exists
+    cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", [book_id])
+    title_row = await cursor.fetchone()
+    if not title_row:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    # Check for existing notes
-    cursor = await db.execute(
-        "SELECT id, content FROM notes WHERE book_id = ? ORDER BY created_at DESC LIMIT 1",
-        [book_id]
-    )
+    # Check for existing note
+    cursor = await db.execute("SELECT id, content FROM notes WHERE title_id = ?", [book_id])
     existing_note = await cursor.fetchone()
     
-    new_content = request.content.strip()
-    final_content = new_content
+    # Prepare content with source attribution
+    source_label = f"*Imported from {request.source}*" if request.source else "*Imported*"
+    new_content = f"{source_label}\n\n{request.content}"
     
     if existing_note and request.append:
         # Append to existing note
-        existing_content = existing_note['content'] or ''
-        
-        # Add separator if existing content is not empty
-        if existing_content.strip():
-            source_label = request.source or 'external source'
-            separator = f"\n\n---\n\n*Imported from {source_label}*\n\n"
-            final_content = existing_content.strip() + separator + new_content
-        else:
-            final_content = new_content
-        
-        # Update existing note
+        combined = f"{existing_note['content']}\n\n---\n\n{new_content}"
         await db.execute(
-            """
-            UPDATE notes 
-            SET content = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-            """,
-            [final_content, existing_note['id']]
+            "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [combined, existing_note["id"]]
         )
-        note_id = existing_note['id']
-        
-    elif existing_note and not request.append:
+        note_id = existing_note["id"]
+    elif existing_note:
         # Replace existing note
         await db.execute(
-            """
-            UPDATE notes 
-            SET content = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-            """,
-            [new_content, existing_note['id']]
+            "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [new_content, existing_note["id"]]
         )
-        note_id = existing_note['id']
-        final_content = new_content
-        
+        note_id = existing_note["id"]
     else:
         # Create new note
         cursor = await db.execute(
-            """
-            INSERT INTO notes (book_id, content, created_at, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """,
+            "INSERT INTO notes (title_id, content) VALUES (?, ?)",
             [book_id, new_content]
         )
         note_id = cursor.lastrowid
-        final_content = new_content
+    
+    # Parse and store links
+    cursor = await db.execute("SELECT content FROM notes WHERE id = ?", [note_id])
+    note_row = await cursor.fetchone()
+    await parse_and_store_links(db, note_id, note_row["content"])
     
     await db.commit()
-    
-    # Parse and store [[links]] from the note content
-    try:
-        await parse_and_store_links(db, note_id, final_content)
-        await db.commit()
-    except Exception as e:
-        # Don't fail the import if link parsing fails
-        print(f"Warning: Link parsing failed for note {note_id}: {e}")
     
     return {
         "success": True,
@@ -883,23 +909,23 @@ async def get_book_backlinks(
     db = Depends(get_db)
 ):
     """
-    Get all books that link to this book via [[Book Title]] in their notes.
-    Returns books whose notes contain a link to the specified book.
+    Get all titles that link to this title via [[Title]] in their notes.
+    Returns titles whose notes contain a link to the specified title.
     """
-    # Verify book exists
-    cursor = await db.execute("SELECT id FROM books WHERE id = ?", [book_id])
+    # Verify title exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
-    # Find all books that have notes linking to this book
+    # Find all titles that have notes linking to this title
     cursor = await db.execute(
         """
-        SELECT DISTINCT b.id, b.title, b.authors
+        SELECT DISTINCT t.id, t.title, t.authors
         FROM links l
         JOIN notes n ON l.from_note_id = n.id
-        JOIN books b ON n.book_id = b.id
-        WHERE l.to_book_id = ?
-        ORDER BY b.title COLLATE NOCASE
+        JOIN titles t ON n.title_id = t.id
+        WHERE l.to_title_id = ?
+        ORDER BY t.title COLLATE NOCASE
         """,
         [book_id]
     )
@@ -924,7 +950,7 @@ async def list_categories(db = Depends(get_db)):
     Useful for building filter dropdowns.
     """
     cursor = await db.execute(
-        "SELECT DISTINCT category FROM books WHERE category IS NOT NULL ORDER BY category"
+        "SELECT DISTINCT category FROM titles WHERE category IS NOT NULL ORDER BY category"
     )
     rows = await cursor.fetchall()
     return [row["category"] for row in rows]
@@ -954,11 +980,8 @@ async def list_series(
     # Build category filter clause for correlated subqueries
     category_filter = ""
     if category:
-        category_filter = " AND b2.category = ?"
+        category_filter = " AND t2.category = ?"
     
-    # Query to get series with aggregated data
-    # Gets first book's author, counts total and read books
-    # Cover is generated from series name + author, not stored in DB
     query = f"""
         SELECT 
             s.name,
@@ -967,45 +990,41 @@ async def list_series(
             s.books_read
         FROM (
             SELECT 
-                b.series as name,
-                (SELECT authors FROM books b2 
-                 WHERE b2.series = b.series{category_filter}
-                 ORDER BY CAST(b2.series_number AS FLOAT) ASC, b2.id ASC 
+                t.series as name,
+                (SELECT authors FROM titles t2 
+                 WHERE t2.series = t.series{category_filter}
+                 ORDER BY CAST(t2.series_number AS FLOAT) ASC, t2.id ASC 
                  LIMIT 1) as author,
                 COUNT(*) as book_count,
-                SUM(CASE WHEN b.status = 'Finished' THEN 1 ELSE 0 END) as books_read
-            FROM books b
-            WHERE b.series IS NOT NULL AND b.series != ''
+                SUM(CASE WHEN t.status = 'Finished' THEN 1 ELSE 0 END) as books_read
+            FROM titles t
+            WHERE t.series IS NOT NULL AND t.series != '' AND t.is_tbr = 0
     """
     
-    # Add category filter to main query and track params for subqueries
     if category:
-        # 1 subquery needs category param, plus main WHERE clause
         params.append(category)
-        query += " AND b.category = ?"
+        query += " AND t.category = ?"
         params.append(category)
     
-    query += " GROUP BY b.series) s"
+    query += " GROUP BY t.series) s"
     
-    # Add search filter (searches series name, author, or book titles in series)
+    # Add search filter
     if search:
-        # Join must also respect category filter to avoid false matches
-        join_condition = "b.series = s.name"
+        join_condition = "t.series = s.name"
         if category:
-            join_condition += " AND b.category = ?"
+            join_condition += " AND t.category = ?"
             params.append(category)
         
         query = f"""
             SELECT DISTINCT s.* FROM ({query}) s
-            LEFT JOIN books b ON {join_condition}
+            LEFT JOIN titles t ON {join_condition}
             WHERE s.name LIKE ? 
                OR s.author LIKE ? 
-               OR b.title LIKE ?
+               OR t.title LIKE ?
         """
         search_term = f"%{search}%"
         params.extend([search_term, search_term, search_term])
     
-    # Sort alphabetically
     query += " ORDER BY s.name ASC"
     
     cursor = await db.execute(query, params)
@@ -1013,11 +1032,9 @@ async def list_series(
     
     series_list = []
     for row in rows:
-        # Parse author using the same utility as other book queries
         authors = parse_json_field(row["author"])
         primary_author = authors[0] if authors else "Unknown Author"
         
-        # Generate cover style from series name and author
         cover_style = get_cover_style(row["name"], primary_author, Theme.DARK)
         
         series_list.append(SeriesSummary(
@@ -1047,12 +1064,12 @@ async def get_series_detail(
     from urllib.parse import unquote
     series_name = unquote(series_name)
     
-    # Get all books in this series, ordered by series number
+    # Get all titles in this series, ordered by series number
     cursor = await db.execute(
         """
         SELECT id, title, series_number, status, rating, authors
-        FROM books 
-        WHERE series = ?
+        FROM titles 
+        WHERE series = ? AND is_tbr = 0
         ORDER BY CAST(series_number AS FLOAT) ASC, id ASC
         """,
         [series_name]
@@ -1099,17 +1116,14 @@ async def list_tags(
     List all tags with their book counts.
     Optionally filter by category.
     """
-    # Tags are stored as JSON array in the tags column
-    # We need to extract and count them
-    
     if category:
         cursor = await db.execute(
-            "SELECT tags FROM books WHERE category = ? AND tags IS NOT NULL AND tags != '[]'",
+            "SELECT tags FROM titles WHERE category = ? AND tags IS NOT NULL AND tags != '[]' AND is_tbr = 0",
             [category]
         )
     else:
         cursor = await db.execute(
-            "SELECT tags FROM books WHERE tags IS NOT NULL AND tags != '[]'"
+            "SELECT tags FROM titles WHERE tags IS NOT NULL AND tags != '[]' AND is_tbr = 0"
         )
     
     rows = await cursor.fetchall()
@@ -1130,3 +1144,30 @@ async def list_tags(
         "tags": [TagSummary(name=name, count=count) for name, count in sorted_tags],
         "total": len(sorted_tags)
     }
+
+
+@router.get("/books/lookup")
+async def lookup_books_by_titles(
+    titles_param: str = Query(..., alias="titles", description="Comma-separated list of book titles to lookup"),
+    db = Depends(get_db)
+):
+    """
+    Look up multiple titles by exact title match (case-insensitive).
+    Used by the frontend to resolve [[book links]] to IDs.
+    """
+    title_list = [t.strip() for t in titles_param.split(",") if t.strip()]
+    
+    if not title_list:
+        return {"books": {}}
+    
+    results = {}
+    for title_text in title_list:
+        cursor = await db.execute(
+            "SELECT id, title FROM titles WHERE LOWER(title) = LOWER(?)",
+            [title_text]
+        )
+        row = await cursor.fetchone()
+        if row:
+            results[title_text] = {"id": row["id"], "title": row["title"]}
+    
+    return {"books": results}

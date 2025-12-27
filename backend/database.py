@@ -2,6 +2,10 @@
 Database module - SQLite connection and schema management.
 
 Uses aiosqlite for async database access with FastAPI.
+
+Schema: titles + editions (Phase 5 refactor)
+- titles: Book metadata, reading status, TBR tracking
+- editions: Individual formats (ebook, audiobook, physical)
 """
 
 import aiosqlite
@@ -48,46 +52,101 @@ async def init_db(db_path: str) -> None:
 
 async def run_migrations(db: aiosqlite.Connection) -> None:
     """
-    Run database migrations to add new columns to existing tables.
-    SQLite's CREATE TABLE IF NOT EXISTS doesn't add new columns,
-    so we need to handle this separately.
-    
-    Each migration checks if the column exists before adding it,
-    making migrations idempotent (safe to run multiple times).
+    Run database migrations to add new columns/tables to existing databases.
+    Each migration checks if already applied, making them idempotent.
     """
+    tables = await get_table_names(db)
+    
+    # Check if this is a post-Phase5 database (has titles table)
+    if "titles" in tables:
+        # New schema - run new-style migrations
+        await run_titles_migrations(db)
+    elif "books" in tables:
+        # Old schema - this shouldn't happen after migration script runs
+        # but keep for safety
+        await run_legacy_migrations(db)
+    
+    await db.commit()
+
+
+async def get_table_names(db: aiosqlite.Connection) -> set:
+    """Get all table names in the database."""
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+    )
+    rows = await cursor.fetchall()
+    return {row[0] for row in rows}
+
+
+async def run_titles_migrations(db: aiosqlite.Connection) -> None:
+    """Migrations for the new titles/editions schema."""
+    
+    # Ensure settings table exists
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Insert default settings if not exists
+    default_settings = [
+        ('reading_wpm', '250'),
+        ('grid_columns', '2'),
+        ('status_label_unread', 'Unread'),
+        ('status_label_in_progress', 'In Progress'),
+        ('status_label_finished', 'Finished'),
+        ('status_label_dnf', 'DNF'),
+    ]
+    for key, value in default_settings:
+        await db.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+    
+    # Ensure author_notes table exists
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS author_notes (
+            author_name TEXT PRIMARY KEY,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+
+async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
+    """Migrations for old 'books' schema (pre-Phase 5)."""
     # Get existing columns in books table
     cursor = await db.execute("PRAGMA table_info(books)")
     columns = await cursor.fetchall()
-    existing_columns = {col[1] for col in columns}  # col[1] is the column name
+    existing_columns = {col[1] for col in columns}
     
-    # Migration 1: Add status column (Phase 1 - Read Status)
+    # Migration 1: Add status column
     if 'status' not in existing_columns:
         print("Migration: Adding 'status' column to books table...")
         await db.execute("ALTER TABLE books ADD COLUMN status TEXT DEFAULT 'Unread'")
-        print("Migration: 'status' column added successfully")
     
-    # Migration 2: Add rating column (Phase 1 - Rating System)
+    # Migration 2: Add rating column
     if 'rating' not in existing_columns:
         print("Migration: Adding 'rating' column to books table...")
         await db.execute("ALTER TABLE books ADD COLUMN rating INTEGER")
-        print("Migration: 'rating' column added successfully")
     
-    # Migration 3: Add date_started column (Phase 1 - Reading Dates)
+    # Migration 3: Add date_started column
     if 'date_started' not in existing_columns:
         print("Migration: Adding 'date_started' column to books table...")
         await db.execute("ALTER TABLE books ADD COLUMN date_started TEXT")
-        print("Migration: 'date_started' column added successfully")
     
-    # Migration 4: Add date_finished column (Phase 1 - Reading Dates)
+    # Migration 4: Add date_finished column
     if 'date_finished' not in existing_columns:
         print("Migration: Adding 'date_finished' column to books table...")
         await db.execute("ALTER TABLE books ADD COLUMN date_finished TEXT")
-        print("Migration: 'date_finished' column added successfully")
     
-    # Ensure indexes exist (these are idempotent)
+    # Ensure indexes exist
     await db.execute("CREATE INDEX IF NOT EXISTS idx_books_status ON books(status)")
     
-    # Migration: Add settings table (for existing databases)
+    # Settings table
     try:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS settings (
@@ -96,29 +155,12 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Insert default settings if not exists
-        await db.execute("""
-            INSERT OR IGNORE INTO settings (key, value) VALUES ('reading_wpm', '250')
-        """)
-        await db.execute("""
-            INSERT OR IGNORE INTO settings (key, value) VALUES ('grid_columns', '2')
-        """)
-        # Default status labels
-        default_status_labels = [
-            ('status_label_unread', 'Unread'),
-            ('status_label_in_progress', 'In Progress'),
-            ('status_label_finished', 'Finished'),
-            ('status_label_dnf', 'DNF'),
-        ]
-        for key, value in default_status_labels:
-            await db.execute(
-                "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
-                (key, value)
-            )
+        await db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('reading_wpm', '250')")
+        await db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('grid_columns', '2')")
     except Exception as e:
         print(f"Settings migration note: {e}")
     
-    # Migration: Add author_notes table
+    # Author notes table
     try:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS author_notes (
@@ -130,8 +172,6 @@ async def run_migrations(db: aiosqlite.Connection) -> None:
         """)
     except Exception as e:
         print(f"Author notes migration note: {e}")
-    
-    await db.commit()
 
 
 async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
@@ -139,8 +179,8 @@ async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
     Dependency that provides a database connection.
     Usage in FastAPI routes:
     
-        @router.get("/books")
-        async def list_books(db = Depends(get_db)):
+        @router.get("/titles")
+        async def list_titles(db = Depends(get_db)):
             ...
     """
     async with aiosqlite.connect(_db_path) as db:
@@ -149,62 +189,75 @@ async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
         yield db
 
 
-# Database schema
+# =============================================================================
+# Database Schema (Phase 5: titles + editions)
+# =============================================================================
+
 SCHEMA = """
--- Core book data (extracted from files + folders)
-CREATE TABLE IF NOT EXISTS books (
+-- Core title data (the concept of a book, independent of format)
+CREATE TABLE IF NOT EXISTS titles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     authors TEXT NOT NULL,        -- JSON array: ["Author 1", "Author 2"]
     series TEXT,
     series_number TEXT,
     category TEXT,                -- Fiction, Non-Fiction, FanFiction
-    status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
-    rating INTEGER,               -- 1-5 star rating
-    date_started TEXT,            -- ISO date: YYYY-MM-DD
-    date_finished TEXT,           -- ISO date: YYYY-MM-DD
     publication_year INTEGER,
     word_count INTEGER,
     summary TEXT,
     tags TEXT,                    -- JSON array: ["fantasy", "romance"]
-    
-    folder_path TEXT UNIQUE,      -- /books/Fiction/Author - Title/
-    file_path TEXT,               -- Path to primary ebook file
+    source_url TEXT,              -- For FanFiction: AO3/FFN URL
     
     cover_color_1 TEXT,           -- Hex color for gradient
     cover_color_2 TEXT,
+    
+    -- Reading tracking
+    status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
+    rating INTEGER,               -- 1-5 star rating
+    date_started TEXT,            -- ISO date: YYYY-MM-DD
+    date_finished TEXT,           -- ISO date: YYYY-MM-DD
+    
+    -- TBR/Wishlist
+    is_tbr INTEGER DEFAULT 0,     -- Boolean: 1 = on TBR list
+    tbr_priority TEXT DEFAULT 'normal',  -- "normal" or "high"
+    tbr_reason TEXT,              -- Why you want to read this
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User's notes about books
+-- Editions: individual formats/copies of a title
+CREATE TABLE IF NOT EXISTS editions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title_id INTEGER NOT NULL,
+    format TEXT NOT NULL,         -- "ebook", "physical", "audiobook"
+    file_path TEXT,               -- For ebooks: path to file
+    folder_path TEXT,             -- For ebooks: path to folder
+    narrators TEXT,               -- JSON array for audiobooks
+    acquired_date TEXT,           -- When you got this edition
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE
+);
+
+-- User's notes about titles
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER NOT NULL,
+    title_id INTEGER NOT NULL,
     content TEXT,                 -- Markdown with [[links]]
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE
 );
 
 -- Tracks [[links]] between notes for backlink queries
 CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     from_note_id INTEGER NOT NULL,
-    to_book_id INTEGER NOT NULL,
+    to_title_id INTEGER NOT NULL,
     link_text TEXT,               -- The actual text inside [[...]]
     FOREIGN KEY (from_note_id) REFERENCES notes(id) ON DELETE CASCADE,
-    FOREIGN KEY (to_book_id) REFERENCES books(id) ON DELETE CASCADE
+    FOREIGN KEY (to_title_id) REFERENCES titles(id) ON DELETE CASCADE
 );
-
--- Indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
-CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);
-CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
-CREATE INDEX IF NOT EXISTS idx_notes_book_id ON notes(book_id);
-CREATE INDEX IF NOT EXISTS idx_links_to_book ON links(to_book_id);
-CREATE INDEX IF NOT EXISTS idx_links_from_note ON links(from_note_id);
 
 -- Settings table for user preferences
 CREATE TABLE IF NOT EXISTS settings (
@@ -212,4 +265,24 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Author notes (separate from title notes)
+CREATE TABLE IF NOT EXISTS author_notes (
+    author_name TEXT PRIMARY KEY,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_titles_category ON titles(category);
+CREATE INDEX IF NOT EXISTS idx_titles_series ON titles(series);
+CREATE INDEX IF NOT EXISTS idx_titles_title ON titles(title);
+CREATE INDEX IF NOT EXISTS idx_titles_status ON titles(status);
+CREATE INDEX IF NOT EXISTS idx_titles_is_tbr ON titles(is_tbr);
+CREATE INDEX IF NOT EXISTS idx_editions_title_id ON editions(title_id);
+CREATE INDEX IF NOT EXISTS idx_editions_format ON editions(format);
+CREATE INDEX IF NOT EXISTS idx_notes_title_id ON notes(title_id);
+CREATE INDEX IF NOT EXISTS idx_links_to_title ON links(to_title_id);
+CREATE INDEX IF NOT EXISTS idx_links_from_note ON links(from_note_id);
 """

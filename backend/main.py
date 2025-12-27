@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db, get_db
-from routers import books, sync
+from routers import titles, sync
 from routers.import_metadata import router as import_router
 from routers.upload import router as upload_router
 from routers.settings import router as settings_router
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.1.0",
+    version="0.9.0",
     lifespan=lifespan
 )
 
@@ -49,7 +49,7 @@ app.add_middleware(
 )
 
 # Include API routers
-app.include_router(books.router, prefix="/api")
+app.include_router(titles.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
 app.include_router(import_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")

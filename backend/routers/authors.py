@@ -65,7 +65,7 @@ def parse_json_field(value: str, default: list = None) -> list:
 @router.get("")
 async def list_authors(db=Depends(get_db)):
     """Get all unique authors with book counts"""
-    cursor = await db.execute("SELECT authors FROM books WHERE authors IS NOT NULL")
+    cursor = await db.execute("SELECT authors FROM titles WHERE authors IS NOT NULL AND is_tbr = 0")
     rows = await cursor.fetchall()
     
     # Parse all author arrays and count occurrences
@@ -107,15 +107,14 @@ async def get_author(author_name: str, db=Depends(get_db)):
     notes_row = await cursor.fetchone()
     notes = notes_row[0] if notes_row else None
     
-    # Get all books by this author
-    # We need to search within JSON arrays
+    # Get all titles by this author
     # Escape quotes for JSON pattern matching
     escaped_name = author_name.replace('"', '\\"')
     cursor = await db.execute("""
         SELECT id, title, authors, series, series_number, category, status, rating,
                publication_year
-        FROM books 
-        WHERE authors LIKE ?
+        FROM titles 
+        WHERE authors LIKE ? AND is_tbr = 0
         ORDER BY series, CAST(series_number AS FLOAT), title
     """, (f'%"{escaped_name}"%',))
     
@@ -183,7 +182,7 @@ async def update_author_notes(author_name: str, update: AuthorNotesUpdate, db=De
 
 @router.put("/{author_name}")
 async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_db)):
-    """Update author name and/or notes. Renaming updates all books with this author."""
+    """Update author name and/or notes. Renaming updates all titles with this author."""
     from urllib.parse import unquote
     author_name = unquote(author_name)
     
@@ -198,19 +197,18 @@ async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_d
     
     # Handle rename if new name provided
     if new_name:
-        # Get all books with this author
-        # Escape quotes for JSON pattern matching
+        # Get all titles with this author
         escaped_old_name = author_name.replace('"', '\\"')
         cursor = await db.execute(
-            "SELECT id, authors FROM books WHERE authors LIKE ?",
+            "SELECT id, authors FROM titles WHERE authors LIKE ?",
             (f'%"{escaped_old_name}"%',)
         )
         rows = await cursor.fetchall()
         
-        # Update each book's authors array
+        # Update each title's authors array
         books_updated_count = 0
         for row in rows:
-            book_id = row[0]
+            title_id = row[0]
             try:
                 authors = json.loads(row[1]) if row[1] else []
             except:
@@ -220,13 +218,12 @@ async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_d
             if author_name in authors:
                 authors = [new_name if a == author_name else a for a in authors]
                 await db.execute(
-                    "UPDATE books SET authors = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (json.dumps(authors), book_id)
+                    "UPDATE titles SET authors = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (json.dumps(authors), title_id)
                 )
                 books_updated_count += 1
         
         # Handle author_notes: delete old, insert/update new
-        # First get existing notes for old name
         cursor = await db.execute(
             "SELECT notes FROM author_notes WHERE author_name = ?",
             (author_name,)
@@ -241,7 +238,6 @@ async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_d
         )
         
         # Determine final notes (prefer new notes if provided, else keep old)
-        # Normalize empty string to None
         final_notes = update.notes if update.notes is not None else old_notes
         if final_notes == '':
             final_notes = None
@@ -267,7 +263,6 @@ async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_d
     
     # No rename, just update notes
     elif update.notes is not None:
-        # Normalize empty string to None
         notes_value = update.notes if update.notes else None
         
         if notes_value:
@@ -299,4 +294,3 @@ async def update_author(author_name: str, update: AuthorUpdate, db=Depends(get_d
         "notes": None,
         "books_updated": 0
     }
-

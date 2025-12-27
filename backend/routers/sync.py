@@ -3,6 +3,8 @@ Sync API Router
 
 Handles scanning book folders and importing/updating library data.
 This is where the magic happens - reading your book folders and extracting metadata.
+
+Phase 5 update: Now creates titles + editions instead of flat books table.
 """
 
 import os
@@ -161,9 +163,9 @@ def get_book_folders(root_path: Path) -> list[Path]:
     return book_folders
 
 
-async def find_existing_book_by_content(db, title: str, authors: list[str]) -> Optional[dict]:
+async def find_existing_title_by_content(db, title: str, authors: list[str]) -> Optional[dict]:
     """
-    Find existing book by title and first author.
+    Find existing title by title and first author.
     Used to preserve category when folder paths change.
     """
     if not authors:
@@ -171,9 +173,24 @@ async def find_existing_book_by_content(db, title: str, authors: list[str]) -> O
     
     first_author = authors[0]
     cursor = await db.execute(
-        """SELECT id, category, folder_path FROM books 
-           WHERE title = ? AND authors LIKE ?""",
+        """SELECT t.id, t.category 
+           FROM titles t
+           WHERE t.title = ? AND t.authors LIKE ?""",
         [title, f'%"{first_author}"%']
+    )
+    return await cursor.fetchone()
+
+
+async def find_existing_title_by_folder(db, folder_str: str) -> Optional[dict]:
+    """
+    Find existing title by folder path (via editions table).
+    """
+    cursor = await db.execute(
+        """SELECT t.id, t.category 
+           FROM titles t
+           JOIN editions e ON e.title_id = t.id
+           WHERE e.folder_path = ?""",
+        [folder_str]
     )
     return await cursor.fetchone()
 
@@ -184,11 +201,6 @@ def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
     
     Returns:
         tuple: (is_fanfiction: bool, reason: str)
-    
-    Detection heuristics:
-    - Tags containing AO3/fanfic indicators
-    - Author names matching username patterns
-    - Summary containing fanfic-related terms
     """
     reasons = []
     
@@ -197,7 +209,6 @@ def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
     if tags:
         tags_lower = [t.lower() if isinstance(t, str) else "" for t in tags]
         
-        # Direct fanfic indicators
         fanfic_tag_patterns = [
             "fanworks", "fanfiction", "fanfic", "ao3", "archive of our own",
             "fandom", "fan fiction", "transformative work"
@@ -215,108 +226,100 @@ def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
         for tag in tags_lower:
             for pattern in ship_patterns:
                 if re.search(pattern, tag, re.IGNORECASE):
-                    reasons.append(f"ship tag detected: '{tag}'")
+                    reasons.append("ship tag detected")
                     break
+            if reasons:
+                break
     
-    # --- Check author name patterns ---
-    if authors and authors != ["Unknown Author"]:
+    # --- Check author patterns ---
+    if authors:
         for author in authors:
-            # Username patterns: contains underscore, or is mostly lowercase with numbers
-            if '_' in author:
-                reasons.append(f"author name has underscore: '{author}'")
-            elif re.match(r'^[a-zA-Z0-9]+$', author) and re.search(r'\d', author) and len(author) > 3:
-                # Alphanumeric WITH digit (no spaces, no special chars) - looks like username
-                reasons.append(f"author name looks like username: '{author}'")
-            elif re.match(r'^[a-z0-9]+$', author) and len(author) > 3:
-                # All lowercase, no spaces - likely username (real authors use title case)
-                reasons.append(f"author name looks like username: '{author}'")
-            elif '-' in author and re.search(r'\d', author) and ' ' not in author:
-                # Has hyphen AND digit AND no space - likely username like "rock-the-casbah18"
-                reasons.append(f"author name looks like username: '{author}'")
+            author_lower = author.lower()
+            # Username patterns
+            if re.search(r'^\w+_\w+$', author):  # underscore_style
+                reasons.append(f"author '{author}' looks like username")
+            elif re.search(r'^\w+\d{2,}$', author):  # name followed by numbers
+                reasons.append(f"author '{author}' has number suffix")
     
     # --- Check summary ---
     summary = parsed.get("summary", "")
     if summary:
         summary_lower = summary.lower()
-        fanfic_summary_terms = [
+        fanfic_summary_patterns = [
             "ao3", "archive of our own", "fanfiction", "fanfic",
-            "this fic", "this story is", "canon divergent", "canon-divergent",
-            "post-canon", "pre-canon", "alternate universe", "au where",
-            "what if", "slow burn", "enemies to lovers", "friends to lovers",
-            "fix-it", "fixit", "one-shot", "oneshot", "multi-chapter"
+            "between chapters", "one-shot", "oneshot",
+            "based on", "inspired by", "au where", "alternate universe",
+            "kudos", "bookmarks"
         ]
-        for term in fanfic_summary_terms:
-            if term in summary_lower:
-                reasons.append(f"summary contains '{term}'")
+        for pattern in fanfic_summary_patterns:
+            if pattern in summary_lower:
+                reasons.append(f"summary contains '{pattern}'")
                 break
     
-    is_fanfiction = len(reasons) > 0
-    reason_str = "; ".join(reasons) if reasons else ""
+    # --- Check title patterns ---
+    title = parsed.get("title", "")
+    if title:
+        title_lower = title.lower()
+        # Common fanfic title patterns
+        if re.search(r'\[.*?\]', title):  # Brackets in title
+            if any(x in title_lower for x in ["wip", "complete", "abandoned", "hiatus"]):
+                reasons.append("title has fanfic status markers")
     
-    return is_fanfiction, reason_str
+    is_fanfic = len(reasons) > 0
+    reason = "; ".join(reasons) if reasons else ""
+    
+    return is_fanfic, reason
 
 
-def determine_category_from_path(folder_path: Path, books_root: Path) -> Optional[str]:
+def determine_category_from_path(folder_path: Path, root_path: Path) -> Optional[str]:
     """
-    Determine book category from folder structure.
-    Only works if books are in category subfolders (legacy structure).
-    Returns None for flat structure.
+    Determine book category from folder path structure.
+    Checks if any part of the path contains Fiction, Non-Fiction, or FanFiction.
     """
-    try:
-        relative = folder_path.relative_to(books_root)
-        parts = relative.parts
-        
-        # Need at least 2 levels: category/book_folder
-        if len(parts) >= 2:
-            category = parts[0]
-            category_map = {
-                "fiction": "Fiction",
-                "non-fiction": "Non-Fiction", 
-                "nonfiction": "Non-Fiction",
-                "fanfiction": "FanFiction",
-                "fanfic": "FanFiction"
-            }
-            normalized = category_map.get(category.lower())
-            # Only return if it's a known category, not a book folder name
-            if normalized:
-                return normalized
-    except ValueError:
-        pass
+    relative_path = folder_path.relative_to(root_path)
+    path_parts = str(relative_path).lower().split(os.sep)
+    
+    # Check each part of the path for category indicators
+    for part in path_parts:
+        if 'fanfiction' in part or 'fan-fiction' in part or 'fan fiction' in part:
+            return 'FanFiction'
+        elif 'non-fiction' in part or 'nonfiction' in part or 'non fiction' in part:
+            return 'Non-Fiction'
+        elif 'fiction' in part:
+            return 'Fiction'
     
     return None
 
 
 # --------------------------------------------------------------------------
-# Standalone Sync Function (for background tasks)
+# Standalone Sync (for background tasks)
 # --------------------------------------------------------------------------
 
-async def run_sync_standalone(full: bool = False, books_path: str = None) -> SyncResult:
+async def run_sync_standalone(full: bool = False) -> SyncResult:
     """
-    Standalone sync function that creates its own database connection.
-    
-    This can be called from background tasks without FastAPI's Depends.
-    
-    Args:
-        full: If True, re-scan all books. If False, only scan new folders.
-        books_path: Override books path (defaults to BOOKS_PATH env var)
-    
-    Returns:
-        SyncResult with counts of added/updated/skipped/errors
+    Run sync operation with its own database connection.
+    Used by background tasks that can't use FastAPI's Depends.
     """
+    db_path = get_db_path()
+    if not db_path:
+        return SyncResult(status="error", message="Database not initialized")
+    
+    async with aiosqlite.connect(db_path) as db:
+        db.row_factory = aiosqlite.Row
+        await db.execute("PRAGMA foreign_keys = ON")
+        return await _do_sync(db, full)
+
+
+async def _do_sync(db, full: bool = False) -> SyncResult:
+    """Core sync logic, shared between endpoint and standalone."""
     global _sync_status
     
-    if _sync_status.in_progress:
-        return SyncResult(
-            status="already_running",
-            message="A sync is already in progress"
-        )
-    
-    books_root = Path(books_path or BOOKS_PATH)
+    books_root = Path(BOOKS_PATH)
     
     if not books_root.exists():
         return SyncResult(
             status="error",
-            message=f"Books path does not exist: {books_root}"
+            message=f"Books path does not exist: {BOOKS_PATH}"
         )
     
     # Find all book folders
@@ -337,168 +340,159 @@ async def run_sync_standalone(full: bool = False, books_path: str = None) -> Syn
     result = SyncResult(status="complete", total=len(book_folders))
     
     try:
-        # Create our own database connection
-        db_path = get_db_path()
-        if not db_path:
-            return SyncResult(
-                status="error",
-                message="Database not initialized"
-            )
-        
-        async with aiosqlite.connect(db_path) as db:
-            db.row_factory = aiosqlite.Row
+        for folder in book_folders:
+            _sync_status.current_book = folder.name
+            _sync_status.processed += 1
             
-            for folder in book_folders:
-                _sync_status.current_book = folder.name
-                _sync_status.processed += 1
+            folder_str = str(folder)
+            
+            # Check if title already exists by folder_path (via editions)
+            existing = await find_existing_title_by_folder(db, folder_str)
+            existing_category = None
+            
+            if not existing:
+                # Folder path changed - try matching by title+author
+                parsed_temp = parse_folder_name(folder.name)
                 
-                folder_str = str(folder)
-                
-                # Check if book already exists by folder_path
+                if parsed_temp["authors"] and parsed_temp["authors"] != ["Unknown Author"]:
+                    existing = await find_existing_title_by_content(
+                        db, 
+                        parsed_temp["title"], 
+                        parsed_temp["authors"]
+                    )
+                    if existing:
+                        existing_category = existing["category"]
+                        print(f"Matched existing title by content: {parsed_temp['title']}")
+            elif existing:
+                existing_category = existing["category"] if "category" in existing.keys() else None
+            
+            if existing and not full:
+                # For non-full sync, check if edition with this folder already exists
                 cursor = await db.execute(
-                    "SELECT id, category FROM books WHERE folder_path = ?",
+                    "SELECT id FROM editions WHERE folder_path = ?",
                     [folder_str]
                 )
-                existing = await cursor.fetchone()
-                existing_category = None
+                if await cursor.fetchone():
+                    result.skipped += 1
+                    continue
+            
+            try:
+                # Parse folder name for basic info
+                parsed = parse_folder_name(folder.name)
                 
-                if not existing:
-                    # Folder path changed - try matching by title+author
-                    parsed_temp = parse_folder_name(folder.name)
+                # Find book file for metadata extraction
+                book_file = find_book_file(folder)
+                
+                # Try to extract richer metadata from the file
+                if book_file:
+                    try:
+                        file_metadata = await extract_metadata(book_file)
+                        # Merge: prefer extracted over parsed
+                        if file_metadata.get("publication_year"):
+                            parsed["publication_year"] = file_metadata["publication_year"]
+                        if file_metadata.get("summary"):
+                            parsed["summary"] = file_metadata["summary"]
+                        if file_metadata.get("tags"):
+                            parsed["tags"] = file_metadata["tags"]
+                        if file_metadata.get("word_count"):
+                            parsed["word_count"] = file_metadata["word_count"]
+                    except Exception as e:
+                        print(f"Metadata extraction failed for {book_file}: {e}")
+                
+                # Generate cover colors
+                author_for_color = parsed["authors"][0] if parsed["authors"] else "Unknown"
+                color1, color2 = generate_cover_colors(parsed["title"], author_for_color)
+                
+                # Determine category
+                if existing_category:
+                    category = existing_category
+                else:
+                    category = determine_category_from_path(folder, books_root)
                     
-                    # Only attempt content matching if we have a real author
-                    if parsed_temp["authors"] and parsed_temp["authors"] != ["Unknown Author"]:
-                        existing = await find_existing_book_by_content(
-                            db, 
-                            parsed_temp["title"], 
-                            parsed_temp["authors"]
-                        )
-                        if existing:
-                            existing_category = existing["category"]
-                            print(f"Matched existing book by content: {parsed_temp['title']}")
-                    else:
-                        print(f"Skipping content match for '{folder.name}' - no author in folder name")
-                elif existing:
-                    existing_category = existing["category"] if "category" in existing.keys() else None
+                    if not category:
+                        is_fanfic, detection_reason = detect_fanfiction(parsed, parsed.get("authors", []))
+                        if is_fanfic:
+                            category = "FanFiction"
+                            print(f"Auto-detected FanFiction: {parsed.get('title', folder.name)} - Reason: {detection_reason}")
+                        else:
+                            category = "Uncategorized"
                 
-                if existing and not full:
-                    # For non-full sync, only skip if folder_path already matches
-                    cursor_check = await db.execute(
-                        "SELECT id FROM books WHERE folder_path = ?",
-                        [folder_str]
+                if existing:
+                    # Update existing title
+                    await db.execute(
+                        """UPDATE titles SET
+                            title = ?, authors = ?, series = ?, series_number = ?,
+                            category = ?, publication_year = ?, word_count = ?,
+                            summary = ?, tags = ?,
+                            cover_color_1 = ?, cover_color_2 = ?,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?""",
+                        [
+                            parsed["title"], json.dumps(parsed["authors"]),
+                            parsed.get("series"), parsed.get("series_number"),
+                            category, parsed.get("publication_year"),
+                            parsed.get("word_count"), parsed.get("summary"),
+                            json.dumps(parsed.get("tags", [])),
+                            color1, color2,
+                            existing["id"]
+                        ]
                     )
-                    if await cursor_check.fetchone():
-                        result.skipped += 1
-                        continue
-                
-                try:
-                    # Parse folder name for basic info
-                    parsed = parse_folder_name(folder.name)
                     
-                    # Find book file for metadata extraction
-                    book_file = find_book_file(folder)
+                    # Update or create edition
+                    cursor = await db.execute(
+                        "SELECT id FROM editions WHERE title_id = ? AND format = 'ebook'",
+                        [existing["id"]]
+                    )
+                    existing_edition = await cursor.fetchone()
                     
-                    # Try to extract richer metadata from the file
-                    if book_file:
-                        try:
-                            file_metadata = await extract_metadata(book_file)
-                            # Merge: prefer extracted over parsed
-                            if file_metadata.get("publication_year"):
-                                parsed["publication_year"] = file_metadata["publication_year"]
-                            if file_metadata.get("summary"):
-                                parsed["summary"] = file_metadata["summary"]
-                            if file_metadata.get("tags"):
-                                parsed["tags"] = file_metadata["tags"]
-                            if file_metadata.get("word_count"):
-                                parsed["word_count"] = file_metadata["word_count"]
-                        except Exception as e:
-                            # Metadata extraction failed, continue with parsed data
-                            print(f"Metadata extraction failed for {book_file}: {e}")
-                    
-                    # Generate cover colors
-                    author_for_color = parsed["authors"][0] if parsed["authors"] else "Unknown"
-                    color1, color2 = generate_cover_colors(parsed["title"], author_for_color)
-                    
-                    # Determine category
-                    # Priority: 1) existing category (preserved), 2) path-based, 3) fanfic detection, 4) Uncategorized
-                    if existing_category:
-                        category = existing_category
-                    else:
-                        # Try path-based detection first (for legacy folder structures)
-                        category = determine_category_from_path(folder, books_root)
-                        
-                        # If no category from path, try fanfiction auto-detection
-                        if not category:
-                            is_fanfic, detection_reason = detect_fanfiction(parsed, parsed.get("authors", []))
-                            if is_fanfic:
-                                category = "FanFiction"
-                                print(f"Auto-detected FanFiction: {parsed.get('title', folder.name)} - Reason: {detection_reason}")
-                            else:
-                                category = "Uncategorized"
-                    
-                    # Prepare data for insert/update
-                    book_data = {
-                        "title": parsed["title"],
-                        "authors": json.dumps(parsed["authors"]),
-                        "series": parsed.get("series"),
-                        "series_number": parsed.get("series_number"),
-                        "category": category,
-                        "publication_year": parsed.get("publication_year"),
-                        "word_count": parsed.get("word_count"),
-                        "summary": parsed.get("summary"),
-                        "tags": json.dumps(parsed.get("tags", [])),
-                        "folder_path": folder_str,
-                        "file_path": str(book_file) if book_file else None,
-                        "cover_color_1": color1,
-                        "cover_color_2": color2,
-                    }
-                    
-                    if existing:
-                        # Update existing book (including folder_path for migrated books)
+                    if existing_edition:
                         await db.execute(
-                            """UPDATE books SET
-                                title = ?, authors = ?, series = ?, series_number = ?,
-                                category = ?, publication_year = ?, word_count = ?,
-                                summary = ?, tags = ?, folder_path = ?, file_path = ?,
-                                cover_color_1 = ?, cover_color_2 = ?,
-                                updated_at = CURRENT_TIMESTAMP
+                            """UPDATE editions SET
+                                file_path = ?, folder_path = ?
                             WHERE id = ?""",
-                            [
-                                book_data["title"], book_data["authors"],
-                                book_data["series"], book_data["series_number"],
-                                book_data["category"], book_data["publication_year"],
-                                book_data["word_count"], book_data["summary"],
-                                book_data["tags"], book_data["folder_path"], book_data["file_path"],
-                                book_data["cover_color_1"], book_data["cover_color_2"],
-                                existing["id"]
-                            ]
+                            [str(book_file) if book_file else None, folder_str, existing_edition["id"]]
                         )
-                        result.updated += 1
                     else:
-                        # Insert new book
                         await db.execute(
-                            """INSERT INTO books 
-                                (title, authors, series, series_number, category,
-                                 publication_year, word_count, summary, tags,
-                                 folder_path, file_path, cover_color_1, cover_color_2)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                            [
-                                book_data["title"], book_data["authors"],
-                                book_data["series"], book_data["series_number"],
-                                book_data["category"], book_data["publication_year"],
-                                book_data["word_count"], book_data["summary"],
-                                book_data["tags"], book_data["folder_path"],
-                                book_data["file_path"], book_data["cover_color_1"],
-                                book_data["cover_color_2"]
-                            ]
+                            """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                            VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
+                            [existing["id"], str(book_file) if book_file else None, folder_str]
                         )
-                        result.added += 1
                     
-                    await db.commit()
+                    result.updated += 1
+                else:
+                    # Insert new title
+                    cursor = await db.execute(
+                        """INSERT INTO titles 
+                            (title, authors, series, series_number, category,
+                             publication_year, word_count, summary, tags,
+                             cover_color_1, cover_color_2)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        [
+                            parsed["title"], json.dumps(parsed["authors"]),
+                            parsed.get("series"), parsed.get("series_number"),
+                            category, parsed.get("publication_year"),
+                            parsed.get("word_count"), parsed.get("summary"),
+                            json.dumps(parsed.get("tags", [])),
+                            color1, color2
+                        ]
+                    )
+                    title_id = cursor.lastrowid
                     
-                except Exception as e:
-                    print(f"Error processing {folder}: {e}")
-                    result.errors += 1
+                    # Insert edition
+                    await db.execute(
+                        """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                        VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
+                        [title_id, str(book_file) if book_file else None, folder_str]
+                    )
+                    
+                    result.added += 1
+                
+                await db.commit()
+                
+            except Exception as e:
+                print(f"Error processing {folder}: {e}")
+                result.errors += 1
         
         result.message = f"Sync complete: {result.added} added, {result.updated} updated, {result.skipped} skipped, {result.errors} errors"
         
@@ -538,188 +532,4 @@ async def sync_library(
             message="A sync is already in progress"
         )
     
-    books_root = Path(BOOKS_PATH)
-    
-    if not books_root.exists():
-        return SyncResult(
-            status="error",
-            message=f"Books path does not exist: {BOOKS_PATH}"
-        )
-    
-    # Find all book folders
-    book_folders = get_book_folders(books_root)
-    
-    if not book_folders:
-        return SyncResult(
-            status="complete",
-            message="No book folders found"
-        )
-    
-    # Update sync status
-    _sync_status = SyncStatus(
-        in_progress=True,
-        total=len(book_folders)
-    )
-    
-    result = SyncResult(status="complete", total=len(book_folders))
-    
-    try:
-        for folder in book_folders:
-            _sync_status.current_book = folder.name
-            _sync_status.processed += 1
-            
-            folder_str = str(folder)
-            
-            # Check if book already exists by folder_path
-            cursor = await db.execute(
-                "SELECT id, category FROM books WHERE folder_path = ?",
-                [folder_str]
-            )
-            existing = await cursor.fetchone()
-            existing_category = None
-            
-            if not existing:
-                # Folder path changed - try matching by title+author
-                parsed_temp = parse_folder_name(folder.name)
-                
-                # Only attempt content matching if we have a real author
-                # (avoid false matches or failed lookups with "Unknown Author")
-                if parsed_temp["authors"] and parsed_temp["authors"] != ["Unknown Author"]:
-                    existing = await find_existing_book_by_content(
-                        db, 
-                        parsed_temp["title"], 
-                        parsed_temp["authors"]
-                    )
-                    if existing:
-                        existing_category = existing["category"]
-                        print(f"Matched existing book by content: {parsed_temp['title']}")
-                else:
-                    print(f"Skipping content match for '{folder.name}' - no author in folder name")
-            elif existing:
-                existing_category = existing["category"] if "category" in existing.keys() else None
-            
-            if existing and not full:
-                # For non-full sync, only skip if folder_path already matches
-                cursor_check = await db.execute(
-                    "SELECT id FROM books WHERE folder_path = ?",
-                    [folder_str]
-                )
-                if await cursor_check.fetchone():
-                    result.skipped += 1
-                    continue
-            
-            try:
-                # Parse folder name for basic info
-                parsed = parse_folder_name(folder.name)
-                
-                # Find book file for metadata extraction
-                book_file = find_book_file(folder)
-                
-                # Try to extract richer metadata from the file
-                if book_file:
-                    try:
-                        file_metadata = await extract_metadata(book_file)
-                        # Merge: prefer extracted over parsed
-                        if file_metadata.get("publication_year"):
-                            parsed["publication_year"] = file_metadata["publication_year"]
-                        if file_metadata.get("summary"):
-                            parsed["summary"] = file_metadata["summary"]
-                        if file_metadata.get("tags"):
-                            parsed["tags"] = file_metadata["tags"]
-                        if file_metadata.get("word_count"):
-                            parsed["word_count"] = file_metadata["word_count"]
-                    except Exception as e:
-                        # Metadata extraction failed, continue with parsed data
-                        print(f"Metadata extraction failed for {book_file}: {e}")
-                
-                # Generate cover colors
-                author_for_color = parsed["authors"][0] if parsed["authors"] else "Unknown"
-                color1, color2 = generate_cover_colors(parsed["title"], author_for_color)
-                
-                # Determine category
-                # Priority: 1) existing category (preserved), 2) path-based, 3) fanfic detection, 4) Uncategorized
-                if existing_category:
-                    category = existing_category
-                else:
-                    # Try path-based detection first (for legacy folder structures)
-                    category = determine_category_from_path(folder, books_root)
-                    
-                    # If no category from path, try fanfiction auto-detection
-                    if not category:
-                        is_fanfic, detection_reason = detect_fanfiction(parsed, parsed.get("authors", []))
-                        if is_fanfic:
-                            category = "FanFiction"
-                            print(f"Auto-detected FanFiction: {parsed.get('title', folder.name)} - Reason: {detection_reason}")
-                        else:
-                            category = "Uncategorized"
-                
-                # Prepare data for insert/update
-                book_data = {
-                    "title": parsed["title"],
-                    "authors": json.dumps(parsed["authors"]),
-                    "series": parsed.get("series"),
-                    "series_number": parsed.get("series_number"),
-                    "category": category,
-                    "publication_year": parsed.get("publication_year"),
-                    "word_count": parsed.get("word_count"),
-                    "summary": parsed.get("summary"),
-                    "tags": json.dumps(parsed.get("tags", [])),
-                    "folder_path": folder_str,
-                    "file_path": str(book_file) if book_file else None,
-                    "cover_color_1": color1,
-                    "cover_color_2": color2,
-                }
-                
-                if existing:
-                    # Update existing book (including folder_path for migrated books)
-                    await db.execute(
-                        """UPDATE books SET
-                            title = ?, authors = ?, series = ?, series_number = ?,
-                            category = ?, publication_year = ?, word_count = ?,
-                            summary = ?, tags = ?, folder_path = ?, file_path = ?,
-                            cover_color_1 = ?, cover_color_2 = ?,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?""",
-                        [
-                            book_data["title"], book_data["authors"],
-                            book_data["series"], book_data["series_number"],
-                            book_data["category"], book_data["publication_year"],
-                            book_data["word_count"], book_data["summary"],
-                            book_data["tags"], book_data["folder_path"], book_data["file_path"],
-                            book_data["cover_color_1"], book_data["cover_color_2"],
-                            existing["id"]
-                        ]
-                    )
-                    result.updated += 1
-                else:
-                    # Insert new book
-                    await db.execute(
-                        """INSERT INTO books 
-                            (title, authors, series, series_number, category,
-                             publication_year, word_count, summary, tags,
-                             folder_path, file_path, cover_color_1, cover_color_2)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        [
-                            book_data["title"], book_data["authors"],
-                            book_data["series"], book_data["series_number"],
-                            book_data["category"], book_data["publication_year"],
-                            book_data["word_count"], book_data["summary"],
-                            book_data["tags"], book_data["folder_path"],
-                            book_data["file_path"], book_data["cover_color_1"],
-                            book_data["cover_color_2"]
-                        ]
-                    )
-                    result.added += 1
-                
-                await db.commit()
-                
-            except Exception as e:
-                print(f"Error processing {folder}: {e}")
-                result.errors += 1
-        
-        result.message = f"Sync complete: {result.added} added, {result.updated} updated, {result.skipped} skipped, {result.errors} errors"
-        
-    finally:
-        _sync_status = SyncStatus(in_progress=False)
-    
-    return result
+    return await _do_sync(db, full)
