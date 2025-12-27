@@ -257,6 +257,103 @@ export async function getSyncStatus() {
 }
 
 // =============================================================================
+// TBR (TO BE READ) API
+// =============================================================================
+
+/**
+ * List all TBR items
+ * @param {Object} params - Query parameters
+ * @param {string} params.priority - Filter by priority ('high', 'normal')
+ * @param {string} params.sort - Sort field (added, title, author)
+ */
+export async function listTBR(params = {}) {
+  const searchParams = new URLSearchParams()
+  
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, value)
+    }
+  })
+  
+  const query = searchParams.toString()
+  return apiFetch(`/tbr${query ? `?${query}` : ''}`)
+}
+
+/**
+ * Add a book to TBR list
+ * @param {Object} data - TBR item data
+ * @param {string} data.title - Book title
+ * @param {string[]} data.authors - Authors
+ * @param {string} data.series - Series name (optional)
+ * @param {string} data.series_number - Series number (optional)
+ * @param {string} data.category - Category (optional)
+ * @param {string} data.tbr_priority - Priority: 'normal' or 'high'
+ * @param {string} data.tbr_reason - Why you want to read this
+ */
+export async function addToTBR(data) {
+  return apiFetch('/tbr', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Update a TBR item's priority or reason
+ * @param {number} bookId - Book ID
+ * @param {Object} data - Fields to update
+ * @param {string} [data.tbr_priority] - Priority: 'normal' or 'high'
+ * @param {string} [data.tbr_reason] - Why you want to read this
+ */
+export async function updateTBR(bookId, data) {
+  return apiFetch(`/tbr/${bookId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Convert a TBR item to a library book ("I got this book!")
+ * @param {number} bookId - Book ID
+ * @param {Object} options - Conversion options
+ * @param {string} [options.format] - Edition format to add ('ebook', 'physical', 'audiobook')
+ */
+export async function convertTBRToLibrary(bookId, options = {}) {
+  return apiFetch(`/tbr/${bookId}/acquire`, {
+    method: 'POST',
+    body: JSON.stringify(options)
+  })
+}
+
+/**
+ * Remove a book from TBR (delete it entirely, not convert to library)
+ * @param {number} bookId - Book ID
+ */
+export async function removeFromTBR(bookId) {
+  return apiFetch(`/tbr/${bookId}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
+ * Create a new title manually (for physical, audiobook, web-based books)
+ * @param {Object} data - Title data
+ * @param {string} data.title - Book title
+ * @param {string[]} data.authors - Authors
+ * @param {string} data.series - Series name (optional)
+ * @param {string} data.series_number - Series number (optional)
+ * @param {string} data.category - Category (optional)
+ * @param {string} data.format - Edition format: 'physical', 'audiobook', 'web'
+ * @param {string} data.source_url - Source URL (optional)
+ * @param {string} data.completion_status - For fanfic: 'Complete', 'WIP', 'Abandoned'
+ */
+export async function createTitle(data) {
+  return apiFetch('/titles', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+// =============================================================================
 // UPLOAD API
 // =============================================================================
 

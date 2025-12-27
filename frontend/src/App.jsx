@@ -1,12 +1,13 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Library from './components/Library'
 import BookDetail from './components/BookDetail'
 import SeriesDetail from './components/SeriesDetail'
 import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
+import TBRList from './components/TBRList'
 import ImportPage from './pages/ImportPage'
-import UploadPage from './pages/UploadPage'
+import AddPage from './pages/AddPage'
 import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import { checkHealth } from './api'
@@ -68,8 +69,11 @@ function App() {
           <Route path="/series/:name" element={<SeriesDetail />} />
           <Route path="/authors" element={<AuthorsList />} />
           <Route path="/author/:name" element={<AuthorDetail />} />
+          <Route path="/tbr" element={<TBRList />} />
           <Route path="/import" element={<ImportPage />} />
-          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/add" element={<AddPage />} />
+          {/* Redirect old /upload URL to /add */}
+          <Route path="/upload" element={<Navigate to="/add" replace />} />
         </Routes>
       </main>
       <BottomNav />

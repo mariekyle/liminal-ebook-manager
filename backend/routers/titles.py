@@ -1171,3 +1171,331 @@ async def lookup_books_by_titles(
             results[title_text] = {"id": row["id"], "title": row["title"]}
     
     return {"books": results}
+
+
+# --------------------------------------------------------------------------
+# TBR (To Be Read) Endpoints
+# --------------------------------------------------------------------------
+
+class TBRCreate(BaseModel):
+    """Request body for creating a TBR item."""
+    title: str
+    authors: List[str]
+    series: Optional[str] = None
+    series_number: Optional[str] = None
+    category: Optional[str] = None
+    tbr_priority: str = "normal"  # "normal" or "high"
+    tbr_reason: Optional[str] = None
+
+
+class TBRUpdate(BaseModel):
+    """Request body for updating TBR-specific fields."""
+    tbr_priority: Optional[str] = None
+    tbr_reason: Optional[str] = None
+
+
+class TBRAcquire(BaseModel):
+    """Request body for converting TBR to library."""
+    format: Optional[str] = None  # "ebook", "physical", "audiobook"
+
+
+class TBRSummary(BaseModel):
+    """TBR item for list view."""
+    id: int
+    title: str
+    authors: List[str]
+    series: Optional[str] = None
+    series_number: Optional[str] = None
+    category: Optional[str] = None
+    tbr_priority: Optional[str] = None
+    tbr_reason: Optional[str] = None
+    cover_gradient: Optional[str] = None
+    cover_bg_color: Optional[str] = None
+    cover_text_color: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class TBRListResponse(BaseModel):
+    """Response for TBR list endpoint."""
+    books: List[TBRSummary]
+    total: int
+
+
+@router.get("/tbr", response_model=TBRListResponse)
+async def list_tbr(
+    priority: Optional[str] = Query(None, description="Filter by priority (high, normal)"),
+    sort: str = Query("added", description="Sort field: added, title, author"),
+    db = Depends(get_db)
+):
+    """
+    List all TBR (To Be Read) items.
+    """
+    where_clauses = ["is_tbr = 1"]
+    params = []
+    
+    if priority:
+        if priority == "high":
+            where_clauses.append("tbr_priority = 'high'")
+        elif priority == "normal":
+            where_clauses.append("(tbr_priority IS NULL OR tbr_priority = 'normal')")
+    
+    where_sql = " AND ".join(where_clauses)
+    
+    # Build ORDER BY clause
+    if sort == "title":
+        order_clause = "title COLLATE NOCASE ASC"
+    elif sort == "author":
+        order_clause = "authors COLLATE NOCASE ASC"
+    else:  # "added" - most recent first
+        order_clause = "created_at DESC"
+    
+    query = f"""
+        SELECT id, title, authors, series, series_number, category,
+               tbr_priority, tbr_reason, created_at
+        FROM titles
+        WHERE {where_sql}
+        ORDER BY {order_clause}
+    """
+    
+    cursor = await db.execute(query, params)
+    rows = await cursor.fetchall()
+    
+    books = []
+    for row in rows:
+        authors = parse_json_field(row["authors"])
+        primary_author = authors[0] if authors else "Unknown Author"
+        cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
+        
+        books.append(TBRSummary(
+            id=row["id"],
+            title=row["title"],
+            authors=authors,
+            series=row["series"],
+            series_number=row["series_number"],
+            category=row["category"],
+            tbr_priority=row["tbr_priority"],
+            tbr_reason=row["tbr_reason"],
+            cover_gradient=cover_style.css_gradient,
+            cover_bg_color=cover_style.background_color,
+            cover_text_color=cover_style.text_color,
+            created_at=row["created_at"]
+        ))
+    
+    return TBRListResponse(books=books, total=len(books))
+
+
+@router.post("/tbr")
+async def create_tbr(
+    data: TBRCreate,
+    db = Depends(get_db)
+):
+    """
+    Add a new book to the TBR list.
+    Creates a title with is_tbr=1 and no editions.
+    """
+    # Generate cover colors
+    author_for_color = data.authors[0] if data.authors else "Unknown"
+    from services.covers import generate_cover_colors
+    color1, color2 = generate_cover_colors(data.title, author_for_color)
+    
+    # Validate priority
+    priority = data.tbr_priority if data.tbr_priority in ("high", "normal") else "normal"
+    
+    cursor = await db.execute(
+        """INSERT INTO titles 
+            (title, authors, series, series_number, category,
+             is_tbr, tbr_priority, tbr_reason,
+             cover_color_1, cover_color_2, status)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'Unread')""",
+        [
+            data.title, json.dumps(data.authors),
+            data.series, data.series_number, data.category,
+            priority, data.tbr_reason,
+            color1, color2
+        ]
+    )
+    title_id = cursor.lastrowid
+    await db.commit()
+    
+    return {"id": title_id, "status": "created"}
+
+
+@router.patch("/tbr/{book_id}")
+async def update_tbr(
+    book_id: int,
+    data: TBRUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update TBR-specific fields (priority, reason).
+    """
+    # Verify it's a TBR item
+    cursor = await db.execute(
+        "SELECT id FROM titles WHERE id = ? AND is_tbr = 1",
+        [book_id]
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="TBR item not found")
+    
+    updates = []
+    params = []
+    
+    if data.tbr_priority is not None:
+        priority = data.tbr_priority if data.tbr_priority in ("high", "normal") else "normal"
+        updates.append("tbr_priority = ?")
+        params.append(priority)
+    
+    if data.tbr_reason is not None:
+        updates.append("tbr_reason = ?")
+        params.append(data.tbr_reason or None)
+    
+    if not updates:
+        return {"status": "no_changes"}
+    
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(book_id)
+    
+    query = f"UPDATE titles SET {', '.join(updates)} WHERE id = ?"
+    await db.execute(query, params)
+    await db.commit()
+    
+    return {"status": "updated"}
+
+
+@router.post("/tbr/{book_id}/acquire")
+async def acquire_tbr(
+    book_id: int,
+    data: TBRAcquire,
+    db = Depends(get_db)
+):
+    """
+    Convert a TBR item to a library book ("I got this book!").
+    Sets is_tbr=0 and optionally creates an edition.
+    """
+    # Verify it's a TBR item
+    cursor = await db.execute(
+        "SELECT id, title FROM titles WHERE id = ? AND is_tbr = 1",
+        [book_id]
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="TBR item not found")
+    
+    # Convert to library item
+    await db.execute(
+        """UPDATE titles 
+           SET is_tbr = 0, updated_at = CURRENT_TIMESTAMP 
+           WHERE id = ?""",
+        [book_id]
+    )
+    
+    # Optionally create an edition
+    edition_id = None
+    if data.format:
+        cursor = await db.execute(
+            """INSERT INTO editions (title_id, format, acquired_date)
+               VALUES (?, ?, CURRENT_TIMESTAMP)""",
+            [book_id, data.format]
+        )
+        edition_id = cursor.lastrowid
+    
+    await db.commit()
+    
+    return {
+        "status": "acquired",
+        "book_id": book_id,
+        "edition_id": edition_id
+    }
+
+
+@router.delete("/tbr/{book_id}")
+async def delete_tbr(
+    book_id: int,
+    db = Depends(get_db)
+):
+    """
+    Delete a TBR item entirely.
+    Only works for TBR items (is_tbr=1).
+    """
+    # Verify it's a TBR item
+    cursor = await db.execute(
+        "SELECT id FROM titles WHERE id = ? AND is_tbr = 1",
+        [book_id]
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="TBR item not found")
+    
+    await db.execute("DELETE FROM titles WHERE id = ?", [book_id])
+    await db.commit()
+    
+    return {"status": "deleted"}
+
+
+# --------------------------------------------------------------------------
+# Manual Title Creation Endpoint
+# --------------------------------------------------------------------------
+
+class TitleCreate(BaseModel):
+    """Request body for creating a title manually."""
+    title: str
+    authors: List[str]
+    series: Optional[str] = None
+    series_number: Optional[str] = None
+    category: Optional[str] = None
+    format: Optional[str] = None  # 'physical', 'audiobook', 'web'
+    source_url: Optional[str] = None
+    completion_status: Optional[str] = None
+    is_tbr: bool = False
+
+
+@router.post("/titles")
+async def create_title_manual(
+    data: TitleCreate,
+    db = Depends(get_db)
+):
+    """
+    Create a new title manually (for physical, audiobook, web-based books).
+    Creates a title record and optionally an edition.
+    """
+    # Generate cover colors
+    author_for_color = data.authors[0] if data.authors else "Unknown"
+    from services.covers import generate_cover_colors
+    color1, color2 = generate_cover_colors(data.title, author_for_color)
+    
+    # Insert title
+    cursor = await db.execute(
+        """INSERT INTO titles 
+            (title, authors, series, series_number, category,
+             source_url, is_tbr, cover_color_1, cover_color_2, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unread')""",
+        [
+            data.title, 
+            json.dumps(data.authors),
+            data.series, 
+            data.series_number, 
+            data.category or 'Fiction',
+            data.source_url,
+            1 if data.is_tbr else 0,
+            color1, 
+            color2
+        ]
+    )
+    title_id = cursor.lastrowid
+    
+    # Create edition if format specified and not TBR
+    edition_id = None
+    if data.format and not data.is_tbr:
+        cursor = await db.execute(
+            """INSERT INTO editions (title_id, format, acquired_date)
+               VALUES (?, ?, CURRENT_TIMESTAMP)""",
+            [title_id, data.format]
+        )
+        edition_id = cursor.lastrowid
+    
+    await db.commit()
+    
+    return {
+        "id": title_id,
+        "edition_id": edition_id,
+        "status": "created"
+    }
