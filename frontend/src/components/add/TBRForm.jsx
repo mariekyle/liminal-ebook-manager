@@ -12,7 +12,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
     author: '',
     series: '',
     seriesNumber: '',
-    category: 'Fiction',
+    category: 'FanFiction',
     priority: 'normal',
     reason: '',
     completionStatus: '',

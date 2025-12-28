@@ -17,7 +17,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle } from '../api'
+import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, getBook, linkFilesToTitle } from '../api'
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'
@@ -84,6 +84,19 @@ export default function AddPage() {
   // Screen state
   const [currentScreen, setCurrentScreen] = useState(getInitialScreen)
   
+  // Link to existing title (TBR → Library with ebook upload)
+  const linkToId = searchParams.get('linkTo')
+  const [linkedBook, setLinkedBook] = useState(null)
+  
+  // Fetch linked book info if linkTo param present
+  useEffect(() => {
+    if (linkToId) {
+      getBook(linkToId)
+        .then(book => setLinkedBook(book))
+        .catch(err => console.error('Failed to fetch linked book:', err))
+    }
+  }, [linkToId])
+  
   // Success state
   const [successType, setSuccessType] = useState(null) // 'tbr' or 'library'
   const [successTitle, setSuccessTitle] = useState(null)
@@ -121,6 +134,12 @@ export default function AddPage() {
   }
   
   const handleBack = () => {
+    // If in link mode, back goes to book detail
+    if (linkToId && currentScreen === SCREENS.UPLOAD_SELECT) {
+      navigate(`/book/${linkToId}`)
+      return
+    }
+    
     switch (currentScreen) {
       case SCREENS.TBR_FORM:
       case SCREENS.LIBRARY_CHOICE:
@@ -131,6 +150,11 @@ export default function AddPage() {
         setCurrentScreen(SCREENS.LIBRARY_CHOICE)
         break
       case SCREENS.UPLOAD_FILES_SELECTED:
+        // If in link mode, back from files selected goes to book detail
+        if (linkToId) {
+          navigate(`/book/${linkToId}`)
+          return
+        }
         setCurrentScreen(SCREENS.UPLOAD_SELECT)
         break
       case SCREENS.UPLOAD_REVIEW:
@@ -227,12 +251,39 @@ export default function AddPage() {
         action: book.duplicate ? null : 'new',
         edited: false,
       })))
-      setCurrentScreen(SCREENS.UPLOAD_REVIEW)
+      
+      // In link mode, skip review and go straight to upload
+      if (linkToId) {
+        // Trigger upload immediately
+        setCurrentScreen(SCREENS.UPLOAD_UPLOADING)
+        setUploadProgress(0)
+        
+        try {
+          const progressInterval = setInterval(() => {
+            setUploadProgress(prev => Math.min(prev + 10, 90))
+          }, 500)
+
+          await linkFilesToTitle(response.session_id, linkToId)
+          
+          clearInterval(progressInterval)
+          setUploadProgress(100)
+          
+          // Navigate to the book detail page
+          setTimeout(() => {
+            navigate(`/book/${linkToId}`)
+          }, 500)
+        } catch (err) {
+          setError(err.message)
+          setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
+        }
+      } else {
+        setCurrentScreen(SCREENS.UPLOAD_REVIEW)
+      }
     } catch (err) {
       setError(err.message)
       setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
     }
-  }, [selectedFiles])
+  }, [selectedFiles, linkToId, navigate])
 
   const handleBookUpdate = useCallback((bookId, updates) => {
     setBooks(prev => prev.map(book => 
@@ -242,10 +293,10 @@ export default function AddPage() {
     ))
   }, [])
 
-  const handleDuplicateAction = useCallback((bookId, action) => {
+  const handleDuplicateAction = useCallback((bookId, action, extraData = null) => {
     setBooks(prev => prev.map(book =>
       book.id === bookId
-        ? { ...book, action }
+        ? { ...book, action, actionData: extraData }
         : book
     ))
   }, [])
@@ -255,6 +306,7 @@ export default function AddPage() {
     setUploadProgress(0)
     setError(null)
 
+    // Normal upload flow (creating new books)
     const bookActions = books.map(book => {
       const action = book.action || 'new'
       
@@ -267,6 +319,15 @@ export default function AddPage() {
           id: book.id,
           action: 'add_format',
           existing_folder: book.duplicate?.existing_folder,
+        }
+      }
+      
+      // Handle add_to_existing (from familiar title detection)
+      if (action === 'add_to_existing') {
+        return {
+          id: book.id,
+          action: 'add_to_existing',
+          title_id: book.actionData?.title_id || book.familiar_title?.title_id,
         }
       }
       
@@ -344,15 +405,31 @@ export default function AddPage() {
     .reduce((sum, b) => sum + b.files.length, 0)
 
   const allDuplicatesResolved = books.every(book => 
-    !book.duplicate || book.action !== null
+    // No duplicate or familiar match, OR has an action chosen
+    (!book.duplicate && !book.familiar_title) || book.action !== null
   )
 
   // ========== HEADER CONFIG ==========
 
   const getHeaderConfig = () => {
+    // Special headers for link mode
+    if (linkToId && linkedBook) {
+      switch (currentScreen) {
+        case SCREENS.UPLOAD_SELECT:
+        case SCREENS.UPLOAD_FILES_SELECTED:
+          return { title: 'Upload Files', showBack: true }
+        case SCREENS.UPLOAD_ANALYZING:
+          return { title: 'Analyzing...', showBack: false }
+        case SCREENS.UPLOAD_REVIEW:
+          return { title: 'Review Files', showBack: true }
+        case SCREENS.UPLOAD_UPLOADING:
+          return { title: 'Uploading...', showBack: false }
+      }
+    }
+    
     switch (currentScreen) {
       case SCREENS.MAIN_CHOICE:
-        return { title: 'Add', showBack: false }
+        return { title: '', showBack: false }
       case SCREENS.LIBRARY_CHOICE:
         return { title: 'Add to Library', showBack: true }
       case SCREENS.TBR_FORM:
@@ -382,25 +459,30 @@ export default function AddPage() {
 
   // ========== RENDER ==========
 
+  // Don't show header bar when there's nothing to show
+  const showHeader = headerConfig.showBack || headerConfig.title
+
   return (
     <div className="text-[#e0e0e0]">
-      {/* Page Header */}
-      <div className="px-4 md:px-8 py-4 border-b border-gray-700">
-        <div className="flex items-center max-w-2xl mx-auto">
-          {headerConfig.showBack && (
-            <button
-              onClick={handleBack}
-              className="text-library-accent mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
-            >
-              <ArrowLeft />
-              <span className="ml-1">Back</span>
-            </button>
-          )}
-          <h1 className="flex-1 text-lg font-semibold text-white">
-            {headerConfig.title}
-          </h1>
+      {/* Page Header - only show when there's content */}
+      {showHeader && (
+        <div className="px-4 md:px-8 py-4 border-b border-gray-700">
+          <div className="flex items-center max-w-2xl mx-auto">
+            {headerConfig.showBack && (
+              <button
+                onClick={handleBack}
+                className="text-library-accent mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
+              >
+                <ArrowLeft />
+                <span className="ml-1">Back</span>
+              </button>
+            )}
+            <h1 className="flex-1 text-lg font-semibold text-white">
+              {headerConfig.title}
+            </h1>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Error Banner */}
       {error && (
@@ -446,11 +528,24 @@ export default function AddPage() {
 
         {/* Upload Flow */}
         {currentScreen === SCREENS.UPLOAD_SELECT && (
-          <UploadZone
-            onFileSelect={handleFileSelect}
-            onFileDrop={handleFileDrop}
-            fileInputRef={fileInputRef}
-          />
+          <>
+            {/* Context banner when uploading for a linked TBR book */}
+            {linkedBook && (
+              <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-400">📚</span>
+                  <span className="text-green-300 font-medium">Adding files for:</span>
+                </div>
+                <p className="text-white font-semibold">{linkedBook.title}</p>
+                <p className="text-gray-400 text-sm">by {linkedBook.authors?.join(', ')}</p>
+              </div>
+            )}
+            <UploadZone
+              onFileSelect={handleFileSelect}
+              onFileDrop={handleFileDrop}
+              fileInputRef={fileInputRef}
+            />
+          </>
         )}
 
         {currentScreen === SCREENS.UPLOAD_FILES_SELECTED && (

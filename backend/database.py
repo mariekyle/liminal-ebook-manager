@@ -81,6 +81,21 @@ async def get_table_names(db: aiosqlite.Connection) -> set:
 async def run_titles_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for the new titles/editions schema."""
     
+    # Check for titles table columns
+    cursor = await db.execute("PRAGMA table_info(titles)")
+    columns = await cursor.fetchall()
+    existing_columns = {col[1] for col in columns}
+    
+    # Migration: Add completion_status column
+    if 'completion_status' not in existing_columns:
+        print("Migration: Adding 'completion_status' column to titles table...")
+        await db.execute("ALTER TABLE titles ADD COLUMN completion_status TEXT")
+    
+    # Migration: Add source_url column
+    if 'source_url' not in existing_columns:
+        print("Migration: Adding 'source_url' column to titles table...")
+        await db.execute("ALTER TABLE titles ADD COLUMN source_url TEXT")
+    
     # Ensure settings table exists
     await db.execute("""
         CREATE TABLE IF NOT EXISTS settings (
@@ -207,6 +222,7 @@ CREATE TABLE IF NOT EXISTS titles (
     summary TEXT,
     tags TEXT,                    -- JSON array: ["fantasy", "romance"]
     source_url TEXT,              -- For FanFiction: AO3/FFN URL
+    completion_status TEXT,       -- For FanFiction: Complete, WIP, Abandoned
     
     cover_color_1 TEXT,           -- Hex color for gradient
     cover_color_2 TEXT,

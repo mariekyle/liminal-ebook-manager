@@ -53,7 +53,7 @@ export default function LibraryChoice({ onChoice }) {
         <ChoiceCard
           icon={<PackageIcon />}
           title="Another format"
-          subtitle="Physical or audiobook"
+          subtitle="Physical, audiobook, or web-based"
           onClick={() => onChoice('manual')}
         />
       </div>

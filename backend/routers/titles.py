@@ -73,6 +73,7 @@ class TitleDetail(BaseModel):
     summary: Optional[str] = None
     tags: List[str] = []
     source_url: Optional[str] = None
+    completion_status: Optional[str] = None
     folder_path: Optional[str] = None  # From primary edition
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
@@ -182,6 +183,8 @@ class BookMetadataUpdate(BaseModel):
     series_number: Optional[str] = None
     category: Optional[str] = None
     publication_year: Optional[int] = None
+    source_url: Optional[str] = None
+    completion_status: Optional[str] = None
 
 
 class TitlesListResponse(BaseModel):
@@ -277,6 +280,7 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         summary=row["summary"],
         tags=parse_json_field(row["tags"]),
         source_url=row["source_url"] if "source_url" in row.keys() else None,
+        completion_status=row["completion_status"] if "completion_status" in row.keys() else None,
         folder_path=folder_path,
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
@@ -727,6 +731,14 @@ async def update_book_metadata(
         # 0 or negative means remove year
         updates.append("publication_year = ?")
         params.append(update.publication_year if update.publication_year > 0 else None)
+    
+    if update.source_url is not None:
+        updates.append("source_url = ?")
+        params.append(update.source_url if update.source_url else None)
+    
+    if update.completion_status is not None:
+        updates.append("completion_status = ?")
+        params.append(update.completion_status if update.completion_status else None)
     
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -1186,17 +1198,21 @@ class TBRCreate(BaseModel):
     category: Optional[str] = None
     tbr_priority: str = "normal"  # "normal" or "high"
     tbr_reason: Optional[str] = None
+    source_url: Optional[str] = None
+    completion_status: Optional[str] = None
 
 
 class TBRUpdate(BaseModel):
     """Request body for updating TBR-specific fields."""
     tbr_priority: Optional[str] = None
     tbr_reason: Optional[str] = None
+    source_url: Optional[str] = None
+    completion_status: Optional[str] = None
 
 
 class TBRAcquire(BaseModel):
     """Request body for converting TBR to library."""
-    format: Optional[str] = None  # "ebook", "physical", "audiobook"
+    format: Optional[str] = None  # "ebook", "physical", "audiobook", "web"
 
 
 class TBRSummary(BaseModel):
@@ -1305,12 +1321,14 @@ async def create_tbr(
         """INSERT INTO titles 
             (title, authors, series, series_number, category,
              is_tbr, tbr_priority, tbr_reason,
+             source_url, completion_status,
              cover_color_1, cover_color_2, status)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'Unread')""",
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'Unread')""",
         [
             data.title, json.dumps(data.authors),
             data.series, data.series_number, data.category,
             priority, data.tbr_reason,
+            data.source_url, data.completion_status,
             color1, color2
         ]
     )
@@ -1348,6 +1366,14 @@ async def update_tbr(
     if data.tbr_reason is not None:
         updates.append("tbr_reason = ?")
         params.append(data.tbr_reason or None)
+    
+    if data.source_url is not None:
+        updates.append("source_url = ?")
+        params.append(data.source_url or None)
+    
+    if data.completion_status is not None:
+        updates.append("completion_status = ?")
+        params.append(data.completion_status or None)
     
     if not updates:
         return {"status": "no_changes"}

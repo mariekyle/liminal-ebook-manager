@@ -289,6 +289,8 @@ export async function listTBR(params = {}) {
  * @param {string} data.category - Category (optional)
  * @param {string} data.tbr_priority - Priority: 'normal' or 'high'
  * @param {string} data.tbr_reason - Why you want to read this
+ * @param {string} data.source_url - Source URL for fanfiction (optional)
+ * @param {string} data.completion_status - 'Complete', 'WIP', or 'Abandoned' (optional)
  */
 export async function addToTBR(data) {
   return apiFetch('/tbr', {
@@ -298,11 +300,13 @@ export async function addToTBR(data) {
 }
 
 /**
- * Update a TBR item's priority or reason
+ * Update a TBR item's priority, reason, source URL, or completion status
  * @param {number} bookId - Book ID
  * @param {Object} data - Fields to update
  * @param {string} [data.tbr_priority] - Priority: 'normal' or 'high'
  * @param {string} [data.tbr_reason] - Why you want to read this
+ * @param {string} [data.source_url] - Source URL for fanfiction
+ * @param {string} [data.completion_status] - 'Complete', 'WIP', or 'Abandoned'
  */
 export async function updateTBR(bookId, data) {
   return apiFetch(`/tbr/${bookId}`, {
@@ -430,6 +434,21 @@ export async function cancelUpload(sessionId) {
     method: 'POST',
     body: JSON.stringify({
       session_id: sessionId,
+    }),
+  })
+}
+
+/**
+ * Link uploaded files to an existing title (TBR → Library conversion)
+ * @param {string} sessionId - Session ID from analyzeUploadedFiles
+ * @param {number} titleId - ID of existing title to link files to
+ */
+export async function linkFilesToTitle(sessionId, titleId) {
+  return apiFetch('/upload/link-to-title', {
+    method: 'POST',
+    body: JSON.stringify({
+      session_id: sessionId,
+      title_id: parseInt(titleId, 10),
     }),
   })
 }

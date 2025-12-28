@@ -4,6 +4,7 @@
  * Individual book card with:
  * - Expandable metadata editing
  * - Duplicate detection and resolution
+ * - Familiar title detection (database match)
  * - Category display with confidence
  */
 
@@ -36,12 +37,14 @@ export default function BookCard({
     onUpdate(book.id, { [field]: value });
   }, [book.id, onUpdate]);
 
-  const handleActionClick = useCallback((action) => {
-    onDuplicateAction(book.id, action);
+  const handleActionClick = useCallback((action, extraData = null) => {
+    onDuplicateAction(book.id, action, extraData);
   }, [book.id, onDuplicateAction]);
 
   const isSkipped = book.action === 'skip';
   const hasUnresolvedDuplicate = book.duplicate && !book.action;
+  const hasUnresolvedFamiliar = book.familiar_title && !book.duplicate && !book.action;
+  const needsAttention = hasUnresolvedDuplicate || hasUnresolvedFamiliar;
 
   return (
     <div
@@ -72,7 +75,7 @@ export default function BookCard({
         <div className="flex-1 min-w-0">
           <div className="text-sm text-[#aaa] flex items-center gap-1">
             📚 Book {index + 1} of {totalBooks} {isExpanded ? '▼' : '▶'}
-            {hasUnresolvedDuplicate && <span className="ml-1">⚠️</span>}
+            {needsAttention && <span className="ml-1">⚠️</span>}
           </div>
           <div className={`text-[15px] font-medium mt-1 ${isSkipped ? 'line-through' : ''}`}>
             {book.title}
@@ -89,7 +92,7 @@ export default function BookCard({
           className="px-4 pb-4 border-t border-[#3a3a3a]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Duplicate Banner */}
+          {/* Duplicate Banner (folder-based) */}
           {book.duplicate && (
             <DuplicateBanner
               duplicate={book.duplicate}
@@ -98,8 +101,18 @@ export default function BookCard({
             />
           )}
 
-          {/* Metadata Form - only show if not add_format and not skipped */}
-          {book.action !== 'add_format' && book.action !== 'skip' && (
+          {/* Familiar Title Banner (database-based) - only show if no folder duplicate */}
+          {book.familiar_title && !book.duplicate && (
+            <FamiliarTitleBanner
+              familiarTitle={book.familiar_title}
+              action={book.action}
+              fileCount={book.files.length}
+              onActionClick={handleActionClick}
+            />
+          )}
+
+          {/* Metadata Form - only show if not add_format/add_to_existing and not skipped */}
+          {book.action !== 'add_format' && book.action !== 'add_to_existing' && book.action !== 'skip' && (
             <div className="mt-4 space-y-4">
               {/* Author */}
               <div>
@@ -184,6 +197,89 @@ export default function BookCard({
       )}
     </div>
   );
+}
+
+
+/**
+ * FamiliarTitleBanner - Shows when a title matches an existing book in the database
+ */
+function FamiliarTitleBanner({ familiarTitle, action, fileCount, onActionClick }) {
+  // No action selected yet - show options
+  if (!action) {
+    return (
+      <div className="mt-4 p-4 rounded-lg bg-[#2a3a3a] border border-[#667eea]">
+        <div className="font-medium flex items-center gap-2 mb-2 text-[#e0e0e0]">
+          A Familiar Title
+        </div>
+        <p className="text-sm text-[#aaa] mb-3">
+          "{familiarTitle.title}" is in your library. {fileCount > 1 ? 'These files' : 'This file'} will be added as new format{fileCount > 1 ? 's' : ''}.
+        </p>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <ActionButton onClick={() => onActionClick('add_to_existing', { title_id: familiarTitle.title_id })}>
+            Add to Existing
+          </ActionButton>
+          <ActionButton onClick={() => onActionClick('skip')}>
+            Skip
+          </ActionButton>
+        </div>
+        <div className="mt-2 pt-2 border-t border-[#3a4a4a]">
+          <button
+            onClick={() => onActionClick('new')}
+            className="text-[12px] text-[#888] hover:text-[#667eea] underline"
+          >
+            Not the same? Add as separate title
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Action selected - show confirmation
+  if (action === 'add_to_existing') {
+    return (
+      <div className="mt-4 p-4 rounded-lg bg-[#2a3a2a] border border-[#28a745]">
+        <div className="font-medium flex items-center gap-2 mb-2 text-[#28a745]">
+          ✓ Adding to Existing Title
+        </div>
+        <p className="text-sm text-[#aaa] mb-3">
+          {fileCount > 1 ? 'These files' : 'This file'} will be added to "{familiarTitle.title}".
+        </p>
+        <ActionButton onClick={() => onActionClick(null)}>Change</ActionButton>
+      </div>
+    );
+  }
+
+  if (action === 'skip') {
+    return (
+      <div className="mt-4 p-4 rounded-lg bg-[#333] border border-[#666]">
+        <div className="font-medium flex items-center gap-2 mb-2 text-[#aaa]">
+          ⏭️ Skipping This Book
+        </div>
+        <p className="text-sm text-[#666] mb-3">
+          {fileCount > 1 ? 'These files' : 'This file'} will not be uploaded.
+        </p>
+        <ActionButton onClick={() => onActionClick(null)}>Undo</ActionButton>
+      </div>
+    );
+  }
+
+  if (action === 'new') {
+    return (
+      <div className="mt-4 p-4 rounded-lg bg-[#2a3a2a] border border-[#28a745]">
+        <div className="font-medium flex items-center gap-2 mb-2 text-[#28a745]">
+          ✓ Uploading as New Title
+        </div>
+        <p className="text-sm text-[#aaa] mb-3">
+          This will be uploaded as a separate title, not linked to "{familiarTitle.title}".
+        </p>
+        <ActionButton onClick={() => onActionClick(null)}>Change</ActionButton>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 

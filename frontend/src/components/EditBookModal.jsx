@@ -9,7 +9,9 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
     series: '',
     series_number: '',
     category: '',
-    publication_year: ''
+    publication_year: '',
+    source_url: '',
+    completion_status: ''
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -27,7 +29,9 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
         series: book.series || '',
         series_number: book.series_number || '',
         category: book.category || '',
-        publication_year: book.publication_year?.toString() || ''
+        publication_year: book.publication_year?.toString() || '',
+        source_url: book.source_url || '',
+        completion_status: book.completion_status || ''
       })
       setError(null)
       setShowSeriesSuggestions(false)
@@ -128,7 +132,9 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
         series: formData.series.trim(),
         series_number: formData.series_number.trim(),
         category: formData.category,
-        publication_year: formData.publication_year ? parseInt(formData.publication_year, 10) : 0
+        publication_year: formData.publication_year ? parseInt(formData.publication_year, 10) : 0,
+        source_url: formData.source_url.trim() || null,
+        completion_status: formData.completion_status || null
       }
 
       const updatedBook = await updateBookMetadata(book.id, updateData)
@@ -295,6 +301,50 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
                 />
               </div>
             </div>
+
+            {/* FanFiction-specific fields */}
+            {formData.category === 'FanFiction' && (
+              <>
+                {/* Completion Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    Completion Status
+                  </label>
+                  <div className="flex gap-2">
+                    {['Complete', 'WIP', 'Abandoned'].map(status => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => handleInputChange('completion_status', 
+                          formData.completion_status === status ? '' : status
+                        )}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          formData.completion_status === status
+                            ? 'bg-library-accent text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Source URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    Source URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.source_url}
+                    onChange={(e) => handleInputChange('source_url', e.target.value)}
+                    placeholder="https://archiveofourown.org/works/..."
+                    className="w-full bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none"
+                  />
+                </div>
+              </>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">

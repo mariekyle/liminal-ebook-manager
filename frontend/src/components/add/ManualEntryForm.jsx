@@ -4,12 +4,14 @@
  * Form for manually adding books to library (physical, audiobook, web-based)
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { listAuthors } from '../../api'
 
 export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
   const [form, setForm] = useState({
     title: '',
-    author: '',
+    authors: [],
+    authorInput: '',
     series: '',
     seriesNumber: '',
     category: 'FanFiction',
@@ -19,14 +21,43 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
   })
   
   const [errors, setErrors] = useState({})
+  const [allAuthors, setAllAuthors] = useState([])
+  const [filteredAuthors, setFilteredAuthors] = useState([])
+  const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
+  const authorInputRef = useRef(null)
   
   const showFanficFields = form.category === 'FanFiction'
   const showUrlField = form.format === 'web' || showFanficFields
   
+  // Fetch all authors on mount
+  useEffect(() => {
+    listAuthors().then(data => {
+      setAllAuthors(data.map(a => a.name))
+    }).catch(console.error)
+  }, [])
+  
+  // Filter authors as user types
+  useEffect(() => {
+    if (form.authorInput.trim()) {
+      const query = form.authorInput.toLowerCase()
+      const filtered = allAuthors
+        .filter(a => a.toLowerCase().includes(query))
+        .filter(a => !form.authors.includes(a))
+        .slice(0, 8)
+      setFilteredAuthors(filtered)
+      setShowAuthorDropdown(filtered.length > 0)
+    } else {
+      setFilteredAuthors([])
+      setShowAuthorDropdown(false)
+    }
+  }, [form.authorInput, allAuthors, form.authors])
+  
   const validate = () => {
     const newErrors = {}
     if (!form.title.trim()) newErrors.title = 'Title is required'
-    if (!form.author.trim()) newErrors.author = 'Author is required'
+    if (form.authors.length === 0 && !form.authorInput.trim()) {
+      newErrors.author = 'At least one author is required'
+    }
     if (form.format === 'web' && !form.sourceUrl.trim()) {
       newErrors.sourceUrl = 'URL is required for web-based books'
     }
@@ -36,11 +67,24 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
   
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!validate()) return
+    
+    // Add any pending author input
+    let finalAuthors = [...form.authors]
+    if (form.authorInput.trim() && !finalAuthors.includes(form.authorInput.trim())) {
+      finalAuthors.push(form.authorInput.trim())
+    }
+    
+    if (!form.title.trim() || finalAuthors.length === 0) {
+      const newErrors = {}
+      if (!form.title.trim()) newErrors.title = 'Title is required'
+      if (finalAuthors.length === 0) newErrors.author = 'At least one author is required'
+      setErrors(newErrors)
+      return
+    }
     
     onSubmit({
       title: form.title.trim(),
-      authors: [form.author.trim()],
+      authors: finalAuthors,
       series: form.series.trim() || null,
       series_number: form.seriesNumber.trim() || null,
       category: form.category,
@@ -58,9 +102,38 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
     }
   }
   
+  const addAuthor = (author) => {
+    if (author && !form.authors.includes(author)) {
+      setForm(prev => ({
+        ...prev,
+        authors: [...prev.authors, author],
+        authorInput: ''
+      }))
+      setShowAuthorDropdown(false)
+      setErrors(prev => ({ ...prev, author: null }))
+    }
+  }
+  
+  const removeAuthor = (author) => {
+    setForm(prev => ({
+      ...prev,
+      authors: prev.authors.filter(a => a !== author)
+    }))
+  }
+  
+  const handleAuthorKeyDown = (e) => {
+    if (e.key === 'Enter' && form.authorInput.trim()) {
+      e.preventDefault()
+      addAuthor(form.authorInput.trim())
+    } else if (e.key === 'Backspace' && !form.authorInput && form.authors.length > 0) {
+      // Remove last author if input is empty
+      removeAuthor(form.authors[form.authors.length - 1])
+    }
+  }
+  
   return (
     <div className="py-4">
-      <div className="mb-6">
+      <div className="mb-6 text-center max-w-md mx-auto">
         <h1 className="text-2xl font-bold text-white mb-2">Another Format</h1>
         <p className="text-gray-400">What do you know about it?</p>
       </div>
@@ -110,18 +183,62 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
         </div>
         
         {/* Author */}
-        <div>
+        <div className="relative">
           <label className="block text-sm text-gray-400 mb-2">Author *</label>
+          
+          {/* Author chips */}
+          {form.authors.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {form.authors.map(author => (
+                <span
+                  key={author}
+                  className="bg-library-accent/20 text-library-accent px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                >
+                  {author}
+                  <button
+                    type="button"
+                    onClick={() => removeAuthor(author)}
+                    className="hover:text-white transition-colors"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          
           <input
+            ref={authorInputRef}
             type="text"
-            value={form.author}
-            onChange={(e) => updateForm('author', e.target.value)}
-            placeholder="Who wrote it?"
+            value={form.authorInput}
+            onChange={(e) => updateForm('authorInput', e.target.value)}
+            onKeyDown={handleAuthorKeyDown}
+            onFocus={() => form.authorInput.trim() && setShowAuthorDropdown(filteredAuthors.length > 0)}
+            onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
+            placeholder={form.authors.length > 0 ? "Add another author..." : "Who wrote it?"}
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.author ? 'border-red-500' : 'border-gray-700'
             }`}
           />
+          
+          {/* Autocomplete dropdown */}
+          {showAuthorDropdown && (
+            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {filteredAuthors.map(author => (
+                <button
+                  key={author}
+                  type="button"
+                  onClick={() => addAuthor(author)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+                >
+                  {author}
+                </button>
+              ))}
+            </div>
+          )}
+          
           {errors.author && <p className="text-red-400 text-sm mt-1">{errors.author}</p>}
+          <p className="text-gray-500 text-xs mt-1">Press Enter to add multiple authors</p>
         </div>
         
         {/* Series Row */}

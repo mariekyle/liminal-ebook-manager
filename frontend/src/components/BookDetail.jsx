@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -129,6 +129,16 @@ function BookDetail() {
   const [selectedPriority, setSelectedPriority] = useState('normal')
   const [priorityLoading, setPriorityLoading] = useState(false)
   const [priorityStatus, setPriorityStatus] = useState(null)
+  
+  // TBR reason editing state
+  const [isEditingReason, setIsEditingReason] = useState(false)
+  const [reasonDraft, setReasonDraft] = useState('')
+  const [reasonLoading, setReasonLoading] = useState(false)
+  
+  // TBR acquire modal state
+  const [showAcquireModal, setShowAcquireModal] = useState(false)
+  const [acquireLoading, setAcquireLoading] = useState(false)
+  const [acquireFormat, setAcquireFormat] = useState('ebook')
 
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
@@ -534,6 +544,36 @@ function BookDetail() {
     }
   }
 
+  const handleReasonSave = async () => {
+    setReasonLoading(true)
+    try {
+      await updateTBR(id, { tbr_reason: reasonDraft || null })
+      setBook(prev => ({ ...prev, tbr_reason: reasonDraft || null }))
+      setIsEditingReason(false)
+    } catch (err) {
+      console.error('Failed to update reason:', err)
+    } finally {
+      setReasonLoading(false)
+    }
+  }
+
+  const handleAcquire = async () => {
+    setAcquireLoading(true)
+    try {
+      await convertTBRToLibrary(id, { format: acquireFormat })
+      // Refresh the book data - it's now in the library
+      const updatedBook = await getBook(id)
+      setBook(updatedBook)
+      setShowAcquireModal(false)
+      // Reset to library defaults
+      setSelectedStatus(updatedBook.status || 'Unread')
+    } catch (err) {
+      console.error('Failed to acquire book:', err)
+    } finally {
+      setAcquireLoading(false)
+    }
+  }
+
   const handleMetadataSave = (updatedBook) => {
     setBook(updatedBook)
     // Update local state that might be affected
@@ -708,6 +748,13 @@ function BookDetail() {
             </button>
           </div>
           
+          {/* Completion status for non-complete works - on its own line above author */}
+          {book.completion_status && book.completion_status !== 'Complete' && (
+            <div className="text-gray-500 text-sm mb-1">
+              {book.completion_status}
+            </div>
+          )}
+          
           <p className="text-gray-400 mb-1">
             by{' '}
             {book.authors?.length > 0 ? (
@@ -727,9 +774,21 @@ function BookDetail() {
             )}
           </p>
           
-          {/* Year - below author */}
+          {/* Source URL - clickable link */}
+          {book.source_url && (
+            <a
+              href={book.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-library-accent hover:underline text-sm mb-2 block truncate"
+            >
+              {book.source_url.replace(/^https?:\/\//, '').split('/').slice(0, 2).join('/')}...
+            </a>
+          )}
+          
+          {/* Year - below source URL */}
           {book.publication_year && (
-            <p className="text-gray-500 text-sm mb-4">
+            <p className="text-gray-500 text-sm mb-2">
               {book.publication_year}
             </p>
           )}
@@ -751,75 +810,148 @@ function BookDetail() {
       {/* Reading Tracker Card OR TBR Card */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
         {book.is_tbr ? (
-          /* TBR Priority UI */
-          <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-gray-400 text-sm">Priority:</span>
-            
-            {/* Priority Chip + Popup */}
-            <div className="relative">
-              <button
-                onClick={() => setPriorityPopupOpen(!priorityPopupOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
-              >
-                <span className={`text-sm ${
-                  selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
-                }`}>
-                  {selectedPriority === 'high' ? '⭐ High Priority' : 'Normal'}
+          /* TBR UI */
+          <div>
+            <div className="flex flex-wrap gap-3 items-center mb-4">
+              <span className="text-gray-400 text-sm">Priority:</span>
+              
+              {/* Priority Chip + Popup */}
+              <div className="relative">
+                <button
+                  onClick={() => setPriorityPopupOpen(!priorityPopupOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+                >
+                  <span className={`text-sm ${
+                    selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
+                  }`}>
+                    {selectedPriority === 'high' ? '⭐ High Priority' : 'Normal'}
+                  </span>
+                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {priorityPopupOpen && (
+                  <>
+                    {/* Backdrop to close popup */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setPriorityPopupOpen(false)}
+                    />
+                    {/* Popup */}
+                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                      <button
+                        onClick={() => {
+                          handlePriorityChange('normal')
+                          setPriorityPopupOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                          selectedPriority === 'normal' ? 'text-library-accent' : 'text-gray-300'
+                        }`}
+                      >
+                        Normal
+                      </button>
+                      <button
+                        onClick={() => {
+                          handlePriorityChange('high')
+                          setPriorityPopupOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                          selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
+                        }`}
+                      >
+                        ⭐ High Priority
+                      </button>
+                    </div>
+                  </>
+                )}
+                
+                {priorityStatus === 'saved' && (
+                  <span className="text-green-400 text-sm ml-1">✓</span>
+                )}
+                {priorityStatus === 'error' && (
+                  <span className="text-red-400 text-sm ml-1">!</span>
+                )}
+              </div>
+              
+              {/* Category - Read Only Chip */}
+              {selectedCategory && (
+                <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
+                  {selectedCategory}
                 </span>
-                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              
-              {priorityPopupOpen && (
-                <>
-                  {/* Backdrop to close popup */}
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setPriorityPopupOpen(false)}
-                  />
-                  {/* Popup */}
-                  <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
-                    <button
-                      onClick={() => {
-                        handlePriorityChange('normal')
-                        setPriorityPopupOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        selectedPriority === 'normal' ? 'text-library-accent' : 'text-gray-300'
-                      }`}
-                    >
-                      Normal
-                    </button>
-                    <button
-                      onClick={() => {
-                        handlePriorityChange('high')
-                        setPriorityPopupOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
-                      }`}
-                    >
-                      ⭐ High Priority
-                    </button>
-                  </div>
-                </>
-              )}
-              
-              {priorityStatus === 'saved' && (
-                <span className="text-green-400 text-sm ml-1">✓</span>
-              )}
-              {priorityStatus === 'error' && (
-                <span className="text-red-400 text-sm ml-1">!</span>
               )}
             </div>
             
-            {/* Category - Read Only Chip */}
-            {selectedCategory && (
-              <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
-                {selectedCategory}
-              </span>
+            {/* TBR Reason */}
+            {(book.tbr_reason || isEditingReason) && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Why this one?</span>
+                  {!isEditingReason && (
+                    <button
+                      onClick={() => {
+                        setReasonDraft(book.tbr_reason || '')
+                        setIsEditingReason(true)
+                      }}
+                      className="text-library-accent text-sm hover:underline"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {isEditingReason ? (
+                  <div>
+                    <textarea
+                      value={reasonDraft}
+                      onChange={(e) => setReasonDraft(e.target.value)}
+                      placeholder="A friend recommended it, saw it on TikTok..."
+                      rows={2}
+                      className="w-full bg-library-bg border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-library-accent resize-none"
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setIsEditingReason(false)}
+                        className="text-gray-400 text-sm hover:text-gray-300"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleReasonSave}
+                        disabled={reasonLoading}
+                        className="text-library-accent text-sm hover:underline disabled:opacity-50"
+                      >
+                        {reasonLoading ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-300 text-sm italic">"{book.tbr_reason}"</p>
+                )}
+              </div>
             )}
+            
+            {/* Add reason link if none exists */}
+            {!book.tbr_reason && !isEditingReason && (
+              <button
+                onClick={() => {
+                  setReasonDraft('')
+                  setIsEditingReason(true)
+                }}
+                className="text-library-accent text-sm hover:underline mb-4 block"
+              >
+                + Add why you want to read this
+              </button>
+            )}
+            
+            {/* "I got this book" button */}
+            <div className="pt-3 border-t border-gray-700">
+              <button
+                onClick={() => setShowAcquireModal(true)}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+              >
+                I got this book!
+              </button>
+            </div>
           </div>
         ) : (
           /* Library Reading Tracker UI */
@@ -1287,6 +1419,108 @@ function BookDetail() {
         onClose={() => setEditModalOpen(false)}
         onSave={handleMetadataSave}
       />
+      
+      {/* Acquire Book Modal (TBR → Library) */}
+      {showAcquireModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-library-card rounded-xl p-6 max-w-sm w-full">
+            <h2 className="text-xl font-semibold text-white mb-2">🎉 You got it!</h2>
+            <p className="text-gray-400 text-sm mb-4">
+              Moving "{book.title}" to your library.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-2">What format?</label>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Navigate to upload page with linkTo param
+                    navigate(`/add?mode=upload&linkTo=${book.id}`)
+                  }}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+                >
+                  <div className="text-white font-medium">Ebook</div>
+                  <div className="text-gray-400 text-sm">Upload your files now</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setAcquireLoading(true)
+                    try {
+                      await convertTBRToLibrary(id, { format: 'physical' })
+                      const updatedBook = await getBook(id)
+                      setBook(updatedBook)
+                      setShowAcquireModal(false)
+                      setSelectedStatus(updatedBook.status || 'Unread')
+                    } catch (err) {
+                      console.error('Failed to acquire book:', err)
+                    } finally {
+                      setAcquireLoading(false)
+                    }
+                  }}
+                  disabled={acquireLoading}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  <div className="text-white font-medium">Physical book</div>
+                  <div className="text-gray-400 text-sm">No files to upload</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setAcquireLoading(true)
+                    try {
+                      await convertTBRToLibrary(id, { format: 'audiobook' })
+                      const updatedBook = await getBook(id)
+                      setBook(updatedBook)
+                      setShowAcquireModal(false)
+                      setSelectedStatus(updatedBook.status || 'Unread')
+                    } catch (err) {
+                      console.error('Failed to acquire book:', err)
+                    } finally {
+                      setAcquireLoading(false)
+                    }
+                  }}
+                  disabled={acquireLoading}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  <div className="text-white font-medium">Audiobook</div>
+                  <div className="text-gray-400 text-sm">No files to upload</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setAcquireLoading(true)
+                    try {
+                      await convertTBRToLibrary(id, { format: 'web' })
+                      const updatedBook = await getBook(id)
+                      setBook(updatedBook)
+                      setShowAcquireModal(false)
+                      setSelectedStatus(updatedBook.status || 'Unread')
+                    } catch (err) {
+                      console.error('Failed to acquire book:', err)
+                    } finally {
+                      setAcquireLoading(false)
+                    }
+                  }}
+                  disabled={acquireLoading}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  <div className="text-white font-medium">Web-based</div>
+                  <div className="text-gray-400 text-sm">For read tracking only</div>
+                </button>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowAcquireModal(false)}
+              className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-500 transition-colors mt-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

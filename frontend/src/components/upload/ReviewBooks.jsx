@@ -27,8 +27,11 @@ export default function ReviewBooks({
     setExpandedBookId(prev => prev === bookId ? null : bookId);
   }, []);
 
-  // Count books needing attention (duplicates without action)
-  const needsAttention = books.filter(b => b.duplicate && !b.action).length;
+  // Count books needing attention (duplicates or familiar titles without action)
+  const needsAttention = books.filter(b => 
+    (b.duplicate && !b.action) || 
+    (b.familiar_title && !b.duplicate && !b.action)
+  ).length;
 
   return (
     <div>

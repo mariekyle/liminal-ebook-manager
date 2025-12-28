@@ -4,14 +4,20 @@ Upload Router for Liminal Book Uploader
 API Endpoints:
 - POST /api/upload/analyze-batch — Upload files, extract metadata, group into books
 - POST /api/upload/finalize-batch — Confirm and move files to NAS
+- POST /api/upload/link-to-title — Link uploaded files to existing title (TBR → Library)
 - POST /api/upload/cancel — Cancel session and clean up temp files
 """
 
 import os
+import json
+import shutil
+import re
+from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 
+from database import get_db
 from services.upload_service import (
     create_session,
     get_session,
@@ -56,6 +62,14 @@ class DuplicateInfo(BaseModel):
     message: str
 
 
+class FamiliarTitle(BaseModel):
+    """Info about a matching title already in the library database."""
+    title_id: int
+    title: str
+    authors: list[str]
+    category: Optional[str] = None
+
+
 class BookInfo(BaseModel):
     id: str
     title: str
@@ -66,6 +80,7 @@ class BookInfo(BaseModel):
     category_confidence: float
     files: list[dict]
     duplicate: Optional[dict] = None
+    familiar_title: Optional[FamiliarTitle] = None  # Matching title from database
 
 
 class AnalyzeResponse(BaseModel):
@@ -77,13 +92,14 @@ class AnalyzeResponse(BaseModel):
 
 class BookAction(BaseModel):
     id: str
-    action: str  # 'new', 'add_format', 'replace', 'skip'
+    action: str  # 'new', 'add_format', 'add_to_existing', 'replace', 'skip'
     title: Optional[str] = None
     author: Optional[str] = None
     series: Optional[str] = None
     series_number: Optional[str] = None
     category: Optional[str] = None
     existing_folder: Optional[str] = None
+    title_id: Optional[int] = None  # For add_to_existing action
 
 
 class FinalizeRequest(BaseModel):
@@ -114,6 +130,20 @@ class CancelResponse(BaseModel):
     files_cleaned: int
 
 
+class LinkToTitleRequest(BaseModel):
+    """Request body for linking uploaded files to existing title."""
+    session_id: str
+    title_id: int
+
+
+class LinkToTitleResponse(BaseModel):
+    """Response for link-to-title endpoint."""
+    success: bool
+    title_id: int
+    files_moved: int
+    folder_path: str
+
+
 # =============================================================================
 # BACKGROUND TASK WRAPPER
 # =============================================================================
@@ -132,13 +162,91 @@ async def trigger_library_sync():
 
 
 # =============================================================================
+# FAMILIAR TITLE CHECK
+# =============================================================================
+
+async def check_familiar_titles(db, books: list) -> dict:
+    """
+    Check if any books being uploaded have matching titles in the database.
+    Returns a dict mapping book.id -> FamiliarTitle info.
+    
+    This catches cases where a book exists in the library database but the
+    folder-based duplicate check didn't find it (e.g., renamed folders).
+    """
+    from difflib import SequenceMatcher
+    
+    results = {}
+    
+    # Get all existing titles from database
+    cursor = await db.execute("""
+        SELECT id, title, authors, category 
+        FROM titles 
+        WHERE is_tbr = 0
+    """)
+    existing_titles = await cursor.fetchall()
+    
+    for book in books:
+        # Skip if already marked as duplicate by folder check
+        if book.duplicate:
+            continue
+        
+        # Normalize the uploading book's title for comparison
+        book_title_lower = book.title.lower().strip()
+        
+        best_match = None
+        best_score = 0
+        
+        for existing in existing_titles:
+            existing_title = existing["title"]
+            existing_title_lower = existing_title.lower().strip()
+            
+            # Check for exact match (case-insensitive)
+            if book_title_lower == existing_title_lower:
+                # Parse authors from JSON
+                try:
+                    authors = json.loads(existing["authors"]) if existing["authors"] else []
+                except:
+                    authors = []
+                
+                best_match = FamiliarTitle(
+                    title_id=existing["id"],
+                    title=existing_title,
+                    authors=authors,
+                    category=existing["category"]
+                )
+                break
+            
+            # Check for high similarity match
+            similarity = SequenceMatcher(None, book_title_lower, existing_title_lower).ratio()
+            if similarity > 0.85 and similarity > best_score:
+                try:
+                    authors = json.loads(existing["authors"]) if existing["authors"] else []
+                except:
+                    authors = []
+                
+                best_match = FamiliarTitle(
+                    title_id=existing["id"],
+                    title=existing_title,
+                    authors=authors,
+                    category=existing["category"]
+                )
+                best_score = similarity
+        
+        if best_match:
+            results[book.id] = best_match
+    
+    return results
+
+
+# =============================================================================
 # ENDPOINTS
 # =============================================================================
 
 @router.post("/analyze-batch", response_model=AnalyzeResponse)
 async def analyze_batch(
     files: list[UploadFile] = File(...),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    db = Depends(get_db)
 ):
     """
     Upload files for analysis.
@@ -148,6 +256,7 @@ async def analyze_batch(
     - Groups files into books by title/author similarity
     - Detects category (FanFiction, Fiction, Non-Fiction)
     - Checks for duplicates against existing library
+    - Checks for familiar titles in database
     
     Returns session_id and list of detected books for review.
     """
@@ -201,8 +310,11 @@ async def analyze_batch(
         # Apply category detection
         apply_category_detection(books, uploaded_files)
         
-        # Check for duplicates
+        # Check for duplicates (folder-based)
         await check_duplicates(books, BOOKS_DIR)
+        
+        # Check for familiar titles (database-based)
+        familiar_titles = await check_familiar_titles(db, books)
         
         # Build response
         book_infos = [
@@ -215,7 +327,8 @@ async def analyze_batch(
                 category=book.category,
                 category_confidence=book.category_confidence,
                 files=book.files,
-                duplicate=book.duplicate
+                duplicate=book.duplicate,
+                familiar_title=familiar_titles.get(book.id)
             )
             for book in books
         ]
@@ -234,17 +347,124 @@ async def analyze_batch(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def add_files_to_existing_title(session, book_id: str, title_id: int, db, books_dir: str) -> dict:
+    """
+    Add uploaded files to an existing title in the database.
+    Creates folder if needed, moves files, creates edition record.
+    """
+    # Find the book in session
+    book = None
+    for b in session.books:
+        if b.id == book_id:
+            book = b
+            break
+    
+    if not book:
+        return {
+            'id': book_id,
+            'status': 'error',
+            'message': 'Book not found in session'
+        }
+    
+    # Get title info from database
+    cursor = await db.execute(
+        "SELECT id, title, authors, category FROM titles WHERE id = ?",
+        (title_id,)
+    )
+    title_row = await cursor.fetchone()
+    
+    if not title_row:
+        return {
+            'id': book_id,
+            'status': 'error',
+            'message': f'Title {title_id} not found in database'
+        }
+    
+    # Parse authors
+    try:
+        authors = json.loads(title_row["authors"]) if title_row["authors"] else []
+    except:
+        authors = []
+    
+    primary_author = authors[0] if authors else "Unknown"
+    title = title_row["title"]
+    category = title_row["category"] or "Uncategorized"
+    
+    # Build folder path: Category/Author - Title/
+    safe_author = sanitize_filename(primary_author)
+    safe_title = sanitize_filename(title)
+    folder_name = f"{safe_author} - {safe_title}"
+    folder_path = os.path.join(books_dir, category, folder_name)
+    
+    # Create folder if it doesn't exist
+    os.makedirs(folder_path, exist_ok=True)
+    
+    # Collect file IDs from this book group
+    file_ids = [f['id'] for f in book.files]
+    
+    # Find matching UploadedFile objects
+    files_to_move = [f for f in session.files if f.id in file_ids]
+    
+    files_moved = 0
+    for uploaded_file in files_to_move:
+        dest_path = os.path.join(folder_path, uploaded_file.original_name)
+        
+        # Handle duplicate filenames
+        base, ext = os.path.splitext(dest_path)
+        counter = 1
+        while os.path.exists(dest_path):
+            dest_path = f"{base}_{counter}{ext}"
+            counter += 1
+        
+        # Move file
+        shutil.move(uploaded_file.temp_path, dest_path)
+        files_moved += 1
+    
+    # Create edition record pointing to this folder
+    # Get the primary file for the edition
+    primary_file = files_to_move[0].original_name if files_to_move else None
+    
+    await db.execute("""
+        INSERT INTO editions (title_id, format, folder_path, file_path, created_at)
+        VALUES (?, 'ebook', ?, ?, datetime('now'))
+    """, (title_id, folder_path, os.path.join(folder_path, primary_file) if primary_file else None))
+    
+    await db.commit()
+    
+    return {
+        'id': book_id,
+        'status': 'format_added',
+        'folder': folder_path,
+        'files_added': files_moved,
+        'message': f'Added {files_moved} file(s) to existing title'
+    }
+
+
+def sanitize_filename(name: str) -> str:
+    """Remove or replace characters that are invalid in filenames."""
+    # Remove/replace problematic characters
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, '')
+    # Replace multiple spaces with single space
+    name = ' '.join(name.split())
+    # Limit length
+    return name[:100].strip()
+
+
 @router.post("/finalize-batch", response_model=FinalizeResponse)
 async def finalize_batch_endpoint(
     request: FinalizeRequest,
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    db = Depends(get_db)
 ):
     """
     Finalize the upload - move files to NAS.
     
     Each book can have an action:
     - 'new': Create new book folder
-    - 'add_format': Add files to existing book folder
+    - 'add_format': Add files to existing book folder (folder-based duplicate)
+    - 'add_to_existing': Add files to existing title in database
     - 'replace': Delete existing and create new
     - 'skip': Don't upload this book
     
@@ -258,11 +478,39 @@ async def finalize_batch_endpoint(
         )
     
     try:
-        # Convert to dicts for the service
-        books_data = [book.dict() for book in request.books]
+        results = []
         
-        # Finalize each book
-        results = await finalize_batch(session, books_data, BOOKS_DIR)
+        # Handle add_to_existing separately (needs database access)
+        add_to_existing_books = [b for b in request.books if b.action == 'add_to_existing']
+        other_books = [b for b in request.books if b.action != 'add_to_existing']
+        
+        # Process add_to_existing books
+        for book_action in add_to_existing_books:
+            if not book_action.title_id:
+                results.append({
+                    'id': book_action.id,
+                    'status': 'error',
+                    'message': 'Missing title_id for add_to_existing action'
+                })
+                continue
+            
+            try:
+                result = await add_files_to_existing_title(
+                    session, book_action.id, book_action.title_id, db, BOOKS_DIR
+                )
+                results.append(result)
+            except Exception as e:
+                results.append({
+                    'id': book_action.id,
+                    'status': 'error',
+                    'message': str(e)
+                })
+        
+        # Process other books through normal finalize_batch
+        if other_books:
+            books_data = [book.dict() for book in other_books]
+            other_results = await finalize_batch(session, books_data, BOOKS_DIR)
+            results.extend(other_results)
         
         # Clean up session
         cleanup_session(request.session_id)
@@ -309,6 +557,135 @@ async def cancel_upload(request: CancelRequest):
         success=True,
         files_cleaned=files_cleaned
     )
+
+
+def sanitize_filename(name: str) -> str:
+    """Remove or replace characters that aren't safe for filenames."""
+    # Replace common problematic characters
+    replacements = {
+        '/': '-',
+        '\\': '-',
+        ':': '-',
+        '*': '',
+        '?': '',
+        '"': "'",
+        '<': '',
+        '>': '',
+        '|': '-',
+    }
+    result = name
+    for old, new in replacements.items():
+        result = result.replace(old, new)
+    
+    # Remove leading/trailing whitespace and dots
+    result = result.strip().strip('.')
+    
+    # Collapse multiple spaces/dashes
+    result = re.sub(r'[\s]+', ' ', result)
+    result = re.sub(r'-+', '-', result)
+    
+    return result[:200]  # Limit length
+
+
+@router.post("/link-to-title", response_model=LinkToTitleResponse)
+async def link_files_to_title(
+    request: LinkToTitleRequest,
+    background_tasks: BackgroundTasks = None,
+    db = Depends(get_db)
+):
+    """
+    Link uploaded files to an existing title (TBR → Library conversion).
+    
+    This endpoint:
+    1. Gets the uploaded files from the session
+    2. Moves them to the appropriate NAS folder
+    3. Creates an ebook edition for the existing title
+    4. Converts the title from TBR to library (is_tbr = 0)
+    """
+    session = get_session(request.session_id)
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Upload session not found or expired"
+        )
+    
+    # Get the title from database
+    cursor = await db.execute("SELECT * FROM titles WHERE id = ?", [request.title_id])
+    title_row = await cursor.fetchone()
+    
+    if not title_row:
+        raise HTTPException(status_code=404, detail="Title not found")
+    
+    try:
+        # Parse existing data
+        title = title_row["title"]
+        authors_json = title_row["authors"]
+        authors = json.loads(authors_json) if authors_json else ["Unknown Author"]
+        primary_author = authors[0] if authors else "Unknown Author"
+        category = title_row["category"] or "Fiction"
+        
+        # Create folder name: "Author - Title"
+        safe_author = sanitize_filename(primary_author)
+        safe_title = sanitize_filename(title)
+        folder_name = f"{safe_author} - {safe_title}"
+        
+        # Determine destination based on category
+        dest_folder = Path(BOOKS_DIR) / category / folder_name
+        
+        # Create destination folder
+        dest_folder.mkdir(parents=True, exist_ok=True)
+        
+        # Get all file IDs from all book groups in session
+        all_file_ids = set()
+        for book in session.books:
+            for f in book.files:
+                all_file_ids.add(f['id'])
+        
+        # Find actual UploadedFile objects from session.files
+        files_to_move = [f for f in session.files if f.id in all_file_ids]
+        
+        # Move all files from session to destination
+        moved_files = []
+        for uploaded_file in files_to_move:
+            if os.path.exists(uploaded_file.temp_path):
+                dest_path = dest_folder / uploaded_file.original_name
+                shutil.move(uploaded_file.temp_path, str(dest_path))
+                moved_files.append(str(dest_path))
+        
+        # Create edition record
+        file_path = moved_files[0] if moved_files else None
+        await db.execute("""
+            INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+            VALUES (?, 'ebook', ?, ?, DATE('now'))
+        """, [request.title_id, file_path, str(dest_folder)])
+        
+        # Convert from TBR to library
+        await db.execute("""
+            UPDATE titles 
+            SET is_tbr = 0, 
+                status = 'Unread',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, [request.title_id])
+        
+        await db.commit()
+        
+        # Clean up session
+        cleanup_session(request.session_id)
+        
+        # Trigger library sync in background
+        if background_tasks:
+            background_tasks.add_task(trigger_library_sync)
+        
+        return LinkToTitleResponse(
+            success=True,
+            title_id=request.title_id,
+            files_moved=len(moved_files),
+            folder_path=str(dest_folder)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/health")
