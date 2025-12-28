@@ -59,7 +59,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
     <div className="py-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white mb-2">Add a Future Read</h1>
-        <p className="text-gray-400">Save it for later</p>
+        <p className="text-gray-400">You'll get to it when you get to it</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
@@ -70,7 +70,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
             type="text"
             value={form.title}
             onChange={(e) => updateForm('title', e.target.value)}
-            placeholder="Enter book title"
+            placeholder="What's it called?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.title ? 'border-red-500' : 'border-gray-700'
             }`}
@@ -85,7 +85,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
             type="text"
             value={form.author}
             onChange={(e) => updateForm('author', e.target.value)}
-            placeholder="Enter author name"
+            placeholder="Who wrote it?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.author ? 'border-red-500' : 'border-gray-700'
             }`}
@@ -198,7 +198,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
         
         {/* Reason */}
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Why do you want to read this?</label>
+          <label className="block text-sm text-gray-400 mb-2">Why this one?</label>
           <textarea
             value={form.reason}
             onChange={(e) => updateForm('reason', e.target.value)}
@@ -222,7 +222,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
             disabled={isSubmitting}
             className="flex-1 bg-library-accent text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50"
           >
-            {isSubmitting ? 'Adding...' : 'Add to TBR'}
+            {isSubmitting ? 'Saving...' : 'Save for Someday'}
           </button>
         </div>
       </form>

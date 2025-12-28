@@ -37,21 +37,20 @@ export default function AddChoice({ onChoice }) {
   return (
     <div className="py-8">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white mb-2">Add to Liminal</h1>
-        <p className="text-gray-400">What would you like to add?</p>
+        <h1 className="text-2xl font-bold text-white mb-2">What are we adding?</h1>
       </div>
       
       <div className="space-y-4 max-w-md mx-auto">
         <ChoiceCard
           icon={<BookIcon />}
           title="A book I have"
-          subtitle="Add to your library"
+          subtitle="Add to library"
           onClick={() => onChoice('library')}
         />
         <ChoiceCard
           icon={<BookmarkIcon />}
           title="A future read"
-          subtitle="Save to your TBR list"
+          subtitle="Save to TBR for later"
           onClick={() => onChoice('tbr')}
         />
       </div>

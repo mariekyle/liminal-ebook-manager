@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -123,6 +123,12 @@ function BookDetail() {
   // Popup state for status and rating
   const [statusPopupOpen, setStatusPopupOpen] = useState(false)
   const [ratingPopupOpen, setRatingPopupOpen] = useState(false)
+  
+  // TBR priority state
+  const [priorityPopupOpen, setPriorityPopupOpen] = useState(false)
+  const [selectedPriority, setSelectedPriority] = useState('normal')
+  const [priorityLoading, setPriorityLoading] = useState(false)
+  const [priorityStatus, setPriorityStatus] = useState(null)
 
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
@@ -155,6 +161,7 @@ function BookDetail() {
         setSelectedRating(bookData.rating || null)
         setDateStarted(bookData.date_started || '')
         setDateFinished(bookData.date_finished || '')
+        setSelectedPriority(bookData.tbr_priority || 'normal')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
           const content = notesData[0].content || ''
@@ -501,6 +508,32 @@ function BookDetail() {
     }
   }
 
+  const handlePriorityChange = async (newPriority) => {
+    if (priorityLoading || newPriority === selectedPriority) return
+    
+    const previousPriority = selectedPriority
+    setPriorityLoading(true)
+    setPriorityStatus(null)
+    
+    // Optimistic update
+    setSelectedPriority(newPriority)
+    
+    try {
+      await updateTBR(id, { tbr_priority: newPriority })
+      setBook(prev => ({ ...prev, tbr_priority: newPriority }))
+      setPriorityStatus('saved')
+      setTimeout(() => setPriorityStatus(null), 2000)
+    } catch (err) {
+      console.error('Failed to update priority:', err)
+      // Revert on failure
+      setSelectedPriority(previousPriority)
+      setPriorityStatus('error')
+      setTimeout(() => setPriorityStatus(null), 3000)
+    } finally {
+      setPriorityLoading(false)
+    }
+  }
+
   const handleMetadataSave = (updatedBook) => {
     setBook(updatedBook)
     // Update local state that might be affected
@@ -715,169 +748,245 @@ function BookDetail() {
         </div>
       </div>
 
-      {/* Reading Tracker Card */}
+      {/* Reading Tracker Card OR TBR Card */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
-        <div className="flex flex-wrap gap-3 items-center mb-4">
-          {/* Status Chip + Popup */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setStatusPopupOpen(!statusPopupOpen)
-                setRatingPopupOpen(false)
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
-            >
-              <span className={`text-sm ${
-                selectedStatus === 'Finished' ? 'text-green-400' :
-                selectedStatus === 'In Progress' ? 'text-blue-400' :
-                selectedStatus === 'DNF' ? 'text-red-400' :
-                'text-gray-300'
-              }`}>
-                {getLabel(selectedStatus)}
-              </span>
-              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+        {book.is_tbr ? (
+          /* TBR Priority UI */
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-gray-400 text-sm">Priority:</span>
             
-            {statusPopupOpen && (
-              <>
-                {/* Backdrop to close popup */}
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setStatusPopupOpen(false)}
-                />
-                {/* Popup */}
-                <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
-                  {getStatusOptions().map(({ value, label }) => (
+            {/* Priority Chip + Popup */}
+            <div className="relative">
+              <button
+                onClick={() => setPriorityPopupOpen(!priorityPopupOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+              >
+                <span className={`text-sm ${
+                  selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
+                }`}>
+                  {selectedPriority === 'high' ? '⭐ High Priority' : 'Normal'}
+                </span>
+                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {priorityPopupOpen && (
+                <>
+                  {/* Backdrop to close popup */}
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setPriorityPopupOpen(false)}
+                  />
+                  {/* Popup */}
+                  <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
                     <button
-                      key={value}
                       onClick={() => {
-                        handleStatusChange(value)
-                        setStatusPopupOpen(false)
+                        handlePriorityChange('normal')
+                        setPriorityPopupOpen(false)
                       }}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        selectedStatus === value ? 'text-library-accent' : 'text-gray-300'
+                        selectedPriority === 'normal' ? 'text-library-accent' : 'text-gray-300'
                       }`}
                     >
-                      {label}
+                      Normal
                     </button>
-                  ))}
-                </div>
-              </>
-            )}
-            
-            {statusStatus === 'saved' && (
-              <span className="text-green-400 text-sm ml-1">✓</span>
-            )}
-            {statusStatus === 'error' && (
-              <span className="text-red-400 text-sm ml-1">!</span>
-            )}
-          </div>
-          
-          {/* Rating Chip + Popup */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setRatingPopupOpen(!ratingPopupOpen)
-                setStatusPopupOpen(false)
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
-            >
-              <span className="text-sm text-gray-300">
-                {selectedRating 
-                  ? `${'★'.repeat(selectedRating)}${'☆'.repeat(5-selectedRating)}`
-                  : 'No Rating'
-                }
-              </span>
-              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {ratingPopupOpen && (
-              <>
-                {/* Backdrop to close popup */}
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setRatingPopupOpen(false)}
-                />
-                {/* Popup */}
-                <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[180px]">
-                  <button
-                    onClick={() => {
-                      handleRatingChange('')
-                      setRatingPopupOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                      !selectedRating ? 'text-library-accent' : 'text-gray-300'
-                    }`}
-                  >
-                    No Rating
-                  </button>
-                  {[5, 4, 3, 2, 1].map(num => (
                     <button
-                      key={num}
                       onClick={() => {
-                        handleRatingChange(num.toString())
-                        setRatingPopupOpen(false)
+                        handlePriorityChange('high')
+                        setPriorityPopupOpen(false)
                       }}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                        selectedRating === num ? 'text-library-accent' : 'text-gray-300'
+                        selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
                       }`}
                     >
-                      {'★'.repeat(num)}{'☆'.repeat(5-num)} <span className="text-gray-500 ml-1">{RATING_LABELS[num]}</span>
+                      ⭐ High Priority
                     </button>
-                  ))}
-                </div>
-              </>
-            )}
+                  </div>
+                </>
+              )}
+              
+              {priorityStatus === 'saved' && (
+                <span className="text-green-400 text-sm ml-1">✓</span>
+              )}
+              {priorityStatus === 'error' && (
+                <span className="text-red-400 text-sm ml-1">!</span>
+              )}
+            </div>
             
-            {ratingStatus === 'saved' && (
-              <span className="text-green-400 text-sm ml-1">✓</span>
+            {/* Category - Read Only Chip */}
+            {selectedCategory && (
+              <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
+                {selectedCategory}
+              </span>
             )}
-            {ratingStatus === 'error' && (
-              <span className="text-red-400 text-sm ml-1">!</span>
-            )}
           </div>
-          
-          {/* Category - Read Only Chip */}
-          {selectedCategory && (
-            <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
-              {selectedCategory}
-            </span>
-          )}
-        </div>
-        
-        {/* Reading Dates */}
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-gray-400 text-sm">Started:</label>
-            <input
-              type="date"
-              value={dateStarted}
-              onChange={(e) => handleDateChange('started', e.target.value)}
-              disabled={datesLoading}
-              className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-gray-400 text-sm">Finished:</label>
-            <input
-              type="date"
-              value={dateFinished}
-              onChange={(e) => handleDateChange('finished', e.target.value)}
-              disabled={datesLoading}
-              className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-            />
-          </div>
-          {datesStatus === 'saved' && (
-            <span className="text-green-400 text-sm">✓</span>
-          )}
-          {datesStatus === 'error' && (
-            <span className="text-red-400 text-sm">Failed</span>
-          )}
-        </div>
+        ) : (
+          /* Library Reading Tracker UI */
+          <>
+            <div className="flex flex-wrap gap-3 items-center mb-4">
+              {/* Status Chip + Popup */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setStatusPopupOpen(!statusPopupOpen)
+                    setRatingPopupOpen(false)
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+                >
+                  <span className={`text-sm ${
+                    selectedStatus === 'Finished' ? 'text-green-400' :
+                    selectedStatus === 'In Progress' ? 'text-blue-400' :
+                    selectedStatus === 'DNF' ? 'text-red-400' :
+                    'text-gray-300'
+                  }`}>
+                    {getLabel(selectedStatus)}
+                  </span>
+                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {statusPopupOpen && (
+                  <>
+                    {/* Backdrop to close popup */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setStatusPopupOpen(false)}
+                    />
+                    {/* Popup */}
+                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                      {getStatusOptions().map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            handleStatusChange(value)
+                            setStatusPopupOpen(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                            selectedStatus === value ? 'text-library-accent' : 'text-gray-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                
+                {statusStatus === 'saved' && (
+                  <span className="text-green-400 text-sm ml-1">✓</span>
+                )}
+                {statusStatus === 'error' && (
+                  <span className="text-red-400 text-sm ml-1">!</span>
+                )}
+              </div>
+              
+              {/* Rating Chip + Popup */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setRatingPopupOpen(!ratingPopupOpen)
+                    setStatusPopupOpen(false)
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+                >
+                  <span className="text-sm text-gray-300">
+                    {selectedRating 
+                      ? `${'★'.repeat(selectedRating)}${'☆'.repeat(5-selectedRating)}`
+                      : 'No Rating'
+                    }
+                  </span>
+                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {ratingPopupOpen && (
+                  <>
+                    {/* Backdrop to close popup */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setRatingPopupOpen(false)}
+                    />
+                    {/* Popup */}
+                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[180px]">
+                      <button
+                        onClick={() => {
+                          handleRatingChange('')
+                          setRatingPopupOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                          !selectedRating ? 'text-library-accent' : 'text-gray-300'
+                        }`}
+                      >
+                        No Rating
+                      </button>
+                      {[5, 4, 3, 2, 1].map(num => (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            handleRatingChange(num.toString())
+                            setRatingPopupOpen(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                            selectedRating === num ? 'text-library-accent' : 'text-gray-300'
+                          }`}
+                        >
+                          {'★'.repeat(num)}{'☆'.repeat(5-num)} <span className="text-gray-500 ml-1">{RATING_LABELS[num]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                
+                {ratingStatus === 'saved' && (
+                  <span className="text-green-400 text-sm ml-1">✓</span>
+                )}
+                {ratingStatus === 'error' && (
+                  <span className="text-red-400 text-sm ml-1">!</span>
+                )}
+              </div>
+              
+              {/* Category - Read Only Chip */}
+              {selectedCategory && (
+                <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
+                  {selectedCategory}
+                </span>
+              )}
+            </div>
+            
+            {/* Reading Dates */}
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-400 text-sm">Started:</label>
+                <input
+                  type="date"
+                  value={dateStarted}
+                  onChange={(e) => handleDateChange('started', e.target.value)}
+                  disabled={datesLoading}
+                  className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-gray-400 text-sm">Finished:</label>
+                <input
+                  type="date"
+                  value={dateFinished}
+                  onChange={(e) => handleDateChange('finished', e.target.value)}
+                  disabled={datesLoading}
+                  className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+                />
+              </div>
+              {datesStatus === 'saved' && (
+                <span className="text-green-400 text-sm">✓</span>
+              )}
+              {datesStatus === 'error' && (
+                <span className="text-red-400 text-sm">Failed</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* About This Book Card */}

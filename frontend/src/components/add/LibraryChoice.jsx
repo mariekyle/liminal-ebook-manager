@@ -40,20 +40,20 @@ export default function LibraryChoice({ onChoice }) {
     <div className="py-8">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-white mb-2">Add to Library</h1>
-        <p className="text-gray-400">How do you have this book?</p>
+        <p className="text-gray-400">What format is it in?</p>
       </div>
       
       <div className="space-y-4 max-w-md mx-auto">
         <ChoiceCard
           icon={<FileIcon />}
-          title="I have ebook files"
+          title="Digital files"
           subtitle="Upload .epub, .mobi, .pdf, etc."
           onClick={() => onChoice('ebook')}
         />
         <ChoiceCard
           icon={<PackageIcon />}
-          title="Other format"
-          subtitle="Physical, audiobook, or web-based"
+          title="Another format"
+          subtitle="Physical or audiobook"
           onClick={() => onChoice('manual')}
         />
       </div>

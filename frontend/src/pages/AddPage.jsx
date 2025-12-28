@@ -360,9 +360,9 @@ export default function AddPage() {
       case SCREENS.MANUAL_FORM:
         return { title: 'Add to Library', showBack: true }
       case SCREENS.UPLOAD_SELECT:
-        return { title: 'Upload Ebooks', showBack: true }
+        return { title: 'Add to Library', showBack: true }
       case SCREENS.UPLOAD_FILES_SELECTED:
-        return { title: 'Upload Ebooks', showBack: true }
+        return { title: 'Add to Library', showBack: true }
       case SCREENS.UPLOAD_ANALYZING:
         return { title: 'Analyzing...', showBack: false }
       case SCREENS.UPLOAD_REVIEW:

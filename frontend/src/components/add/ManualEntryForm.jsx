@@ -12,7 +12,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
     author: '',
     series: '',
     seriesNumber: '',
-    category: 'Fiction',
+    category: 'FanFiction',
     format: 'physical',
     sourceUrl: '',
     completionStatus: '',
@@ -61,8 +61,8 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
   return (
     <div className="py-4">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Add to Library</h1>
-        <p className="text-gray-400">Enter the book details</p>
+        <h1 className="text-2xl font-bold text-white mb-2">Another Format</h1>
+        <p className="text-gray-400">What do you know about it?</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
@@ -89,6 +89,9 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
               </button>
             ))}
           </div>
+          {form.format === 'web' && (
+            <p className="text-gray-500 text-sm mt-2 italic">Choose this option for web-based works</p>
+          )}
         </div>
         
         {/* Title */}
@@ -98,7 +101,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
             type="text"
             value={form.title}
             onChange={(e) => updateForm('title', e.target.value)}
-            placeholder="Enter book title"
+            placeholder="What's it called?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.title ? 'border-red-500' : 'border-gray-700'
             }`}
@@ -113,7 +116,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
             type="text"
             value={form.author}
             onChange={(e) => updateForm('author', e.target.value)}
-            placeholder="Enter author name"
+            placeholder="Who wrote it?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.author ? 'border-red-500' : 'border-gray-700'
             }`}

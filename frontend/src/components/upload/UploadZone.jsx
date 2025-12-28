@@ -37,6 +37,11 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
 
   return (
     <div>
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold text-white mb-2">Upload digital files</h1>
+      </div>
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -64,7 +69,7 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
       >
         <div className="text-5xl mb-4">📚</div>
         <div className="text-base mb-2">
-          {isDragging ? 'Drop files here' : 'Tap to select files'}
+          {isDragging ? 'Drop files here' : 'Tap to choose files'}
         </div>
         <div className="text-sm text-[#aaa]">
           EPUB • PDF • MOBI • AZW3 • HTML
@@ -73,7 +78,7 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
 
       {/* Tips */}
       <div className="border-t border-[#3a3a3a] pt-5 mt-5">
-        <h3 className="text-sm text-[#aaa] mb-3">Quick Tips</h3>
+        <h3 className="text-sm text-[#aaa] mb-3">A few things to know:</h3>
         <ul className="space-y-2">
           <Tip>Select all files at once</Tip>
           <Tip>Fanfic formats auto-group by title</Tip>

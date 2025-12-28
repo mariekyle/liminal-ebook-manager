@@ -149,14 +149,24 @@ function TBRList() {
   return (
     <div className="px-4 py-4 md:px-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-1">TBR</h1>
-        <p className="text-gray-400 text-sm">
-          {books.length === 0 
-            ? "Stories calling to you"
-            : `${books.length} ${books.length === 1 ? 'story' : 'stories'} waiting to be discovered`
-          }
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">TBR</h1>
+          <p className="text-gray-400 text-sm">
+            {books.length === 0 
+              ? "Stories calling to you"
+              : `${books.length} ${books.length === 1 ? 'story' : 'stories'} waiting to be discovered`
+            }
+          </p>
+        </div>
+        {books.length > 0 && (
+          <button
+            onClick={() => navigate('/add?mode=tbr')}
+            className="bg-library-accent text-white text-sm px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            + Add
+          </button>
+        )}
       </div>
 
       {books.length === 0 ? (
