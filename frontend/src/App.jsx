@@ -5,7 +5,6 @@ import BookDetail from './components/BookDetail'
 import SeriesDetail from './components/SeriesDetail'
 import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
-import TBRList from './components/TBRList'
 import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
 import Header from './components/Header'
@@ -69,7 +68,8 @@ function App() {
           <Route path="/series/:name" element={<SeriesDetail />} />
           <Route path="/authors" element={<AuthorsList />} />
           <Route path="/author/:name" element={<AuthorDetail />} />
-          <Route path="/tbr" element={<TBRList />} />
+          {/* Redirect /tbr to library with wishlist filter */}
+          <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/add" element={<AddPage />} />
           {/* Redirect old /upload URL to /add */}
