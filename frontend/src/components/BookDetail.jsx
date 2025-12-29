@@ -140,6 +140,12 @@ function BookDetail() {
   const [acquireLoading, setAcquireLoading] = useState(false)
   const [acquireFormat, setAcquireFormat] = useState('ebook')
 
+  // Mobile tab state
+  const [activeTab, setActiveTab] = useState('details')
+  
+  // Date editors visibility
+  const [showDateEditors, setShowDateEditors] = useState(false)
+
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
 
@@ -158,6 +164,8 @@ function BookDetail() {
   useEffect(() => {
     setLoading(true)
     setError(null)
+    setShowDateEditors(false)
+    setActiveTab('details')
     
     Promise.all([
       getBook(id),
@@ -722,10 +730,10 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Book Header */}
-      <div className="flex flex-col sm:flex-row gap-6 mb-6">
-        {/* Cover */}
-        <div className="w-32 sm:w-40 shrink-0">
+      {/* Book Header - Horizontal on desktop, stacked on mobile */}
+      <div className="flex flex-col md:flex-row gap-6 mb-6">
+        {/* Cover - larger on desktop */}
+        <div className="w-28 md:w-48 shrink-0 mx-auto md:mx-0">
           <GradientCover
             title={book.title}
             author={primaryAuthor}
@@ -735,16 +743,9 @@ function BookDetail() {
           />
         </div>
         
-        {/* Title, Author, Read Time */}
+        {/* Content Area */}
         <div className="flex-1 min-w-0">
-          {/* Series badge - above title */}
-          {book.series && (
-            <div className="text-gray-500 text-xs mb-1">
-              {book.series} #{book.series_number || '?'}
-            </div>
-          )}
-          
-          {/* Edit button - positioned at top right of content area */}
+          {/* Edit button - positioned at top right */}
           <div className="flex justify-end mb-2">
             <button
               onClick={() => setEditModalOpen(true)}
@@ -757,18 +758,25 @@ function BookDetail() {
             </button>
           </div>
           
-          <h1 className="text-2xl font-bold text-white mb-1">
+          {/* Series badge */}
+          {book.series && (
+            <div className="text-gray-500 text-xs mb-1">
+              {book.series} #{book.series_number || '?'}
+            </div>
+          )}
+          
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-1">
             {book.title}
           </h1>
           
-          {/* Completion status for non-complete works - on its own line above author */}
+          {/* Completion status */}
           {book.completion_status && book.completion_status !== 'Complete' && (
             <div className="text-gray-500 text-sm mb-1">
               {book.completion_status}
             </div>
           )}
           
-          <p className="text-gray-400 mb-1">
+          <p className="text-gray-400 mb-2">
             by{' '}
             {book.authors?.length > 0 ? (
               book.authors.map((author, index) => (
@@ -787,7 +795,7 @@ function BookDetail() {
             )}
           </p>
           
-          {/* Source URL - clickable link */}
+          {/* Source URL */}
           {book.source_url && (
             <a
               href={book.source_url}
@@ -799,29 +807,66 @@ function BookDetail() {
             </a>
           )}
           
-          {/* Year - below source URL */}
-          {book.publication_year && (
-            <p className="text-gray-500 text-sm mb-2">
-              {book.publication_year}
-            </p>
-          )}
-          
-          {/* Estimated Read Time - Prominent Display (only for owned books) */}
-          {!isWishlist && readTimeData && (
-            <div className="bg-library-card rounded-lg px-4 py-3 inline-block">
-              <div className="text-2xl font-semibold text-white">
-                {readTimeData.display}
+          {/* Year and Read Time in a row on desktop */}
+          <div className="flex flex-wrap items-center gap-4 mt-3">
+            {book.publication_year && (
+              <span className="text-gray-500 text-sm">
+                {book.publication_year}
+              </span>
+            )}
+            
+            {/* Estimated Read Time (only for owned books) */}
+            {!isWishlist && readTimeData && (
+              <div className="bg-library-card rounded-lg px-3 py-2">
+                <span className="text-lg font-semibold text-white">{readTimeData.display}</span>
+                <span className="text-gray-400 text-sm ml-2">{readTimeData.microcopy}</span>
               </div>
-              <div className="text-gray-400 text-sm">
-                {readTimeData.microcopy}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Mobile Tab Navigation - only show on mobile for owned books */}
+      {!isWishlist && (
+        <div className="md:hidden mb-4">
+          <div className="flex border-b border-gray-700">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'details'
+                  ? 'text-library-accent border-b-2 border-library-accent'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setActiveTab('notes')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'notes'
+                  ? 'text-library-accent border-b-2 border-library-accent'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Notes
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'history'
+                  ? 'text-library-accent border-b-2 border-library-accent'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              History
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Reading Tracker Card OR TBR Card */}
-      <div className="bg-library-card rounded-lg p-4 mb-6">
+      {/* On mobile: show in Details tab OR History tab. On desktop: always show */}
+      <div className={`bg-library-card rounded-lg p-4 mb-6 ${!isWishlist && activeTab !== 'details' && activeTab !== 'history' ? 'hidden md:block' : ''}`}>
         {isWishlist ? (
           /* TBR UI */
           <div>
@@ -1101,33 +1146,66 @@ function BookDetail() {
               )}
             </div>
             
-            {/* Reading Dates */}
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex items-center gap-2">
-                <label className="text-gray-400 text-sm">Started:</label>
-                <input
-                  type="date"
-                  value={dateStarted}
-                  onChange={(e) => handleDateChange('started', e.target.value)}
-                  disabled={datesLoading}
-                  className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-                />
+            {/* Reading History - Desktop inline, Mobile in History tab only */}
+            <div className={`mt-4 pt-4 border-t border-gray-700 ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-400">Reading History</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-gray-400 text-sm">Finished:</label>
-                <input
-                  type="date"
-                  value={dateFinished}
-                  onChange={(e) => handleDateChange('finished', e.target.value)}
-                  disabled={datesLoading}
-                  className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              {datesStatus === 'saved' && (
-                <span className="text-green-400 text-sm">✓</span>
+              
+              {(dateStarted || dateFinished) ? (
+                <div className="flex items-center justify-between bg-library-bg rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 text-sm">Read #1</span>
+                    <span className="text-gray-300 text-sm">
+                      {dateStarted ? new Date(dateStarted + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '?'}
+                      {' — '}
+                      {dateFinished ? new Date(dateFinished + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'ongoing'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowDateEditors(!showDateEditors)}
+                    className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+                    aria-label="Edit dates"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No reading dates recorded</p>
               )}
-              {datesStatus === 'error' && (
-                <span className="text-red-400 text-sm">Failed</span>
+              
+              {/* Date editors - shown when edit button clicked */}
+              {showDateEditors && (
+                <div className="mt-3 flex flex-wrap gap-4 items-center">
+                  <div className="flex items-center gap-2">
+                    <label className="text-gray-400 text-sm">Started:</label>
+                    <input
+                      type="date"
+                      value={dateStarted}
+                      onChange={(e) => handleDateChange('started', e.target.value)}
+                      disabled={datesLoading}
+                      className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-gray-400 text-sm">Finished:</label>
+                    <input
+                      type="date"
+                      value={dateFinished}
+                      onChange={(e) => handleDateChange('finished', e.target.value)}
+                      disabled={datesLoading}
+                      className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
+                    />
+                  </div>
+                  {datesStatus === 'saved' && (
+                    <span className="text-green-400 text-sm">✓</span>
+                  )}
+                  {datesStatus === 'error' && (
+                    <span className="text-red-400 text-sm">Failed</span>
+                  )}
+                </div>
               )}
             </div>
           </>
@@ -1135,8 +1213,9 @@ function BookDetail() {
       </div>
 
       {/* About This Book Card (hide for wishlist - no metadata yet) */}
+      {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && (book.summary || (book.tags && book.tags.length > 0) || book.word_count) && (
-        <div className="bg-library-card rounded-lg p-4 mb-6">
+        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
           
           {/* Summary */}
@@ -1175,7 +1254,8 @@ function BookDetail() {
       )}
 
       {/* Notes Section */}
-      <div className="bg-library-card rounded-lg p-4 mb-6">
+      {/* On mobile: only show in Notes tab (or always for wishlist). On desktop: always show */}
+      <div className={`bg-library-card rounded-lg p-4 mb-6 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-medium text-gray-400">Notes</h2>
           
@@ -1327,8 +1407,9 @@ function BookDetail() {
       )}
 
       {/* Backlinks Section (hide for wishlist items) */}
+      {/* On mobile: only show in Notes tab. On desktop: always show */}
       {!isWishlist && (backlinks.length > 0 || backlinksLoading) && (
-        <div className="bg-library-card rounded-lg p-4 mb-6">
+        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
           <h2 className="text-sm font-medium text-gray-400 mb-3">
             Referenced by {!backlinksLoading && <span className="text-gray-500">({backlinks.length})</span>}
           </h2>
@@ -1357,8 +1438,9 @@ function BookDetail() {
       )}
 
       {/* Series Section (hide for wishlist items) */}
+      {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && book.series && (
-        <div className="bg-library-card rounded-lg overflow-hidden mb-6">
+        <div className={`bg-library-card rounded-lg overflow-hidden mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-400">
               {book.series}
@@ -1416,8 +1498,9 @@ function BookDetail() {
       )}
 
       {/* File Location (hide for wishlist items - no files yet) */}
+      {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && book.folder_path && (
-        <div className="text-gray-500 text-xs">
+        <div className={`text-gray-500 text-xs ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <span className="font-medium">Location: </span>
           <code className="bg-library-card px-2 py-1 rounded">
             {book.folder_path}
