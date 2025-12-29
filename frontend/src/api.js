@@ -47,6 +47,7 @@ export async function checkHealth() {
  * @param {string} params.search - Search in title/author
  * @param {string} params.sort - Sort field (title, author, series, updated, year)
  * @param {string} params.order - Sort order (asc, desc)
+ * @param {string} params.acquisition - Filter by acquisition status: 'owned', 'wishlist', or 'all'
  * @param {number} params.limit - Max results
  * @param {number} params.offset - Pagination offset
  */

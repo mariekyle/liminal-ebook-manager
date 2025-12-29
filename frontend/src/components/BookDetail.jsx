@@ -809,7 +809,7 @@ function BookDetail() {
 
       {/* Reading Tracker Card OR TBR Card */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
-        {book.is_tbr ? (
+        {book.acquisition_status === 'wishlist' ? (
           /* TBR UI */
           <div>
             <div className="flex flex-wrap gap-3 items-center mb-4">
