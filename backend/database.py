@@ -101,6 +101,19 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
         print("Migration: Adding 'is_orphaned' column to titles table...")
         await db.execute("ALTER TABLE titles ADD COLUMN is_orphaned INTEGER DEFAULT 0")
     
+    # Migration: Add acquisition_status column (Phase 5.1)
+    if 'acquisition_status' not in existing_columns:
+        print("Migration: Adding 'acquisition_status' column to titles table...")
+        await db.execute("ALTER TABLE titles ADD COLUMN acquisition_status TEXT DEFAULT 'owned'")
+        
+        # Migrate existing data: is_tbr = 1 → 'wishlist', is_tbr = 0 → 'owned'
+        print("Migration: Populating acquisition_status from is_tbr values...")
+        await db.execute("UPDATE titles SET acquisition_status = 'wishlist' WHERE is_tbr = 1")
+        await db.execute("UPDATE titles SET acquisition_status = 'owned' WHERE is_tbr = 0 OR is_tbr IS NULL")
+        
+        # Create index for faster queries
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_titles_acquisition_status ON titles(acquisition_status)")
+    
     # Ensure settings table exists
     await db.execute("""
         CREATE TABLE IF NOT EXISTS settings (

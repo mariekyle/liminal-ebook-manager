@@ -54,6 +54,7 @@ class TitleSummary(BaseModel):
     cover_text_color: Optional[str] = None
     has_notes: bool = False
     created_at: Optional[str] = None
+    acquisition_status: str = 'owned'  # 'owned' or 'wishlist'
 
 
 class TitleDetail(BaseModel):
@@ -79,9 +80,10 @@ class TitleDetail(BaseModel):
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
     created_at: Optional[str] = None
-    is_tbr: bool = False
+    is_tbr: bool = False  # KEEP for backward compatibility
     tbr_priority: Optional[str] = None
     tbr_reason: Optional[str] = None
+    acquisition_status: str = 'owned'  # 'owned' or 'wishlist'
     editions: List[EditionSummary] = []
 
 
@@ -215,6 +217,14 @@ def row_to_title_summary(row) -> TitleSummary:
     # Generate cover style from title/author
     cover_style = get_cover_style(row["title"] or "Untitled", primary_author, Theme.DARK)
     
+    # Determine acquisition status (fallback to is_tbr for backward compatibility)
+    if "acquisition_status" in row.keys() and row["acquisition_status"]:
+        acquisition_status = row["acquisition_status"]
+    elif "is_tbr" in row.keys():
+        acquisition_status = 'wishlist' if row["is_tbr"] else 'owned'
+    else:
+        acquisition_status = 'owned'
+    
     return TitleSummary(
         id=row["id"],
         title=row["title"],
@@ -229,7 +239,8 @@ def row_to_title_summary(row) -> TitleSummary:
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
         has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False,
-        created_at=row["created_at"] if "created_at" in row.keys() else None
+        created_at=row["created_at"] if "created_at" in row.keys() else None,
+        acquisition_status=acquisition_status
     )
 
 
@@ -264,6 +275,14 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         if ed["format"] == "ebook" and ed["folder_path"] and not folder_path:
             folder_path = ed["folder_path"]
     
+    # Determine acquisition status (fallback to is_tbr for backward compatibility)
+    if "acquisition_status" in row.keys() and row["acquisition_status"]:
+        acquisition_status = row["acquisition_status"]
+    elif "is_tbr" in row.keys():
+        acquisition_status = 'wishlist' if row["is_tbr"] else 'owned'
+    else:
+        acquisition_status = 'owned'
+    
     return TitleDetail(
         id=row["id"],
         title=row["title"],
@@ -289,6 +308,7 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         is_tbr=bool(row["is_tbr"]) if "is_tbr" in row.keys() else False,
         tbr_priority=row["tbr_priority"] if "tbr_priority" in row.keys() else None,
         tbr_reason=row["tbr_reason"] if "tbr_reason" in row.keys() else None,
+        acquisition_status=acquisition_status,
         editions=editions
     )
 
@@ -346,16 +366,31 @@ async def list_titles(
     order: str = Query("asc", description="Sort order: asc or desc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
+    acquisition: Optional[str] = Query(None, description="Filter by acquisition status: owned, wishlist, or omit for all"),
     db = Depends(get_db)
 ):
     """
     List all titles with optional filtering and sorting.
     
     This is the main endpoint for the library grid view.
+    
+    The `acquisition` parameter filters by acquisition status:
+    - 'owned': Only books you have (default library view)
+    - 'wishlist': Only wishlist items (was TBR)
+    - omit: Show both owned and wishlist items
     """
     # Build query dynamically based on filters
-    where_clauses = ["is_tbr = 0"]  # Exclude TBR items from main library
+    where_clauses = []
     params = []
+    
+    # Acquisition status filter (default to 'owned' for backward compatibility)
+    if acquisition == 'wishlist':
+        where_clauses.append("acquisition_status = 'wishlist'")
+    elif acquisition == 'all':
+        pass  # No filter - show both owned and wishlist
+    else:
+        # Default to 'owned' (includes explicit 'owned' or None/omitted)
+        where_clauses.append("acquisition_status = 'owned'")
     
     if category:
         where_clauses.append("category = ?")
@@ -386,7 +421,7 @@ async def list_titles(
                 f'%"{tag}"]%',     # Tag followed by ] (last item)
             ])
     
-    where_sql = " AND ".join(where_clauses)
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
     # Build ORDER BY clause with case-insensitive sorting for text columns
     sort_order = "DESC" if order.lower() == "desc" else "ASC"
@@ -441,10 +476,11 @@ async def list_books(
     order: str = Query("asc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
+    acquisition: Optional[str] = Query(None),
     db = Depends(get_db)
 ):
     """Backward compatible endpoint - calls list_titles."""
-    return await list_titles(category, status, series, tags, search, sort, order, limit, offset, db)
+    return await list_titles(category, status, series, tags, search, sort, order, limit, offset, acquisition, db)
 
 
 @router.get("/books/match")
@@ -1010,7 +1046,7 @@ async def list_series(
                 COUNT(*) as book_count,
                 SUM(CASE WHEN t.status = 'Finished' THEN 1 ELSE 0 END) as books_read
             FROM titles t
-            WHERE t.series IS NOT NULL AND t.series != '' AND t.is_tbr = 0
+            WHERE t.series IS NOT NULL AND t.series != '' AND t.acquisition_status = 'owned'
     """
     
     if category:
@@ -1081,7 +1117,7 @@ async def get_series_detail(
         """
         SELECT id, title, series_number, status, rating, authors
         FROM titles 
-        WHERE series = ? AND is_tbr = 0
+        WHERE series = ? AND acquisition_status = 'owned'
         ORDER BY CAST(series_number AS FLOAT) ASC, id ASC
         """,
         [series_name]
@@ -1130,12 +1166,12 @@ async def list_tags(
     """
     if category:
         cursor = await db.execute(
-            "SELECT tags FROM titles WHERE category = ? AND tags IS NOT NULL AND tags != '[]' AND is_tbr = 0",
+            "SELECT tags FROM titles WHERE category = ? AND tags IS NOT NULL AND tags != '[]' AND acquisition_status = 'owned'",
             [category]
         )
     else:
         cursor = await db.execute(
-            "SELECT tags FROM titles WHERE tags IS NOT NULL AND tags != '[]' AND is_tbr = 0"
+            "SELECT tags FROM titles WHERE tags IS NOT NULL AND tags != '[]' AND acquisition_status = 'owned'"
         )
     
     rows = await cursor.fetchall()
@@ -1322,8 +1358,8 @@ async def create_tbr(
             (title, authors, series, series_number, category,
              is_tbr, tbr_priority, tbr_reason,
              source_url, completion_status,
-             cover_color_1, cover_color_2, status)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'Unread')""",
+             cover_color_1, cover_color_2, status, acquisition_status)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'Unread', 'wishlist')""",
         [
             data.title, json.dumps(data.authors),
             data.series, data.series_number, data.category,
@@ -1492,8 +1528,8 @@ async def create_title_manual(
     cursor = await db.execute(
         """INSERT INTO titles 
             (title, authors, series, series_number, category,
-             source_url, is_tbr, cover_color_1, cover_color_2, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unread')""",
+             source_url, is_tbr, cover_color_1, cover_color_2, status, acquisition_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unread', ?)""",
         [
             data.title, 
             json.dumps(data.authors),
@@ -1503,7 +1539,8 @@ async def create_title_manual(
             data.source_url,
             1 if data.is_tbr else 0,
             color1, 
-            color2
+            color2,
+            'wishlist' if data.is_tbr else 'owned'
         ]
     )
     title_id = cursor.lastrowid
