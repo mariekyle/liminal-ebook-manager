@@ -96,6 +96,11 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
         print("Migration: Adding 'source_url' column to titles table...")
         await db.execute("ALTER TABLE titles ADD COLUMN source_url TEXT")
     
+    # Migration: Add is_orphaned column
+    if 'is_orphaned' not in existing_columns:
+        print("Migration: Adding 'is_orphaned' column to titles table...")
+        await db.execute("ALTER TABLE titles ADD COLUMN is_orphaned INTEGER DEFAULT 0")
+    
     # Ensure settings table exists
     await db.execute("""
         CREATE TABLE IF NOT EXISTS settings (
@@ -237,6 +242,9 @@ CREATE TABLE IF NOT EXISTS titles (
     is_tbr INTEGER DEFAULT 0,     -- Boolean: 1 = on TBR list
     tbr_priority TEXT DEFAULT 'normal',  -- "normal" or "high"
     tbr_reason TEXT,              -- Why you want to read this
+    
+    -- Orphan tracking (folder missing from filesystem)
+    is_orphaned INTEGER DEFAULT 0, -- Boolean: 1 = folder not found during sync
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

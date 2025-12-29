@@ -390,11 +390,11 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
     title = title_row["title"]
     category = title_row["category"] or "Uncategorized"
     
-    # Build folder path: Category/Author - Title/
+    # Build folder path: /books/Author - Title/ (flat, no category subfolder)
     safe_author = sanitize_filename(primary_author)
     safe_title = sanitize_filename(title)
     folder_name = f"{safe_author} - {safe_title}"
-    folder_path = os.path.join(books_dir, category, folder_name)
+    folder_path = os.path.join(books_dir, folder_name)
     
     # Create folder if it doesn't exist
     os.makedirs(folder_path, exist_ok=True)
@@ -629,8 +629,8 @@ async def link_files_to_title(
         safe_title = sanitize_filename(title)
         folder_name = f"{safe_author} - {safe_title}"
         
-        # Determine destination based on category
-        dest_folder = Path(BOOKS_DIR) / category / folder_name
+        # Destination is flat: /books/Author - Title/ (no category subfolder)
+        dest_folder = Path(BOOKS_DIR) / folder_name
         
         # Create destination folder
         dest_folder.mkdir(parents=True, exist_ok=True)

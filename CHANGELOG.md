@@ -11,6 +11,141 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.2] - 2025-12-29
+
+### Added
+
+#### Orphan Detection System
+- **Automatic orphan detection** — Sync now detects when book folders are missing from the filesystem
+- **New `is_orphaned` column** — Titles table tracks orphan status separately from other fields
+- **Auto-recovery** — If a previously orphaned book's folder reappears, it's automatically un-orphaned
+- **Sync result tracking** — Sync reports now include `orphaned` and `recovered` counts
+- **Preserves all data** — Orphaned books retain their notes, ratings, reading status, and metadata
+
+### Technical
+
+#### Database Changes
+- Migration: Added `is_orphaned INTEGER DEFAULT 0` column to titles table
+
+#### Modified Files
+- `backend/database.py` — Added is_orphaned column to schema and migration
+- `backend/routers/sync.py` — Added orphan detection and auto-recovery logic
+
+#### How It Works
+1. During sync, all found folder paths are tracked
+2. After processing folders, editions with `folder_path` not found on disk are identified
+3. Those titles are marked `is_orphaned = 1`
+4. When a folder reappears (re-uploaded, restored), title is automatically recovered (`is_orphaned = 0`)
+5. TBR items and manual entries (no folder_path) are excluded from orphan checks
+
+---
+
+## [0.9.1] - 2025-12-29
+
+### Fixed
+
+#### Upload Folder Structure Bug
+- **Critical fix:** Uploaded books now correctly placed in flat `/books/Author - Title/` structure
+- Previously, v0.9.0 TBR conversion code incorrectly created category subfolders (`/books/FanFiction/Author - Title/`)
+- Fixed `link_files_to_title` endpoint to use flat folder structure
+- Fixed `add_files_to_existing_title` function to use flat folder structure
+
+#### File Size Display
+- **Small files now display in KB** — Files under 1 MB show as "35.1 KB" instead of "0.0 MB"
+- Files under 1 KB show in bytes (e.g., "512 B")
+- Improves readability on upload review screen
+
+### Technical
+
+#### Modified Files
+- `backend/routers/upload.py` — Removed category from folder path in two locations
+- `frontend/src/components/upload/BookCard.jsx` — Updated `formatSize()` function
+
+---
+
+## [0.9.0] - 2025-12-28
+
+### Added
+
+#### TBR (To Be Read) System
+- **TBR List View** — New TBR tab in bottom navigation showing books you want to read
+- **TBR Priority** — Mark items as "High" or "Normal" priority with visual indicators
+- **TBR Reason** — Add "Why I want to read this" notes to any TBR item
+- **Priority Filter** — Filter TBR list by priority level
+- **TBR Count Badge** — Shows number of TBR items in navigation
+
+#### Manual Book Entry
+- **Add to Library** — Add physical, audiobook, or web-based books without uploading files
+- **Add to TBR** — Add future reads with title, author, series, and reason
+- **Multiple Authors** — Add multiple authors with chip display and autocomplete
+- **Author Autocomplete** — Suggests existing library authors while typing
+- **Format Selection** — Choose Physical, Audiobook, or Web/URL format
+- **Completion Status** — Track WIP/Abandoned status for fanfiction
+- **Source URL** — Store AO3/FFN URLs for web-based works
+
+#### TBR → Library Conversion
+- **"I got this book!" Flow** — Convert TBR items to library with format selection
+- **Ebook Upload Option** — Links to upload page to add files
+- **Physical/Audiobook/Web Options** — Convert without uploading files
+- **Metadata Preservation** — Source URL and completion status preserved on conversion
+
+#### Familiar Title Detection
+- **Smart Detection** — Upload warns when title matches existing library book
+- **"A Familiar Title" Banner** — Shows on upload review when match found
+- **Add to Existing** — Option to add files to existing title
+- **Add as Separate** — Override to create new title entry
+- **85% Similarity Matching** — Fuzzy matching catches near-duplicates
+
+#### UI Improvements
+- **Clean Add Page** — Header hidden on main choice screen (no empty bar)
+- **Centered Form Headers** — ManualEntryForm header properly centered
+- **Completion Status Display** — Shows on separate line above author
+- **Web-based Acquire Option** — New option when converting TBR to library
+
+### Changed
+
+- **Bottom Navigation** — Now includes TBR tab (Library, Series, Authors, TBR, Add)
+- **Add Flow Redesigned** — Two-path choice: "A book I have" vs "A future read"
+- **Book Detail Layout** — Completion status moved to own line above author
+
+### Fixed
+
+- **TBR Conversion Preserves Data** — Source URL and completion status no longer lost
+- **Database Migration** — Added missing `source_url` column migration
+- **Author Autocomplete Dropdown** — Properly filters and displays suggestions
+
+### Technical
+
+#### Database Changes
+- Migration: `source_url` column added to titles table if missing
+- TBR fields: `is_tbr`, `tbr_priority`, `tbr_reason` fully utilized
+
+#### New API Endpoints
+- `GET /api/tbr` — List TBR items with optional priority filter
+- `POST /api/tbr` — Create new TBR item
+- `PATCH /api/tbr/{id}` — Update TBR priority/reason/source_url/completion_status
+- `POST /api/tbr/{id}/acquire` — Convert TBR to library
+- `DELETE /api/tbr/{id}` — Remove TBR item
+- `POST /api/titles` — Create manual library entry
+
+#### New Frontend Components
+- `TBRList.jsx` — TBR list page with priority filtering
+- `TBRForm.jsx` — Form for adding TBR items
+- `ManualEntryForm.jsx` — Form for adding library items manually
+- `AddPage.jsx` — Unified add flow with multiple paths
+- `AddChoice.jsx` — Initial choice screen
+- `LibraryChoice.jsx` — Library add method selection
+
+#### Modified Files
+- `BookDetail.jsx` — Acquire modal, completion status display
+- `BookCard.jsx` — FamiliarTitleBanner component
+- `ReviewBooks.jsx` — Familiar title counting
+- `upload.py` — Familiar title detection, add_to_existing action
+- `titles.py` — TBR endpoints, manual entry
+- `database.py` — source_url migration
+
+---
+
 ## [0.8.2] - 2025-12-27
 
 ### Added
@@ -67,23 +202,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | Notes imported manually | 15 |
 | **Total notes migrated** | **251** |
 
-### Technical
-
-#### Backend Changes
-- `backend/routers/books.py` — Added `match_book()` endpoint with multi-strategy matching
-- `backend/routers/books.py` — Added `import_book_note()` endpoint with append support
-
-#### New Files
-- `migrate_notes.py` — Standalone Python script for bulk note migration
-
-#### Dependencies (Migration Script)
-- `requests` — HTTP client for API calls
-- `pyyaml` — YAML frontmatter parsing
-
-### Notes
-
-This completes the Obsidian-to-Liminal migration. All reading data (status, ratings, dates) was imported in Phase 1.5, and now all book notes have been migrated as well.
-
 ---
 
 ## [0.8.0] - 2025-12-26
@@ -120,36 +238,6 @@ This completes the Obsidian-to-Liminal migration. All reading data (status, rati
 - **"Referenced by" section** — Shows on book detail when other books link to it
 - **Clickable backlinks** — Navigate directly to the referencing book
 
-### Changed
-
-- **Notes editor UX** — From inline editing to full-screen modal
-- **Book search popup** — From floating cursor-positioned to modal overlay
-
-### Fixed
-
-- **Mobile keyboard handling** — Full-screen modal prevents keyboard from pushing content off-screen
-- **Link regex** — Non-greedy pattern handles book titles containing brackets
-
-### Technical
-
-#### Backend Changes
-- `backend/routers/books.py` — Added `parse_and_store_links()` function, backlinks endpoint
-- Links stored atomically with note save (single transaction)
-
-#### Frontend Changes
-- `frontend/src/pages/BookDetail.jsx` — Full-screen modal, template dropdown, backlinks section, markdown rendering
-- `frontend/src/components/BookLinkPopup.jsx` — Complete rewrite as modal overlay
-- `frontend/src/api/index.js` — Added `getBookBacklinks()`, `lookupBooksByTitles()`
-- Added `react-markdown` dependency for note rendering
-
-#### Database
-- `links` table now populated when notes are saved
-- Stores `from_note_id`, `to_book_id`, `link_text`
-
-### Known Issues
-
-- Scrollbar appears on mobile notes editor even when content doesn't overflow (cosmetic only)
-
 ---
 
 ## [0.7.0] - 2025-12-25
@@ -169,42 +257,6 @@ This completes the Obsidian-to-Liminal migration. All reading data (status, rati
 
 #### Edit Book Modal
 - **Series autocomplete** — Suggests existing series names when typing in series field
-
-### Changed
-
-- **Filter drawer replaces inline filters** — All filters now accessed via drawer instead of filter bar
-- **Sort separated from filters** — Sort is now independent; "Clear all" no longer resets sort
-- **Poetic phrase styling** — Unified size/color with sort dropdown, removed italics
-- **Sort dropdown simplified** — Shows just "Title" instead of "Sort: Title", uses ↑ arrow icon
-
-### Fixed
-
-#### Navigation & Layout
-- **Sub-page padding** — BookDetail, SeriesDetail, AuthorDetail now have proper horizontal padding
-- **Sticky header positioning** — Alphabetical section headers in AuthorsList position correctly below search bar
-- **Filter drawer visibility** — Drawer fully hides when closed (no peeking through bottom)
-
-#### Filter System
-- **View-aware filter count** — Badge only counts filters relevant to current view (library vs series)
-- **Search included in series filter count** — Filter badge now includes search on series view
-- **Clear filters preserves sort** — "Clear all" no longer resets sort order
-
-### Technical
-
-#### New Files
-- `frontend/src/components/BottomNav.jsx` — Mobile bottom navigation component
-- `frontend/src/components/FilterDrawer.jsx` — Responsive filter drawer component
-- `frontend/src/components/SearchBar.jsx` — Unified search bar component
-
-#### Modified Files
-- `frontend/src/App.jsx` — Added BottomNav, responsive layout padding
-- `frontend/src/components/Header.jsx` — Desktop navigation, responsive design
-- `frontend/src/components/Library.jsx` — Filter drawer integration, inline sort, grid columns setting
-- `frontend/src/components/SettingsDrawer.jsx` — Grid columns setting with event dispatch
-- `frontend/src/components/EditBookModal.jsx` — Series autocomplete
-- `frontend/src/pages/AuthorsList.jsx` — Shared SearchBar, fixed sticky positioning
-- `frontend/src/pages/UploadPage.jsx` — Shared navigation integration
-- `backend/database.py` — Default grid_columns setting
 
 ---
 
@@ -236,188 +288,17 @@ This completes the Obsidian-to-Liminal migration. All reading data (status, rati
 - **Authors list page** — Alphabetical list with search, accessible from main nav
 - **Clickable author links** — Author names on BookDetail link to author pages
 
-#### BookDetail Redesign
-- **Reorganized layout** — Series above title, year below author
-- **Chip+popup controls** — Status and rating use chip display with popup selectors
-- **Estimated read time card** — Prominent display with microcopy
-- **"About This Book" card** — Summary, tags, word count, and "added to library" date
-
-#### Other Improvements
-- **HTML entity decoding** — Summaries display &amp; correctly as &
-- **Case-insensitive sorting** — Lowercase titles now sort alphabetically with others
-- **"Added to library" date** — Shows when book was added in BookDetail footer
-
-### Fixed
-
-#### Performance
-- **Infinite re-render loop** — Fixed URL sync causing 50+ API calls on page load
-- **Flickering book count** — Stable phrase display, no more count jumping
-
-#### Author System
-- **JSON quote escaping** — Author names with double quotes can be found and renamed
-- **Empty notes handling** — Returns null instead of empty string for consistency
-- **Accurate books_updated count** — Reports actual updates, not LIKE query matches
-
-#### Other Fixes
-- **Case-insensitive duplicate check** — Can't add "John Smith" and "john smith" as separate authors
-- **React key collision** — Fixed potential key duplicates in author rendering
-- **word_count in API** — Books list now includes word_count for read time filtering
-- **Defensive column access** — Handles databases without word_count column gracefully
-
-### Technical
-
-#### New Files
-- `backend/routers/settings.py` — Settings API endpoints
-- `backend/routers/authors.py` — Authors API endpoints
-- `frontend/src/components/SettingsDrawer.jsx` — Settings drawer component
-- `frontend/src/components/EditBookModal.jsx` — Book metadata editor
-- `frontend/src/components/AuthorChips.jsx` — Draggable author management
-- `frontend/src/components/EditAuthorModal.jsx` — Author name/notes editor
-- `frontend/src/pages/AuthorDetail.jsx` — Individual author page
-- `frontend/src/pages/AuthorsList.jsx` — Authors directory page
-- `frontend/src/utils/readTime.js` — Read time calculations and microcopy
-
-#### Database
-- Added `settings` table for key-value configuration storage
-- Added `author_notes` table for author notes storage
-- Added `created_at` to API responses
-
-#### Modified Files
-- `backend/database.py` — Settings and author_notes tables, migrations
-- `backend/routers/books.py` — Metadata update endpoint, word_count in responses, COLLATE NOCASE sorting
-- `backend/main.py` — Register settings and authors routers
-- `frontend/src/api/index.js` — Settings, authors, and metadata API functions
-- `frontend/src/pages/BookDetail.jsx` — Complete redesign with new layout
-- `frontend/src/pages/Library.jsx` — Read time filter, Authors tab, URL sync fix
-- `frontend/src/App.jsx` — Settings drawer, author routes
-
----
-
-## [0.5.4] - 2025-12-23
-
-### Fixed
-
-#### Mobile File Picker for .mobi/.azw3
-- **Android document picker now works** — Uses broad MIME types to trigger document browser
-- **All ebook formats selectable on mobile** — .mobi, .azw3, .azw, .epub, .pdf, .html
-
----
-
-## [0.5.3] - 2025-12-23
-
-### Added
-
-#### EPUB/PDF Metadata Extraction During Upload
-- **Author auto-population** — Authors extracted from EPUB/PDF metadata
-- **Title from metadata** — Prefers embedded title over filename parsing
-- **Rich metadata** — Extracts publication year, summary, tags, and word count
-
-#### "Upload as New Book" for False Duplicate Matches
-- **Override incorrect matches** — "Not a match? Upload as separate book" link
-- **Confirmation UI** — Green banner when uploading as new
-
----
-
-## [0.5.2] - 2025-12-22
-
-### Fixed
-
-#### FanFiction Category Detection
-- **AO3-style filename detection** — Correctly detects files with underscores
-- **Expanded trope detection** — Added more trope keywords
-
-#### File Type Support
-- **Added .azw support** — Amazon Kindle .azw files now accepted
-
----
-
-## [0.5.1] - 2025-12-22
-
-### Fixed
-
-#### Background Sync After Upload
-- **Auto-sync now works** — Uploaded books automatically appear in library
-
----
-
-## [0.5.0] - 2025-12-22
-
-### Added
-
-#### Book Upload System (Phase 2)
-- **Upload page** — New `/upload` route accessible from Library navigation
-- **Drag-and-drop zone** — Drop files or click to select from device
-- **Multi-file upload** — Upload multiple books in one session
-- **Smart file grouping** — Auto-groups related files
-- **Category auto-detection** — FanFiction, Fiction, Non-Fiction with confidence scores
-- **Duplicate detection** — Warns when uploading books that already exist
-- **Inline metadata editing** — Edit before finalizing
-
----
-
-## [0.4.0] - 2025-12-20
-
-### Added
-- Obsidian import system
-- Collapsible filter header
-- Filter state persistence
-- Rich gradient cover system (10 presets, HSL color lanes)
-
----
-
-## [0.3.0] - 2025-12-19
-
-### Added
-- Library UI redesign with unified filter bar
-- Navigation tabs (Library, Series)
-- Series system with detail pages
-- Tag filtering with searchable modal
-
----
-
-## [0.2.0] - 2025-12-17
-
-### Added
-- Read status system (Unread, In Progress, Finished, DNF)
-- 1-5 star rating system
-- Reading dates (started, finished)
-
----
-
-## [0.1.2] - 2025-12-17
-
-### Added
-- Category dropdown on book detail page
-- FanFiction auto-detection
-
----
-
-## [0.1.1] - 2025-12-16
-
-### Added
-- Single folder scanning
-- Content matching for moved books
-
----
-
-## [0.1.0] - 2025-12-14
-
-### Added
-- Initial release
-- Library browsing with gradient covers
-- Search, filter, sort
-- Book detail page
-- Notes system
-- Docker deployment
-
 ---
 
 ## Version History Summary
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.9.2 | 2025-12-29 | **Orphan detection** — Track missing book folders |
+| 0.9.1 | 2025-12-29 | **Bug fix** — Upload folder structure, file size display |
+| 0.9.0 | 2025-12-28 | **Phase 5 (partial)** — TBR system, manual entry, familiar title detection |
 | 0.8.2 | 2025-12-27 | Custom status labels, finished checkmarks on author pages |
-| 0.8.1 | 2025-12-26 | **Phase 4.5 complete** — Obsidian notes migration (251 notes) |
+| 0.8.1 | 2025-12-26 | Phase 4.5 complete — Obsidian notes migration (251 notes) |
 | 0.8.0 | 2025-12-26 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
 | 0.7.0 | 2025-12-25 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
 | 0.6.0 | 2025-12-24 | Phase 3 complete — Settings, metadata editing, read time, author pages |
@@ -437,77 +318,25 @@ This completes the Obsidian-to-Liminal migration. All reading data (status, rati
 
 ## Upgrade Notes
 
-### Upgrading to 0.8.2
+### Upgrading to 0.9.2
 
-**Frontend:**
-- New file: `hooks/useStatusLabels.js`
-- Modified: `components/AuthorDetail.jsx` (checkmark overlay)
-- Modified: `components/SettingsDrawer.jsx` (status labels UI)
-- Modified: `components/BookDetail.jsx` (useStatusLabels integration)
-- Modified: `components/FilterDrawer.jsx` (useStatusLabels integration)
+**Modified Files:**
+- `backend/database.py` — Added is_orphaned column
+- `backend/routers/sync.py` — Added orphan detection logic
 
-**Backend:**
-- Modified: `database.py` (default status label settings)
-
-**Database migrations run automatically on startup.**
+**Database migration runs automatically** — The `is_orphaned` column will be added on first startup.
 
 **Rebuild Docker container after update.**
 
-### Upgrading to 0.8.1
+### Upgrading to 0.9.1
 
-**Backend:**
-- Modified: `routers/books.py` (added match endpoint, notes import endpoint)
+**Modified Files:**
+- `backend/routers/upload.py` — Fixed folder path creation
+- `frontend/src/components/upload/BookCard.jsx` — Fixed file size display
 
-**Migration Script:**
-- New file: `migrate_notes.py` (runs on Mac, not on NAS)
-- Install: `pip install requests pyyaml`
-
-**No database changes required.**
-
-**Rebuild Docker container after update.**
-
-### Upgrading to 0.8.0
-
-**Backend:**
-- Modified: `routers/books.py` (link parsing, backlinks endpoint)
-
-**Frontend:**
-- Modified: `pages/BookDetail.jsx` (full-screen editor, templates, backlinks)
-- Modified: `components/BookLinkPopup.jsx` (complete rewrite as modal)
-- Modified: `api/index.js` (backlinks, lookup functions)
-- Added: `react-markdown` dependency
-
-**Database:**
-- `links` table now populated automatically when saving notes
-
-**Rebuild Docker container after update.**
-
-### Upgrading to 0.7.0
-
-**Backend:**
-- Modified: `database.py` (grid_columns default setting)
-
-**Frontend:**
-- New files: `BottomNav.jsx`, `FilterDrawer.jsx`, `SearchBar.jsx`
-- Modified: `App.jsx`, `Header.jsx`, `Library.jsx`, `SettingsDrawer.jsx`, `EditBookModal.jsx`, `AuthorsList.jsx`, `UploadPage.jsx`
-
-**Database migrations run automatically on startup.**
-
-**Rebuild Docker container after update.**
-
-### Upgrading to 0.6.0
-
-**Backend:**
-- New files: `routers/settings.py`, `routers/authors.py`
-- Modified: `database.py`, `routers/books.py`, `main.py`
-
-**Frontend:**
-- New files in `components/`: SettingsDrawer, EditBookModal, AuthorChips, EditAuthorModal
-- New files in `pages/`: AuthorDetail, AuthorsList
-- New file: `utils/readTime.js`
-- Modified: BookDetail.jsx (major redesign), Library.jsx, App.jsx, api/index.js
-
-**Database migrations run automatically on startup.**
+**Manual cleanup required:**
+- Move any books incorrectly placed in `/books/FanFiction/` back to `/books/`
+- Delete empty category subfolders if created
 
 **Rebuild Docker container after update.**
 
@@ -515,10 +344,10 @@ This completes the Obsidian-to-Liminal migration. All reading data (status, rati
 
 ## Links
 
-- [Roadmap](./20251227_ROADMAP.md)
+- [Roadmap](./20251229_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: December 27, 2025*
+*Last updated: December 29, 2025*

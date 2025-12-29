@@ -518,147 +518,137 @@ def detect_fanfiction_from_filename(filename: str, author: str) -> tuple[bool, f
     # Pattern: "Title_With_Underscores.epub" (no " - " anywhere)
     
     has_underscores = '_' in name_without_ext
-    has_author_separator = ' - ' in filename or '_-_' in filename
-    underscore_count = name_without_ext.count('_')
+    has_author_separator = ' - ' in name_without_ext or '_-_' in name_without_ext
     
-    # Strong AO3 indicator: multiple underscores, no author separator
-    if has_underscores and not has_author_separator and underscore_count >= 2:
-        reasons.append(f"AO3-style filename (underscores as spaces, no author): {underscore_count} underscores")
-        confidence += 0.7
-    
-    # Ship patterns in filename: "Character x Character" or "CharacterxCharacter"
-    ship_pattern = re.search(r'(\w+)\s*[x×]\s*(\w+)', filename_lower)
-    if ship_pattern:
-        reasons.append(f"ship pattern in filename: '{ship_pattern.group(0)}'")
-        confidence += 0.5
-    
-    # --- MEDIUM CONFIDENCE: Author pattern analysis ---
-    if author and author not in ('Unknown', 'Unknown Author', ''):
-        author_lower = author.lower()
-        
-        # Username patterns
-        if '_' in author:
-            reasons.append(f"author has underscore: '{author}'")
-            confidence += 0.4
-        elif re.match(r'^[a-zA-Z0-9]+$', author) and re.search(r'\d', author) and len(author) > 3:
-            reasons.append(f"author looks like username: '{author}'")
-            confidence += 0.35
-        elif re.match(r'^[a-z0-9]+$', author) and len(author) > 3:
-            reasons.append(f"author is all lowercase (username pattern): '{author}'")
-            confidence += 0.35
-        elif '-' in author and re.search(r'\d', author) and ' ' not in author:
-            reasons.append(f"author looks like username: '{author}'")
-            confidence += 0.35
-    
-    # --- LOW CONFIDENCE: Trope words ---
-    trope_words = ['oneshot', 'one-shot', 'one_shot', 'drabble', 'ficlet', 'pwp', 
-                   'smut', 'fluff', 'angst', 'lemon', 'lime', 'slash',
-                   'au_', '_au', 'alternate_universe', 'alt_universe',
-                   'reader_insert', 'x_reader', 'self_insert',
-                   'enemies_to_lovers', 'friends_to_lovers', 'slow_burn',
-                   'fix_it', 'fix-it', 'canon_divergence']
-    for trope in trope_words:
-        if trope in filename_lower:
-            reasons.append(f"contains trope word: '{trope}'")
+    if has_underscores and not has_author_separator:
+        # Count underscores - more underscores = more likely AO3
+        underscore_count = name_without_ext.count('_')
+        if underscore_count >= 3:
+            reasons.append(f"AO3-style underscore pattern ({underscore_count} underscores)")
             confidence += 0.3
-            break
+        elif underscore_count >= 2:
+            reasons.append("some underscores, possibly AO3")
+            confidence += 0.15
     
-    is_fanfiction = confidence >= 0.5
-    reason_str = "; ".join(reasons) if reasons else ""
+    # --- MEDIUM CONFIDENCE: Username-style author ---
+    # AO3 authors often have username patterns: lowercase, underscores, numbers
+    if author and author != 'Unknown':
+        author_lower = author.lower()
+        # Check for username patterns
+        if re.match(r'^[a-z0-9_]+$', author_lower) and len(author) < 25:
+            reasons.append("username-style author")
+            confidence += 0.2
     
-    return is_fanfiction, min(confidence, 1.0), reason_str
-
-
-def detect_nonfiction_from_filename(filename: str, title: str) -> tuple[bool, float, str]:
-    """
-    Detect if a file is Non-Fiction based on filename and title patterns.
-    
-    Returns:
-        (is_nonfiction, confidence, reason)
-    """
-    check_text = f"{filename} {title}".lower()
-    reasons = []
-    confidence = 0.0
-    
-    # Strong non-fiction indicators in title
-    nonfiction_title_patterns = [
-        (r'\bhow to\b', "title contains 'how to'", 0.6),
-        (r'\bguide to\b', "title contains 'guide to'", 0.5),
-        (r'\bintroduction to\b', "title contains 'introduction to'", 0.5),
-        (r'\bthe art of\b', "title contains 'the art of'", 0.4),
-        (r'\bprinciples of\b', "title contains 'principles of'", 0.5),
-        (r'\bthe science of\b', "title contains 'the science of'", 0.5),
-        (r'\bthe history of\b', "title contains 'the history of'", 0.5),
-        (r'\bmemoir\b', "contains 'memoir'", 0.6),
-        (r'\bbiography\b', "contains 'biography'", 0.6),
-        (r'\bautobiography\b', "contains 'autobiography'", 0.7),
-        (r'\bself[- ]help\b', "contains 'self-help'", 0.6),
-        (r'\btextbook\b', "contains 'textbook'", 0.7),
-        (r'\bmanual\b', "contains 'manual'", 0.4),
-        (r'\bhandbook\b', "contains 'handbook'", 0.5),
+    # --- MEDIUM CONFIDENCE: Fandom-specific keywords ---
+    fandom_keywords = [
+        'drarry', 'dramione', 'wolfstar', 'jily', 'hinny', 'romione',  # Harry Potter
+        'destiel', 'sabriel', 'wincest',  # Supernatural  
+        'stucky', 'stony', 'thorki', 'ironstrange',  # Marvel
+        'johnlock', 'mystrade',  # Sherlock
+        'klance', 'sheith',  # Voltron
+        'sterek', 'stydia',  # Teen Wolf
+        'obikin', 'reylo', 'stormpilot',  # Star Wars
+        'bakudeku', 'tododeku', 'kiribaku',  # My Hero Academia
+        'ereri', 'levihan',  # Attack on Titan
+        'larry', 'ziam',  # One Direction (RPF)
+        'supercorp', 'clexa',  # DC/CW
+        'malec', 'clace',  # Shadowhunters
+        'percabeth', 'solangelo',  # Percy Jackson
+        'nalu', 'gruvia',  # Fairy Tail
+        'sasunaru', 'kakairu',  # Naruto
     ]
     
-    for pattern, reason, score in nonfiction_title_patterns:
-        if re.search(pattern, check_text):
-            reasons.append(reason)
-            confidence += score
+    for keyword in fandom_keywords:
+        if keyword in filename_lower:
+            reasons.append(f"fandom keyword: {keyword}")
+            confidence += 0.4
+            break  # Only count once
     
-    is_nonfiction = confidence >= 0.5
-    reason_str = "; ".join(reasons) if reasons else ""
+    # --- MEDIUM CONFIDENCE: Common fanfic tropes in filename ---
+    trope_keywords = [
+        'soulmate', 'soulmates', 'soulbond',
+        'omegaverse', 'alpha', 'omega', 'abo',
+        'enemies to lovers', 'enemies-to-lovers', 'enemies_to_lovers',
+        'fake dating', 'fake-dating', 'fake_dating',
+        'slow burn', 'slow-burn', 'slowburn',
+        'coffee shop', 'coffeeshop', 'coffee_shop',
+        'high school', 'highschool', 'college au',
+        'modern au', 'no powers', 'canon divergent',
+        'fix-it', 'fixit', 'fix_it',
+        'time travel', 'timetravel',
+        'oneshot', 'one-shot', 'one_shot',
+        'pwp', 'smut', 'fluff', 'angst',
+        'hurt comfort', 'hurt-comfort', 'hurtcomfort',
+        'found family',
+        'mpreg',
+        'hanahaki',
+        'wingfic',
+    ]
     
-    return is_nonfiction, min(confidence, 1.0), reason_str
+    for trope in trope_keywords:
+        if trope in filename_lower:
+            reasons.append(f"trope keyword: {trope}")
+            confidence += 0.3
+            break  # Only count once
+    
+    # Cap confidence at 1.0
+    confidence = min(confidence, 1.0)
+    
+    is_fanfiction = confidence >= 0.3
+    reason_str = "; ".join(reasons) if reasons else "no strong indicators"
+    
+    return is_fanfiction, confidence, reason_str
 
 
-def detect_category(metadata: dict, filename: str = "") -> tuple[str, float]:
+def detect_category(metadata: dict, filename: str = None) -> tuple[str, float]:
     """
-    Detect category from metadata and filename.
+    Detect the category for a book.
     
-    Priority:
-    1. Explicit is_fanfiction flag from parsing
-    2. Filename-based FanFiction detection
-    3. Filename-based Non-Fiction detection
-    4. Default to Fiction with low confidence
-    
-    Returns (category, confidence) where confidence is 0.0 to 1.0
+    Returns:
+        (category, confidence)
     """
-    title = metadata.get('title', '')
-    author = metadata.get('author', '')
+    # First check for fanfiction
+    author = metadata.get('author', 'Unknown')
+    check_filename = filename or metadata.get('original_filename', '')
     
-    # Check if already flagged as fanfiction from parsing (e.g., AO3 pattern)
+    is_ff, ff_confidence, reason = detect_fanfiction_from_filename(check_filename, author)
+    
+    if is_ff:
+        return "FanFiction", ff_confidence
+    
+    # Check metadata for fanfiction indicators
     if metadata.get('is_fanfiction'):
-        return ('FanFiction', 0.9)
+        return "FanFiction", 0.8
     
-    # Try filename-based FanFiction detection
-    is_fanfic, fanfic_conf, fanfic_reason = detect_fanfiction_from_filename(filename, author)
-    if is_fanfic:
-        if fanfic_reason:
-            print(f"Auto-detected FanFiction: '{title}' - {fanfic_reason}")
-        return ('FanFiction', fanfic_conf)
-    
-    # Try Non-Fiction detection
-    is_nonfic, nonfic_conf, nonfic_reason = detect_nonfiction_from_filename(filename, title)
-    if is_nonfic:
-        if nonfic_reason:
-            print(f"Auto-detected Non-Fiction: '{title}' - {nonfic_reason}")
-        return ('Non-Fiction', nonfic_conf)
+    # Check tags for non-fiction indicators
+    tags = metadata.get('tags', [])
+    if tags:
+        tags_lower = [t.lower() for t in tags]
+        nonfiction_tags = ['non-fiction', 'nonfiction', 'biography', 'history', 
+                          'science', 'self-help', 'business', 'memoir', 'reference']
+        for tag in nonfiction_tags:
+            if any(tag in t for t in tags_lower):
+                return "Non-Fiction", 0.6
     
     # Default to Fiction with low confidence
-    return ('Fiction', 0.3)
+    return "Fiction", 0.3
 
 
 def apply_category_detection(books: list[BookGroup], files: list[UploadedFile]):
-    """Apply category detection to all book groups"""
-    # Build a map of file id to (metadata, filename)
-    file_info = {f.id: (f.metadata or {}, f.original_name) for f in files}
-    
+    """Apply category detection to all books"""
     for book in books:
-        # Get the first file's info for detection
-        # (all files in a group should be the same book)
-        first_file_id = book.files[0]['id'] if book.files else None
-        
-        if first_file_id and first_file_id in file_info:
-            metadata, filename = file_info[first_file_id]
-            # Merge book-level metadata
+        # Get first file's info for detection
+        if book.files:
+            file_id = book.files[0]['id']
+            filename = book.files[0]['name']
+            
+            # Find the uploaded file to get its metadata
+            metadata = None
+            for f in files:
+                if f.id == file_id:
+                    metadata = f.metadata
+                    break
+            
             combined_metadata = {
                 'title': book.title,
                 'author': book.author,
@@ -678,32 +668,64 @@ def apply_category_detection(books: list[BookGroup], files: list[UploadedFile]):
 
 
 # =============================================================================
-# DUPLICATE DETECTION
+# DUPLICATE DETECTION (FIXED - Now scans category subdirectories)
 # =============================================================================
 
 async def check_duplicates(books: list[BookGroup], books_dir: str):
     """
     Check for duplicates against existing library.
     Updates each BookGroup's duplicate field if a match is found.
+    
+    FIXED: Now properly scans category subdirectories (FanFiction/, Fiction/, Non-Fiction/)
     """
     if not os.path.exists(books_dir):
         return
     
-    # Get list of existing book folders
+    # Get list of existing book folders from ALL category subdirectories
     existing_folders = []
+    
+    # Known category directories
+    categories = ['FanFiction', 'Fiction', 'Non-Fiction']
+    
+    for category in categories:
+        category_path = os.path.join(books_dir, category)
+        if not os.path.exists(category_path) or not os.path.isdir(category_path):
+            continue
+        
+        # Scan book folders within this category
+        for folder_name in os.listdir(category_path):
+            folder_path = os.path.join(category_path, folder_name)
+            if os.path.isdir(folder_path):
+                # Get files in the folder
+                files_in_folder = [
+                    f for f in os.listdir(folder_path)
+                    if os.path.splitext(f)[1].lower() in ALLOWED_EXTENSIONS
+                ]
+                existing_folders.append({
+                    'name': folder_name,
+                    'path': folder_path,
+                    'category': category,
+                    'files': files_in_folder
+                })
+    
+    # Also check root level for any books directly in books_dir (legacy support)
     for folder_name in os.listdir(books_dir):
         folder_path = os.path.join(books_dir, folder_name)
+        # Skip category directories themselves
+        if folder_name in categories:
+            continue
         if os.path.isdir(folder_path):
-            # Get files in the folder
             files_in_folder = [
                 f for f in os.listdir(folder_path)
                 if os.path.splitext(f)[1].lower() in ALLOWED_EXTENSIONS
             ]
-            existing_folders.append({
-                'name': folder_name,
-                'path': folder_path,
-                'files': files_in_folder
-            })
+            if files_in_folder:  # Only add if there are book files
+                existing_folders.append({
+                    'name': folder_name,
+                    'path': folder_path,
+                    'category': None,  # Root level
+                    'files': files_in_folder
+                })
     
     for book in books:
         duplicate = find_duplicate(book, existing_folders)
@@ -748,18 +770,20 @@ def find_duplicate(book: BookGroup, existing_folders: list[dict]) -> Optional[di
             if exact_matches and not new_files:
                 # All files already exist
                 return {
-                    'existing_folder': folder['name'],
+                    'existing_folder': folder['path'],  # Use full path now
                     'existing_files': folder['files'],
                     'type': 'exact_match',
+                    'category': folder.get('category'),
                     'message': 'All files already exist in library'
                 }
             elif new_files:
                 # Some files are new (different formats)
                 return {
-                    'existing_folder': folder['name'],
+                    'existing_folder': folder['path'],  # Use full path now
                     'existing_files': folder['files'],
                     'type': 'different_format',
                     'new_files': list(new_files),
+                    'category': folder.get('category'),
                     'message': f'New format(s) can be added: {", ".join(new_files)}'
                 }
     
@@ -767,7 +791,7 @@ def find_duplicate(book: BookGroup, existing_folders: list[dict]) -> Optional[di
 
 
 # =============================================================================
-# FINALIZATION
+# FINALIZATION (FIXED - Now includes category in path)
 # =============================================================================
 
 def build_folder_name(title: str, author: str, series: str = None, series_number: str = None) -> str:
@@ -804,6 +828,8 @@ async def finalize_book(
     - action: 'new', 'add_format', 'replace', or 'skip'
     - For 'new'/'replace': title, author, series, series_number, category
     - For 'add_format': existing_folder
+    
+    FIXED: Now properly creates folders in category subdirectories
     """
     action = book_data.get('action', 'new')
     book_id = book_data.get('id')
@@ -830,12 +856,28 @@ async def finalize_book(
     
     try:
         if action == 'add_format':
-            # Add to existing folder
+            # Add to existing folder - existing_folder now contains full path
             existing_folder = book_data.get('existing_folder')
-            target_dir = os.path.join(books_dir, existing_folder)
             
-            if not os.path.exists(target_dir):
-                return {'id': book_id, 'status': 'error', 'message': 'Existing folder not found'}
+            # Check if it's already a full path
+            if os.path.isabs(existing_folder) or existing_folder.startswith(books_dir):
+                target_dir = existing_folder
+            else:
+                # Legacy support: if just folder name, search for it
+                target_dir = None
+                for category in ['FanFiction', 'Fiction', 'Non-Fiction']:
+                    potential_path = os.path.join(books_dir, category, existing_folder)
+                    if os.path.exists(potential_path):
+                        target_dir = potential_path
+                        break
+                # Also check root level
+                if not target_dir:
+                    root_path = os.path.join(books_dir, existing_folder)
+                    if os.path.exists(root_path):
+                        target_dir = root_path
+            
+            if not target_dir or not os.path.exists(target_dir):
+                return {'id': book_id, 'status': 'error', 'message': f'Existing folder not found: {existing_folder}'}
             
             for f in files_to_move:
                 target_path = os.path.join(target_dir, f.original_name)
@@ -844,7 +886,7 @@ async def finalize_book(
             return {
                 'id': book_id,
                 'status': 'format_added',
-                'folder': existing_folder,
+                'folder': target_dir,
                 'files_added': len(files_to_move)
             }
         
@@ -852,7 +894,20 @@ async def finalize_book(
             # Delete existing and create new
             existing_folder = book_data.get('existing_folder')
             if existing_folder:
-                existing_path = os.path.join(books_dir, existing_folder)
+                # existing_folder might be full path or just name
+                if os.path.isabs(existing_folder):
+                    existing_path = existing_folder
+                else:
+                    # Search for it
+                    existing_path = None
+                    for category in ['FanFiction', 'Fiction', 'Non-Fiction']:
+                        potential_path = os.path.join(books_dir, category, existing_folder)
+                        if os.path.exists(potential_path):
+                            existing_path = potential_path
+                            break
+                    if not existing_path:
+                        existing_path = os.path.join(books_dir, existing_folder)
+                
                 if os.path.exists(existing_path):
                     shutil.rmtree(existing_path)
             
@@ -860,7 +915,7 @@ async def finalize_book(
             action = 'new'
         
         if action == 'new':
-            # Create new folder
+            # Create new folder - flat structure: /books/Author - Title/
             folder_name = build_folder_name(
                 title=book_data.get('title', book_group.title),
                 author=book_data.get('author', book_group.author),
@@ -868,6 +923,7 @@ async def finalize_book(
                 series_number=book_data.get('series_number', book_group.series_number)
             )
             
+            # Build full path: books_dir / Author - Title (NO category subfolder)
             target_dir = os.path.join(books_dir, folder_name)
             os.makedirs(target_dir, exist_ok=True)
             
@@ -878,7 +934,7 @@ async def finalize_book(
             return {
                 'id': book_id,
                 'status': 'created',
-                'folder': folder_name,
+                'folder': target_dir,
                 'files_added': len(files_to_move)
             }
         

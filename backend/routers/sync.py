@@ -34,6 +34,8 @@ class SyncResult(BaseModel):
     skipped: int = 0
     errors: int = 0
     total: int = 0
+    orphaned: int = 0      # Titles marked as orphaned (folder missing)
+    recovered: int = 0     # Previously orphaned titles now found
     message: str = ""
 
 
@@ -339,12 +341,16 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
     
     result = SyncResult(status="complete", total=len(book_folders))
     
+    # Track all found folder paths for orphan detection
+    found_folder_paths = set()
+    
     try:
         for folder in book_folders:
             _sync_status.current_book = folder.name
             _sync_status.processed += 1
             
             folder_str = str(folder)
+            found_folder_paths.add(folder_str)  # Track this folder
             
             # Check if title already exists by folder_path (via editions)
             existing = await find_existing_title_by_folder(db, folder_str)
@@ -418,13 +424,22 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             category = "Uncategorized"
                 
                 if existing:
-                    # Update existing title
+                    # Check if this was previously orphaned (for recovery tracking)
+                    cursor = await db.execute(
+                        "SELECT is_orphaned FROM titles WHERE id = ?",
+                        [existing["id"]]
+                    )
+                    orphan_row = await cursor.fetchone()
+                    was_orphaned = orphan_row and orphan_row["is_orphaned"] == 1
+                    
+                    # Update existing title (and recover if orphaned)
                     await db.execute(
                         """UPDATE titles SET
                             title = ?, authors = ?, series = ?, series_number = ?,
                             category = ?, publication_year = ?, word_count = ?,
                             summary = ?, tags = ?,
                             cover_color_1 = ?, cover_color_2 = ?,
+                            is_orphaned = 0,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?""",
                         [
@@ -437,6 +452,10 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             existing["id"]
                         ]
                     )
+                    
+                    if was_orphaned:
+                        result.recovered += 1
+                        print(f"Recovered orphaned title: {parsed['title']}")
                     
                     # Update or create edition
                     cursor = await db.execute(
@@ -494,7 +513,57 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                 print(f"Error processing {folder}: {e}")
                 result.errors += 1
         
-        result.message = f"Sync complete: {result.added} added, {result.updated} updated, {result.skipped} skipped, {result.errors} errors"
+        # =====================================================================
+        # ORPHAN DETECTION: Find editions with missing folders
+        # =====================================================================
+        try:
+            # Find all editions with folder_path that are NOT in our found_folder_paths
+            # Only check ebook editions (they have folder_path), exclude TBR/manual entries
+            cursor = await db.execute("""
+                SELECT DISTINCT e.folder_path, t.id as title_id, t.title, t.is_orphaned
+                FROM editions e
+                JOIN titles t ON t.id = e.title_id
+                WHERE e.folder_path IS NOT NULL
+                  AND t.is_tbr = 0
+            """)
+            all_editions = await cursor.fetchall()
+            
+            orphaned_count = 0
+            for edition in all_editions:
+                folder_path = edition["folder_path"]
+                title_id = edition["title_id"]
+                title_name = edition["title"]
+                already_orphaned = edition["is_orphaned"] == 1
+                
+                # Check if this folder exists in our found folders
+                if folder_path not in found_folder_paths:
+                    # Double-check the filesystem (in case of path format differences)
+                    if not os.path.exists(folder_path):
+                        if not already_orphaned:
+                            # Mark as orphaned
+                            await db.execute(
+                                "UPDATE titles SET is_orphaned = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                [title_id]
+                            )
+                            orphaned_count += 1
+                            print(f"Marked as orphaned: {title_name} (folder: {folder_path})")
+            
+            if orphaned_count > 0:
+                await db.commit()
+                result.orphaned = orphaned_count
+        
+        except Exception as e:
+            print(f"Error during orphan detection: {e}")
+        
+        # Build result message
+        msg_parts = [f"Sync complete: {result.added} added, {result.updated} updated, {result.skipped} skipped"]
+        if result.recovered > 0:
+            msg_parts.append(f"{result.recovered} recovered")
+        if result.orphaned > 0:
+            msg_parts.append(f"{result.orphaned} orphaned")
+        if result.errors > 0:
+            msg_parts.append(f"{result.errors} errors")
+        result.message = ", ".join(msg_parts)
         
     finally:
         _sync_status = SyncStatus(in_progress=False)
