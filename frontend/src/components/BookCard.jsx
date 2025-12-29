@@ -16,7 +16,7 @@ function BookCard({ book }) {
     <Link 
       to={`/book/${book.id}`}
       state={{ returnUrl: window.location.pathname + window.location.search }}
-      className={`group block ${isWishlist ? 'opacity-75' : ''}`}
+      className="group block"
     >
       <div className="relative">
         {/* Cover - add dotted border for wishlist items */}

@@ -692,6 +692,7 @@ function BookDetail() {
 
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   const readTimeData = getReadTimeData(book.word_count, wpm)
+  const isWishlist = book.acquisition_status === 'wishlist'
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8">
@@ -709,6 +710,17 @@ function BookDetail() {
       >
         ← Back
       </button>
+
+      {/* Wishlist Banner */}
+      {isWishlist && (
+        <div className="bg-gray-700/50 border border-gray-600 border-dashed rounded-lg px-4 py-2 mb-6 flex items-center gap-2">
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+          <span className="text-gray-300 text-sm font-medium">WISHLIST</span>
+          <span className="text-gray-500 text-sm">— You don't own this yet</span>
+        </div>
+      )}
 
       {/* Book Header */}
       <div className="flex flex-col sm:flex-row gap-6 mb-6">
@@ -732,21 +744,22 @@ function BookDetail() {
             </div>
           )}
           
-          <div className="flex items-start justify-between gap-4 mb-1">
-            <h1 className="text-2xl font-bold text-white">
-              {book.title}
-            </h1>
+          {/* Edit button - positioned at top right of content area */}
+          <div className="flex justify-end mb-2">
             <button
               onClick={() => setEditModalOpen(true)}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0"
+              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
               aria-label="Edit book details"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              Edit
             </button>
           </div>
+          
+          <h1 className="text-2xl font-bold text-white mb-1">
+            {book.title}
+          </h1>
           
           {/* Completion status for non-complete works - on its own line above author */}
           {book.completion_status && book.completion_status !== 'Complete' && (
@@ -793,8 +806,8 @@ function BookDetail() {
             </p>
           )}
           
-          {/* Estimated Read Time - Prominent Display */}
-          {readTimeData && (
+          {/* Estimated Read Time - Prominent Display (only for owned books) */}
+          {!isWishlist && readTimeData && (
             <div className="bg-library-card rounded-lg px-4 py-3 inline-block">
               <div className="text-2xl font-semibold text-white">
                 {readTimeData.display}
@@ -809,7 +822,7 @@ function BookDetail() {
 
       {/* Reading Tracker Card OR TBR Card */}
       <div className="bg-library-card rounded-lg p-4 mb-6">
-        {book.acquisition_status === 'wishlist' ? (
+        {isWishlist ? (
           /* TBR UI */
           <div>
             <div className="flex flex-wrap gap-3 items-center mb-4">
@@ -1121,8 +1134,8 @@ function BookDetail() {
         )}
       </div>
 
-      {/* About This Book Card */}
-      {(book.summary || (book.tags && book.tags.length > 0) || book.word_count) && (
+      {/* About This Book Card (hide for wishlist - no metadata yet) */}
+      {!isWishlist && (book.summary || (book.tags && book.tags.length > 0) || book.word_count) && (
         <div className="bg-library-card rounded-lg p-4 mb-6">
           <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
           
@@ -1313,8 +1326,8 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Backlinks Section */}
-      {(backlinks.length > 0 || backlinksLoading) && (
+      {/* Backlinks Section (hide for wishlist items) */}
+      {!isWishlist && (backlinks.length > 0 || backlinksLoading) && (
         <div className="bg-library-card rounded-lg p-4 mb-6">
           <h2 className="text-sm font-medium text-gray-400 mb-3">
             Referenced by {!backlinksLoading && <span className="text-gray-500">({backlinks.length})</span>}
@@ -1343,8 +1356,8 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Series Section */}
-      {book.series && (
+      {/* Series Section (hide for wishlist items) */}
+      {!isWishlist && book.series && (
         <div className="bg-library-card rounded-lg overflow-hidden mb-6">
           <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
             <h2 className="text-sm font-medium text-gray-400">
@@ -1402,8 +1415,8 @@ function BookDetail() {
         </div>
       )}
 
-      {/* File Location */}
-      {book.folder_path && (
+      {/* File Location (hide for wishlist items - no files yet) */}
+      {!isWishlist && book.folder_path && (
         <div className="text-gray-500 text-xs">
           <span className="font-medium">Location: </span>
           <code className="bg-library-card px-2 py-1 rounded">
