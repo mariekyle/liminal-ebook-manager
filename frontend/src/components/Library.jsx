@@ -35,6 +35,9 @@ function Library() {
   // View state (tabs) - initialize from URL
   const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
   
+  // Acquisition filter state - 'owned', 'wishlist', or 'all'
+  const [acquisition, setAcquisition] = useState(searchParams.get('acquisition') || 'owned')
+  
   // Series state
   const [seriesList, setSeriesList] = useState([])
   const [seriesTotal, setSeriesTotal] = useState(0)
@@ -116,6 +119,7 @@ function Library() {
       tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
       search: search || undefined,
       sort,
+      acquisition: acquisition || 'owned',
       limit: 10000, // Load all books
     })
       .then(data => {
@@ -127,7 +131,7 @@ function Library() {
         setBooks([])
       })
       .finally(() => setLoading(false))
-  }, [category, status, selectedTags, search, sort])
+  }, [category, status, selectedTags, search, sort, acquisition])
 
   // Load series when Series tab is active and filters change
   useEffect(() => {
@@ -154,7 +158,7 @@ function Library() {
   // Regenerate phrase when filters change
   useEffect(() => {
     setPhraseKey(k => k + 1)
-  }, [category, status, selectedTags, search, activeView, readTimeFilter])
+  }, [category, status, selectedTags, search, activeView, readTimeFilter, acquisition])
 
   // Sync FROM URL params TO state (for browser back/forward navigation)
   // Only runs when searchParams changes (from browser navigation), not when state changes
@@ -166,6 +170,7 @@ function Library() {
     const urlSort = searchParams.get('sort') || 'title'
     const urlView = searchParams.get('view') || 'library'
     const urlReadTime = searchParams.get('readTime') || ''
+    const urlAcquisition = searchParams.get('acquisition') || 'owned'
     
     // Update state from URL values
     setCategory(urlCategory)
@@ -175,6 +180,7 @@ function Library() {
     setSort(urlSort)
     setActiveView(urlView)
     setReadTimeFilter(urlReadTime)
+    setAcquisition(urlAcquisition)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -186,7 +192,8 @@ function Library() {
       if (value === '' || value === null || value === undefined || 
           (Array.isArray(value) && value.length === 0) ||
           (key === 'sort' && value === 'title') ||
-          (key === 'view' && value === 'library')) {
+          (key === 'view' && value === 'library') ||
+          (key === 'acquisition' && value === 'owned')) {
         params.delete(key)
       } else if (Array.isArray(value)) {
         params.set(key, value.join(','))
@@ -205,6 +212,7 @@ function Library() {
     setSelectedTags([])
     setReadTimeFilter('')
     setSearch('')
+    setAcquisition('owned')
     // Preserve current sort - don't reset it
     const params = new URLSearchParams()
     if (sort !== 'title') {
@@ -230,6 +238,53 @@ function Library() {
         />
       </div>
 
+      {/* Acquisition Toggle Bar - only show in library view */}
+      {activeView === 'library' && (
+        <div className="px-4 md:px-8 pt-3">
+          <div className="inline-flex rounded-lg bg-library-card p-1">
+            <button
+              onClick={() => {
+                setAcquisition('owned')
+                updateUrlParams({ acquisition: 'owned' })
+              }}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                acquisition === 'owned'
+                  ? 'bg-library-accent text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => {
+                setAcquisition('wishlist')
+                updateUrlParams({ acquisition: 'wishlist' })
+              }}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                acquisition === 'wishlist'
+                  ? 'bg-library-accent text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Wishlist
+            </button>
+            <button
+              onClick={() => {
+                setAcquisition('all')
+                updateUrlParams({ acquisition: 'all' })
+              }}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                acquisition === 'all'
+                  ? 'bg-library-accent text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Poetic phrase + Sort + Active filters */}
       <div className="px-4 md:px-8 py-3">
         <div className="flex flex-col gap-2">
@@ -238,7 +293,11 @@ function Library() {
             <p className="text-gray-500 text-xs">
               {activeView === 'series' 
                 ? `${seriesTotal} series. Stories that needed more than one book.`
-                : currentPhrase
+                : acquisition === 'wishlist'
+                  ? `${filteredBooks.length} on the wishlist. Dreams waiting to become reality.`
+                  : acquisition === 'all'
+                    ? `${filteredBooks.length} total. Your complete reading universe.`
+                    : currentPhrase
               }
             </p>
             
