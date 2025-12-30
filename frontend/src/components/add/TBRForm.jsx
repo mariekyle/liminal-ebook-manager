@@ -1,15 +1,17 @@
 /**
  * TBRForm.jsx
  * 
- * Form for adding books to the TBR (To Be Read) list
+ * Form for adding books to the Wishlist (formerly TBR)
+ * Features: Multi-author chips, autocomplete for title/author/series
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { listBooks, listAuthors, listSeries } from '../../api'
 
 export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
   const [form, setForm] = useState({
     title: '',
-    author: '',
+    authors: [],
     series: '',
     seriesNumber: '',
     category: 'FanFiction',
@@ -21,12 +23,176 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
   
   const [errors, setErrors] = useState({})
   
+  // Author input (separate from form.authors array)
+  const [authorInput, setAuthorInput] = useState('')
+  
+  // Autocomplete states
+  const [titleSuggestions, setTitleSuggestions] = useState([])
+  const [authorSuggestions, setAuthorSuggestions] = useState([])
+  const [seriesSuggestions, setSeriesSuggestions] = useState([])
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false)
+  const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
+  const [showSeriesDropdown, setShowSeriesDropdown] = useState(false)
+  
+  // Familiar title warning
+  const [familiarTitle, setFamiliarTitle] = useState(null)
+  
+  // Refs for managing focus
+  const authorInputRef = useRef(null)
+  
   const showFanficFields = form.category === 'FanFiction'
+  
+  // Title autocomplete - check for existing books
+  useEffect(() => {
+    if (!form.title || form.title.length < 2) {
+      setTitleSuggestions([])
+      setFamiliarTitle(null)
+      return
+    }
+    
+    const timer = setTimeout(async () => {
+      try {
+        const data = await listBooks({ search: form.title, limit: 5, acquisition: 'all' })
+        const matches = data.books || []
+        
+        setTitleSuggestions(matches)
+        
+        // Check for exact or very similar match
+        const exactMatch = matches.find(
+          book => book.title.toLowerCase() === form.title.toLowerCase()
+        )
+        
+        if (exactMatch) {
+          setFamiliarTitle(exactMatch)
+        } else {
+          // Check for high similarity (>85%)
+          const similarMatch = matches.find(book => {
+            const similarity = calculateSimilarity(
+              form.title.toLowerCase(),
+              book.title.toLowerCase()
+            )
+            return similarity > 0.85
+          })
+          setFamiliarTitle(similarMatch || null)
+        }
+      } catch (err) {
+        console.error('Title autocomplete error:', err)
+      }
+    }, 300)
+    
+    return () => clearTimeout(timer)
+  }, [form.title])
+  
+  // Author autocomplete
+  useEffect(() => {
+    if (!authorInput || authorInput.length < 1) {
+      setAuthorSuggestions([])
+      return
+    }
+    
+    const timer = setTimeout(async () => {
+      try {
+        const data = await listAuthors()
+        // Extract author names from response object
+        const authorNames = (data.authors || []).map(a => a.name)
+        const filtered = authorNames
+          .filter(author => 
+            author.toLowerCase().includes(authorInput.toLowerCase()) &&
+            !form.authors.includes(author)
+          )
+          .sort((a, b) => {
+            // Prioritize starts-with matches
+            const aStarts = a.toLowerCase().startsWith(authorInput.toLowerCase())
+            const bStarts = b.toLowerCase().startsWith(authorInput.toLowerCase())
+            if (aStarts && !bStarts) return -1
+            if (!aStarts && bStarts) return 1
+            return a.localeCompare(b)
+          })
+          .slice(0, 5)
+        
+        setAuthorSuggestions(filtered)
+      } catch (err) {
+        console.error('Author autocomplete error:', err)
+      }
+    }, 200)
+    
+    return () => clearTimeout(timer)
+  }, [authorInput, form.authors])
+  
+  // Series autocomplete
+  useEffect(() => {
+    if (!form.series || form.series.length < 2) {
+      setSeriesSuggestions([])
+      return
+    }
+    
+    const timer = setTimeout(async () => {
+      try {
+        const data = await listSeries()
+        const matches = (data.series || [])
+          .map(s => s.name)
+          .filter(name => 
+            name.toLowerCase().includes(form.series.toLowerCase())
+          )
+          .slice(0, 5)
+        
+        setSeriesSuggestions(matches)
+      } catch (err) {
+        console.error('Series autocomplete error:', err)
+      }
+    }, 300)
+    
+    return () => clearTimeout(timer)
+  }, [form.series])
+  
+  // Similarity calculation (Levenshtein-based)
+  const calculateSimilarity = (str1, str2) => {
+    const longer = str1.length > str2.length ? str1 : str2
+    const shorter = str1.length > str2.length ? str2 : str1
+    
+    if (longer.length === 0) return 1.0
+    
+    const editDistance = levenshtein(longer, shorter)
+    return (longer.length - editDistance) / longer.length
+  }
+  
+  const levenshtein = (str1, str2) => {
+    // Initialize full 2D matrix
+    const matrix = Array(str2.length + 1).fill(null).map(() => 
+      Array(str1.length + 1).fill(0)
+    )
+    
+    // Fill first column
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i][0] = i
+    }
+    
+    // Fill first row
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length]
+  }
   
   const validate = () => {
     const newErrors = {}
     if (!form.title.trim()) newErrors.title = 'Title is required'
-    if (!form.author.trim()) newErrors.author = 'Author is required'
+    if (form.authors.length === 0) newErrors.authors = 'At least one author is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -37,7 +203,7 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
     
     onSubmit({
       title: form.title.trim(),
-      authors: [form.author.trim()],
+      authors: form.authors,
       series: form.series.trim() || null,
       series_number: form.seriesNumber.trim() || null,
       category: form.category,
@@ -55,6 +221,51 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
     }
   }
   
+  // Author management
+  const handleAddAuthor = (author) => {
+    const trimmed = author.trim()
+    if (!trimmed) return
+    
+    // Check if author already exists (case-insensitive)
+    const existingIndex = form.authors.findIndex(
+      a => a.toLowerCase() === trimmed.toLowerCase()
+    )
+    
+    if (existingIndex >= 0) {
+      // Replace existing with new version (better capitalization from autocomplete)
+      const updatedAuthors = [...form.authors]
+      updatedAuthors[existingIndex] = trimmed
+      setForm(prev => ({ ...prev, authors: updatedAuthors }))
+    } else {
+      // Add new author
+      setForm(prev => ({ ...prev, authors: [...prev.authors, trimmed] }))
+    }
+    
+    setAuthorInput('')
+    setShowAuthorDropdown(false)
+    if (errors.authors) {
+      setErrors(prev => ({ ...prev, authors: null }))
+    }
+  }
+  
+  const handleRemoveAuthor = (authorToRemove) => {
+    setForm(prev => ({
+      ...prev,
+      authors: prev.authors.filter(a => a !== authorToRemove)
+    }))
+  }
+  
+  const handleAuthorKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (authorSuggestions.length > 0) {
+        handleAddAuthor(authorSuggestions[0])
+      } else if (authorInput.trim()) {
+        handleAddAuthor(authorInput)
+      }
+    }
+  }
+  
   return (
     <div className="py-4">
       <div className="mb-6">
@@ -63,47 +274,160 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-        {/* Title */}
-        <div>
+        {/* Title with Autocomplete */}
+        <div className="relative">
           <label className="block text-sm text-gray-400 mb-2">Title *</label>
           <input
             type="text"
             value={form.title}
-            onChange={(e) => updateForm('title', e.target.value)}
+            onChange={(e) => {
+              updateForm('title', e.target.value)
+              setShowTitleDropdown(true)
+            }}
+            onFocus={() => setShowTitleDropdown(true)}
+            onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
             placeholder="What's it called?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.title ? 'border-red-500' : 'border-gray-700'
             }`}
           />
           {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
+          
+          {/* Familiar Title Warning */}
+          {familiarTitle && (
+            <div className="mt-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-400 text-lg">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-amber-400 text-sm font-medium">A Familiar Title</p>
+                  <p className="text-gray-300 text-xs mt-1">
+                    "{familiarTitle.title}" by {familiarTitle.authors?.join(', ')} is already {familiarTitle.acquisition_status === 'wishlist' ? 'on your wishlist' : 'in your library'}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Title Suggestions Dropdown */}
+          {showTitleDropdown && titleSuggestions.length > 0 && !familiarTitle && (
+            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {titleSuggestions.map((book, idx) => (
+                <div
+                  key={idx}
+                  className="px-4 py-2 hover:bg-gray-700 cursor-pointer"
+                  onClick={() => {
+                    setFamiliarTitle(book)
+                    setShowTitleDropdown(false)
+                  }}
+                >
+                  <div className="text-white text-sm">{book.title}</div>
+                  <div className="text-gray-400 text-xs">
+                    {book.authors?.join(', ')} • {book.acquisition_status === 'wishlist' ? 'On Wishlist' : 'In Library'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
-        {/* Author */}
+        {/* Authors with Chips and Autocomplete */}
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Author *</label>
-          <input
-            type="text"
-            value={form.author}
-            onChange={(e) => updateForm('author', e.target.value)}
-            placeholder="Who wrote it?"
-            className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
-              errors.author ? 'border-red-500' : 'border-gray-700'
-            }`}
-          />
-          {errors.author && <p className="text-red-400 text-sm mt-1">{errors.author}</p>}
+          <label className="block text-sm text-gray-400 mb-2">Author(s) *</label>
+          
+          {/* Author Chips */}
+          {form.authors.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {form.authors.map((author, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-library-accent/20 text-library-accent rounded-full text-sm"
+                >
+                  {author}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAuthor(author)}
+                    className="hover:text-white ml-1"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {/* Author Input with Autocomplete */}
+          <div className="relative">
+            <input
+              ref={authorInputRef}
+              type="text"
+              value={authorInput}
+              onChange={(e) => {
+                setAuthorInput(e.target.value)
+                setShowAuthorDropdown(true)
+              }}
+              onKeyDown={handleAuthorKeyDown}
+              onFocus={() => setShowAuthorDropdown(true)}
+              onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
+              placeholder={form.authors.length === 0 ? "Who wrote it?" : "Add another author..."}
+              className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
+                errors.authors ? 'border-red-500' : 'border-gray-700'
+              }`}
+            />
+            
+            {/* Author Suggestions Dropdown */}
+            {showAuthorDropdown && authorSuggestions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {authorSuggestions.map((author, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white text-sm"
+                    onClick={() => handleAddAuthor(author)}
+                  >
+                    {author}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {errors.authors && <p className="text-red-400 text-sm mt-1">{errors.authors}</p>}
+          <p className="text-gray-500 text-xs mt-1">Press Enter to add each author</p>
         </div>
         
-        {/* Series Row */}
+        {/* Series with Autocomplete */}
         <div className="flex gap-3">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <label className="block text-sm text-gray-400 mb-2">Series</label>
             <input
               type="text"
               value={form.series}
-              onChange={(e) => updateForm('series', e.target.value)}
+              onChange={(e) => {
+                updateForm('series', e.target.value)
+                setShowSeriesDropdown(true)
+              }}
+              onFocus={() => setShowSeriesDropdown(true)}
+              onBlur={() => setTimeout(() => setShowSeriesDropdown(false), 200)}
               placeholder="Series name"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent"
             />
+            
+            {/* Series Suggestions Dropdown */}
+            {showSeriesDropdown && seriesSuggestions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {seriesSuggestions.map((series, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white text-sm"
+                    onClick={() => {
+                      updateForm('series', series)
+                      setShowSeriesDropdown(false)
+                    }}
+                  >
+                    {series}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="w-20">
             <label className="block text-sm text-gray-400 mb-2">#</label>
