@@ -19,6 +19,7 @@ from routers.import_metadata import router as import_router
 from routers.upload import router as upload_router
 from routers.settings import router as settings_router
 from routers.authors import router as authors_router
+from routers.sessions import router as sessions_router
 
 # Configuration from environment
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
@@ -55,6 +56,7 @@ app.include_router(import_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(authors_router, prefix="/api")
+app.include_router(sessions_router)
 
 
 # Health check endpoint
