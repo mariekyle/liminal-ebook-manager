@@ -1014,7 +1014,8 @@ function BookDetail() {
         ) : (
           /* Library Reading Tracker UI */
           <>
-            <div className="flex flex-wrap gap-3 items-center mb-4">
+            {/* Status and Rating Controls - hide on mobile History tab */}
+            <div className={`flex flex-wrap gap-3 items-center mb-4 ${activeTab === 'history' ? 'hidden md:flex' : ''}`}>
               {/* Status Chip + Popup */}
               <div className="relative">
                 <button
@@ -1173,7 +1174,15 @@ function BookDetail() {
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm">No reading dates recorded</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-500 text-sm">No reading dates recorded</p>
+                  <button
+                    onClick={() => setShowDateEditors(true)}
+                    className="text-library-accent hover:text-white text-sm transition-colors"
+                  >
+                    + Add dates
+                  </button>
+                </div>
               )}
               
               {/* Date editors - shown when edit button clicked */}

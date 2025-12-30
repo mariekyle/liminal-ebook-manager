@@ -35,7 +35,7 @@ function Library() {
   // View state (tabs) - initialize from URL
   const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
   
-  // Acquisition filter state - 'owned', 'wishlist', or 'all'
+  // Acquisition filter state - 'owned', 'browse', or 'wishlist'
   const [acquisition, setAcquisition] = useState(searchParams.get('acquisition') || 'owned')
   
   // Series state
@@ -119,7 +119,7 @@ function Library() {
       tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
       search: search || undefined,
       sort,
-      acquisition: acquisition || 'owned',
+      acquisition: acquisition === 'browse' ? 'owned' : (acquisition || 'owned'),
       limit: 10000, // Load all books
     })
       .then(data => {
@@ -257,6 +257,19 @@ function Library() {
             </button>
             <button
               onClick={() => {
+                setAcquisition('browse')
+                updateUrlParams({ acquisition: 'browse' })
+              }}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                acquisition === 'browse'
+                  ? 'bg-library-accent text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Browse
+            </button>
+            <button
+              onClick={() => {
                 setAcquisition('wishlist')
                 updateUrlParams({ acquisition: 'wishlist' })
               }}
@@ -267,19 +280,6 @@ function Library() {
               }`}
             >
               Wishlist
-            </button>
-            <button
-              onClick={() => {
-                setAcquisition('all')
-                updateUrlParams({ acquisition: 'all' })
-              }}
-              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                acquisition === 'all'
-                  ? 'bg-library-accent text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              All
             </button>
           </div>
         </div>
@@ -295,9 +295,9 @@ function Library() {
                 ? `${seriesTotal} series. Stories that needed more than one book.`
                 : acquisition === 'wishlist'
                   ? `${filteredBooks.length} on the wishlist. Dreams waiting to become reality.`
-                  : acquisition === 'all'
-                    ? `${filteredBooks.length} total. Your complete reading universe.`
-                    : currentPhrase
+                  : acquisition === 'browse'
+                    ? currentPhrase
+                    : `${filteredBooks.length} titles. Your library awaits.`
               }
             </p>
             
