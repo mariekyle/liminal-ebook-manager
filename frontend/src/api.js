@@ -134,6 +134,13 @@ export async function getBook(bookId) {
 }
 
 /**
+ * Get reading sessions for a book
+ */
+export async function getBookSessions(titleId) {
+  return apiFetch(`/titles/${titleId}/sessions`)
+}
+
+/**
  * Get notes for a book
  */
 export async function getBookNotes(bookId) {

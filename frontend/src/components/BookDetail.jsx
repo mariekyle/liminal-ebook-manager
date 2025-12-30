@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -145,6 +145,11 @@ function BookDetail() {
   
   // Date editors visibility
   const [showDateEditors, setShowDateEditors] = useState(false)
+  
+  // Sessions state
+  const [sessions, setSessions] = useState([])
+  const [sessionsStats, setSessionsStats] = useState({ times_read: 0, average_rating: null })
+  const [sessionsLoading, setSessionsLoading] = useState(false)
 
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
@@ -160,12 +165,34 @@ function BookDetail() {
       .catch(err => console.error('Failed to load settings:', err))
   }, [])
 
+  // Fetch sessions for the book
+  const fetchSessions = async () => {
+    if (!id) return
+    setSessionsLoading(true)
+    try {
+      const data = await getBookSessions(id)
+      setSessions(data.sessions || [])
+      setSessionsStats({
+        times_read: data.times_read || 0,
+        average_rating: data.average_rating
+      })
+    } catch (err) {
+      console.error('Failed to fetch sessions:', err)
+    } finally {
+      setSessionsLoading(false)
+    }
+  }
+  
   // Load book and notes (essential for page)
   useEffect(() => {
     setLoading(true)
     setError(null)
     setShowDateEditors(false)
     setActiveTab('details')
+    // Reset sessions state when navigating to new book
+    setSessions([])
+    setSessionsStats({ times_read: 0, average_rating: null })
+    setSessionsLoading(true)
     
     Promise.all([
       getBook(id),
@@ -186,6 +213,8 @@ function BookDetail() {
           setNoteContent(content)
           setOriginalNoteContent(content)
         }
+        // Fetch sessions after book loads
+        fetchSessions()
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -701,6 +730,46 @@ function BookDetail() {
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   const readTimeData = getReadTimeData(book.word_count, wpm)
   const isWishlist = book.acquisition_status === 'wishlist'
+  
+  // Helper functions for sessions
+  const formatSessionDate = (dateStr) => {
+    if (!dateStr) return null
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const formatSessionDateRange = (startDate, endDate) => {
+    const start = formatSessionDate(startDate)
+    const end = formatSessionDate(endDate)
+    
+    if (start && end) {
+      // Check if same year to avoid repetition
+      const startYear = startDate?.slice(0, 4)
+      const endYear = endDate?.slice(0, 4)
+      if (startYear === endYear) {
+        // Same year: "Dec 20 – Dec 24, 2025"
+        const startShort = new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        return `${startShort} – ${end}`
+      }
+      return `${start} – ${end}`
+    }
+    if (start) return `Started ${start}`
+    if (end) return `Finished ${end}`
+    return null
+  }
+  
+  const renderStars = (rating, maxStars = 5) => {
+    if (rating === null || rating === undefined) return null
+    const stars = []
+    for (let i = 1; i <= maxStars; i++) {
+      stars.push(
+        <span key={i} className={i <= rating ? 'text-yellow-400' : 'text-gray-600'}>
+          ★
+        </span>
+      )
+    }
+    return <span className="text-lg">{stars}</span>
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8">
@@ -1147,75 +1216,95 @@ function BookDetail() {
               )}
             </div>
             
-            {/* Reading History - Desktop inline, Mobile in History tab only */}
+            {/* Reading History Section */}
             <div className={`mt-4 pt-4 border-t border-gray-700 ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-400">Reading History</h3>
+              <div className="space-y-4">
+                {/* Header with Add button */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+                    Reading History
+                  </h3>
+                  <button
+                    className="text-violet-400 hover:text-violet-300 text-sm font-medium"
+                    onClick={() => {/* TODO: Add session - next step */}}
+                  >
+                    + Add Session
+                  </button>
+                </div>
+
+                {/* Sessions List */}
+                {sessionsLoading ? (
+                  <div className="text-gray-500 text-sm">Loading sessions...</div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-gray-500 text-sm">No reading sessions recorded</div>
+                ) : (
+                  <div className="space-y-3">
+                    {sessions.map((session) => (
+                      <div
+                        key={session.id}
+                        className="bg-gray-800/50 rounded-lg p-4 relative"
+                      >
+                        {/* Edit button */}
+                        <button
+                          className="absolute top-3 right-3 text-gray-500 hover:text-gray-300"
+                          onClick={() => {/* TODO: Edit session - next step */}}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+
+                        {/* Session number */}
+                        <div className="font-semibold text-white mb-1">
+                          Read #{session.session_number}
+                        </div>
+
+                        {/* Date range */}
+                        {formatSessionDateRange(session.date_started, session.date_finished) && (
+                          <div className="text-gray-400 text-sm mb-2">
+                            {formatSessionDateRange(session.date_started, session.date_finished)}
+                          </div>
+                        )}
+
+                        {/* Status and rating */}
+                        <div className="flex items-center gap-3">
+                          <span className={`text-sm font-medium ${
+                            session.session_status === 'finished' ? 'text-green-400' :
+                            session.session_status === 'dnf' ? 'text-pink-400' :
+                            'text-gray-400'
+                          }`}>
+                            {session.session_status === 'finished' ? 'Finished' :
+                             session.session_status === 'dnf' ? 'DNF' :
+                             'In Progress'}
+                          </span>
+                          {session.rating && renderStars(session.rating)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Stats Row */}
+                {sessions.length > 0 && (
+                  <div className="border-t border-gray-700 pt-4 mt-4">
+                    <div className="flex justify-between text-sm">
+                      <div>
+                        <div className="text-gray-400">Times Read</div>
+                        <div className="text-white font-semibold text-lg">{sessionsStats.times_read}</div>
+                      </div>
+                      {sessionsStats.average_rating && (
+                        <div className="text-right">
+                          <div className="text-gray-400">Average Rating</div>
+                          <div className="text-white font-semibold text-lg flex items-center justify-end gap-1">
+                            {sessionsStats.average_rating}
+                            <span className="text-yellow-400">★</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              {(dateStarted || dateFinished) ? (
-                <div className="flex items-center justify-between bg-library-bg rounded-lg px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-sm">Read #1</span>
-                    <span className="text-gray-300 text-sm">
-                      {dateStarted ? new Date(dateStarted + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '?'}
-                      {' — '}
-                      {dateFinished ? new Date(dateFinished + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'ongoing'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setShowDateEditors(!showDateEditors)}
-                    className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
-                    aria-label="Edit dates"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-500 text-sm">No reading dates recorded</p>
-                  <button
-                    onClick={() => setShowDateEditors(true)}
-                    className="text-library-accent hover:text-white text-sm transition-colors"
-                  >
-                    + Add dates
-                  </button>
-                </div>
-              )}
-              
-              {/* Date editors - shown when edit button clicked */}
-              {showDateEditors && (
-                <div className="mt-3 flex flex-wrap gap-4 items-center">
-                  <div className="flex items-center gap-2">
-                    <label className="text-gray-400 text-sm">Started:</label>
-                    <input
-                      type="date"
-                      value={dateStarted}
-                      onChange={(e) => handleDateChange('started', e.target.value)}
-                      disabled={datesLoading}
-                      className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-gray-400 text-sm">Finished:</label>
-                    <input
-                      type="date"
-                      value={dateFinished}
-                      onChange={(e) => handleDateChange('finished', e.target.value)}
-                      disabled={datesLoading}
-                      className="bg-library-bg px-3 py-1.5 rounded text-sm text-gray-300 border border-gray-600 focus:border-library-accent focus:outline-none disabled:opacity-50"
-                    />
-                  </div>
-                  {datesStatus === 'saved' && (
-                    <span className="text-green-400 text-sm">✓</span>
-                  )}
-                  {datesStatus === 'error' && (
-                    <span className="text-red-400 text-sm">Failed</span>
-                  )}
-                </div>
-              )}
             </div>
           </>
         )}
