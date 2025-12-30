@@ -11,6 +11,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.4] - 2025-12-30
+
+### Added
+
+#### Phase 5.2: Form Autocomplete
+Complete upgrade to TBRForm (wishlist entry form) with autocomplete features.
+
+#### Multi-Author Support
+- **Author chips** — Multiple authors displayed as removable chips
+- **Enter to add** — Press Enter to add typed author
+- **Remove button** — Click × to remove any author
+- **Validation** — At least one author required
+
+#### Title Autocomplete
+- **Search suggestions** — Shows matching books after 2+ characters
+- **Familiar title warning** — Warns when title matches existing book
+- **85% similarity matching** — Levenshtein distance for fuzzy matching
+- **Status indication** — Warning shows "on wishlist" vs "in library"
+
+#### Author Autocomplete
+- **Suggestions from library** — Shows authors from existing books
+- **Starts-with priority** — Better matches sorted first
+- **Smart replacement** — Selecting autocomplete replaces case variations
+- **Debounced search** — 200ms delay prevents excessive API calls
+
+#### Series Autocomplete
+- **Suggestions from library** — Shows existing series names
+- **Click to fill** — Select suggestion to populate field
+- **Debounced search** — 300ms delay prevents excessive API calls
+
+### Fixed
+
+- **API response handling** — Extract author names from `{authors: [{name}]}` structure
+- **Levenshtein matrix** — Proper 2D array initialization prevents NaN errors
+- **Case-insensitive replacement** — "john smith" replaced by "John Smith" from autocomplete
+
+### Technical
+
+#### Modified Files
+- `frontend/src/components/add/TBRForm.jsx` — Complete refactor with autocomplete
+
+#### Implementation Details
+- Levenshtein distance algorithm for title similarity
+- Debounced API calls (200ms authors, 300ms title/series)
+- Dropdown management with focus/blur handlers
+- Form validation preserved (title + author required)
+
+---
+
+## [0.9.3] - 2025-12-29
+
+### Added
+
+#### Phase 5.1: Wishlist Unification
+Complete redesign of how wishlist items integrate with the library.
+
+#### Backend: Acquisition Status System
+- **New `acquisition_status` column** — Tracks 'owned' vs 'wishlist' status
+- **`?acquisition=` filter** — API parameter to filter books by ownership status
+- **Automatic migration** — Existing `is_tbr` data migrated to new column
+- **Backward compatible** — TBR endpoints still functional
+
+#### Library: Toggle Bar Navigation
+- **Home / Browse / Wishlist tabs** — Filter library by ownership status
+- **Home tab** — Shows owned books with "Your library awaits" message
+- **Browse tab** — Shows owned books with rotating poetic phrases
+- **Wishlist tab** — Shows wishlist items only
+- **URL persistence** — Toggle state preserved in URL params
+
+#### BookCard: Wishlist Styling
+- **Dotted border** — Wishlist items have dashed border on covers
+- **Bookmark icon** — Badge indicator for wishlist items
+- **Full brightness** — No opacity reduction (cleaner look)
+
+#### BookDetail: Complete UI Redesign
+- **WISHLIST banner** — Clear indicator with "You don't own this yet" message
+- **Horizontal desktop layout** — Cover on left, content on right
+- **Larger cover on desktop** — Increased from w-40 to w-48
+- **Mobile tab navigation** — Details | Notes | History tabs
+- **Edit icon repositioned** — Moved to upper right corner (icon only)
+
+#### Reading History Section
+- **New formatted display** — "Read #1: Jul 14, 2025 — Jul 14, 2025"
+- **Collapsible date editors** — Edit button toggles date input fields
+- **"+ Add dates" button** — Appears when no reading dates recorded
+- **React state management** — Date editors persist through re-renders
+
+#### Navigation Cleanup
+- **TBR tab removed** — From both mobile and desktop navigation
+- **`/tbr` redirect** — Automatically redirects to `/?acquisition=wishlist`
+- **4-tab navigation** — Library, Series, Authors, Add
+
+### Changed
+
+- **Toggle order** — Changed from Home/Wishlist/All to Home/Browse/Wishlist
+- **Browse behavior** — Shows only owned books (same filter as Home, different phrase)
+
+### Fixed
+
+- **Reading History tab visibility** — Only shows in History tab on mobile (not Details)
+- **Date editors state** — No longer closes when changing dates
+- **Tab state reset** — Resets to Details tab when navigating between books
+- **Status/rating visibility** — Hidden on mobile History tab (only shows reading dates)
+
+### Technical
+
+#### Database Changes
+- Migration: Added `acquisition_status TEXT DEFAULT 'owned'` column to titles table
+- Migration: Populated from existing `is_tbr` values
+- Index: Added `idx_titles_acquisition_status`
+
+#### New API Behavior
+- `GET /api/books` — New `?acquisition=` parameter (owned, wishlist, all)
+- Default: Returns 'owned' books when parameter omitted
+
+#### Modified Files
+- `backend/database.py` — Added acquisition_status column and migration
+- `backend/routers/titles.py` — Added acquisition filter, updated queries
+- `frontend/src/components/Library.jsx` — Toggle bar, phrase logic
+- `frontend/src/components/BookCard.jsx` — Wishlist styling
+- `frontend/src/components/BookDetail.jsx` — Complete UI redesign
+- `frontend/src/components/Header.jsx` — Removed TBR tab
+- `frontend/src/components/BottomNav.jsx` — Removed TBR tab
+- `frontend/src/App.jsx` — TBR redirect
+
+---
+
 ## [0.9.2] - 2025-12-29
 
 ### Added
@@ -146,157 +273,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.8.2] - 2025-12-27
-
-### Added
-
-#### Finished Checkmarks on Author Pages
-- **Green checkmark badge** — Finished books now show checkmark overlay on AuthorDetail page
-- Matches the checkmark style used in Library view
-
-#### Custom Status Labels
-- **Status Labels settings** — Customize display names for Unread, In Progress, Finished, DNF
-- **useStatusLabels hook** — Centralized hook for fetching and applying custom labels app-wide
-- **Labels in BookDetail** — Status chip and popup show custom labels
-- **Labels in FilterDrawer** — Status filter buttons show custom labels
-- **Persistence** — Labels save to database and load on app start
-
-### Technical
-
-#### New Files
-- `frontend/src/hooks/useStatusLabels.js` — Hook for status label management
-
-#### Modified Files
-- `frontend/src/components/AuthorDetail.jsx` — Added checkmark overlay
-- `frontend/src/components/SettingsDrawer.jsx` — Added Status Labels UI section
-- `frontend/src/components/BookDetail.jsx` — Integrated useStatusLabels hook
-- `frontend/src/components/FilterDrawer.jsx` — Integrated useStatusLabels hook
-- `backend/database.py` — Added default status label settings in migrations
-
----
-
-## [0.8.1] - 2025-12-26
-
-### Added
-
-#### Obsidian Notes Migration
-- **Notes import endpoint** — `POST /books/{id}/notes/import` for bulk importing notes
-- **Book matching endpoint** — `GET /books/match` for fuzzy title/author matching with confidence scores
-- **Migration script** — `migrate_notes.py` for importing Obsidian book notes to Liminal
-- **Append mode** — Imported notes append to existing notes with `---` separator
-- **Source tracking** — Imported notes labeled with "*Imported from obsidian*"
-
-#### Migration Features
-- **Fuzzy matching** — Matches books by exact title, partial title, or reverse partial
-- **Confidence scoring** — 95-100% for exact matches, 70-85% for partial matches
-- **Author boost** — +10% confidence when author also matches
-- **Dry run mode** — Preview imports before committing
-- **Detailed reports** — Markdown report of matched/unmatched files
-- **Empty section cleanup** — Removes unfilled template placeholders from notes
-
-### Migration Results
-
-| Metric | Count |
-|--------|-------|
-| Notes imported automatically | 236 |
-| Notes imported manually | 15 |
-| **Total notes migrated** | **251** |
-
----
-
-## [0.8.0] - 2025-12-26
-
-### Added
-
-#### Full-Screen Notes Editor
-- **Full-screen modal** — Replaces 80% slide-up panel for distraction-free writing
-- **Header controls** — X (close) on left, Save on right — always accessible with mobile keyboard
-- **Transparent textarea** — No border, seamless with modal background
-- **Template dropdown** — Quick-apply templates from toolbar
-
-#### Note Templates
-- **Structured Review** — Characters, Atmosphere/World, Writing, Plot, Enjoyment, Steam, Believability sections
-- **Reading Notes** — Thoughts While Reading, Reactions After Finishing sections
-- **Append with separator** — Templates add to existing content with `---` divider
-
-#### Book Linking System
-- **`[[` trigger** — Type `[[` to open book search modal
-- **Modal search overlay** — Full-screen search with backdrop
-- **Rich search results** — Shows title, author, and category (20 results)
-- **Keyboard navigation** — Arrow keys to navigate, Enter/Tab to select, Escape to close
-- **Insert as plain text** — Option to insert search text even if no book matches
-
-#### Rendered Notes (Read Mode)
-- **Markdown rendering** — Notes display with headers, bold, italic, lists
-- **Clickable book links** — `[[Book Title]]` renders as purple links to book detail
-- **Unmatched links** — Books not in library show as gray text (no brackets)
-- **Case-insensitive matching** — Links match regardless of title capitalization
-
-#### Backlinks
-- **Link storage** — `[[Book Title]]` patterns parsed and stored in `links` table
-- **GET /books/{id}/backlinks** — API endpoint to find books referencing current book
-- **"Referenced by" section** — Shows on book detail when other books link to it
-- **Clickable backlinks** — Navigate directly to the referencing book
-
----
-
-## [0.7.0] - 2025-12-25
-
-### Added
-
-#### Navigation Redesign
-- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload tabs
-- **Desktop header navigation** — Centered nav tabs on single line with logo and settings
-- **Filter drawer** — Slides up from bottom on mobile, slides in from right on desktop
-- **Unified SearchBar** — Combined search input and filter icon in single component
-- **Sort inline with phrase** — Sort dropdown moved next to book/series count, separate from filters
-
-#### Settings Enhancements
-- **Books per row setting** — Choose 2, 3, or 4 columns on mobile (desktop unchanged)
-- **Real-time grid sync** — Grid columns update immediately when setting changes
-
-#### Edit Book Modal
-- **Series autocomplete** — Suggests existing series names when typing in series field
-
----
-
-## [0.6.0] - 2025-12-24
-
-### Added
-
-#### Settings System
-- **Settings drawer** — Slide-out panel from gear icon in header
-- **WPM setting** — Configurable words-per-minute (50-2000) for read time calculations
-- **Relocated Sync Library button** — Moved from header to settings drawer
-
-#### Edit Book Metadata
-- **Edit metadata modal** — Full book editing from BookDetail page
-- **Draggable author chips** — Reorder authors with drag-and-drop
-- **Author autocomplete** — Suggests existing library authors when typing
-- **Editable fields** — Title, authors, series, series number, category, publication year
-
-#### Estimated Read Time
-- **Read time display** — Shows estimated duration on BookDetail page
-- **Poetic microcopy** — Tier labels like "a quick visit", "a slow unfolding", "a true saga"
-- **Read time filter** — 8 filter tiers in library from "Under 30 min" to "30+ hours"
-- **WPM-aware calculations** — Respects user's reading speed setting
-
-#### Author System
-- **Author pages** — View author with notes and all their books
-- **Author notes** — Free-form notes about any author
-- **Author rename** — Update author name across all books
-- **Authors list page** — Alphabetical list with search, accessible from main nav
-- **Clickable author links** — Author names on BookDetail link to author pages
-
----
-
 ## Version History Summary
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.9.2 | 2025-12-29 | **Orphan detection** — Track missing book folders |
-| 0.9.1 | 2025-12-29 | **Bug fix** — Upload folder structure, file size display |
-| 0.9.0 | 2025-12-28 | **Phase 5 (partial)** — TBR system, manual entry, familiar title detection |
+| 0.9.4 | 2025-12-30 | **Phase 5.2** — Form autocomplete (title, author, series) |
+| 0.9.3 | 2025-12-29 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
+| 0.9.2 | 2025-12-29 | Orphan detection system |
+| 0.9.1 | 2025-12-29 | Bug fix — Upload folder structure, file size display |
+| 0.9.0 | 2025-12-28 | **Phase 5** — TBR system, manual entry, familiar title detection |
 | 0.8.2 | 2025-12-27 | Custom status labels, finished checkmarks on author pages |
 | 0.8.1 | 2025-12-26 | Phase 4.5 complete — Obsidian notes migration (251 notes) |
 | 0.8.0 | 2025-12-26 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
@@ -318,25 +303,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Upgrade Notes
 
-### Upgrading to 0.9.2
+### Upgrading to 0.9.4
 
 **Modified Files:**
-- `backend/database.py` — Added is_orphaned column
-- `backend/routers/sync.py` — Added orphan detection logic
+- `frontend/src/components/add/TBRForm.jsx` — Complete refactor
 
-**Database migration runs automatically** — The `is_orphaned` column will be added on first startup.
-
-**Rebuild Docker container after update.**
-
-### Upgrading to 0.9.1
-
-**Modified Files:**
-- `backend/routers/upload.py` — Fixed folder path creation
-- `frontend/src/components/upload/BookCard.jsx` — Fixed file size display
-
-**Manual cleanup required:**
-- Move any books incorrectly placed in `/books/FanFiction/` back to `/books/`
-- Delete empty category subfolders if created
+**No database changes.** Frontend-only update.
 
 **Rebuild Docker container after update.**
 
@@ -344,10 +316,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Roadmap](./20251229_ROADMAP.md)
+- [Roadmap](./20251230_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: December 29, 2025*
+*Last updated: December 30, 2025*

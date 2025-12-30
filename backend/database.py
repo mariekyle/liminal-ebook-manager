@@ -147,6 +147,97 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Migration: Populate reading_sessions from existing titles data
+    cursor = await db.execute("""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='reading_sessions'
+    """)
+    sessions_table_exists = await cursor.fetchone()
+    
+    if sessions_table_exists:
+        # Check if migration already ran (any sessions exist)
+        cursor = await db.execute("SELECT COUNT(*) FROM reading_sessions")
+        count = (await cursor.fetchone())[0]
+        
+        if count == 0:
+            # Migrate existing reading data to sessions
+            # Logic:
+            # 1. Trust explicit status for non-unread books
+            # 2. For 'Unread' books with reading data, infer status:
+            #    - has date_finished → finished
+            #    - has date_started only → in_progress  
+            #    - has rating only → finished (you don't rate unread books)
+            # 3. Skip truly unread books (no dates, no rating, status='Unread')
+            
+            await db.execute("""
+                INSERT INTO reading_sessions (
+                    title_id, 
+                    session_number, 
+                    date_started, 
+                    date_finished, 
+                    session_status, 
+                    rating,
+                    created_at,
+                    updated_at
+                )
+                SELECT 
+                    id,
+                    1,
+                    date_started,
+                    date_finished,
+                    CASE 
+                        -- Explicit non-unread status: trust it
+                        WHEN status = 'In Progress' THEN 'in_progress'
+                        WHEN status = 'Finished' THEN 'finished'
+                        WHEN status = 'DNF' THEN 'dnf'
+                        -- Unread but has date_finished: was actually finished
+                        WHEN status = 'Unread' AND date_finished IS NOT NULL THEN 'finished'
+                        -- Unread but has date_started only: was actually in progress
+                        WHEN status = 'Unread' AND date_started IS NOT NULL THEN 'in_progress'
+                        -- Unread but has rating: was actually finished (you don't rate unread books)
+                        WHEN status = 'Unread' AND rating IS NOT NULL THEN 'finished'
+                        -- Fallback (shouldn't hit this given WHERE clause)
+                        ELSE 'in_progress'
+                    END,
+                    rating,
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                FROM titles
+                WHERE 
+                    -- Include all non-unread books
+                    status IN ('In Progress', 'Finished', 'DNF')
+                    -- OR include 'Unread' books that have reading evidence
+                    OR (status = 'Unread' AND (
+                        date_started IS NOT NULL 
+                        OR date_finished IS NOT NULL 
+                        OR rating IS NOT NULL
+                    ))
+            """)
+            
+            # Also fix the status on titles that were incorrectly marked Unread
+            # This ensures the cached status matches the new session
+            await db.execute("""
+                UPDATE titles
+                SET status = 'Finished',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE status = 'Unread' 
+                  AND (date_finished IS NOT NULL OR rating IS NOT NULL)
+            """)
+            
+            await db.execute("""
+                UPDATE titles
+                SET status = 'In Progress',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE status = 'Unread' 
+                  AND date_started IS NOT NULL 
+                  AND date_finished IS NULL 
+                  AND rating IS NULL
+            """)
+            
+            await db.commit()
+            print("Migration: Created reading_sessions from existing title data")
+            print("Migration: Fixed status for books incorrectly marked as Unread")
 
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
@@ -222,6 +313,67 @@ async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
         yield db
 
 
+async def sync_title_from_sessions(db, title_id: int):
+    """
+    Recalculate and update a title's cached status, rating, and dates
+    based on its reading sessions. Call this after any session change.
+    """
+    # Get all sessions for this title, ordered by session_number descending
+    cursor = await db.execute("""
+        SELECT session_status, date_started, date_finished, rating
+        FROM reading_sessions
+        WHERE title_id = ?
+        ORDER BY session_number DESC
+    """, (title_id,))
+    sessions = await cursor.fetchall()
+    
+    if not sessions:
+        # No sessions = unread
+        await db.execute("""
+            UPDATE titles 
+            SET status = 'Unread', 
+                date_started = NULL, 
+                date_finished = NULL,
+                rating = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (title_id,))
+    else:
+        # Most recent session determines status
+        most_recent = sessions[0]
+        new_status = most_recent[0]  # session_status
+        
+        # Map session_status to title status
+        status_map = {
+            'in_progress': 'In Progress',
+            'finished': 'Finished',
+            'dnf': 'DNF'
+        }
+        title_status = status_map.get(new_status, 'In Progress')
+        
+        new_date_started = most_recent[1]
+        new_date_finished = most_recent[2]
+        
+        # Calculate average rating from all sessions that have ratings
+        ratings = [s[3] for s in sessions if s[3] is not None]
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+        # Store as integer if whole number, otherwise keep decimal
+        if avg_rating is not None and avg_rating == int(avg_rating):
+            avg_rating = int(avg_rating)
+        
+        await db.execute("""
+            UPDATE titles 
+            SET status = ?,
+                date_started = ?,
+                date_finished = ?,
+                rating = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (title_status, new_date_started, new_date_finished, avg_rating, title_id))
+    
+    await db.commit()
+
+
 # =============================================================================
 # Database Schema (Phase 5: titles + editions)
 # =============================================================================
@@ -261,6 +413,20 @@ CREATE TABLE IF NOT EXISTS titles (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reading sessions: tracks multiple reads per book
+CREATE TABLE IF NOT EXISTS reading_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title_id INTEGER NOT NULL,
+    session_number INTEGER NOT NULL,
+    date_started TEXT,
+    date_finished TEXT,
+    session_status TEXT DEFAULT 'in_progress',
+    rating INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE
 );
 
 -- Editions: individual formats/copies of a title
@@ -322,4 +488,5 @@ CREATE INDEX IF NOT EXISTS idx_editions_format ON editions(format);
 CREATE INDEX IF NOT EXISTS idx_notes_title_id ON notes(title_id);
 CREATE INDEX IF NOT EXISTS idx_links_to_title ON links(to_title_id);
 CREATE INDEX IF NOT EXISTS idx_links_from_note ON links(from_note_id);
+CREATE INDEX IF NOT EXISTS idx_reading_sessions_title_id ON reading_sessions(title_id);
 """

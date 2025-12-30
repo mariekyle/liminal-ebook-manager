@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.8.2)
+## Current State (v0.9.4)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -16,10 +16,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Smart FanFiction detection from filename patterns (AO3, FFN, tropes)
 - Override false duplicate matches with "Upload as New" option
 - Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
-- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Upload
+- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Add
 - **Desktop header navigation** — Centered nav tabs on single line
 - **Filter drawer** — Slides up on mobile, slides from right on desktop
 - **Unified search bar** — Combined search input and filter icon
+- **Library toggle bar** — Home / Browse / Wishlist tabs ✨
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
 - Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
@@ -35,13 +36,16 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Books per row setting** — Choose 2, 3, or 4 columns on mobile
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
+- **Horizontal desktop layout** — Cover left, content right ✨
+- **Mobile tab navigation** — Details / Notes / History tabs ✨
 - Edit book metadata — Title, authors, series, category, year
 - Draggable author chips — Reorder authors, first appears on cover
 - Author autocomplete — Suggests existing authors when editing
 - **Series autocomplete** — Suggests existing series when editing
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
-- Track reading dates (started, finished)
+- **Reading History display** — "Read #1: [date] — [date]" format ✨
+- **"+ Add dates" button** — Enter dates when none recorded ✨
 - Estimated read time — Based on word count and WPM setting
 - Finished checkmark on book covers
 - **Finished checkmarks on author pages** ✨
@@ -60,199 +64,144 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - "Added to library" date — Shows when book was added
 - Mobile-responsive design
 - Import reading data from Obsidian (status, rating, dates, notes)
+- **Wishlist system** — Track books you want to read ✨
+- **Wishlist priority** — Mark items as High or Normal priority ✨
+- **WISHLIST banner** — Clear indicator on book detail page ✨
+- **Wishlist styling** — Dotted border + bookmark icon in library ✨
+- **Manual Book Entry** — Add physical, audiobook, or web-based books ✨
+- **Multiple Authors** — Add multiple authors with autocomplete ✨
+- **Familiar Title Detection** — Upload warns when title matches existing book ✨
+- **"I got this book!" flow** — Convert wishlist to owned with format selection ✨
+- **Title autocomplete** — Wishlist form warns of duplicate titles ✨
+- **Author autocomplete** — Wishlist form suggests existing authors ✨
+- **Series autocomplete** — Wishlist form suggests existing series ✨
+- **Smart author replacement** — Autocomplete fixes capitalization ✨
 
 ---
 
-## Phase 2: Book Uploader ✅ COMPLETE
+## Phase 5: TBR & Manual Entry ✅ COMPLETE
 
-**Completed: December 22-23, 2025**
+**Completed: December 27-28, 2025**
 
-All upload features working including mobile file picker for all formats.
+### Manual Book Entry ✅
+- ✅ **Add books without files** — Track physical books, audiobooks, web-based
+- ✅ **Manual entry form** — Title, author(s), series, category
+- ✅ **Format selection** — Physical, Audiobook, Web/URL
+- ✅ **Multiple authors** — Add multiple authors with chip display
+- ✅ **Author autocomplete** — Suggests existing library authors
+- ✅ **Completion status** — Track WIP/Abandoned for fanfiction
+- ✅ **Source URL** — Store AO3/FFN URLs
 
----
+### TBR List ✅
+- ✅ **Separate TBR tab** — New tab in bottom navigation
+- ✅ **TBR entry form** — Title, author, series, category
+- ✅ **"Why I want to read this" field** — Free-form reason
+- ✅ **Source URL field** — Store where you found it
+- ✅ **Priority** — High or Normal priority
 
-## Phase 2.1: Upload Polish ✅ COMPLETE
+### TBR → Library Flow ✅
+- ✅ **"I got this book!" action** — Convert TBR to library
+- ✅ **Format selection modal** — Ebook, Physical, Audiobook, Web-based
+- ✅ **Preserve notes/metadata** — Source URL and completion status kept
 
-**Completed: December 23, 2025**
-
-- ✅ Background sync after upload
-- ✅ EPUB/PDF metadata extraction
-- ✅ Category detection improvements
-- ✅ "Upload as New" for false duplicates
-- ✅ Mobile file picker for .mobi/.azw3
-
----
-
-## Phase 3: Rich Notes & Metadata ✅ COMPLETE
-
-**Completed: December 24, 2025**
-
-### Editable Metadata ✅
-- ✅ **Edit title** — Fix incorrect titles
-- ✅ **Edit author(s)** — Fix misspellings, add missing authors
-- ✅ **Edit series** — Add, change, or remove series assignment
-- ✅ **Edit series number** — Fix ordering
-- ✅ Edit publication year
-- ✅ HTML entity decoding in summaries (fix &amp; etc.)
-- ✅ "Added to library" date (pulled from created_at)
-
-### Book Detail Page Redesign ✅
-- ✅ **Clean up visual layout** — Reorganized with logical grouping
-- ✅ Logical grouping of metadata
-- ✅ Better use of space
-- ✅ Mobile-optimized layout
-- ✅ Consistent styling with library view
-- ✅ Chip+popup controls for status/rating
-
-### Reading Stats & Estimated Time ✅
-- ✅ **Estimated read time** displayed on book detail page
-- ✅ **Estimated read time filter** in library (8 tiers)
-- ✅ Poetic microcopy tiers ("a quick visit" to "a true saga")
-
-### Settings Screen ✅
-- ✅ **Reading speed (WPM) setting** for estimated read time calculations
-- ✅ **Move "Sync Library" button here**
-
-### Simple Author Page ✅
-- ✅ Basic author page (name + notes)
-- ✅ GET /api/authors endpoint (unique authors list)
-- ✅ Author autocomplete when editing book authors
-- ✅ **Author notes** — free-form notes about an author
-- ✅ Link from book detail page
-- ✅ List of books by this author
-- ✅ Authors list page with search and alphabetical grouping
-- ✅ Author rename functionality
-
-### Deferred to Later Phases
-- [ ] Customizable rating labels
-- [ ] Light/dark mode toggle
-- [ ] Actual WPM field (manual entry from Moon Reader)
+### Upload Enhancements ✅
+- ✅ **Familiar title detection** — Warns when uploading title that exists
+- ✅ **"Add to Existing" option** — Add files to existing title
+- ✅ **"Add as Separate" option** — Override to create new entry
 
 ---
 
-## Phase 3.5: Navigation Redesign ✅ COMPLETE
+## Phase 5.1: Wishlist Unification ✅ COMPLETE
 
-**Completed: December 25, 2025**
+**Completed: December 29, 2025**
 
-### Mobile Navigation ✅
-- ✅ **Bottom navigation bar** — Fixed position with Library, Series, Authors, Upload
-- ✅ **Filter drawer** — Slides up from bottom, rounded top corners
-- ✅ **Unified search bar** — Search icon + input + filter icon in single component
+### Backend Changes ✅
+- ✅ **acquisition_status column** — Tracks 'owned' vs 'wishlist' status
+- ✅ **?acquisition= filter** — API parameter for filtering by ownership
+- ✅ **Automatic migration** — Existing is_tbr data migrated
 
-### Desktop Navigation ✅
-- ✅ **Header navigation** — Logo + centered nav tabs + settings on single line
-- ✅ **Filter drawer** — Slides in from right, 320px width
-- ✅ **Full-width search bar** — Spans page width
+### Library Toggle Bar ✅
+- ✅ **Home / Browse / Wishlist tabs** — Filter by ownership status
+- ✅ **URL persistence** — Toggle state in URL params
+- ✅ **Poetic phrases** — Browse tab shows rotating phrases
 
-### Filter System Improvements ✅
-- ✅ **Sort separated from filters** — Sort dropdown inline with book/series count
-- ✅ **View-aware filter count** — Badge only counts relevant filters per view
-- ✅ **Clear filters preserves sort** — Sorting is independent of filtering
+### BookCard Styling ✅
+- ✅ **Dotted border** — Visual distinction for wishlist items
+- ✅ **Bookmark icon** — Badge indicator
+- ✅ **Full brightness** — No opacity reduction
 
-### Display Settings ✅
-- ✅ **Books per row** — User can choose 2, 3, or 4 columns on mobile
-- ✅ **Real-time sync** — Grid updates immediately when setting changes
-- ✅ **Series autocomplete** — Edit modal suggests existing series names
+### BookDetail Redesign ✅
+- ✅ **WISHLIST banner** — Clear indicator at top
+- ✅ **Horizontal desktop layout** — Cover left, content right
+- ✅ **Mobile tab navigation** — Details / Notes / History
+- ✅ **Edit icon repositioned** — Upper right corner
+- ✅ **Reading History format** — "Read #1: [date] — [date]"
+- ✅ **"+ Add dates" button** — When no dates exist
 
----
-
-## Phase 4: Notes Enhancement ✅ COMPLETE
-
-**Completed: December 26, 2025**
-
-### Note Templates ✅
-- ✅ **Structured Review template** — Characters, Atmosphere/World, Writing, Plot, Enjoyment, Steam, Believability
-- ✅ **Reading Notes template** — Thoughts While Reading, Reactions After Finishing
-- ✅ **Template dropdown** — Quick-apply from editor toolbar
-
-### Full-Screen Editor ✅
-- ✅ **Full-screen modal** — Replaces 80% slide-up panel
-- ✅ **Header controls** — X (close) left, Save right — accessible with keyboard open
-- ✅ **Distraction-free writing** — No border, transparent background
-- ✅ **Mobile keyboard friendly** — Controls always accessible
-
-### Book Linking ✅
-- ✅ **`[[` trigger** — Type `[[` to open book search modal
-- ✅ **Modal search** — Full overlay with search input and results
-- ✅ **20 search results** — Shows title, author, category
-- ✅ **Keyboard navigation** — Arrow keys, Enter, Escape
-- ✅ **Insert as plain text** — Option for books not in library
-
-### Rendered Notes ✅
-- ✅ **Markdown rendering** — Notes display with formatting in read mode
-- ✅ **Clickable book links** — `[[Book Title]]` renders as purple links
-- ✅ **Unmatched links** — Non-existent books show as gray text
-- ✅ **Case-insensitive matching** — Links match regardless of capitalization
-
-### Backlinks ✅
-- ✅ **Link storage** — `[[Book Title]]` parsed and stored in database
-- ✅ **Backlinks endpoint** — GET /books/{id}/backlinks
-- ✅ **"Referenced by" section** — Shows books that link to current book
-- ✅ **Clickable backlinks** — Navigate to referencing book
-
-### Known Issues
-- [ ] Scrollbar appears on mobile notes editor (cosmetic only)
+### Navigation Cleanup ✅
+- ✅ **TBR tab removed** — From mobile and desktop
+- ✅ **/tbr redirect** — Goes to /?acquisition=wishlist
 
 ---
 
-## Phase 4.5: Obsidian Notes Migration ✅ COMPLETE
+## Phase 5.2: Form Autocomplete ✅ COMPLETE
 
-**Completed: December 26, 2025**
+**Completed: December 30, 2025**
 
-### Migration System ✅
-- ✅ **Book matching endpoint** — `GET /books/match` with confidence scoring
-- ✅ **Notes import endpoint** — `POST /books/{id}/notes/import` with append support
-- ✅ **Migration script** — `migrate_notes.py` for bulk importing
-- ✅ **Dry run mode** — Preview imports before committing
-- ✅ **Detailed reports** — Markdown report of matched/unmatched files
-
-### Migration Features ✅
-- ✅ **Fuzzy matching** — Exact, partial, and reverse partial title matching
-- ✅ **Confidence scoring** — 95-100% exact, 70-85% partial
-- ✅ **Author boost** — +10% when author also matches
-- ✅ **Append mode** — New notes added below existing with separator
-- ✅ **Empty section cleanup** — Removes unfilled template placeholders
-
-### Results
-| Metric | Count |
-|--------|-------|
-| Notes imported automatically | 236 |
-| Notes imported manually | 15 |
-| **Total notes migrated** | **251** |
-
-**🎉 Obsidian migration complete! All reading data and notes now in Liminal.**
+### TBRForm Upgrades ✅
+- ✅ **Multi-author support** — Chips with remove buttons
+- ✅ **Title autocomplete** — Warns of duplicate titles
+- ✅ **Author autocomplete** — Suggests existing authors
+- ✅ **Series autocomplete** — Suggests existing series
+- ✅ **Familiar title warning** — 85% similarity matching
+- ✅ **Smart author replacement** — Fixes capitalization from autocomplete
 
 ---
 
-## Phase 5: TBR & Wishlist ← NEXT
+## Phase 5.3: Reading Sessions ← NEXT
 
-**Goal:** Track books you want, not just books you have.
+**Goal:** Support multiple reading sessions per book with per-session ratings.
 
-### Manual Book Entry
-- [ ] **Add books without files** — Track physical books, audiobooks
-- [ ] Manual entry form: title, author, series, category
-- [ ] Mark as "No ebook" or "Physical only"
-- [ ] Still track reading status, rating, dates, notes
+### Database Changes
+- [ ] **reading_sessions table** — Store multiple reads per book
+- [ ] **session_number** — Track which read (1st, 2nd, etc.)
+- [ ] **per-session dates** — date_started, date_finished
+- [ ] **per-session rating** — Optional rating for each read
+- [ ] **Migrate existing data** — Move current date_started/date_finished to first session
 
-### TBR List
-- [ ] Separate TBR section/view
-- [ ] Manual entry: title, author, source, notes
-- [ ] "Why I want to read this" field
-- [ ] Source URL field
-- [ ] Priority/ranking within TBR
+### Reading History UI
+- [ ] **Multiple sessions display** — Show "Read #1", "Read #2", etc.
+- [ ] **Add session button** — "+ Add another read"
+- [ ] **Edit session** — Modify dates and rating for any session
+- [ ] **Delete session** — Remove a reading session
 
-### Quick Capture
-- [ ] Photo capture: snap a book cover
-- [ ] Share-to-Liminal: share a link from browser/app to add to TBR
-
-### TBR → Library Flow
-- [ ] "I got this book" action to move from TBR to Library
-- [ ] Link TBR entry to library entry when acquired
-- [ ] Preserve notes/metadata during transition
+### Cumulative Stats
+- [ ] **Times Read** — Count of reading sessions
+- [ ] **Average Rating** — Mean of per-session ratings
+- [ ] **Display on History tab** — Show stats when multiple sessions exist
 
 ---
 
-## Phase 6: Discovery & Collections
+## Phase 6: Library Home Screen
+
+**Goal:** Transform library from a browse-only view to an engaging home experience.
+
+### Library Tabs
+- [ ] **Home Tab** — Dashboard view with curated sections
+- [ ] **Browse Tab** — Current library grid with filters
+
+### Home Tab Sections
+- [ ] **In Progress** — Books currently being read
+- [ ] **Recently Added** — Newest titles at the top
+- [ ] **Discover** — Random unread books for serendipity
+- [ ] **Stats** — Quick reading statistics
+
+### Sort Enhancement
+- [ ] **"Updated" sort → "Recently Added"** — Sort by `created_at` descending, newest first
+
+---
+
+## Phase 7: Discovery & Collections
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
@@ -300,13 +249,14 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 7: Integration & Polish
+## Phase 8: Integration & Polish
 
 **Goal:** Streamline workflows. Reduce remaining friction points.
 
 ### Book Detail Enhancements
 - [ ] **Download link** — Make stored book location a clickable download link (prefer EPUB, fallback to MOBI)
 - [ ] **Edit/add tags** — Add, remove, or edit tags directly from book detail page
+- [ ] **"In Library" / "In Wishlist" banner** — Show status banner on book detail screen
 
 ### Cover Improvements
 - [x] ~~Match Obsidian plugin gradient style~~ ✅
@@ -315,9 +265,12 @@ All upload features working including mobile file picker for all formats.
 - [ ] Series info displayed on cover
 - [ ] Theme-based cover generation
 
-### Metadata Extraction
+### Metadata Extraction (Enhanced)
 - [ ] **Extract series from ebooks** — Parse series info from EPUB/MOBI metadata
 - [ ] **Extract fanfiction URL from ebooks** — Parse source URL from AO3/FFN downloads
+- [ ] **Extract publication year from EPUB** — For new uploads and existing library
+- [ ] **Extract tags from EPUB** — For new uploads and existing library
+- [ ] **Extract source URL from EPUB** — For new uploads and existing library
 
 ### UI Polish
 - [ ] Clear search button (X icon)
@@ -365,7 +318,7 @@ All upload features working including mobile file picker for all formats.
 
 ---
 
-## Phase 8: AI Enhancements
+## Phase 9: AI Enhancements
 
 **Goal:** Let AI reduce manual work and enhance discovery.
 
@@ -378,6 +331,9 @@ All upload features working including mobile file picker for all formats.
 ---
 
 ## Technical Debt & Bugs
+
+### High Priority
+- [ ] **PDF duplicates not detected** — Upload screen doesn't detect existing PDFs
 
 ### Medium Priority
 - [ ] Folder name parsing too strict on dash separator
@@ -430,13 +386,19 @@ All upload features working including mobile file picker for all formats.
 | v0.6.0 | Dec 24, 2025 | Phase 3 complete — Settings, metadata editing, read time, author pages |
 | v0.7.0 | Dec 25, 2025 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
 | v0.8.0 | Dec 26, 2025 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
-| v0.8.1 | Dec 26, 2025 | **Phase 4.5 complete** — Obsidian notes migration (251 notes) |
+| v0.8.1 | Dec 26, 2025 | Phase 4.5 complete — Obsidian notes migration (251 notes) |
 | v0.8.2 | Dec 27, 2025 | Custom status labels, finished checkmarks on author pages |
-| v0.9.0 | TBD | Phase 5 — TBR & Wishlist |
-| v0.10.0 | TBD | Phase 6 — Discovery & Collections |
-| v0.11.0 | TBD | Phase 7 — Integration & Polish |
-| v1.0.0 | TBD | Phase 8 — Full Obsidian replacement complete |
+| v0.9.0 | Dec 28, 2025 | **Phase 5** — TBR system, manual entry, familiar title detection |
+| v0.9.1 | Dec 29, 2025 | Bug fix — Upload folder structure |
+| v0.9.2 | Dec 29, 2025 | Orphan detection system |
+| v0.9.3 | Dec 29, 2025 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
+| v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
+| v0.10.0 | TBD | Phase 5.3 — Reading Sessions |
+| v0.11.0 | TBD | Phase 6 — Library Home Screen |
+| v0.12.0 | TBD | Phase 7 — Discovery & Collections |
+| v0.13.0 | TBD | Phase 8 — Integration & Polish |
+| v1.0.0 | TBD | Phase 9 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 27, 2025 (v0.8.2 — Custom status labels, author page checkmarks)*
+*Last updated: December 30, 2025 (v0.9.4 — Form autocomplete)*
