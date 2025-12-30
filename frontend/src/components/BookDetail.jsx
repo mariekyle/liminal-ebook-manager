@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -150,6 +150,18 @@ function BookDetail() {
   const [sessions, setSessions] = useState([])
   const [sessionsStats, setSessionsStats] = useState({ times_read: 0, average_rating: null })
   const [sessionsLoading, setSessionsLoading] = useState(false)
+  
+  // Session editor modal state
+  const [sessionModalOpen, setSessionModalOpen] = useState(false)
+  const [editingSession, setEditingSession] = useState(null) // null = creating new, object = editing existing
+  const [sessionForm, setSessionForm] = useState({
+    date_started: '',
+    date_finished: '',
+    session_status: 'in_progress',
+    rating: null
+  })
+  const [sessionSaving, setSessionSaving] = useState(false)
+  const [sessionError, setSessionError] = useState(null)
 
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
@@ -180,6 +192,115 @@ function BookDetail() {
       console.error('Failed to fetch sessions:', err)
     } finally {
       setSessionsLoading(false)
+    }
+  }
+  
+  // Session editor handlers
+  const openAddSession = () => {
+    setEditingSession(null)
+    setSessionForm({
+      date_started: '',
+      date_finished: '',
+      session_status: 'in_progress',
+      rating: null
+    })
+    setSessionError(null)
+    setSessionModalOpen(true)
+  }
+
+  const openEditSession = (session) => {
+    setEditingSession(session)
+    setSessionForm({
+      date_started: session.date_started || '',
+      date_finished: session.date_finished || '',
+      session_status: session.session_status,
+      rating: session.rating
+    })
+    setSessionError(null)
+    setSessionModalOpen(true)
+  }
+
+  const closeSessionModal = () => {
+    setSessionModalOpen(false)
+    setEditingSession(null)
+    setSessionError(null)
+  }
+  
+  const handleSaveSession = async () => {
+    setSessionSaving(true)
+    setSessionError(null)
+    
+    try {
+      const data = {
+        session_status: sessionForm.session_status
+      }
+      
+      // Only include rating if status is finished or dnf
+      // (in_progress sessions can't have ratings, but we preserve existing ones by not sending)
+      if (sessionForm.session_status !== 'in_progress') {
+        data.rating = sessionForm.rating
+      }
+      
+      // Only include dates if we're editing (to allow clearing)
+      // For new sessions, empty string is fine (backend handles it)
+      if (editingSession) {
+        // Send empty string to clear, actual value to set
+        data.date_started = sessionForm.date_started
+        data.date_finished = sessionForm.date_finished
+      } else {
+        // For new sessions, only include if set
+        if (sessionForm.date_started) data.date_started = sessionForm.date_started
+        if (sessionForm.date_finished) data.date_finished = sessionForm.date_finished
+      }
+      
+      if (editingSession) {
+        await updateSession(editingSession.id, data)
+      } else {
+        await createSession(id, data)
+      }
+      
+      closeSessionModal()
+      fetchSessions() // Refresh the list
+      // Also refresh book data to get updated cached status/rating
+      const bookData = await getBook(id)
+      setBook(bookData)
+      setSelectedStatus(bookData.status || 'Unread')
+      setSelectedRating(bookData.rating || null)
+      setDateStarted(bookData.date_started || '')
+      setDateFinished(bookData.date_finished || '')
+    } catch (err) {
+      setSessionError(err.message)
+    } finally {
+      setSessionSaving(false)
+    }
+  }
+  
+  const handleDeleteSession = async () => {
+    if (!editingSession) return
+    
+    const confirmDelete = window.confirm(
+      `Delete Read #${editingSession.session_number}? This cannot be undone.`
+    )
+    if (!confirmDelete) return
+    
+    setSessionSaving(true)
+    setSessionError(null)
+    
+    try {
+      await deleteSession(editingSession.id)
+      closeSessionModal()
+      fetchSessions()
+      // Refresh book data to get updated cached status/rating
+      const bookData = await getBook(id)
+      setBook(bookData)
+      setSelectedStatus(bookData.status || 'Unread')
+      setSelectedRating(bookData.rating || null)
+      setDateStarted(bookData.date_started || '')
+      setDateFinished(bookData.date_finished || '')
+    } catch (err) {
+      setSessionError(err.message)
+    } finally {
+      setSessionSaving(false)
     }
   }
   
@@ -1226,7 +1347,7 @@ function BookDetail() {
                   </h3>
                   <button
                     className="text-violet-400 hover:text-violet-300 text-sm font-medium"
-                    onClick={() => {/* TODO: Add session - next step */}}
+                    onClick={openAddSession}
                   >
                     + Add Session
                   </button>
@@ -1247,7 +1368,7 @@ function BookDetail() {
                         {/* Edit button */}
                         <button
                           className="absolute top-3 right-3 text-gray-500 hover:text-gray-300"
-                          onClick={() => {/* TODO: Edit session - next step */}}
+                          onClick={() => openEditSession(session)}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1712,6 +1833,145 @@ function BookDetail() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Session Editor Modal */}
+      {sessionModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg w-full max-w-md p-6 relative">
+            {/* Close button */}
+            <button
+              onClick={closeSessionModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Title */}
+            <h2 className="text-xl font-semibold text-white mb-6">
+              {editingSession ? `Edit Read #${editingSession.session_number}` : 'Add Reading Session'}
+            </h2>
+
+            {/* Error message */}
+            {sessionError && (
+              <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded mb-4">
+                {sessionError}
+              </div>
+            )}
+
+            {/* Form */}
+            <div className="space-y-4">
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={sessionForm.date_started}
+                  onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={sessionForm.date_finished}
+                  onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Status</label>
+                <div className="flex gap-2">
+                  {['in_progress', 'finished', 'dnf'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setSessionForm({ ...sessionForm, session_status: status })}
+                      className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
+                        sessionForm.session_status === status
+                          ? status === 'finished'
+                            ? 'bg-green-600 text-white'
+                            : status === 'dnf'
+                            ? 'bg-pink-600 text-white'
+                            : 'bg-gray-600 text-white'
+                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                      }`}
+                    >
+                      {status === 'in_progress' ? 'In Progress' : status === 'finished' ? 'Finished' : 'DNF'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Rating</label>
+                <div className={`flex gap-1 ${sessionForm.session_status === 'in_progress' ? 'opacity-40' : ''}`}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      disabled={sessionForm.session_status === 'in_progress'}
+                      onClick={() => {
+                        if (sessionForm.session_status !== 'in_progress') {
+                          setSessionForm({
+                            ...sessionForm,
+                            rating: sessionForm.rating === star ? null : star
+                          })
+                        }
+                      }}
+                      className={`text-3xl transition-colors ${
+                        sessionForm.session_status === 'in_progress'
+                          ? 'cursor-not-allowed text-gray-600'
+                          : sessionForm.rating && star <= sessionForm.rating
+                          ? 'text-yellow-400 hover:text-yellow-300'
+                          : 'text-gray-600 hover:text-gray-500'
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                {sessionForm.session_status === 'in_progress' && (
+                  <p className="text-xs text-gray-500 mt-1">Rating available after marking Finished or DNF</p>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-6">
+              {editingSession && (
+                <button
+                  onClick={handleDeleteSession}
+                  disabled={sessionSaving}
+                  className="px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              )}
+              <div className="flex-1" />
+              <button
+                onClick={closeSessionModal}
+                disabled={sessionSaving}
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSession}
+                disabled={sessionSaving}
+                className="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded font-medium transition-colors disabled:opacity-50"
+              >
+                {sessionSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

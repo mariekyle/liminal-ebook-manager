@@ -141,6 +141,35 @@ export async function getBookSessions(titleId) {
 }
 
 /**
+ * Create a new reading session for a book
+ */
+export async function createSession(titleId, sessionData) {
+  return apiFetch(`/titles/${titleId}/sessions`, {
+    method: 'POST',
+    body: JSON.stringify(sessionData)
+  })
+}
+
+/**
+ * Update an existing reading session
+ */
+export async function updateSession(sessionId, sessionData) {
+  return apiFetch(`/sessions/${sessionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(sessionData)
+  })
+}
+
+/**
+ * Delete a reading session
+ */
+export async function deleteSession(sessionId) {
+  return apiFetch(`/sessions/${sessionId}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
  * Get notes for a book
  */
 export async function getBookNotes(bookId) {

@@ -229,13 +229,14 @@ async def update_session(
     update_fields = []
     params = []
     
+    # Handle dates: empty string means "clear", None means "don't change"
     if updates.date_started is not None:
         update_fields.append("date_started = ?")
-        params.append(updates.date_started)
+        params.append(updates.date_started if updates.date_started != '' else None)
     
     if updates.date_finished is not None:
         update_fields.append("date_finished = ?")
-        params.append(updates.date_finished)
+        params.append(updates.date_finished if updates.date_finished != '' else None)
     
     if updates.session_status is not None:
         update_fields.append("session_status = ?")
