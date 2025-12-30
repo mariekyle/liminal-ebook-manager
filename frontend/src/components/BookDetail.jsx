@@ -1394,9 +1394,7 @@ function BookDetail() {
                             session.session_status === 'dnf' ? 'text-pink-400' :
                             'text-gray-400'
                           }`}>
-                            {session.session_status === 'finished' ? 'Finished' :
-                             session.session_status === 'dnf' ? 'DNF' :
-                             'In Progress'}
+                            {getLabel(session.session_status)}
                           </span>
                           {session.rating && renderStars(session.rating)}
                         </div>
@@ -1905,7 +1903,7 @@ function BookDetail() {
                           : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                       }`}
                     >
-                      {status === 'in_progress' ? 'In Progress' : status === 'finished' ? 'Finished' : 'DNF'}
+                      {getLabel(status)}
                     </button>
                   ))}
                 </div>
