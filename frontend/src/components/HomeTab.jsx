@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getHomeInProgress, getHomeRecentlyAdded, getHomeDiscover, getHomeStats, getSettings } from '../api'
+import { getHomeInProgress, getHomeRecentlyAdded, getHomeDiscover, getHomeQuickReads, getHomeStats, getSettings } from '../api'
 import BookCard from './BookCard'
 
 function HomeTab() {
@@ -13,6 +13,8 @@ function HomeTab() {
   const [loadingInProgress, setLoadingInProgress] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
   const [loadingDiscover, setLoadingDiscover] = useState(true)
+  const [quickReads, setQuickReads] = useState([])
+  const [loadingQuickReads, setLoadingQuickReads] = useState(true)
   const [loadingStats, setLoadingStats] = useState(true)
 
   // Load settings for WPM
@@ -56,6 +58,15 @@ function HomeTab() {
       .catch(err => console.error('Failed to load discover:', err))
       .finally(() => setLoadingDiscover(false))
   }
+
+  // Load quick reads
+  useEffect(() => {
+    setLoadingQuickReads(true)
+    getHomeQuickReads()
+      .then(data => setQuickReads(data.books || []))
+      .catch(err => console.error('Failed to load quick reads:', err))
+      .finally(() => setLoadingQuickReads(false))
+  }, [])
 
   // Load stats when period changes
   useEffect(() => {
@@ -188,6 +199,35 @@ function HomeTab() {
           ) : (
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {discover.map(book => (
+                <div key={book.id} className="flex-shrink-0 w-32">
+                  <BookCard book={book} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Quick Reads Section */}
+      {(loadingQuickReads || quickReads.length > 0) && (
+        <section>
+          <h2 className="text-white text-lg font-medium mb-3 px-4 md:px-0">
+            Quick Reads
+            <span className="text-gray-500 text-sm font-normal ml-2">Under 3 hours</span>
+          </h2>
+          
+          {loadingQuickReads ? (
+            <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="flex-shrink-0 w-32 animate-pulse">
+                  <div className="aspect-[2/3] bg-library-card rounded-lg" />
+                  <div className="mt-2 h-4 bg-library-card rounded w-3/4" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
+              {quickReads.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
                   <BookCard book={book} />
                 </div>

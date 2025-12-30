@@ -17,6 +17,7 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Optional
+from urllib.parse import unquote
 from xml.etree import ElementTree as ET
 
 # For PDF handling
@@ -184,33 +185,77 @@ async def _count_epub_words(zf: zipfile.ZipFile, opf_path: str) -> Optional[int]
         if opf_dir == '.':
             opf_dir = ''
         
+        # Build a set of all file paths in the ZIP for fast lookup
+        zip_files = set(zf.namelist())
+        
         # Find manifest items that are HTML/XHTML
         total_words = 0
+        files_processed = 0
         
         for item in root.iter():
             if item.tag.endswith('item'):
                 media_type = item.get('media-type', '')
                 href = item.get('href', '')
                 
+                if not href:
+                    continue
+                
                 if 'html' in media_type or 'xhtml' in media_type:
-                    # Construct full path
-                    if opf_dir:
-                        content_path = f"{opf_dir}/{href}"
-                    else:
-                        content_path = href
+                    # URL decode the href (handles %20, etc.)
+                    href = unquote(href)
                     
-                    try:
-                        content = zf.read(content_path).decode('utf-8', errors='ignore')
+                    # Try multiple path resolution strategies
+                    possible_paths = []
+                    
+                    # Strategy 1: Relative to OPF directory
+                    if opf_dir:
+                        possible_paths.append(f"{opf_dir}/{href}")
+                    
+                    # Strategy 2: href as-is (might be absolute within ZIP)
+                    possible_paths.append(href)
+                    
+                    # Strategy 3: Without leading slash if present
+                    if href.startswith('/'):
+                        possible_paths.append(href[1:])
+                    
+                    # Strategy 4: Resolve .. in paths
+                    if opf_dir and '..' in href:
+                        # Manual normalization for ZIP paths
+                        parts = f"{opf_dir}/{href}".split('/')
+                        resolved_parts = []
+                        for part in parts:
+                            if part == '..':
+                                if resolved_parts:
+                                    resolved_parts.pop()
+                            elif part and part != '.':
+                                resolved_parts.append(part)
+                        possible_paths.append('/'.join(resolved_parts))
+                    
+                    # Try each possible path
+                    content = None
+                    for content_path in possible_paths:
+                        if content_path in zip_files:
+                            try:
+                                content = zf.read(content_path).decode('utf-8', errors='ignore')
+                                break
+                            except Exception:
+                                continue
+                    
+                    if content:
                         # Strip HTML and count words
                         text = _strip_html(content)
                         words = len(text.split())
                         total_words += words
-                    except (KeyError, UnicodeDecodeError):
-                        pass
+                        files_processed += 1
+        
+        # Log for debugging if we got suspiciously low counts
+        if files_processed > 0 and total_words < 1000:
+            print(f"Warning: EPUB word count suspiciously low: {total_words} words from {files_processed} files")
         
         return total_words if total_words > 0 else None
         
-    except Exception:
+    except Exception as e:
+        print(f"Error counting EPUB words: {e}")
         return None
 
 

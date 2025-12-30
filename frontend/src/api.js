@@ -594,6 +594,13 @@ export async function getHomeDiscover() {
 }
 
 /**
+ * Get quick reads - unread books under 3 hours based on user's WPM
+ */
+export async function getHomeQuickReads() {
+  return apiFetch('/home/quick-reads')
+}
+
+/**
  * Get reading stats for home dashboard
  * @param {string} period - 'month' or 'year'
  */
