@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import GradientCover from './GradientCover'
 
-function BookCard({ book }) {
+function BookCard({ book, showActivityBar = false }) {
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   
   // Format series display
@@ -28,6 +28,13 @@ function BookCard({ book }) {
           coverTextColor={book.cover_text_color}
           className={isWishlist ? 'border-2 border-dashed border-gray-500' : ''}
         />
+        
+        {/* Activity bar for in-progress books */}
+        {showActivityBar && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+            <div className="h-full w-1/2 bg-library-accent" />
+          </div>
+        )}
         
         {/* Finished indicator - only show for owned books */}
         {!isWishlist && book.status === 'Finished' && (

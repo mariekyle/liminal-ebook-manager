@@ -8,6 +8,7 @@ import { getRandomPhrase } from '../utils/categoryPhrases'
 import { READ_TIME_FILTERS, matchesReadTimeFilter } from '../utils/readTime'
 import SearchBar from './SearchBar'
 import FilterDrawer from './FilterDrawer'
+import HomeTab from './HomeTab'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -285,7 +286,8 @@ function Library() {
         </div>
       )}
 
-      {/* Poetic phrase + Sort + Active filters */}
+      {/* Poetic phrase + Sort + Active filters - hide on Home tab */}
+      {!(activeView === 'library' && acquisition === 'owned') && (
       <div className="px-4 md:px-8 py-3">
         <div className="flex flex-col gap-2">
           {/* Top row: phrase and sort */}
@@ -401,27 +403,33 @@ function Library() {
           )}
         </div>
       </div>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 px-4 md:px-8 pb-8">
-        {/* Loading State - Library */}
-        {activeView === 'library' && loading && (
+        {/* Home Dashboard - show when on Home tab */}
+        {activeView === 'library' && acquisition === 'owned' && (
+          <HomeTab />
+        )}
+
+        {/* Loading State - Library (Browse/Wishlist only) */}
+        {activeView === 'library' && acquisition !== 'owned' && loading && (
           <div className="text-center py-12">
             <div className="animate-pulse-slow text-4xl mb-4">📚</div>
             <p className="text-gray-400">Loading library...</p>
           </div>
         )}
 
-        {/* Error State - Library */}
-        {activeView === 'library' && error && !loading && (
+        {/* Error State - Library (Browse/Wishlist only) */}
+        {activeView === 'library' && acquisition !== 'owned' && error && !loading && (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">⚠️</div>
             <p className="text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Empty State - Library */}
-        {activeView === 'library' && !loading && !error && filteredBooks.length === 0 && (
+        {/* Empty State - Library (Browse/Wishlist only) */}
+        {activeView === 'library' && acquisition !== 'owned' && !loading && !error && filteredBooks.length === 0 && (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">🔭</div>
             <p className="text-gray-400 mb-4">No books found</p>
@@ -434,8 +442,8 @@ function Library() {
           </div>
         )}
 
-        {/* Book Grid - Library View */}
-        {activeView === 'library' && !loading && !error && filteredBooks.length > 0 && (
+        {/* Book Grid - Library View (Browse/Wishlist only) */}
+        {activeView === 'library' && acquisition !== 'owned' && !loading && !error && filteredBooks.length > 0 && (
           <div className={`grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 ${
             gridColumns === '2' ? 'grid-cols-2' :
             gridColumns === '3' ? 'grid-cols-3' :

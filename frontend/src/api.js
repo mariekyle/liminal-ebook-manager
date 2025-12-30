@@ -567,3 +567,36 @@ export async function updateAuthor(name, { newName, notes }) {
     })
   })
 }
+
+// =============================================================================
+// HOME DASHBOARD API
+// =============================================================================
+
+/**
+ * Get in-progress books for home dashboard (max 5)
+ */
+export async function getHomeInProgress() {
+  return apiFetch('/home/in-progress')
+}
+
+/**
+ * Get recently added books for home dashboard (20 most recent)
+ */
+export async function getHomeRecentlyAdded() {
+  return apiFetch('/home/recently-added')
+}
+
+/**
+ * Get random unread books for discovery (6 books)
+ */
+export async function getHomeDiscover() {
+  return apiFetch('/home/discover')
+}
+
+/**
+ * Get reading stats for home dashboard
+ * @param {string} period - 'month' or 'year'
+ */
+export async function getHomeStats(period = 'month') {
+  return apiFetch(`/home/stats?period=${period}`)
+}

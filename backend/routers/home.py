@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, Query
 from datetime import datetime, date
 from typing import Literal
 import random
+import json
 
 from database import get_db
+from services.covers import get_cover_style, Theme
 
 router = APIRouter(prefix="/api/home", tags=["home"])
 
@@ -15,7 +17,7 @@ async def get_in_progress(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.cover_color_1, t.cover_color_2, t.acquisition_status
+            t.acquisition_status
         FROM titles t
         WHERE t.status = 'In Progress' 
           AND t.acquisition_status = 'owned'
@@ -27,19 +29,27 @@ async def get_in_progress(db=Depends(get_db)):
     
     books = []
     for row in rows:
+        # Parse authors JSON
+        authors = json.loads(row[2]) if row[2] else []
+        primary_author = authors[0] if authors else "Unknown Author"
+        
+        # Generate cover style
+        cover_style = get_cover_style(row[1] or "Untitled", primary_author, Theme.DARK)
+        
         books.append({
             "id": row[0],
             "title": row[1],
-            "authors": row[2],
+            "authors": authors,
             "series": row[3],
             "series_number": row[4],
             "category": row[5],
             "word_count": row[6],
             "status": row[7],
             "rating": row[8],
-            "cover_color_1": row[9],
-            "cover_color_2": row[10],
-            "acquisition_status": row[11]
+            "cover_gradient": cover_style.css_gradient,
+            "cover_bg_color": cover_style.background_color,
+            "cover_text_color": cover_style.text_color,
+            "acquisition_status": row[9]
         })
     
     return {"books": books, "count": len(books)}
@@ -52,8 +62,7 @@ async def get_recently_added(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.cover_color_1, t.cover_color_2, t.acquisition_status,
-            t.created_at
+            t.acquisition_status, t.created_at
         FROM titles t
         WHERE t.acquisition_status = 'owned'
           AND (t.is_orphaned IS NULL OR t.is_orphaned = 0)
@@ -64,20 +73,28 @@ async def get_recently_added(db=Depends(get_db)):
     
     books = []
     for row in rows:
+        # Parse authors JSON
+        authors = json.loads(row[2]) if row[2] else []
+        primary_author = authors[0] if authors else "Unknown Author"
+        
+        # Generate cover style
+        cover_style = get_cover_style(row[1] or "Untitled", primary_author, Theme.DARK)
+        
         books.append({
             "id": row[0],
             "title": row[1],
-            "authors": row[2],
+            "authors": authors,
             "series": row[3],
             "series_number": row[4],
             "category": row[5],
             "word_count": row[6],
             "status": row[7],
             "rating": row[8],
-            "cover_color_1": row[9],
-            "cover_color_2": row[10],
-            "acquisition_status": row[11],
-            "created_at": row[12]
+            "cover_gradient": cover_style.css_gradient,
+            "cover_bg_color": cover_style.background_color,
+            "cover_text_color": cover_style.text_color,
+            "acquisition_status": row[9],
+            "created_at": row[10]
         })
     
     return {"books": books, "count": len(books)}
@@ -107,7 +124,7 @@ async def get_discover(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.cover_color_1, t.cover_color_2, t.acquisition_status
+            t.acquisition_status
         FROM titles t
         WHERE t.id IN ({placeholders})
     """, selected_ids)
@@ -115,19 +132,27 @@ async def get_discover(db=Depends(get_db)):
     
     books = []
     for row in rows:
+        # Parse authors JSON
+        authors = json.loads(row[2]) if row[2] else []
+        primary_author = authors[0] if authors else "Unknown Author"
+        
+        # Generate cover style
+        cover_style = get_cover_style(row[1] or "Untitled", primary_author, Theme.DARK)
+        
         books.append({
             "id": row[0],
             "title": row[1],
-            "authors": row[2],
+            "authors": authors,
             "series": row[3],
             "series_number": row[4],
             "category": row[5],
             "word_count": row[6],
             "status": row[7],
             "rating": row[8],
-            "cover_color_1": row[9],
-            "cover_color_2": row[10],
-            "acquisition_status": row[11]
+            "cover_gradient": cover_style.css_gradient,
+            "cover_bg_color": cover_style.background_color,
+            "cover_text_color": cover_style.text_color,
+            "acquisition_status": row[9]
         })
     
     # Shuffle to randomize display order
