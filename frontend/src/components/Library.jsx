@@ -9,6 +9,7 @@ import { READ_TIME_FILTERS, matchesReadTimeFilter } from '../utils/readTime'
 import SearchBar from './SearchBar'
 import FilterDrawer from './FilterDrawer'
 import HomeTab from './HomeTab'
+import SearchModal from './SearchModal'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -26,6 +27,7 @@ function Library() {
   )
   const [tagsModalOpen, setTagsModalOpen] = useState(false)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sort, setSort] = useState(searchParams.get('sort') || 'title')
   const [categories, setCategories] = useState([])
@@ -224,67 +226,135 @@ function Library() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-120px)]">
-      {/* Search Bar - Sticky below header */}
-      <div className="sticky top-[57px] z-30 bg-library-bg pt-3 md:pt-0">
-        <SearchBar
-          value={search}
-          onChange={(value) => {
-            setSearch(value)
-            updateUrlParams({ search: value })
-          }}
-          placeholder={activeView === 'series' ? 'Search series...' : 'Search books...'}
-          showFilter={true}
-          filterCount={activeFilterCount}
-          onFilterClick={() => setFilterDrawerOpen(true)}
-        />
-      </div>
-
-      {/* Acquisition Toggle Bar - only show in library view */}
-      {activeView === 'library' && (
-        <div className="px-4 md:px-8 pt-3">
-          <div className="inline-flex rounded-lg bg-library-card p-1">
-            <button
-              onClick={() => {
-                setAcquisition('owned')
-                updateUrlParams({ acquisition: 'owned' })
-              }}
-              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                acquisition === 'owned'
-                  ? 'bg-library-accent text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => {
-                setAcquisition('browse')
-                updateUrlParams({ acquisition: 'browse' })
-              }}
-              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                acquisition === 'browse'
-                  ? 'bg-library-accent text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Browse
-            </button>
-            <button
-              onClick={() => {
-                setAcquisition('wishlist')
-                updateUrlParams({ acquisition: 'wishlist' })
-              }}
-              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                acquisition === 'wishlist'
-                  ? 'bg-library-accent text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Wishlist
-            </button>
+      {/* Toggle Bar + Search/Filter - Sticky below header */}
+      <div className="sticky top-[57px] z-30 bg-library-bg">
+        {/* Mobile Layout */}
+        <div className="md:hidden px-4 pt-3">
+          <div className="flex items-center justify-between">
+            {/* Toggle Bar - always show in library view */}
+            {activeView === 'library' && (
+              <div className="inline-flex rounded-lg bg-library-card p-1">
+                <button
+                  onClick={() => {
+                    setAcquisition('owned')
+                    updateUrlParams({ acquisition: 'owned' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'owned'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => {
+                    setAcquisition('browse')
+                    updateUrlParams({ acquisition: 'browse' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'browse'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Browse
+                </button>
+                <button
+                  onClick={() => {
+                    setAcquisition('wishlist')
+                    updateUrlParams({ acquisition: 'wishlist' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'wishlist'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Wishlist
+                </button>
+              </div>
+            )}
+            
+            {/* Search & Filter Icons - hide on Home tab */}
+            {!(activeView === 'library' && acquisition === 'owned') && (
+              <SearchBar
+                iconsOnly={true}
+                showFilter={true}
+                filterCount={activeFilterCount}
+                searchActive={!!search}
+                onSearchClick={() => setSearchModalOpen(true)}
+                onFilterClick={() => setFilterDrawerOpen(true)}
+              />
+            )}
           </div>
         </div>
-      )}
+
+        {/* Desktop Layout */}
+        <div className="hidden md:block px-8 pt-3">
+          <div className="flex items-center gap-4">
+            {/* Toggle Bar - always show in library view */}
+            {activeView === 'library' && (
+              <div className="inline-flex rounded-lg bg-library-card p-1">
+                <button
+                  onClick={() => {
+                    setAcquisition('owned')
+                    updateUrlParams({ acquisition: 'owned' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'owned'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => {
+                    setAcquisition('browse')
+                    updateUrlParams({ acquisition: 'browse' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'browse'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Browse
+                </button>
+                <button
+                  onClick={() => {
+                    setAcquisition('wishlist')
+                    updateUrlParams({ acquisition: 'wishlist' })
+                  }}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    acquisition === 'wishlist'
+                      ? 'bg-library-accent text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Wishlist
+                </button>
+              </div>
+            )}
+            
+            {/* Inline Search Bar - hide on Home tab */}
+            {!(activeView === 'library' && acquisition === 'owned') && (
+              <SearchBar
+                value={search}
+                onChange={(value) => {
+                  setSearch(value)
+                  updateUrlParams({ search: value })
+                }}
+                placeholder={activeView === 'series' ? 'Search series...' : 'Search books...'}
+                showFilter={true}
+                filterCount={activeFilterCount}
+                onFilterClick={() => setFilterDrawerOpen(true)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Poetic phrase + Sort + Active filters - hide on Home tab */}
       {!(activeView === 'library' && acquisition === 'owned') && (
@@ -526,6 +596,18 @@ function Library() {
         onClearAll={handleClearFilters}
         showLibraryFilters={activeView === 'library'}
       />
+
+      {/* Search Modal (mobile) */}
+      {searchModalOpen && (
+        <SearchModal
+          onClose={() => setSearchModalOpen(false)}
+          onApplyFilter={(searchTerm) => {
+            setSearch(searchTerm)
+            updateUrlParams({ search: searchTerm })
+          }}
+          currentSearch={search}
+        />
+      )}
 
       {/* Tags Modal - keep existing */}
       <TagsModal

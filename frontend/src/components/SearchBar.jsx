@@ -11,6 +11,11 @@ const FilterIcon = () => (
   </svg>
 )
 
+/**
+ * SearchBar component with two modes:
+ * - Desktop: Full inline search input with filter button
+ * - Mobile (iconsOnly): Just search and filter icon buttons
+ */
 function SearchBar({ 
   value, 
   onChange, 
@@ -18,10 +23,50 @@ function SearchBar({
   showFilter = false,
   filterCount = 0,
   onFilterClick,
+  onSearchClick,
+  iconsOnly = false,
+  searchActive = false,
 }) {
+  // Icons-only mode (mobile Browse/Wishlist)
+  if (iconsOnly) {
+    return (
+      <div className="flex items-center gap-2">
+        {/* Search Button */}
+        <button 
+          onClick={onSearchClick}
+          className={`relative p-2 rounded-lg transition-colors ${
+            searchActive 
+              ? 'bg-library-accent text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-library-card'
+          }`}
+          title="Search"
+        >
+          <SearchIcon />
+        </button>
+        
+        {/* Filter Button */}
+        {showFilter && (
+          <button 
+            onClick={onFilterClick}
+            className="relative text-gray-400 hover:text-white hover:bg-library-card p-2 rounded-lg transition-colors"
+            title="Filters"
+          >
+            <FilterIcon />
+            {filterCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-library-accent text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {filterCount}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Full search bar mode (desktop)
   return (
-    <div className="bg-library-card rounded-lg mx-4 md:mx-0 md:rounded-none">
-      <div className="flex items-center gap-2 px-3 py-2 md:px-8 md:py-3">
+    <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="flex items-center gap-2 px-3 py-2 bg-library-card rounded-lg flex-1">
         {/* Search Icon */}
         <span className="text-gray-400">
           <SearchIcon />
@@ -33,31 +78,39 @@ function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm"
         />
         
-        {/* Filter Button */}
-        {showFilter && (
-          <>
-            <div className="w-px h-6 bg-gray-600" />
-            <button 
-              onClick={onFilterClick}
-              className="relative text-gray-400 hover:text-white transition-colors p-2"
-              title="Filters"
-            >
-              <FilterIcon />
-              {filterCount > 0 && (
-                <span className="absolute top-0 right-0 bg-library-accent text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {filterCount}
-                </span>
-              )}
-            </button>
-          </>
+        {/* Clear button when there's text */}
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            className="text-gray-500 hover:text-white"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         )}
       </div>
+      
+      {/* Filter Button */}
+      {showFilter && (
+        <button 
+          onClick={onFilterClick}
+          className="relative text-gray-400 hover:text-white p-2 transition-colors"
+          title="Filters"
+        >
+          <FilterIcon />
+          {filterCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-library-accent text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {filterCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   )
 }
 
 export default SearchBar
-
