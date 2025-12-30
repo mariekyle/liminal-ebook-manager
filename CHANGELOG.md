@@ -11,6 +11,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2025-12-30
+
+### Added
+
+#### Phase 5.3: Reading Sessions
+Complete system for tracking multiple reading sessions (re-reads) per book.
+
+#### Database: reading_sessions Table
+- **New table** — Stores multiple reading sessions per book
+- **session_number** — Tracks which read (1st, 2nd, 3rd, etc.)
+- **Per-session dates** — date_started and date_finished (both optional)
+- **Per-session rating** — 1-5 stars per reading session
+- **Per-session status** — in_progress, finished, dnf
+- **Smart migration** — Existing reading data migrated to first session
+- **Data integrity fix** — 9 books incorrectly marked "Unread" with dates/ratings now corrected
+
+#### API: Session Endpoints
+- **GET /api/titles/{id}/sessions** — List all sessions with cumulative stats
+- **POST /api/titles/{id}/sessions** — Create new reading session
+- **PATCH /api/sessions/{id}** — Update session (dates, status, rating)
+- **DELETE /api/sessions/{id}** — Delete session with automatic renumbering
+- **Automatic sync** — Title's cached status/rating updates after every mutation
+
+#### UI: Reading History Section
+- **Session cards** — Display "Read #1", "Read #2", etc. with dates and ratings
+- **"+ Add Session" button** — Start tracking a new read
+- **Session editor modal** — Full edit interface for each session
+- **Status buttons** — Color-coded: Green (Finished), Pink (DNF), Gray (In Progress)
+- **Rating stars** — Disabled and greyed out for in_progress sessions
+- **Delete with confirmation** — Remove sessions safely
+- **Custom status labels** — Uses labels from Settings (e.g., "Read" instead of "Finished")
+
+#### Cumulative Stats
+- **Times Read** — Count of all reading sessions
+- **Average Rating** — Mean of all session ratings
+- **Stats row** — Displays below sessions list
+
+### Changed
+
+- **Book status** — Now derived from most recent session's status
+- **Book rating** — Now calculated as average of all session ratings
+- **Reading History tab** — Complete redesign with sessions-based display
+
+### Fixed
+
+- **State reset on navigation** — Sessions clear when switching between books (no stale data flash)
+- **Rating preservation** — Existing rating preserved (greyed out) when switching to in_progress
+- **Date clearing** — Can now remove dates from sessions by clearing the field
+- **Rating validation** — Rating not sent to backend when status is in_progress
+
+### Technical
+
+#### Database Changes
+- New table: `reading_sessions` with foreign key to titles
+- Index: `idx_reading_sessions_title_id`
+- Migration: Creates sessions from existing title data
+- Migration: Fixes status for books incorrectly marked Unread
+
+#### New Files
+- `backend/routers/sessions.py` — CRUD endpoints for reading sessions
+
+#### Modified Files
+- `backend/database.py` — Schema, migration, sync_title_from_sessions helper
+- `backend/main.py` — Register sessions router
+- `frontend/src/api.js` — Session API functions
+- `frontend/src/components/BookDetail.jsx` — Sessions display and editor modal
+
+---
+
 ## [0.9.4] - 2025-12-30
 
 ### Added
@@ -277,6 +346,7 @@ Complete redesign of how wishlist items integrate with the library.
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.10.0 | 2025-12-30 | **Phase 5.3** — Reading sessions, multiple re-reads |
 | 0.9.4 | 2025-12-30 | **Phase 5.2** — Form autocomplete (title, author, series) |
 | 0.9.3 | 2025-12-29 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
 | 0.9.2 | 2025-12-29 | Orphan detection system |
@@ -303,12 +373,21 @@ Complete redesign of how wishlist items integrate with the library.
 
 ## Upgrade Notes
 
-### Upgrading to 0.9.4
+### Upgrading to 0.10.0
+
+**New Files:**
+- `backend/routers/sessions.py` — New router for session endpoints
 
 **Modified Files:**
-- `frontend/src/components/add/TBRForm.jsx` — Complete refactor
+- `backend/database.py` — Schema, migration, helper function
+- `backend/main.py` — Register sessions router
+- `frontend/src/api.js` — Session API functions
+- `frontend/src/components/BookDetail.jsx` — Sessions UI
 
-**No database changes.** Frontend-only update.
+**Database Migration:** Automatic on startup
+- Creates `reading_sessions` table
+- Migrates existing reading data to first session
+- Fixes 9 books incorrectly marked "Unread" with dates/ratings
 
 **Rebuild Docker container after update.**
 

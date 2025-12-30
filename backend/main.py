@@ -20,6 +20,7 @@ from routers.upload import router as upload_router
 from routers.settings import router as settings_router
 from routers.authors import router as authors_router
 from routers.sessions import router as sessions_router
+from routers.home import router as home_router
 
 # Configuration from environment
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
@@ -36,7 +37,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.9.0",
+    version="0.10.0",
     lifespan=lifespan
 )
 
@@ -57,6 +58,7 @@ app.include_router(upload_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(authors_router, prefix="/api")
 app.include_router(sessions_router)
+app.include_router(home_router)
 
 
 # Health check endpoint

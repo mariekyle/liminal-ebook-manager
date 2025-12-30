@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.9.4)
+## Current State (v0.10.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -20,7 +20,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Desktop header navigation** — Centered nav tabs on single line
 - **Filter drawer** — Slides up on mobile, slides from right on desktop
 - **Unified search bar** — Combined search input and filter icon
-- **Library toggle bar** — Home / Browse / Wishlist tabs ✨
+- **Library toggle bar** — Home / Browse / Wishlist tabs
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
 - Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
@@ -36,46 +36,48 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Books per row setting** — Choose 2, 3, or 4 columns on mobile
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
-- **Horizontal desktop layout** — Cover left, content right ✨
-- **Mobile tab navigation** — Details / Notes / History tabs ✨
+- **Horizontal desktop layout** — Cover left, content right
+- **Mobile tab navigation** — Details / Notes / History tabs
 - Edit book metadata — Title, authors, series, category, year
 - Draggable author chips — Reorder authors, first appears on cover
 - Author autocomplete — Suggests existing authors when editing
 - **Series autocomplete** — Suggests existing series when editing
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
-- **Reading History display** — "Read #1: [date] — [date]" format ✨
-- **"+ Add dates" button** — Enter dates when none recorded ✨
+- **Multiple reading sessions** — Track re-reads with separate dates/ratings ✨
+- **Reading History display** — "Read #1", "Read #2" with dates and ratings ✨
+- **Session editor modal** — Add/edit/delete reading sessions ✨
+- **Times Read & Average Rating** — Cumulative stats from all sessions ✨
+- **Custom status labels** — Apply throughout app including Reading History ✨
 - Estimated read time — Based on word count and WPM setting
 - Finished checkmark on book covers
-- **Finished checkmarks on author pages** ✨
+- **Finished checkmarks on author pages**
 - Series section on book detail — Navigate between books in series
 - Auto-detect FanFiction based on metadata patterns
-- **Full-screen notes editor** — Distraction-free writing ✨
-- **Note templates** — Structured Review, Reading Notes ✨
-- **Book linking** — Type `[[` to search and link books ✨
-- **Rendered markdown** — Notes display with formatting in read mode ✨
-- **Backlinks** — "Referenced by" shows which books link to current book ✨
-- **251 book notes imported from Obsidian** ✨
-- **Custom status labels** — Personalize status names in Settings ✨
+- **Full-screen notes editor** — Distraction-free writing
+- **Note templates** — Structured Review, Reading Notes
+- **Book linking** — Type `[[` to search and link books
+- **Rendered markdown** — Notes display with formatting in read mode
+- **Backlinks** — "Referenced by" shows which books link to current book
+- **251 book notes imported from Obsidian**
 - Author notes — Free-form notes about any author
 - Author rename — Update author name across all books
 - Settings drawer — WPM, grid columns, status labels, sync controls
 - "Added to library" date — Shows when book was added
 - Mobile-responsive design
 - Import reading data from Obsidian (status, rating, dates, notes)
-- **Wishlist system** — Track books you want to read ✨
-- **Wishlist priority** — Mark items as High or Normal priority ✨
-- **WISHLIST banner** — Clear indicator on book detail page ✨
-- **Wishlist styling** — Dotted border + bookmark icon in library ✨
-- **Manual Book Entry** — Add physical, audiobook, or web-based books ✨
-- **Multiple Authors** — Add multiple authors with autocomplete ✨
-- **Familiar Title Detection** — Upload warns when title matches existing book ✨
-- **"I got this book!" flow** — Convert wishlist to owned with format selection ✨
-- **Title autocomplete** — Wishlist form warns of duplicate titles ✨
-- **Author autocomplete** — Wishlist form suggests existing authors ✨
-- **Series autocomplete** — Wishlist form suggests existing series ✨
-- **Smart author replacement** — Autocomplete fixes capitalization ✨
+- **Wishlist system** — Track books you want to read
+- **Wishlist priority** — Mark items as High or Normal priority
+- **WISHLIST banner** — Clear indicator on book detail page
+- **Wishlist styling** — Dotted border + bookmark icon in library
+- **Manual Book Entry** — Add physical, audiobook, or web-based books
+- **Multiple Authors** — Add multiple authors with autocomplete
+- **Familiar Title Detection** — Upload warns when title matches existing book
+- **"I got this book!" flow** — Convert wishlist to owned with format selection
+- **Title autocomplete** — Wishlist form warns of duplicate titles
+- **Author autocomplete** — Wishlist form suggests existing authors
+- **Series autocomplete** — Wishlist form suggests existing series
+- **Smart author replacement** — Autocomplete fixes capitalization
 
 ---
 
@@ -158,31 +160,41 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Phase 5.3: Reading Sessions ← NEXT
+## Phase 5.3: Reading Sessions ✅ COMPLETE
 
-**Goal:** Support multiple reading sessions per book with per-session ratings.
+**Completed: December 30, 2025**
 
-### Database Changes
-- [ ] **reading_sessions table** — Store multiple reads per book
-- [ ] **session_number** — Track which read (1st, 2nd, etc.)
-- [ ] **per-session dates** — date_started, date_finished
-- [ ] **per-session rating** — Optional rating for each read
-- [ ] **Migrate existing data** — Move current date_started/date_finished to first session
+### Database Changes ✅
+- ✅ **reading_sessions table** — Store multiple reads per book
+- ✅ **session_number** — Track which read (1st, 2nd, etc.)
+- ✅ **per-session dates** — date_started, date_finished (both optional)
+- ✅ **per-session rating** — Optional rating for each read
+- ✅ **Migrate existing data** — Move current dates/ratings to first session
+- ✅ **Smart migration** — Fix 9 books incorrectly marked Unread with data
 
-### Reading History UI
-- [ ] **Multiple sessions display** — Show "Read #1", "Read #2", etc.
-- [ ] **Add session button** — "+ Add another read"
-- [ ] **Edit session** — Modify dates and rating for any session
-- [ ] **Delete session** — Remove a reading session
+### Reading History UI ✅
+- ✅ **Multiple sessions display** — Show "Read #1", "Read #2", etc.
+- ✅ **"+ Add Session" button** — Create new reading session
+- ✅ **Edit session** — Modify dates, status, and rating
+- ✅ **Delete session** — Remove with confirmation
+- ✅ **Session editor modal** — Full-featured edit interface
+- ✅ **Status colors** — Green (Finished), Pink (DNF), Gray (In Progress)
+- ✅ **Rating stars** — Disabled for in_progress, active for finished/dnf
+- ✅ **Custom status labels** — Use labels from Settings throughout
 
-### Cumulative Stats
-- [ ] **Times Read** — Count of reading sessions
-- [ ] **Average Rating** — Mean of per-session ratings
-- [ ] **Display on History tab** — Show stats when multiple sessions exist
+### Cumulative Stats ✅
+- ✅ **Times Read** — Count of reading sessions
+- ✅ **Average Rating** — Mean of per-session ratings
+- ✅ **Display on History tab** — Stats row below sessions
+
+### Edge Cases Handled ✅
+- ✅ **Preserve ratings** — Keep existing rating when switching to in_progress
+- ✅ **Clear dates** — Allow removing dates from sessions
+- ✅ **State reset** — Clear sessions when navigating between books
 
 ---
 
-## Phase 6: Library Home Screen
+## Phase 6: Library Home Screen ← NEXT
 
 **Goal:** Transform library from a browse-only view to an engaging home experience.
 
@@ -337,7 +349,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ### Medium Priority
 - [ ] Folder name parsing too strict on dash separator
-- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
+- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows → arrow)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
@@ -393,7 +405,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.9.2 | Dec 29, 2025 | Orphan detection system |
 | v0.9.3 | Dec 29, 2025 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
 | v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
-| v0.10.0 | TBD | Phase 5.3 — Reading Sessions |
+| v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads ✨ |
 | v0.11.0 | TBD | Phase 6 — Library Home Screen |
 | v0.12.0 | TBD | Phase 7 — Discovery & Collections |
 | v0.13.0 | TBD | Phase 8 — Integration & Polish |
@@ -401,4 +413,4 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-*Last updated: December 30, 2025 (v0.9.4 — Form autocomplete)*
+*Last updated: December 30, 2025 (v0.10.0 — Reading Sessions complete)*
