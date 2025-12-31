@@ -25,6 +25,34 @@ const RATING_LABELS = {
   5: 'All-time Fav'
 }
 
+// Helper component for displaying labeled metadata (Phase 7.0)
+const MetadataRow = ({ label, children, show = true }) => {
+  if (!show || !children) return null
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 mb-2">
+      <span className="text-zinc-500 text-xs min-w-[80px]">{label}</span>
+      <div className="text-zinc-200 text-sm">{children}</div>
+    </div>
+  )
+}
+
+// Helper for displaying tag chips (Phase 7.0)
+const TagChip = ({ children, variant = 'default' }) => {
+  const variants = {
+    default: 'bg-zinc-800 text-zinc-300',
+    rating: 'bg-red-900/40 text-red-300 border border-red-800/50',
+    warning: 'bg-amber-900/40 text-amber-300 border border-amber-800/50',
+    ship: 'bg-pink-900/40 text-pink-300 border border-pink-800/50',
+    fandom: 'bg-purple-900/40 text-purple-300 border border-purple-800/50',
+  }
+  
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs ${variants[variant]}`}>
+      {children}
+    </span>
+  )
+}
+
 // Note templates
 const NOTE_TEMPLATES = {
   structured: {
@@ -1431,7 +1459,10 @@ function BookDetail() {
 
       {/* About This Book Card (hide for wishlist - no metadata yet) */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
-      {!isWishlist && (book.summary || (book.tags && book.tags.length > 0) || book.word_count) && (
+      {!isWishlist && (book.summary || (book.tags && book.tags.length > 0) || book.word_count ||
+        book.fandom || book.content_rating || book.relationships?.length > 0 ||
+        book.characters?.length > 0 || book.ao3_category?.length > 0 || book.ao3_warnings?.length > 0 ||
+        book.isbn || book.publisher || book.chapter_count != null) && (
         <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
           
@@ -1442,17 +1473,136 @@ function BookDetail() {
             </p>
           )}
           
-          {/* Tags */}
-          {book.tags && book.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {book.tags.map(tag => (
-                <span 
-                  key={tag}
-                  className="bg-library-accent/20 text-library-accent px-2 py-0.5 rounded text-xs"
+          {/* Enhanced Metadata Display (Phase 7.0) */}
+          {book.category === 'FanFiction' ? (
+            // FanFiction: Structured display
+            <div className="space-y-2 mb-4">
+              {/* Fandom */}
+              <MetadataRow label="Fandom" show={!!book.fandom}>
+                <TagChip variant="fandom">{book.fandom}</TagChip>
+              </MetadataRow>
+              
+              {/* Content Rating */}
+              <MetadataRow label="Rating" show={!!book.content_rating || book.ao3_category?.length > 0}>
+                {book.content_rating && (
+                  <TagChip variant="rating">{book.content_rating}</TagChip>
+                )}
+                {book.ao3_category && book.ao3_category.length > 0 && (
+                  <span className={`text-zinc-500 text-xs ${book.content_rating ? 'ml-2' : ''}`}>
+                    {book.content_rating ? '(' : ''}{book.ao3_category.join(', ')}{book.content_rating ? ')' : ''}
+                  </span>
+                )}
+              </MetadataRow>
+              
+              {/* Ships/Relationships */}
+              <MetadataRow label="Ships" show={book.relationships && book.relationships.length > 0}>
+                <div className="flex flex-wrap gap-1.5">
+                  {book.relationships?.slice(0, 5)?.map((ship, i) => (
+                    <TagChip key={i} variant="ship">{ship}</TagChip>
+                  ))}
+                  {book.relationships?.length > 5 && (
+                    <span className="text-zinc-500 text-xs self-center">
+                      +{book.relationships.length - 5} more
+                    </span>
+                  )}
+                </div>
+              </MetadataRow>
+              
+              {/* Characters */}
+              <MetadataRow label="Characters" show={book.characters && book.characters.length > 0}>
+                <div className="flex flex-wrap gap-1.5">
+                  {book.characters?.slice(0, 8)?.map((char, i) => (
+                    <span key={i} className="text-zinc-400 text-xs">
+                      {char}{i < Math.min(book.characters.length, 8) - 1 ? ',' : ''}
+                    </span>
+                  ))}
+                  {book.characters?.length > 8 && (
+                    <span className="text-zinc-500 text-xs">
+                      +{book.characters.length - 8} more
+                    </span>
+                  )}
+                </div>
+              </MetadataRow>
+              
+              {/* Warnings */}
+              <MetadataRow label="Warnings" show={book.ao3_warnings && book.ao3_warnings.length > 0}>
+                <div className="flex flex-wrap gap-1.5">
+                  {book.ao3_warnings?.map((warning, i) => (
+                    <TagChip key={i} variant="warning">{warning}</TagChip>
+                  ))}
+                </div>
+              </MetadataRow>
+              
+              {/* Source URL */}
+              <MetadataRow label="Source" show={!!book.source_url}>
+                <a 
+                  href={book.source_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-teal-400 hover:text-teal-300 text-xs truncate max-w-[250px] inline-block"
                 >
-                  {tag}
+                  {book.source_url?.replace(/^https?:\/\//, '')?.split('/')?.slice(0, 2)?.join('/')}
+                </a>
+              </MetadataRow>
+              
+              {/* Completion status */}
+              <MetadataRow label="Status" show={!!book.completion_status}>
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  book.completion_status === 'Complete' ? 'bg-green-900/40 text-green-300' :
+                  book.completion_status === 'WIP' ? 'bg-yellow-900/40 text-yellow-300' :
+                  book.completion_status === 'Abandoned' ? 'bg-red-900/40 text-red-300' :
+                  'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {book.completion_status}
                 </span>
-              ))}
+              </MetadataRow>
+              
+              {/* Chapters */}
+              <MetadataRow label="Chapters" show={book.chapter_count != null}>
+                {book.chapter_count} chapters
+              </MetadataRow>
+              
+              {/* Tropes (freeform tags) */}
+              {book.tags && book.tags.length > 0 && (
+                <div className="pt-2 border-t border-zinc-800">
+                  <span className="text-zinc-500 text-xs block mb-2">Tropes</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {book.tags.map((tag, i) => (
+                      <TagChip key={i}>{tag}</TagChip>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Fiction/Non-Fiction: Genre display
+            <div className="space-y-2 mb-4">
+              {/* Publisher */}
+              <MetadataRow label="Publisher" show={!!book.publisher}>
+                {book.publisher}
+              </MetadataRow>
+              
+              {/* ISBN */}
+              <MetadataRow label="ISBN" show={!!book.isbn}>
+                <span className="font-mono text-xs">{book.isbn}</span>
+              </MetadataRow>
+              
+              {/* Chapters */}
+              <MetadataRow label="Chapters" show={book.chapter_count != null}>
+                {book.chapter_count} chapters
+              </MetadataRow>
+              
+              {/* Genre (tags displayed as genre for published books) */}
+              {book.tags && book.tags.length > 0 && (
+                <div>
+                  <span className="text-zinc-500 text-xs block mb-2">Genre</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {book.tags.map((tag, i) => (
+                      <TagChip key={i}>{tag}</TagChip>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           

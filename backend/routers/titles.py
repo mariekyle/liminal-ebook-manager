@@ -85,6 +85,16 @@ class TitleDetail(BaseModel):
     tbr_reason: Optional[str] = None
     acquisition_status: str = 'owned'  # 'owned' or 'wishlist'
     editions: List[EditionSummary] = []
+    # Enhanced metadata (Phase 7.0)
+    fandom: Optional[str] = None
+    relationships: Optional[List[str]] = None
+    characters: Optional[List[str]] = None
+    content_rating: Optional[str] = None
+    ao3_warnings: Optional[List[str]] = None
+    ao3_category: Optional[List[str]] = None
+    isbn: Optional[str] = None
+    publisher: Optional[str] = None
+    chapter_count: Optional[int] = None
 
 
 class SeriesSummary(BaseModel):
@@ -309,7 +319,17 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         tbr_priority=row["tbr_priority"] if "tbr_priority" in row.keys() else None,
         tbr_reason=row["tbr_reason"] if "tbr_reason" in row.keys() else None,
         acquisition_status=acquisition_status,
-        editions=editions
+        editions=editions,
+        # Enhanced metadata (Phase 7.0)
+        fandom=row["fandom"] if "fandom" in row.keys() else None,
+        relationships=parse_json_field(row["relationships"]) if "relationships" in row.keys() else None,
+        characters=parse_json_field(row["characters"]) if "characters" in row.keys() else None,
+        content_rating=row["content_rating"] if "content_rating" in row.keys() else None,
+        ao3_warnings=parse_json_field(row["ao3_warnings"]) if "ao3_warnings" in row.keys() else None,
+        ao3_category=parse_json_field(row["ao3_category"]) if "ao3_category" in row.keys() else None,
+        isbn=row["isbn"] if "isbn" in row.keys() else None,
+        publisher=row["publisher"] if "publisher" in row.keys() else None,
+        chapter_count=row["chapter_count"] if "chapter_count" in row.keys() else None,
     )
 
 
