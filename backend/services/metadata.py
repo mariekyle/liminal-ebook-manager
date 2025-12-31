@@ -13,6 +13,7 @@ This module reads book files to extract:
 - Word count (approximate)
 """
 
+import json
 import re
 import zipfile
 from pathlib import Path
@@ -66,6 +67,18 @@ async def extract_from_epub(file_path: Path) -> dict:
         "summary": None,
         "tags": [],
         "word_count": None,
+        # Enhanced metadata (Phase 7.0)
+        "fandom": None,
+        "relationships": None,
+        "characters": None,
+        "content_rating": None,
+        "ao3_warnings": None,
+        "ao3_category": None,
+        "source_url": None,
+        "isbn": None,
+        "publisher": None,
+        "chapter_count": None,
+        "completion_status": None,
     }
     
     try:
@@ -133,10 +146,57 @@ async def extract_from_epub(file_path: Path) -> dict:
                 if not subjects:
                     subjects = metadata.findall('.//{http://purl.org/dc/elements/1.1/}subject')
                 
-                result["tags"] = [
-                    _sanitize_tag(s.text) for s in subjects 
-                    if s.text and s.text.strip()
-                ]
+                raw_tags = [s.text.strip() for s in subjects if s.text and s.text.strip()]
+                
+                # Extract publisher for source detection
+                result["publisher"] = extract_publisher(root, namespaces)
+                
+                # Detect source type
+                source_type = detect_source_type(opf_content, result.get("publisher"))
+                
+                # Enhanced extraction based on source type
+                if source_type == "ao3" or (result.get("publisher") and "archive of our own" in result.get("publisher", "").lower()):
+                    # Parse AO3 structured tags
+                    parsed = parse_ao3_subjects(raw_tags)
+                    result["fandom"] = parsed["fandom"]
+                    result["relationships"] = json.dumps(parsed["relationships"]) if parsed["relationships"] else None
+                    result["characters"] = json.dumps(parsed["characters"]) if parsed["characters"] else None
+                    result["content_rating"] = parsed["content_rating"]
+                    result["ao3_warnings"] = json.dumps(parsed["ao3_warnings"]) if parsed["ao3_warnings"] else None
+                    result["ao3_category"] = json.dumps(parsed["ao3_category"]) if parsed["ao3_category"] else None
+                    # Only keep freeform tags
+                    result["tags"] = [_sanitize_tag(t) for t in parsed["freeform_tags"]]
+                else:
+                    # Standard tag processing
+                    result["tags"] = [_sanitize_tag(t) for t in raw_tags]
+                    
+                    # Still try to detect completion status from tags
+                    detected_status = detect_completion_status(raw_tags, result.get("summary"))
+                    if detected_status:
+                        result["completion_status"] = detected_status
+                
+                # Extract source URL (works for FanFicFare, etc.)
+                result["source_url"] = extract_source_url(root, namespaces)
+                
+                # Extract ISBN (for published books)
+                result["isbn"] = extract_isbn(root, namespaces)
+                
+                # Extract Calibre series info (may override filename-parsed series)
+                calibre_series, calibre_index = extract_calibre_series(root, namespaces)
+                if calibre_series and not result.get("series"):
+                    result["series"] = calibre_series
+                if calibre_index is not None and not result.get("series_number"):
+                    result["series_number"] = str(calibre_index)
+                
+                # Count chapters
+                result["chapter_count"] = count_chapters_from_manifest(root, namespaces)
+                
+                # Detect completion status from tags/summary (if not already set by AO3 parsing)
+                if not result.get("completion_status"):
+                    result["completion_status"] = detect_completion_status(
+                        raw_tags, 
+                        result.get("summary")
+                    )
             
             # Count words in content files
             result["word_count"] = await _count_epub_words(zf, opf_path)
@@ -399,6 +459,336 @@ def _sanitize_tag(tag: str) -> str:
     sanitized = re.sub(r'[^\w\-]', '', sanitized)  # Remove special chars
     
     return sanitized
+
+
+# ============================================================
+# AO3 Tag Parsing (Phase 7.0)
+# ============================================================
+
+# Known AO3 content ratings
+AO3_RATINGS = {
+    "explicit", "mature", "teen and up audiences", 
+    "general audiences", "not rated"
+}
+
+# Known AO3 archive warnings
+AO3_WARNINGS = {
+    "graphic depictions of violence",
+    "major character death", 
+    "no archive warnings apply",
+    "choose not to use archive warnings",
+    "rape/non-con",
+    "underage"
+}
+
+# Known AO3 relationship categories
+AO3_CATEGORIES = {"f/f", "f/m", "m/m", "gen", "multi", "other"}
+
+# Meta tags to skip (not useful as freeform tags)
+AO3_SKIP_TAGS = {"fanworks", "fanfiction", "fanfic"}
+
+
+def parse_ao3_subjects(subjects: list[str]) -> dict:
+    """
+    Parse AO3 dc:subject tags into structured fields.
+    
+    AO3 stores all metadata in dc:subject tags with patterns:
+    - Fandom: "Series Name - Creator Name"
+    - Relationship: "Character/Character" (romantic) or "Character & Character" (platonic)
+    - Rating: "Explicit", "Mature", "Teen And Up Audiences", "General Audiences"
+    - Warning: "Graphic Depictions Of Violence", etc.
+    - Category: "F/F", "F/M", "M/M", "Gen", "Multi"
+    - Everything else: Freeform tags (tropes, themes, etc.)
+    
+    Returns dict with:
+        fandom: str or None
+        relationships: list[str]
+        characters: list[str]  
+        content_rating: str or None
+        ao3_warnings: list[str]
+        ao3_category: list[str]
+        freeform_tags: list[str]
+    """
+    result = {
+        "fandom": None,
+        "relationships": [],
+        "characters": [],
+        "content_rating": None,
+        "ao3_warnings": [],
+        "ao3_category": [],
+        "freeform_tags": []
+    }
+    
+    # Track seen character names to avoid duplicates
+    seen_characters = set()
+    
+    for tag in subjects:
+        if not tag or not tag.strip():
+            continue
+            
+        tag = tag.strip()
+        tag_lower = tag.lower()
+        
+        # Skip meta tags
+        if tag_lower in AO3_SKIP_TAGS:
+            continue
+        
+        # Check for rating
+        if tag_lower in AO3_RATINGS:
+            # Normalize rating display
+            if tag_lower == "teen and up audiences":
+                result["content_rating"] = "Teen"
+            elif tag_lower == "general audiences":
+                result["content_rating"] = "General"
+            elif tag_lower == "not rated":
+                result["content_rating"] = "Not Rated"
+            else:
+                result["content_rating"] = tag.title()
+            continue
+        
+        # Check for archive warning
+        if tag_lower in AO3_WARNINGS:
+            result["ao3_warnings"].append(tag)
+            continue
+        
+        # Check for category (F/M, M/M, etc.)
+        if tag_lower in AO3_CATEGORIES:
+            result["ao3_category"].append(tag.upper())
+            continue
+        
+        # Check for fandom: "Series Name - Creator Name" pattern
+        # Must have exactly one " - " separator
+        if " - " in tag and tag.count(" - ") == 1:
+            parts = tag.split(" - ")
+            # Verify it looks like a fandom (second part is usually an author name)
+            if len(parts) == 2 and len(parts[0]) > 2 and len(parts[1]) > 2:
+                fandom_name = parts[0].strip()
+                # Only set if we don't already have a fandom
+                if result["fandom"] is None:
+                    result["fandom"] = fandom_name
+                continue
+        
+        # Check for relationship: contains "/" (but not URL) or " & "
+        if ("/" in tag and not tag.startswith("http") and not tag.startswith("www")) or " & " in tag:
+            result["relationships"].append(tag)
+            
+            # Extract character names from relationship
+            if "/" in tag:
+                chars = tag.split("/")
+            else:
+                chars = tag.split(" & ")
+            
+            for char in chars:
+                char = char.strip()
+                char_lower = char.lower()
+                if char and char_lower not in seen_characters and len(char) > 1:
+                    # Skip if it's just a single letter or looks like a tag
+                    if not re.match(r'^[a-z]$', char_lower):
+                        result["characters"].append(char)
+                        seen_characters.add(char_lower)
+            continue
+        
+        # Check if it looks like a standalone character name
+        # Character names are usually 2-4 words, Title Case, no special punctuation
+        words = tag.split()
+        if 1 <= len(words) <= 4 and tag == tag.title() and not any(c in tag for c in ['!', '?', '-', '(', ')']):
+            # Could be a character, but also could be a tag like "Original Characters"
+            # Only add if it looks like a proper name (not generic)
+            generic_patterns = ["original", "characters", "minor", "background", "other"]
+            if not any(g in tag_lower for g in generic_patterns):
+                if tag_lower not in seen_characters:
+                    result["characters"].append(tag)
+                    seen_characters.add(tag_lower)
+                continue
+        
+        # Everything else is a freeform tag
+        result["freeform_tags"].append(tag)
+    
+    return result
+
+
+def detect_source_type(opf_content: str, publisher: str = None) -> str:
+    """
+    Detect the source type of an EPUB based on metadata patterns.
+    
+    Returns: "ao3", "fanficfare", "fichub", "calibre", or "unknown"
+    """
+    content_lower = opf_content.lower()
+    
+    # AO3 direct download
+    if publisher and "archive of our own" in publisher.lower():
+        return "ao3"
+    if "archive of our own" in content_lower:
+        return "ao3"
+    
+    # FanFicFare (used for Wattpad, FFN, etc.)
+    if "fanficfare" in content_lower:
+        return "fanficfare"
+    
+    # FicHub
+    if "ebook-lib" in content_lower or "fichub" in content_lower:
+        return "fichub"
+    
+    # Calibre processed
+    if "calibre" in content_lower:
+        return "calibre"
+    
+    return "unknown"
+
+
+def extract_source_url(opf_root, namespaces: dict) -> Optional[str]:
+    """
+    Extract source URL from EPUB metadata.
+    
+    Checks:
+    1. dc:source (FanFicFare uses this)
+    2. dc:identifier with scheme="URL"
+    """
+    # Try dc:source first
+    for source in opf_root.findall('.//dc:source', namespaces):
+        if source is not None and source.text:
+            url = source.text.strip()
+            if url.startswith('http'):
+                return url
+    
+    # Also try without namespace prefix
+    for source in opf_root.findall('.//{http://purl.org/dc/elements/1.1/}source'):
+        if source is not None and source.text:
+            url = source.text.strip()
+            if url.startswith('http'):
+                return url
+    
+    # Fallback: check identifiers
+    for identifier in opf_root.findall('.//dc:identifier', namespaces):
+        # Check opf:scheme attribute
+        scheme = identifier.get('{http://www.idpf.org/2007/opf}scheme', '')
+        if scheme.upper() == 'URL' and identifier.text:
+            url = identifier.text.strip()
+            if url.startswith('http'):
+                return url
+        
+        # Check if the identifier itself is a URL
+        if identifier.text and identifier.text.strip().startswith('http'):
+            return identifier.text.strip()
+    
+    return None
+
+
+def extract_isbn(opf_root, namespaces: dict) -> Optional[str]:
+    """Extract ISBN from EPUB metadata."""
+    for identifier in opf_root.findall('.//dc:identifier', namespaces):
+        scheme = identifier.get('{http://www.idpf.org/2007/opf}scheme', '')
+        if scheme.upper() == 'ISBN' and identifier.text:
+            return identifier.text.strip()
+    
+    # Also check without namespace
+    for identifier in opf_root.findall('.//{http://purl.org/dc/elements/1.1/}identifier'):
+        scheme = identifier.get('{http://www.idpf.org/2007/opf}scheme', '')
+        if scheme.upper() == 'ISBN' and identifier.text:
+            return identifier.text.strip()
+    
+    return None
+
+
+def extract_publisher(opf_root, namespaces: dict) -> Optional[str]:
+    """Extract publisher from EPUB metadata."""
+    publisher = opf_root.find('.//dc:publisher', namespaces)
+    if publisher is not None and publisher.text:
+        return publisher.text.strip()
+    
+    # Try without namespace
+    publisher = opf_root.find('.//{http://purl.org/dc/elements/1.1/}publisher')
+    if publisher is not None and publisher.text:
+        return publisher.text.strip()
+    
+    return None
+
+
+def extract_calibre_series(opf_root, namespaces: dict) -> tuple[Optional[str], Optional[float]]:
+    """
+    Extract series info from Calibre metadata.
+    
+    Returns: (series_name, series_index)
+    """
+    series_name = None
+    series_index = None
+    
+    # Find all meta tags
+    for meta in opf_root.findall('.//meta'):
+        name = meta.get('name', '')
+        content = meta.get('content', '')
+        
+        if name == 'calibre:series' and content:
+            series_name = content.strip()
+        elif name == 'calibre:series_index' and content:
+            try:
+                series_index = float(content)
+            except ValueError:
+                pass
+    
+    return series_name, series_index
+
+
+def detect_completion_status(subjects: list[str], summary: str = None) -> Optional[str]:
+    """
+    Detect completion status from tags or summary.
+    
+    Returns: "Complete", "WIP", "Abandoned", "Hiatus", or None
+    """
+    # Check tags first (FanFicFare includes status as tag)
+    for tag in subjects:
+        tag_lower = tag.lower().strip()
+        
+        if tag_lower in ["in-progress", "in progress", "wip", "work in progress"]:
+            return "WIP"
+        if tag_lower in ["complete", "completed"]:
+            return "Complete"
+        if tag_lower in ["abandoned", "discontinued"]:
+            return "Abandoned"
+        if tag_lower in ["hiatus", "on hiatus"]:
+            return "Hiatus"
+    
+    # Check summary for patterns
+    if summary:
+        summary_lower = summary.lower()
+        
+        # Be careful with word boundaries
+        if re.search(r'\b(complete|completed)\b', summary_lower):
+            # Make sure it's not "incomplete"
+            if not re.search(r'\bincomplete\b', summary_lower):
+                return "Complete"
+        
+        if re.search(r'\b(wip|work in progress)\b', summary_lower):
+            return "WIP"
+    
+    return None
+
+
+def count_chapters_from_manifest(opf_root, namespaces: dict) -> Optional[int]:
+    """
+    Count chapter files in EPUB manifest.
+    
+    This is approximate - counts HTML/XHTML files that look like chapters.
+    """
+    count = 0
+    
+    for item in opf_root.findall('.//item'):
+        href = item.get('href', '').lower()
+        media_type = item.get('media-type', '')
+        
+        # Skip non-content files
+        if 'html' not in media_type:
+            continue
+        
+        # Skip common non-chapter files
+        skip_patterns = ['toc', 'nav', 'cover', 'title', 'copyright', 'stylesheet', 'index']
+        if any(pattern in href for pattern in skip_patterns):
+            continue
+        
+        # Looks like a chapter file
+        count += 1
+    
+    return count if count > 0 else None
 
 
 # For testing

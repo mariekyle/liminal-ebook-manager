@@ -238,6 +238,28 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             await db.commit()
             print("Migration: Created reading_sessions from existing title data")
             print("Migration: Fixed status for books incorrectly marked as Unread")
+    
+    # Migration: Add enhanced metadata fields (Phase 7.0)
+    enhanced_metadata_columns = [
+        ("fandom", "TEXT"),
+        ("relationships", "TEXT"),
+        ("characters", "TEXT"),
+        ("content_rating", "TEXT"),
+        ("ao3_warnings", "TEXT"),
+        ("ao3_category", "TEXT"),
+        ("isbn", "TEXT"),
+        ("publisher", "TEXT"),
+        ("chapter_count", "INTEGER"),
+    ]
+    
+    for col_name, col_type in enhanced_metadata_columns:
+        if col_name not in existing_columns:
+            try:
+                await db.execute(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}")
+                print(f"  Added {col_name} column")
+            except Exception as e:
+                if "duplicate column name" not in str(e).lower():
+                    print(f"  Note: {col_name} column: {e}")
 
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
@@ -393,6 +415,17 @@ CREATE TABLE IF NOT EXISTS titles (
     tags TEXT,                    -- JSON array: ["fantasy", "romance"]
     source_url TEXT,              -- For FanFiction: AO3/FFN URL
     completion_status TEXT,       -- For FanFiction: Complete, WIP, Abandoned
+    
+    -- Enhanced metadata fields (Phase 7.0)
+    fandom TEXT,
+    relationships TEXT,           -- JSON array of relationship tags
+    characters TEXT,              -- JSON array of character names
+    content_rating TEXT,          -- AO3 rating: Explicit, Mature, Teen, General
+    ao3_warnings TEXT,            -- JSON array of archive warnings
+    ao3_category TEXT,            -- JSON array: F/F, F/M, M/M, Gen, etc.
+    isbn TEXT,
+    publisher TEXT,
+    chapter_count INTEGER,
     
     cover_color_1 TEXT,           -- Hex color for gradient
     cover_color_2 TEXT,

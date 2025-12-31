@@ -11,6 +11,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0] - 2025-12-30
+
+### Added
+
+#### Phase 6: Library Home Screen
+Complete dashboard experience replacing the simple library grid on the Home tab.
+
+#### Home Dashboard Sections
+- **Currently Reading** — Up to 5 in-progress books with activity bars on covers
+- **Recently Added** — 20 most recently uploaded books in horizontal scroll
+- **Discover Something New** — 6 random unread books with refresh button
+- **Quick Reads** — Unread books under 3 hours based on user's WPM setting
+- **Your Reading Stats** — Words read, reading time, titles finished with category breakdown
+
+#### Backend: Home API Endpoints
+- **GET /api/home/in-progress** — Returns up to 5 in-progress owned books
+- **GET /api/home/recently-added** — Returns 20 most recently added books
+- **GET /api/home/discover** — Returns 6 random unread books (refreshable)
+- **GET /api/home/quick-reads** — Returns unread books under 3 hours
+- **GET /api/home/stats?period=month|year** — Reading statistics with category breakdown
+
+#### Search Redesign
+- **SearchModal component** — Full-screen search modal for mobile
+- **Live search results** — Debounced search with keyboard navigation
+- **Dual action** — Click book to navigate, or "Filter library by X" to apply as filter
+- **Responsive layout** — Mobile uses modal, desktop keeps inline search bar
+- **Icon buttons** — Search and filter icons on mobile Browse/Wishlist tabs
+
+#### Sort Options Redesign
+- **Recently Added** — Sort by `created_at` DESC (new default)
+- **Title A-Z** — Numeric-first sorting ("4-Hour" before "10 Things")
+- **Author A-Z** — Alphabetical, case-insensitive
+- **Recently Published** — Year DESC with NULLs sorted to bottom
+- **Removed** — Series, Year, Updated sort options
+
+#### BookCard Enhancement
+- **Activity bar** — 50% width teal bar on in-progress book covers (Home tab only)
+- **showActivityBar prop** — Optional prop to enable activity indicator
+
+#### EPUB Word Count Fix
+- **Improved path resolution** — Multiple strategies for finding content files
+- **URL decoding** — Handles encoded paths in EPUB manifests
+- **Debug logging** — Warns when word count is suspiciously low
+- **Minimum threshold** — Quick Reads requires 1000+ words (filters broken data)
+
+### Changed
+
+- **Home tab** — Now shows dashboard instead of book grid
+- **Browse/Wishlist tabs** — Show book grid with search/filter
+- **Search bar hidden on Home** — Clean dashboard experience
+- **Default sort** — Changed from "Title" to "Recently Added"
+- **Toggle bar repositioned** — Integrated with search/filter row
+
+### Fixed
+
+- **EPUB word count extraction** — Most books now extract correctly (was returning near-zero for some EPUBs)
+- **Desktop search layout** — Inline search between toggle bar and filter icon
+
+### Technical
+
+#### New Files
+- `backend/routers/home.py` — Dashboard API endpoints
+- `frontend/src/components/HomeTab.jsx` — Dashboard component
+- `frontend/src/components/SearchModal.jsx` — Mobile search modal
+
+#### Modified Files
+- `backend/routers/titles.py` — New sort options, updated defaults
+- `backend/services/metadata.py` — EPUB word count extraction fix
+- `frontend/src/api.js` — Home API functions
+- `frontend/src/components/BookCard.jsx` — Activity bar support
+- `frontend/src/components/SearchBar.jsx` — Icons-only mode for mobile
+- `frontend/src/components/Library.jsx` — HomeTab integration, search redesign
+
+---
+
 ## [0.10.0] - 2025-12-30
 
 ### Added
@@ -346,6 +421,7 @@ Complete redesign of how wishlist items integrate with the library.
 
 | Version | Date | Milestone |
 |---------|------|-----------|
+| 0.11.0 | 2025-12-30 | **Phase 6** — Library Home Screen, search redesign, sort options ✨ |
 | 0.10.0 | 2025-12-30 | **Phase 5.3** — Reading sessions, multiple re-reads |
 | 0.9.4 | 2025-12-30 | **Phase 5.2** — Form autocomplete (title, author, series) |
 | 0.9.3 | 2025-12-29 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
@@ -373,21 +449,22 @@ Complete redesign of how wishlist items integrate with the library.
 
 ## Upgrade Notes
 
-### Upgrading to 0.10.0
+### Upgrading to 0.11.0
 
 **New Files:**
-- `backend/routers/sessions.py` — New router for session endpoints
+- `backend/routers/home.py` — Dashboard API endpoints
+- `frontend/src/components/HomeTab.jsx` — Dashboard component
+- `frontend/src/components/SearchModal.jsx` — Mobile search modal
 
 **Modified Files:**
-- `backend/database.py` — Schema, migration, helper function
-- `backend/main.py` — Register sessions router
-- `frontend/src/api.js` — Session API functions
-- `frontend/src/components/BookDetail.jsx` — Sessions UI
+- `backend/routers/titles.py` — Sort options
+- `backend/services/metadata.py` — EPUB word count fix
+- `frontend/src/api.js` — Home API functions
+- `frontend/src/components/BookCard.jsx` — Activity bar
+- `frontend/src/components/SearchBar.jsx` — Icons-only mode
+- `frontend/src/components/Library.jsx` — Dashboard integration
 
-**Database Migration:** Automatic on startup
-- Creates `reading_sessions` table
-- Migrates existing reading data to first session
-- Fixes 9 books incorrectly marked "Unread" with dates/ratings
+**Post-upgrade:** Run Full Sync from Settings to re-extract word counts for existing books.
 
 **Rebuild Docker container after update.**
 

@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.10.0)
+## Current State (v0.11.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -19,7 +19,6 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Add
 - **Desktop header navigation** — Centered nav tabs on single line
 - **Filter drawer** — Slides up on mobile, slides from right on desktop
-- **Unified search bar** — Combined search input and filter icon
 - **Library toggle bar** — Home / Browse / Wishlist tabs
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
@@ -32,7 +31,6 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Active filters row — Clear individual filters or all at once
 - Search and filter by category, status, tags, read time
 - **Sort inline with count** — Sort dropdown next to book/series count
-- Sort by title, author, series, year, recently updated (case-insensitive)
 - **Books per row setting** — Choose 2, 3, or 4 columns on mobile
 - Scroll through full library (1700+ books)
 - View book detail page with full metadata
@@ -44,11 +42,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Series autocomplete** — Suggests existing series when editing
 - Track read status (Unread, In Progress, Finished, DNF)
 - Rate books 1-5 stars with custom labels
-- **Multiple reading sessions** — Track re-reads with separate dates/ratings ✨
-- **Reading History display** — "Read #1", "Read #2" with dates and ratings ✨
-- **Session editor modal** — Add/edit/delete reading sessions ✨
-- **Times Read & Average Rating** — Cumulative stats from all sessions ✨
-- **Custom status labels** — Apply throughout app including Reading History ✨
+- **Multiple reading sessions** — Track re-reads with separate dates/ratings
+- **Reading History display** — "Read #1", "Read #2" with dates and ratings
+- **Session editor modal** — Add/edit/delete reading sessions
+- **Times Read & Average Rating** — Cumulative stats from all sessions
+- **Custom status labels** — Apply throughout app including Reading History
 - Estimated read time — Based on word count and WPM setting
 - Finished checkmark on book covers
 - **Finished checkmarks on author pages**
@@ -78,142 +76,54 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Author autocomplete** — Wishlist form suggests existing authors
 - **Series autocomplete** — Wishlist form suggests existing series
 - **Smart author replacement** — Autocomplete fixes capitalization
+- **Home Dashboard** — Currently Reading, Recently Added, Discover, Quick Reads, Stats ✨
+- **Search modal (mobile)** — Full-screen search with live results ✨
+- **Inline search (desktop)** — Search bar between toggle and filter ✨
+- **New sort options** — Recently Added (default), Title A-Z, Author A-Z, Recently Published ✨
+- **Numeric-first title sort** — "4-Hour Chef" before "10 Things" ✨
+- **Activity bars** — Visual indicator on in-progress book covers ✨
+- **Reading stats** — Words read, reading time, titles finished with category breakdown ✨
 
 ---
 
-## Phase 5: TBR & Manual Entry ✅ COMPLETE
-
-**Completed: December 27-28, 2025**
-
-### Manual Book Entry ✅
-- ✅ **Add books without files** — Track physical books, audiobooks, web-based
-- ✅ **Manual entry form** — Title, author(s), series, category
-- ✅ **Format selection** — Physical, Audiobook, Web/URL
-- ✅ **Multiple authors** — Add multiple authors with chip display
-- ✅ **Author autocomplete** — Suggests existing library authors
-- ✅ **Completion status** — Track WIP/Abandoned for fanfiction
-- ✅ **Source URL** — Store AO3/FFN URLs
-
-### TBR List ✅
-- ✅ **Separate TBR tab** — New tab in bottom navigation
-- ✅ **TBR entry form** — Title, author, series, category
-- ✅ **"Why I want to read this" field** — Free-form reason
-- ✅ **Source URL field** — Store where you found it
-- ✅ **Priority** — High or Normal priority
-
-### TBR → Library Flow ✅
-- ✅ **"I got this book!" action** — Convert TBR to library
-- ✅ **Format selection modal** — Ebook, Physical, Audiobook, Web-based
-- ✅ **Preserve notes/metadata** — Source URL and completion status kept
-
-### Upload Enhancements ✅
-- ✅ **Familiar title detection** — Warns when uploading title that exists
-- ✅ **"Add to Existing" option** — Add files to existing title
-- ✅ **"Add as Separate" option** — Override to create new entry
-
----
-
-## Phase 5.1: Wishlist Unification ✅ COMPLETE
-
-**Completed: December 29, 2025**
-
-### Backend Changes ✅
-- ✅ **acquisition_status column** — Tracks 'owned' vs 'wishlist' status
-- ✅ **?acquisition= filter** — API parameter for filtering by ownership
-- ✅ **Automatic migration** — Existing is_tbr data migrated
-
-### Library Toggle Bar ✅
-- ✅ **Home / Browse / Wishlist tabs** — Filter by ownership status
-- ✅ **URL persistence** — Toggle state in URL params
-- ✅ **Poetic phrases** — Browse tab shows rotating phrases
-
-### BookCard Styling ✅
-- ✅ **Dotted border** — Visual distinction for wishlist items
-- ✅ **Bookmark icon** — Badge indicator
-- ✅ **Full brightness** — No opacity reduction
-
-### BookDetail Redesign ✅
-- ✅ **WISHLIST banner** — Clear indicator at top
-- ✅ **Horizontal desktop layout** — Cover left, content right
-- ✅ **Mobile tab navigation** — Details / Notes / History
-- ✅ **Edit icon repositioned** — Upper right corner
-- ✅ **Reading History format** — "Read #1: [date] — [date]"
-- ✅ **"+ Add dates" button** — When no dates exist
-
-### Navigation Cleanup ✅
-- ✅ **TBR tab removed** — From mobile and desktop
-- ✅ **/tbr redirect** — Goes to /?acquisition=wishlist
-
----
-
-## Phase 5.2: Form Autocomplete ✅ COMPLETE
+## Phase 6: Library Home Screen ✅ COMPLETE
 
 **Completed: December 30, 2025**
 
-### TBRForm Upgrades ✅
-- ✅ **Multi-author support** — Chips with remove buttons
-- ✅ **Title autocomplete** — Warns of duplicate titles
-- ✅ **Author autocomplete** — Suggests existing authors
-- ✅ **Series autocomplete** — Suggests existing series
-- ✅ **Familiar title warning** — 85% similarity matching
-- ✅ **Smart author replacement** — Fixes capitalization from autocomplete
+### Home Dashboard ✅
+- ✅ **Currently Reading section** — Up to 5 in-progress books with activity bars
+- ✅ **Recently Added section** — 20 most recent uploads in horizontal scroll
+- ✅ **Discover section** — 6 random unread books with refresh button
+- ✅ **Quick Reads section** — Unread books under 3 hours (based on WPM setting)
+- ✅ **Your Reading stats** — Words read, reading time, titles finished
+- ✅ **Category breakdown** — Progress bars showing reading distribution
+- ✅ **Month/Year toggle** — Switch stats period
+
+### Search Redesign ✅
+- ✅ **Mobile: Search modal** — Full-screen with live results
+- ✅ **Mobile: Icon buttons** — Search and filter icons on Browse/Wishlist
+- ✅ **Desktop: Inline search** — Search bar between toggle and filter
+- ✅ **Dual action** — Navigate to book OR filter library
+- ✅ **Hidden on Home tab** — Clean dashboard experience
+
+### Sort Options ✅
+- ✅ **Recently Added** — New default, sorts by created_at DESC
+- ✅ **Title A-Z** — Numeric-first sorting
+- ✅ **Author A-Z** — Alphabetical, case-insensitive
+- ✅ **Recently Published** — Year DESC, NULLs at bottom
+- ✅ **Removed** — Series, Year, Updated options
+
+### Backend ✅
+- ✅ **GET /api/home/in-progress** — In-progress books
+- ✅ **GET /api/home/recently-added** — Recent uploads
+- ✅ **GET /api/home/discover** — Random unread books
+- ✅ **GET /api/home/quick-reads** — Short reads based on WPM
+- ✅ **GET /api/home/stats** — Reading statistics
+- ✅ **EPUB word count fix** — Improved path resolution
 
 ---
 
-## Phase 5.3: Reading Sessions ✅ COMPLETE
-
-**Completed: December 30, 2025**
-
-### Database Changes ✅
-- ✅ **reading_sessions table** — Store multiple reads per book
-- ✅ **session_number** — Track which read (1st, 2nd, etc.)
-- ✅ **per-session dates** — date_started, date_finished (both optional)
-- ✅ **per-session rating** — Optional rating for each read
-- ✅ **Migrate existing data** — Move current dates/ratings to first session
-- ✅ **Smart migration** — Fix 9 books incorrectly marked Unread with data
-
-### Reading History UI ✅
-- ✅ **Multiple sessions display** — Show "Read #1", "Read #2", etc.
-- ✅ **"+ Add Session" button** — Create new reading session
-- ✅ **Edit session** — Modify dates, status, and rating
-- ✅ **Delete session** — Remove with confirmation
-- ✅ **Session editor modal** — Full-featured edit interface
-- ✅ **Status colors** — Green (Finished), Pink (DNF), Gray (In Progress)
-- ✅ **Rating stars** — Disabled for in_progress, active for finished/dnf
-- ✅ **Custom status labels** — Use labels from Settings throughout
-
-### Cumulative Stats ✅
-- ✅ **Times Read** — Count of reading sessions
-- ✅ **Average Rating** — Mean of per-session ratings
-- ✅ **Display on History tab** — Stats row below sessions
-
-### Edge Cases Handled ✅
-- ✅ **Preserve ratings** — Keep existing rating when switching to in_progress
-- ✅ **Clear dates** — Allow removing dates from sessions
-- ✅ **State reset** — Clear sessions when navigating between books
-
----
-
-## Phase 6: Library Home Screen ← NEXT
-
-**Goal:** Transform library from a browse-only view to an engaging home experience.
-
-### Library Tabs
-- [ ] **Home Tab** — Dashboard view with curated sections
-- [ ] **Browse Tab** — Current library grid with filters
-
-### Home Tab Sections
-- [ ] **In Progress** — Books currently being read
-- [ ] **Recently Added** — Newest titles at the top
-- [ ] **Discover** — Random unread books for serendipity
-- [ ] **Stats** — Quick reading statistics
-
-### Sort Enhancement
-- [ ] **"Updated" sort → "Recently Added"** — Sort by `created_at` descending, newest first
-
----
-
-## Phase 7: Discovery & Collections
+## Phase 7: Discovery & Collections ← NEXT
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
@@ -256,7 +166,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] Multi-filter: combine status + category + tags + rating + read time
 - [ ] Complex queries: "Unread 5-star fiction under 3 hours"
 - [ ] Sort direction toggle (asc/desc)
-- [ ] Clear search button (X icon)
+- [x] ~~Clear search button (X icon)~~ ✅
 
 
 ---
@@ -269,6 +179,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] **Download link** — Make stored book location a clickable download link (prefer EPUB, fallback to MOBI)
 - [ ] **Edit/add tags** — Add, remove, or edit tags directly from book detail page
 - [ ] **"In Library" / "In Wishlist" banner** — Show status banner on book detail screen
+- [ ] **Move "Referenced by" to Details tab (mobile)** — Backlinks currently on Notes tab, should be on Details
 
 ### Cover Improvements
 - [x] ~~Match Obsidian plugin gradient style~~ ✅
@@ -285,7 +196,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] **Extract source URL from EPUB** — For new uploads and existing library
 
 ### UI Polish
-- [ ] Clear search button (X icon)
+- [x] ~~Clear search button (X icon)~~ ✅
 - [x] ~~Books per row setting~~ ✅
 - [ ] **Sort direction toggle** — Asc/desc option for all sort fields in library view
 - [ ] Loading states and animations
@@ -348,8 +259,14 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] **PDF duplicates not detected** — Upload screen doesn't detect existing PDFs
 
 ### Medium Priority
+- [ ] **Word count extraction fails for some EPUBs** — "MONEY Master the Game" by Tony Robbins shows 116 words instead of ~200,000+. The metadata extraction fix (Phase 6.3) resolved most books but not all. Needs investigation:
+  - Check if EPUB structure uses non-standard paths (encrypted content, DRM artifacts, unusual nesting)
+  - Check if content is in formats other than HTML/XHTML (e.g., pure XML, PDF-in-EPUB)
+  - Test extraction locally with `python backend/services/metadata.py /path/to/book.epub`
+  - Consider adding fallback: estimate from file size if word count extraction fails
+  - Related: Some PDFs may have similar issues with text extraction
 - [ ] Folder name parsing too strict on dash separator
-- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows → arrow)
+- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
 - [ ] Status filter on Series page
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
@@ -405,12 +322,12 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.9.2 | Dec 29, 2025 | Orphan detection system |
 | v0.9.3 | Dec 29, 2025 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
 | v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
-| v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads ✨ |
-| v0.11.0 | TBD | Phase 6 — Library Home Screen |
+| v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads |
+| v0.11.0 | Dec 30, 2025 | **Phase 6** — Library Home Screen, search redesign, sort options ✨ |
 | v0.12.0 | TBD | Phase 7 — Discovery & Collections |
 | v0.13.0 | TBD | Phase 8 — Integration & Polish |
 | v1.0.0 | TBD | Phase 9 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 30, 2025 (v0.10.0 — Reading Sessions complete)*
+*Last updated: December 30, 2025 (v0.11.0 — Phase 6 complete)*
