@@ -1483,15 +1483,8 @@ function BookDetail() {
               </MetadataRow>
               
               {/* Content Rating */}
-              <MetadataRow label="Rating" show={!!book.content_rating || book.ao3_category?.length > 0}>
-                {book.content_rating && (
-                  <TagChip variant="rating">{book.content_rating}</TagChip>
-                )}
-                {book.ao3_category && book.ao3_category.length > 0 && (
-                  <span className={`text-zinc-500 text-xs ${book.content_rating ? 'ml-2' : ''}`}>
-                    {book.content_rating ? '(' : ''}{book.ao3_category.join(', ')}{book.content_rating ? ')' : ''}
-                  </span>
-                )}
+              <MetadataRow label="Rating" show={!!book.content_rating}>
+                <TagChip variant="rating">{book.content_rating}</TagChip>
               </MetadataRow>
               
               {/* Ships/Relationships */}
@@ -1505,6 +1498,15 @@ function BookDetail() {
                       +{book.relationships.length - 5} more
                     </span>
                   )}
+                </div>
+              </MetadataRow>
+              
+              {/* Pairing Type (ao3_category) */}
+              <MetadataRow label="Pairing Type" show={book.ao3_category && book.ao3_category.length > 0}>
+                <div className="flex flex-wrap gap-1.5">
+                  {book.ao3_category?.map((cat, i) => (
+                    <TagChip key={i} variant="ship">{cat}</TagChip>
+                  ))}
                 </div>
               </MetadataRow>
               
