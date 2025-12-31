@@ -29,7 +29,7 @@ function Library() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [sort, setSort] = useState(searchParams.get('sort') || 'title')
+  const [sort, setSort] = useState(searchParams.get('sort') || 'added')
   const [categories, setCategories] = useState([])
   const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
   const [wpm, setWpm] = useState(250)
@@ -170,7 +170,7 @@ function Library() {
     const urlStatus = searchParams.get('status') || ''
     const urlTags = searchParams.get('tags') ? searchParams.get('tags').split(',') : []
     const urlSearch = searchParams.get('search') || ''
-    const urlSort = searchParams.get('sort') || 'title'
+    const urlSort = searchParams.get('sort') || 'added'
     const urlView = searchParams.get('view') || 'library'
     const urlReadTime = searchParams.get('readTime') || ''
     const urlAcquisition = searchParams.get('acquisition') || 'owned'
@@ -194,7 +194,7 @@ function Library() {
     Object.entries(updates).forEach(([key, value]) => {
       if (value === '' || value === null || value === undefined || 
           (Array.isArray(value) && value.length === 0) ||
-          (key === 'sort' && value === 'title') ||
+          (key === 'sort' && value === 'added') ||
           (key === 'view' && value === 'library') ||
           (key === 'acquisition' && value === 'owned')) {
         params.delete(key)
@@ -218,7 +218,7 @@ function Library() {
     setAcquisition('owned')
     // Preserve current sort - don't reset it
     const params = new URLSearchParams()
-    if (sort !== 'title') {
+    if (sort !== 'added') {
       params.set('sort', sort)
     }
     setSearchParams(params, { replace: true })
@@ -384,11 +384,10 @@ function Library() {
                   }}
                   className="appearance-none bg-transparent text-gray-500 text-xs pr-5 cursor-pointer hover:text-white focus:outline-none"
                 >
-                  <option value="title">Title</option>
-                  <option value="author">Author</option>
-                  <option value="series">Series</option>
-                  <option value="year">Year</option>
-                  <option value="updated">Updated</option>
+                  <option value="added">Recently Added</option>
+                  <option value="title">Title A-Z</option>
+                  <option value="author">Author A-Z</option>
+                  <option value="published">Recently Published</option>
                 </select>
                 <span className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">↑</span>
               </div>

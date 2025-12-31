@@ -362,7 +362,7 @@ async def list_titles(
     series: Optional[str] = Query(None, description="Filter by series"),
     tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     search: Optional[str] = Query(None, description="Search in title/author"),
-    sort: str = Query("title", description="Sort field: title, author, series, updated"),
+    sort: str = Query("added", description="Sort field: added, title, author, published"),
     order: str = Query("asc", description="Sort order: asc or desc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
@@ -423,21 +423,34 @@ async def list_titles(
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
-    # Build ORDER BY clause with case-insensitive sorting for text columns
-    sort_order = "DESC" if order.lower() == "desc" else "ASC"
-    
-    if sort == 'title':
-        order_clause = f"title COLLATE NOCASE {sort_order}"
-    elif sort == 'author':
-        order_clause = f"authors COLLATE NOCASE {sort_order}"
-    elif sort == 'series':
-        order_clause = f"series COLLATE NOCASE {sort_order}, series_number {sort_order}"
-    elif sort == 'year':
-        order_clause = f"publication_year {sort_order}"
-    elif sort == 'updated':
-        order_clause = f"updated_at {sort_order}"
+    # Build ORDER BY clause
+    if sort == "added":
+        # Recently Added: newest first
+        order_clause = "created_at DESC"
+    elif sort == "title":
+        # Title A-Z: numeric-first sorting
+        # Extract leading numbers and sort numerically, then alphabetically
+        order_clause = """
+            CASE 
+                WHEN title GLOB '[0-9]*' THEN 0 
+                ELSE 1 
+            END,
+            CASE 
+                WHEN title GLOB '[0-9]*' THEN CAST(title AS INTEGER)
+                ELSE 0
+            END,
+            title COLLATE NOCASE ASC"""
+    elif sort == "author":
+        # Author A-Z: alphabetical by first author
+        order_clause = "authors COLLATE NOCASE ASC"
+    elif sort == "published":
+        # Recently Published: newest year first, NULLs at bottom
+        order_clause = """
+            CASE WHEN publication_year IS NULL THEN 1 ELSE 0 END,
+            publication_year DESC"""
     else:
-        order_clause = f"title COLLATE NOCASE {sort_order}"
+        # Default to Recently Added
+        order_clause = "created_at DESC"
     
     # Get total count
     count_sql = f"SELECT COUNT(*) as total FROM titles WHERE {where_sql}"
@@ -472,7 +485,7 @@ async def list_books(
     series: Optional[str] = Query(None),
     tags: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    sort: str = Query("title"),
+    sort: str = Query("added"),
     order: str = Query("asc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
