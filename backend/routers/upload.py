@@ -19,6 +19,8 @@ from pydantic import BaseModel
 
 from database import get_db
 from services.covers import generate_cover_colors
+from services.metadata import extract_metadata
+from pathlib import Path
 from services.upload_service import (
     create_session,
     get_session,
@@ -464,8 +466,9 @@ async def create_title_from_upload(
     file_path: str = None
 ) -> int:
     """
-    Create a title record from upload data.
-    This ensures user's category selection is saved before sync runs.
+    Create a title record from upload data with full metadata extraction.
+    This ensures user's category selection is saved and metadata is extracted
+    immediately, without depending on background sync.
     Returns the title_id.
     """
     # Parse author into list
@@ -492,20 +495,71 @@ async def create_title_from_upload(
         await db.commit()
         return existing[0]
     
-    # Insert new title with user's category
+    # Extract metadata from the ebook file
+    metadata = {}
+    if file_path and Path(file_path).exists():
+        try:
+            metadata = await extract_metadata(Path(file_path))
+            print(f"Extracted metadata for {title}: fandom={metadata.get('fandom')}, has_ships={bool(metadata.get('relationships'))}")
+        except Exception as e:
+            print(f"Metadata extraction failed for {title}: {e}")
+            metadata = {}
+    
+    # Use extracted metadata, falling back to upload form values
+    final_title = metadata.get('title') or title
+    final_series = series or metadata.get('series')
+    final_series_number = series_number or metadata.get('series_number')
+    final_summary = metadata.get('summary')
+    final_tags = json.dumps(metadata.get('tags', []))
+    final_word_count = metadata.get('word_count')
+    final_publication_year = metadata.get('publication_year')
+    
+    # Enhanced metadata fields
+    fandom = metadata.get('fandom')
+    relationships = metadata.get('relationships')
+    characters = metadata.get('characters')
+    content_rating = metadata.get('content_rating')
+    ao3_warnings = metadata.get('ao3_warnings')
+    ao3_category = metadata.get('ao3_category')
+    source_url = metadata.get('source_url')
+    isbn = metadata.get('isbn')
+    publisher = metadata.get('publisher')
+    chapter_count = metadata.get('chapter_count')
+    completion_status = metadata.get('completion_status')
+    
+    # Insert new title with all metadata
     cursor = await db.execute(
         """INSERT OR IGNORE INTO titles 
             (title, authors, series, series_number, category,
-             cover_color_1, cover_color_2)
-        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+             publication_year, word_count, summary, tags,
+             cover_color_1, cover_color_2,
+             fandom, relationships, characters, content_rating,
+             ao3_warnings, ao3_category, source_url, isbn, publisher,
+             chapter_count, completion_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
-            title,
+            final_title,
             json.dumps(authors),
-            series or None,
-            series_number or None,
+            final_series,
+            final_series_number,
             category or 'Uncategorized',
+            final_publication_year,
+            final_word_count,
+            final_summary,
+            final_tags,
             color1,
-            color2
+            color2,
+            fandom,
+            relationships,
+            characters,
+            content_rating,
+            ao3_warnings,
+            ao3_category,
+            source_url,
+            isbn,
+            publisher,
+            chapter_count,
+            completion_status
         ]
     )
     title_id = cursor.lastrowid
@@ -528,16 +582,35 @@ async def create_title_from_upload(
             cursor = await db.execute(
                 """INSERT INTO titles 
                     (title, authors, series, series_number, category,
-                     cover_color_1, cover_color_2)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     publication_year, word_count, summary, tags,
+                     cover_color_1, cover_color_2,
+                     fandom, relationships, characters, content_rating,
+                     ao3_warnings, ao3_category, source_url, isbn, publisher,
+                     chapter_count, completion_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 [
-                    title,
+                    final_title,
                     json.dumps(authors),
-                    series or None,
-                    series_number or None,
+                    final_series,
+                    final_series_number,
                     category or 'Uncategorized',
+                    final_publication_year,
+                    final_word_count,
+                    final_summary,
+                    final_tags,
                     color1,
-                    color2
+                    color2,
+                    fandom,
+                    relationships,
+                    characters,
+                    content_rating,
+                    ao3_warnings,
+                    ao3_category,
+                    source_url,
+                    isbn,
+                    publisher,
+                    chapter_count,
+                    completion_status
                 ]
             )
             title_id = cursor.lastrowid
