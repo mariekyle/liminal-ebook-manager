@@ -664,7 +664,9 @@ async def rescan_metadata(
         
         query = f"""
             SELECT t.id, t.title, e.file_path, e.folder_path, t.category,
-                   t.series, t.fandom, t.source_url
+                   t.series, t.fandom, t.source_url, t.relationships, t.characters,
+                   t.content_rating, t.ao3_warnings, t.ao3_category, t.publisher,
+                   t.isbn, t.chapter_count, t.completion_status, t.tags
             FROM titles t
             LEFT JOIN editions e ON t.id = e.title_id
             WHERE {where_clause}
@@ -685,6 +687,16 @@ async def rescan_metadata(
             current_series = row[5]
             current_fandom = row[6]
             current_source_url = row[7]
+            current_relationships = row[8]
+            current_characters = row[9]
+            current_content_rating = row[10]
+            current_ao3_warnings = row[11]
+            current_ao3_category = row[12]
+            current_publisher = row[13]
+            current_isbn = row[14]
+            current_chapter_count = row[15]
+            current_completion_status = row[16]
+            current_tags = row[17]
             
             # Find the ebook file
             epub_path = None
@@ -725,28 +737,28 @@ async def rescan_metadata(
                     values.append(metadata["fandom"])
                     results["details"]["ao3_parsed"] += 1
                 
-                # Relationships
-                if metadata.get("relationships"):
+                # Relationships (only if not already set)
+                if metadata.get("relationships") and not current_relationships:
                     updates.append("relationships = ?")
                     values.append(metadata["relationships"])
                 
-                # Characters
-                if metadata.get("characters"):
+                # Characters (only if not already set)
+                if metadata.get("characters") and not current_characters:
                     updates.append("characters = ?")
                     values.append(metadata["characters"])
                 
-                # Content rating
-                if metadata.get("content_rating"):
+                # Content rating (only if not already set)
+                if metadata.get("content_rating") and not current_content_rating:
                     updates.append("content_rating = ?")
                     values.append(metadata["content_rating"])
                 
-                # AO3 warnings
-                if metadata.get("ao3_warnings"):
+                # AO3 warnings (only if not already set)
+                if metadata.get("ao3_warnings") and not current_ao3_warnings:
                     updates.append("ao3_warnings = ?")
                     values.append(metadata["ao3_warnings"])
                 
-                # AO3 category
-                if metadata.get("ao3_category"):
+                # AO3 category (only if not already set)
+                if metadata.get("ao3_category") and not current_ao3_category:
                     updates.append("ao3_category = ?")
                     values.append(metadata["ao3_category"])
                 
@@ -756,14 +768,14 @@ async def rescan_metadata(
                     values.append(metadata["source_url"])
                     results["details"]["source_urls_found"] += 1
                 
-                # ISBN
-                if metadata.get("isbn"):
+                # ISBN (only if not already set)
+                if metadata.get("isbn") and not current_isbn:
                     updates.append("isbn = ?")
                     values.append(metadata["isbn"])
                     results["details"]["isbn_found"] += 1
                 
-                # Publisher
-                if metadata.get("publisher"):
+                # Publisher (only if not already set)
+                if metadata.get("publisher") and not current_publisher:
                     updates.append("publisher = ?")
                     values.append(metadata["publisher"])
                 
@@ -777,19 +789,19 @@ async def rescan_metadata(
                         updates.append("series_number = ?")
                         values.append(metadata["series_number"])
                 
-                # Chapter count
-                if metadata.get("chapter_count"):
+                # Chapter count (only if not already set)
+                if metadata.get("chapter_count") and current_chapter_count is None:
                     updates.append("chapter_count = ?")
                     values.append(metadata["chapter_count"])
                 
-                # Completion status
-                if metadata.get("completion_status"):
+                # Completion status (only if not already set)
+                if metadata.get("completion_status") and not current_completion_status:
                     updates.append("completion_status = ?")
                     values.append(metadata["completion_status"])
                     results["details"]["completion_status_detected"] += 1
                 
-                # Update tags (replace with freeform only)
-                if metadata.get("tags"):
+                # Update tags (only if not already set)
+                if metadata.get("tags") and not current_tags:
                     updates.append("tags = ?")
                     values.append(json.dumps(metadata["tags"]))
                 
