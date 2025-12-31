@@ -6,7 +6,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.11.0)
+## Current State (v0.12.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
@@ -76,54 +76,100 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Author autocomplete** — Wishlist form suggests existing authors
 - **Series autocomplete** — Wishlist form suggests existing series
 - **Smart author replacement** — Autocomplete fixes capitalization
-- **Home Dashboard** — Currently Reading, Recently Added, Discover, Quick Reads, Stats ✨
-- **Search modal (mobile)** — Full-screen search with live results ✨
-- **Inline search (desktop)** — Search bar between toggle and filter ✨
-- **New sort options** — Recently Added (default), Title A-Z, Author A-Z, Recently Published ✨
-- **Numeric-first title sort** — "4-Hour Chef" before "10 Things" ✨
-- **Activity bars** — Visual indicator on in-progress book covers ✨
-- **Reading stats** — Words read, reading time, titles finished with category breakdown ✨
+- **Home Dashboard** — Currently Reading, Recently Added, Discover, Quick Reads, Stats
+- **Search modal (mobile)** — Full-screen search with live results
+- **Inline search (desktop)** — Search bar between toggle and filter
+- **New sort options** — Recently Added (default), Title A-Z, Author A-Z, Recently Published
+- **Numeric-first title sort** — "4-Hour Chef" before "10 Things"
+- **Activity bars** — Visual indicator on in-progress book covers
+- **Reading stats** — Words read, reading time, titles finished with category breakdown
+- **Enhanced metadata extraction** — Fandom, ships, characters, ratings from AO3 EPUBs ✨
+- **Rescan metadata** — Re-extract enhanced data from existing library ✨
+- **Contextual tag display** — "Tropes" for FanFiction, "Genre" for published books ✨
+- **Source URL display** — Clickable links to original Wattpad/AO3 sources ✨
+- **Publisher/ISBN display** — For published books ✨
+- **Completion status badges** — WIP/Complete/Abandoned indicators ✨
 
 ---
 
-## Phase 6: Library Home Screen ✅ COMPLETE
+## Phase 7.0: Enhanced Metadata Extraction ✅ COMPLETE
 
-**Completed: December 30, 2025**
+**Completed: December 31, 2025**
 
-### Home Dashboard ✅
-- ✅ **Currently Reading section** — Up to 5 in-progress books with activity bars
-- ✅ **Recently Added section** — 20 most recent uploads in horizontal scroll
-- ✅ **Discover section** — 6 random unread books with refresh button
-- ✅ **Quick Reads section** — Unread books under 3 hours (based on WPM setting)
-- ✅ **Your Reading stats** — Words read, reading time, titles finished
-- ✅ **Category breakdown** — Progress bars showing reading distribution
-- ✅ **Month/Year toggle** — Switch stats period
+### Database Schema ✅
+- ✅ **fandom** — Extracted from AO3 dc:subject tags
+- ✅ **relationships** — JSON array of ships
+- ✅ **characters** — JSON array from relationship parsing
+- ✅ **content_rating** — Explicit/Mature/Teen/General
+- ✅ **ao3_warnings** — JSON array of archive warnings
+- ✅ **ao3_category** — JSON array (F/M, M/M, F/F, etc.)
+- ✅ **isbn** — From published book metadata
+- ✅ **publisher** — From dc:publisher
+- ✅ **chapter_count** — From EPUB manifest
 
-### Search Redesign ✅
-- ✅ **Mobile: Search modal** — Full-screen with live results
-- ✅ **Mobile: Icon buttons** — Search and filter icons on Browse/Wishlist
-- ✅ **Desktop: Inline search** — Search bar between toggle and filter
-- ✅ **Dual action** — Navigate to book OR filter library
-- ✅ **Hidden on Home tab** — Clean dashboard experience
+### Backend: Extraction Logic ✅
+- ✅ **AO3 tag parser** — Separates fandom/ships/characters/tropes
+- ✅ **Source type detection** — ao3, fanficfare, fichub, calibre
+- ✅ **Source URL extraction** — From FanFicFare downloads
+- ✅ **Calibre series extraction** — From calibre:series meta tag
+- ✅ **Completion status detection** — From tags/summary patterns
+- ✅ **Chapter count** — From manifest analysis
 
-### Sort Options ✅
-- ✅ **Recently Added** — New default, sorts by created_at DESC
-- ✅ **Title A-Z** — Numeric-first sorting
-- ✅ **Author A-Z** — Alphabetical, case-insensitive
-- ✅ **Recently Published** — Year DESC, NULLs at bottom
-- ✅ **Removed** — Series, Year, Updated options
+### Rescan Feature ✅
+- ✅ **POST /sync/rescan-metadata** — Bulk re-extraction endpoint
+- ✅ **GET /sync/rescan-metadata/preview** — Pre-scan statistics
+- ✅ **Settings UI** — "Enhanced Metadata" section with button
+- ✅ **User edit protection** — Only fills NULL fields
+- ✅ **Concurrency protection** — Prevents sync/rescan conflicts
 
-### Backend ✅
-- ✅ **GET /api/home/in-progress** — In-progress books
-- ✅ **GET /api/home/recently-added** — Recent uploads
-- ✅ **GET /api/home/discover** — Random unread books
-- ✅ **GET /api/home/quick-reads** — Short reads based on WPM
-- ✅ **GET /api/home/stats** — Reading statistics
-- ✅ **EPUB word count fix** — Improved path resolution
+### BookDetail Display ✅
+- ✅ **MetadataRow component** — Responsive label/value layout
+- ✅ **TagChip component** — Color variants for different data types
+- ✅ **FanFiction display** — Fandom, Rating, Ships, Characters, Warnings, Tropes
+- ✅ **Fiction/Non-Fiction display** — Publisher, ISBN, Genre
+- ✅ **Source URL links** — Clickable, truncated display
+- ✅ **Completion status badges** — Color-coded indicators
+
+### Results
+- ✅ **657 books** with fandom extracted
+- ✅ **56 books** with source URLs
+- ✅ Clean character extraction (no false positives)
 
 ---
 
-## Phase 7: Discovery & Collections ← NEXT
+## Phase 7.1: Enhanced Metadata Improvements ← NEXT
+
+**Goal:** Complete the enhanced metadata system with editing and upload integration.
+
+### Upload Flow Integration
+- [ ] **Enhanced extraction on upload** — New uploads get fandom/ships/etc. automatically
+- [ ] Update `upload_service.py` to use enhanced extraction
+- [ ] Pass all new fields when creating title records
+
+### Metadata Editing
+- [ ] **Edit fandom** — Inline edit on BookDetail
+- [ ] **Edit ships** — Add/remove relationship chips
+- [ ] **Edit characters** — Add/remove character chips
+- [ ] **Edit content rating** — Dropdown selector
+- [ ] **Edit warnings** — Multi-select
+- [ ] **Edit tags/tropes** — Add/remove tag chips
+- [ ] **Edit source URL** — Text input
+- [ ] **Edit completion status** — Dropdown (Complete/WIP/Abandoned/Hiatus)
+
+### Per-Book Rescan
+- [ ] **"Rescan this book" button** — Force re-extract from EPUB
+- [ ] Overwrites existing data (unlike bulk rescan)
+- [ ] Useful when EPUB is updated/fixed
+
+### Filter by Enhanced Fields
+- [ ] **Filter by fandom** — Dropdown or searchable
+- [ ] **Filter by content rating** — Checkboxes
+- [ ] **Filter by completion status** — Checkboxes
+- [ ] **Filter by ships** — Searchable
+
+---
+
+## Phase 7.2: Discovery & Collections
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
@@ -177,7 +223,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ### Book Detail Enhancements
 - [ ] **Download link** — Make stored book location a clickable download link (prefer EPUB, fallback to MOBI)
-- [ ] **Edit/add tags** — Add, remove, or edit tags directly from book detail page
+- [x] ~~**Edit/add tags**~~ ✅ (Covered in Phase 7.1)
 - [ ] **"In Library" / "In Wishlist" banner** — Show status banner on book detail screen
 - [ ] **Move "Referenced by" to Details tab (mobile)** — Backlinks currently on Notes tab, should be on Details
 
@@ -189,11 +235,11 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] Theme-based cover generation
 
 ### Metadata Extraction (Enhanced)
-- [ ] **Extract series from ebooks** — Parse series info from EPUB/MOBI metadata
-- [ ] **Extract fanfiction URL from ebooks** — Parse source URL from AO3/FFN downloads
-- [ ] **Extract publication year from EPUB** — For new uploads and existing library
-- [ ] **Extract tags from EPUB** — For new uploads and existing library
-- [ ] **Extract source URL from EPUB** — For new uploads and existing library
+- [x] ~~**Extract series from ebooks**~~ ✅ (Calibre series extraction)
+- [x] ~~**Extract fanfiction URL from ebooks**~~ ✅ (Source URL extraction)
+- [x] ~~**Extract publication year from EPUB**~~ ✅ (Already existed)
+- [x] ~~**Extract tags from EPUB**~~ ✅ (Enhanced tag parsing)
+- [x] ~~**Extract source URL from EPUB**~~ ✅ (Source URL extraction)
 
 ### UI Polish
 - [x] ~~Clear search button (X icon)~~ ✅
@@ -257,6 +303,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ### High Priority
 - [ ] **PDF duplicates not detected** — Upload screen doesn't detect existing PDFs
+- [ ] **Upload flow missing enhanced extraction** — New uploads don't get fandom/ships/etc. (workaround: run Rescan after upload)
 
 ### Medium Priority
 - [ ] **Word count extraction fails for some EPUBs** — "MONEY Master the Game" by Tony Robbins shows 116 words instead of ~200,000+. The metadata extraction fix (Phase 6.3) resolved most books but not all. Needs investigation:
@@ -271,6 +318,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [ ] Redundant title below covers
 - [ ] Storage location display and validation
 - [ ] Mobile notes editor scrollbar (cosmetic)
+- [ ] **BISAC codes showing as genre** — Some Calibre books show codes like "bus041000" instead of readable genre names
 
 ### Low Priority
 - [ ] Some non-book files getting scanned
@@ -323,11 +371,13 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.9.3 | Dec 29, 2025 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
 | v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
 | v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads |
-| v0.11.0 | Dec 30, 2025 | **Phase 6** — Library Home Screen, search redesign, sort options ✨ |
-| v0.12.0 | TBD | Phase 7 — Discovery & Collections |
-| v0.13.0 | TBD | Phase 8 — Integration & Polish |
+| v0.11.0 | Dec 30, 2025 | **Phase 6** — Library Home Screen, search redesign, sort options |
+| v0.12.0 | Dec 31, 2025 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing ✨ |
+| v0.13.0 | TBD | Phase 7.1 — Metadata editing, upload integration |
+| v0.14.0 | TBD | Phase 7.2 — Discovery & Collections |
+| v0.15.0 | TBD | Phase 8 — Integration & Polish |
 | v1.0.0 | TBD | Phase 9 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 30, 2025 (v0.11.0 — Phase 6 complete)*
+*Last updated: December 31, 2025 (v0.12.0 — Phase 7.0 complete)*

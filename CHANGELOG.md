@@ -11,6 +11,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2025-12-31
+
+### Added
+
+#### Phase 7.0: Enhanced Metadata Extraction
+Complete system for extracting and displaying structured metadata from EPUB files, with special handling for AO3 fanfiction.
+
+#### Database: New Metadata Fields
+- **fandom** — Extracted from AO3 dc:subject tags (e.g., "Harry Potter")
+- **relationships** — JSON array of ships (e.g., ["Hermione Granger/Draco Malfoy"])
+- **characters** — JSON array extracted from relationship tags
+- **content_rating** — AO3 rating (Explicit, Mature, Teen, General)
+- **ao3_warnings** — JSON array (e.g., ["Graphic Depictions Of Violence"])
+- **ao3_category** — JSON array (e.g., ["F/M", "M/M"])
+- **isbn** — Extracted from published book metadata
+- **publisher** — Extracted from dc:publisher
+- **chapter_count** — Counted from EPUB manifest
+
+#### Backend: AO3 Tag Parser
+- **parse_ao3_subjects()** — Parses dc:subject tags into structured fields
+- **detect_source_type()** — Identifies EPUB source (ao3, fanficfare, fichub, calibre)
+- **extract_source_url()** — Gets original URL from FanFicFare downloads
+- **extract_calibre_series()** — Extracts series from Calibre metadata
+- **detect_completion_status()** — Detects WIP/Complete from tags/summary
+- **count_chapters_from_manifest()** — Counts chapter files in EPUB
+
+#### Backend: Rescan Feature
+- **POST /api/sync/rescan-metadata** — Re-extract metadata from all EPUB files
+- **GET /api/sync/rescan-metadata/preview** — Preview stats before rescan
+- **Concurrency protection** — Prevents sync/rescan from running simultaneously
+- **User edit protection** — Rescan only fills NULL fields, preserves user edits
+
+#### Frontend: Settings Enhancement
+- **"Enhanced Metadata" section** — New section in Settings drawer
+- **Preview statistics** — Shows books with/without enhanced metadata
+- **"Rescan All Metadata" button** — Triggers full library rescan
+- **Results display** — Shows what was extracted after rescan
+
+#### Frontend: BookDetail Metadata Display
+- **MetadataRow component** — Responsive label/value display
+- **TagChip component** — Styled chips with color variants
+- **FanFiction display:**
+  - Fandom (purple chip)
+  - Rating (red chip) with AO3 category
+  - Ships (pink chips, max 5 shown with "+X more")
+  - Characters (comma list, max 8 shown)
+  - Warnings (amber chips)
+  - Source URL (clickable link)
+  - Completion status (color-coded badge)
+  - Tropes (freeform tags, labeled separately)
+- **Fiction/Non-Fiction display:**
+  - Publisher
+  - ISBN (monospace font)
+  - Genre (tags labeled as "Genre" not "Tags")
+  - Chapter count
+
+#### Results
+- **657 books** with fandom extracted from AO3 metadata
+- **56 books** with source URLs from FanFicFare/Wattpad
+- Clean character extraction from relationship tags only
+
+### Changed
+
+- **Tags display** — Now contextual: "Tropes" for FanFiction, "Genre" for published books
+- **About This Book card** — Visibility includes all enhanced metadata fields
+
+### Fixed
+
+- **Optional chaining** — Prevents crashes when relationships/characters/source_url are null
+- **Chapter count display** — Shows 0 chapters correctly (was hidden)
+- **AO3 category visibility** — Shows even when content_rating is missing
+- **Character parsing** — No longer catches freeform tags as characters
+- **SQL query duplicates** — GROUP BY prevents multiple rows per title
+- **SQL syntax error** — WHERE clause built before GROUP BY
+
+### Technical
+
+#### Database Changes
+- New columns in titles table: fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, isbn, publisher, chapter_count
+- Migration: Auto-adds columns on startup
+
+#### New/Modified Files
+- `backend/database.py` — Schema updates, migration
+- `backend/services/metadata.py` — AO3 parser, source detection, all extractors
+- `backend/routers/sync.py` — Rescan endpoints, concurrency protection
+- `backend/routers/titles.py` — TitleDetail model, JSON field parsing
+- `frontend/src/api.js` — previewRescan(), rescanMetadata()
+- `frontend/src/components/SettingsDrawer.jsx` — Enhanced Metadata section
+- `frontend/src/components/BookDetail.jsx` — MetadataRow, TagChip, contextual display
+
+---
+
 ## [0.11.0] - 2025-12-30
 
 ### Added
@@ -421,7 +513,8 @@ Complete redesign of how wishlist items integrate with the library.
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.11.0 | 2025-12-30 | **Phase 6** — Library Home Screen, search redesign, sort options ✨ |
+| 0.12.0 | 2025-12-31 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing, rescan feature ✨ |
+| 0.11.0 | 2025-12-30 | **Phase 6** — Library Home Screen, search redesign, sort options |
 | 0.10.0 | 2025-12-30 | **Phase 5.3** — Reading sessions, multiple re-reads |
 | 0.9.4 | 2025-12-30 | **Phase 5.2** — Form autocomplete (title, author, series) |
 | 0.9.3 | 2025-12-29 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
@@ -449,33 +542,32 @@ Complete redesign of how wishlist items integrate with the library.
 
 ## Upgrade Notes
 
-### Upgrading to 0.11.0
+### Upgrading to 0.12.0
 
-**New Files:**
-- `backend/routers/home.py` — Dashboard API endpoints
-- `frontend/src/components/HomeTab.jsx` — Dashboard component
-- `frontend/src/components/SearchModal.jsx` — Mobile search modal
+**New Columns (auto-migrated):**
+- fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, isbn, publisher, chapter_count
 
 **Modified Files:**
-- `backend/routers/titles.py` — Sort options
-- `backend/services/metadata.py` — EPUB word count fix
-- `frontend/src/api.js` — Home API functions
-- `frontend/src/components/BookCard.jsx` — Activity bar
-- `frontend/src/components/SearchBar.jsx` — Icons-only mode
-- `frontend/src/components/Library.jsx` — Dashboard integration
+- `backend/database.py` — Schema, migration
+- `backend/services/metadata.py` — AO3 parser, extractors
+- `backend/routers/sync.py` — Rescan endpoints
+- `backend/routers/titles.py` — TitleDetail model updates
+- `frontend/src/api.js` — Rescan API functions
+- `frontend/src/components/SettingsDrawer.jsx` — Enhanced Metadata section
+- `frontend/src/components/BookDetail.jsx` — Metadata display
 
-**Post-upgrade:** Run Full Sync from Settings to re-extract word counts for existing books.
-
-**Rebuild Docker container after update.**
+**Post-upgrade:** 
+1. Rebuild Docker container
+2. Open Settings → Click "Rescan All Metadata" to populate enhanced fields for existing books
 
 ---
 
 ## Links
 
-- [Roadmap](./20251230_ROADMAP.md)
+- [Roadmap](./20251231_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: December 30, 2025*
+*Last updated: December 31, 2025*

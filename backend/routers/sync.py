@@ -403,6 +403,35 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             parsed["tags"] = file_metadata["tags"]
                         if file_metadata.get("word_count"):
                             parsed["word_count"] = file_metadata["word_count"]
+                        
+                        # Enhanced metadata fields (Phase 7.1)
+                        if file_metadata.get("fandom"):
+                            parsed["fandom"] = file_metadata["fandom"]
+                        if file_metadata.get("relationships"):
+                            parsed["relationships"] = file_metadata["relationships"]
+                        if file_metadata.get("characters"):
+                            parsed["characters"] = file_metadata["characters"]
+                        if file_metadata.get("content_rating"):
+                            parsed["content_rating"] = file_metadata["content_rating"]
+                        if file_metadata.get("ao3_warnings"):
+                            parsed["ao3_warnings"] = file_metadata["ao3_warnings"]
+                        if file_metadata.get("ao3_category"):
+                            parsed["ao3_category"] = file_metadata["ao3_category"]
+                        if file_metadata.get("source_url"):
+                            parsed["source_url"] = file_metadata["source_url"]
+                        if file_metadata.get("isbn"):
+                            parsed["isbn"] = file_metadata["isbn"]
+                        if file_metadata.get("publisher"):
+                            parsed["publisher"] = file_metadata["publisher"]
+                        if file_metadata.get("chapter_count") is not None:
+                            parsed["chapter_count"] = file_metadata["chapter_count"]
+                        if file_metadata.get("completion_status"):
+                            parsed["completion_status"] = file_metadata["completion_status"]
+                        # Calibre series extraction
+                        if file_metadata.get("series") and not parsed.get("series"):
+                            parsed["series"] = file_metadata["series"]
+                        if file_metadata.get("series_number") and not parsed.get("series_number"):
+                            parsed["series_number"] = file_metadata["series_number"]
                     except Exception as e:
                         print(f"Metadata extraction failed for {book_file}: {e}")
                 
@@ -434,12 +463,24 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     was_orphaned = orphan_row and orphan_row["is_orphaned"] == 1
                     
                     # Update existing title (and recover if orphaned)
+                    # Only update enhanced fields if they have new values (preserve user edits)
                     await db.execute(
                         """UPDATE titles SET
-                            title = ?, authors = ?, series = ?, series_number = ?,
-                            category = ?, publication_year = ?, word_count = ?,
-                            summary = ?, tags = ?,
+                            title = ?, authors = ?, series = COALESCE(?, series), series_number = COALESCE(?, series_number),
+                            category = ?, publication_year = COALESCE(?, publication_year), word_count = COALESCE(?, word_count),
+                            summary = COALESCE(?, summary), tags = CASE WHEN ? != '[]' THEN ? ELSE tags END,
                             cover_color_1 = ?, cover_color_2 = ?,
+                            fandom = COALESCE(?, fandom),
+                            relationships = COALESCE(?, relationships),
+                            characters = COALESCE(?, characters),
+                            content_rating = COALESCE(?, content_rating),
+                            ao3_warnings = COALESCE(?, ao3_warnings),
+                            ao3_category = COALESCE(?, ao3_category),
+                            source_url = COALESCE(?, source_url),
+                            isbn = COALESCE(?, isbn),
+                            publisher = COALESCE(?, publisher),
+                            chapter_count = COALESCE(?, chapter_count),
+                            completion_status = COALESCE(?, completion_status),
                             is_orphaned = 0,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?""",
@@ -448,8 +489,19 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             parsed.get("series"), parsed.get("series_number"),
                             category, parsed.get("publication_year"),
                             parsed.get("word_count"), parsed.get("summary"),
-                            json.dumps(parsed.get("tags", [])),
+                            json.dumps(parsed.get("tags", [])), json.dumps(parsed.get("tags", [])),
                             color1, color2,
+                            parsed.get("fandom"),
+                            parsed.get("relationships"),
+                            parsed.get("characters"),
+                            parsed.get("content_rating"),
+                            parsed.get("ao3_warnings"),
+                            parsed.get("ao3_category"),
+                            parsed.get("source_url"),
+                            parsed.get("isbn"),
+                            parsed.get("publisher"),
+                            parsed.get("chapter_count"),
+                            parsed.get("completion_status"),
                             existing["id"]
                         ]
                     )
@@ -481,20 +533,34 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     
                     result.updated += 1
                 else:
-                    # Insert new title
+                    # Insert new title with all enhanced metadata
                     cursor = await db.execute(
                         """INSERT INTO titles 
                             (title, authors, series, series_number, category,
                              publication_year, word_count, summary, tags,
-                             cover_color_1, cover_color_2)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                             cover_color_1, cover_color_2,
+                             fandom, relationships, characters, content_rating,
+                             ao3_warnings, ao3_category, source_url, isbn, publisher,
+                             chapter_count, completion_status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                         [
                             parsed["title"], json.dumps(parsed["authors"]),
                             parsed.get("series"), parsed.get("series_number"),
                             category, parsed.get("publication_year"),
                             parsed.get("word_count"), parsed.get("summary"),
                             json.dumps(parsed.get("tags", [])),
-                            color1, color2
+                            color1, color2,
+                            parsed.get("fandom"),
+                            parsed.get("relationships"),
+                            parsed.get("characters"),
+                            parsed.get("content_rating"),
+                            parsed.get("ao3_warnings"),
+                            parsed.get("ao3_category"),
+                            parsed.get("source_url"),
+                            parsed.get("isbn"),
+                            parsed.get("publisher"),
+                            parsed.get("chapter_count"),
+                            parsed.get("completion_status")
                         ]
                     )
                     title_id = cursor.lastrowid
