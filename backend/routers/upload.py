@@ -18,6 +18,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 from pydantic import BaseModel
 
 from database import get_db
+from services.covers import generate_cover_colors
 from services.upload_service import (
     create_session,
     get_session,
@@ -452,6 +453,106 @@ def sanitize_filename(name: str) -> str:
     return name[:100].strip()
 
 
+async def create_title_from_upload(
+    db,
+    title: str,
+    author: str,
+    series: str,
+    series_number: str,
+    category: str,
+    folder_path: str,
+    file_path: str = None
+) -> int:
+    """
+    Create a title record from upload data.
+    This ensures user's category selection is saved before sync runs.
+    Returns the title_id.
+    """
+    # Parse author into list
+    authors = [a.strip() for a in (author or '').split(',') if a.strip()] or ['Unknown Author']
+    
+    # Generate cover colors
+    color1, color2 = generate_cover_colors(title, authors[0])
+    
+    # Check if title already exists for this folder (avoid duplicates)
+    cursor = await db.execute(
+        """SELECT t.id FROM titles t
+           JOIN editions e ON e.title_id = t.id
+           WHERE e.folder_path = ?""",
+        [folder_path]
+    )
+    existing = await cursor.fetchone()
+    
+    if existing:
+        # Title exists, just update category if different
+        await db.execute(
+            "UPDATE titles SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [category or 'Uncategorized', existing[0]]
+        )
+        await db.commit()
+        return existing[0]
+    
+    # Insert new title with user's category
+    cursor = await db.execute(
+        """INSERT OR IGNORE INTO titles 
+            (title, authors, series, series_number, category,
+             cover_color_1, cover_color_2)
+        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        [
+            title,
+            json.dumps(authors),
+            series or None,
+            series_number or None,
+            category or 'Uncategorized',
+            color1,
+            color2
+        ]
+    )
+    title_id = cursor.lastrowid
+    
+    # Handle race condition: if INSERT was ignored, lastrowid may be 0 or stale
+    # Re-check for existing title by folder_path (another process may have created it)
+    if not title_id or title_id == 0:
+        cursor = await db.execute(
+            """SELECT t.id FROM titles t
+               JOIN editions e ON e.title_id = t.id
+               WHERE e.folder_path = ?""",
+            [folder_path]
+        )
+        existing = await cursor.fetchone()
+        if existing:
+            title_id = existing[0]
+        else:
+            # No existing title found - this shouldn't happen, but handle gracefully
+            # Try a regular insert (will fail with proper error if there's an issue)
+            cursor = await db.execute(
+                """INSERT INTO titles 
+                    (title, authors, series, series_number, category,
+                     cover_color_1, cover_color_2)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                [
+                    title,
+                    json.dumps(authors),
+                    series or None,
+                    series_number or None,
+                    category or 'Uncategorized',
+                    color1,
+                    color2
+                ]
+            )
+            title_id = cursor.lastrowid
+    
+    # Insert edition (use OR IGNORE in case of race condition on edition too)
+    await db.execute(
+        """INSERT OR IGNORE INTO editions (title_id, format, file_path, folder_path, acquired_date)
+        VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
+        [title_id, file_path, folder_path]
+    )
+    
+    await db.commit()
+    return title_id
+
+
 @router.post("/finalize-batch", response_model=FinalizeResponse)
 async def finalize_batch_endpoint(
     request: FinalizeRequest,
@@ -510,6 +611,38 @@ async def finalize_batch_endpoint(
         if other_books:
             books_data = [book.dict() for book in other_books]
             other_results = await finalize_batch(session, books_data, BOOKS_DIR)
+            
+            # Create title records for successfully uploaded books
+            # This ensures user's category selection is saved before sync runs
+            for i, result in enumerate(other_results):
+                if result['status'] == 'created' and result.get('folder'):
+                    book_data = books_data[i]
+                    try:
+                        # Find the primary ebook file in the folder
+                        folder_path = result['folder']
+                        file_path = None
+                        for ext in ['.epub', '.pdf', '.mobi', '.azw3']:
+                            import glob
+                            # Escape folder_path to handle brackets in series names like [Series 1]
+                            matches = glob.glob(f"{glob.escape(folder_path)}/*{ext}")
+                            if matches:
+                                file_path = matches[0]
+                                break
+                        
+                        await create_title_from_upload(
+                            db=db,
+                            title=book_data.get('title', 'Unknown Title'),
+                            author=book_data.get('author', 'Unknown Author'),
+                            series=book_data.get('series'),
+                            series_number=book_data.get('series_number'),
+                            category=book_data.get('category', 'Uncategorized'),
+                            folder_path=folder_path,
+                            file_path=file_path
+                        )
+                    except Exception as e:
+                        print(f"Warning: Failed to create title record during upload: {e}")
+                        # Don't fail the upload - sync will create it later
+            
             results.extend(other_results)
         
         # Clean up session
