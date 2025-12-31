@@ -43,6 +43,7 @@ class SyncStatus(BaseModel):
     """Current sync status (for progress tracking)."""
     in_progress: bool
     current_book: Optional[str] = None
+    current_operation: Optional[str] = None  # "sync" or "rescan"
     processed: int = 0
     total: int = 0
 
@@ -602,3 +603,263 @@ async def sync_library(
         )
     
     return await _do_sync(db, full)
+
+
+# --------------------------------------------------------------------------
+# Rescan Metadata Endpoints (Phase 7.0)
+# --------------------------------------------------------------------------
+
+@router.post("/sync/rescan-metadata")
+async def rescan_metadata(
+    category: Optional[str] = None,
+    db = Depends(get_db)
+):
+    """
+    Re-extract enhanced metadata from all ebook files.
+    
+    This updates:
+    - Fandom, relationships, characters (from AO3 tags)
+    - Content rating, warnings, category (from AO3 tags)
+    - Source URL (from FanFicFare/Wattpad)
+    - ISBN, publisher (from published books)
+    - Series info (from Calibre metadata)
+    - Completion status (from tags/summary)
+    - Chapter count (from manifest)
+    
+    Args:
+        category: Optional filter - only rescan books in this category
+    """
+    global _sync_status
+    
+    # Prevent concurrent operations
+    if _sync_status.in_progress:
+        return {"error": "A sync operation is already in progress. Please wait."}
+    
+    _sync_status.in_progress = True
+    _sync_status.current_operation = "rescan"
+    
+    try:
+        results = {
+            "total": 0,
+            "updated": 0,
+            "skipped_no_file": 0,
+            "skipped_no_epub": 0,
+            "errors": 0,
+            "details": {
+                "ao3_parsed": 0,
+                "source_urls_found": 0,
+                "series_extracted": 0,
+                "isbn_found": 0,
+                "completion_status_detected": 0,
+            }
+        }
+        
+        # Build query with optional category filter BEFORE GROUP BY
+        where_clause = "(t.is_tbr = 0 OR t.is_tbr IS NULL)"
+        params = []
+        
+        if category:
+            where_clause += " AND t.category = ?"
+            params.append(category)
+        
+        query = f"""
+            SELECT t.id, t.title, e.file_path, e.folder_path, t.category,
+                   t.series, t.fandom, t.source_url
+            FROM titles t
+            LEFT JOIN editions e ON t.id = e.title_id
+            WHERE {where_clause}
+            GROUP BY t.id
+        """
+        
+        cursor = await db.execute(query, params)
+        rows = await cursor.fetchall()
+        
+        results["total"] = len(rows)
+        
+        for row in rows:
+            title_id = row[0]
+            title_name = row[1]
+            file_path = row[2]
+            folder_path = row[3]
+            current_category = row[4]
+            current_series = row[5]
+            current_fandom = row[6]
+            current_source_url = row[7]
+            
+            # Find the ebook file
+            epub_path = None
+            
+            if file_path and Path(file_path).exists():
+                if file_path.lower().endswith('.epub'):
+                    epub_path = file_path
+            elif folder_path and Path(folder_path).exists():
+                # Look for EPUB in folder
+                folder = Path(folder_path)
+                epubs = list(folder.glob('*.epub')) + list(folder.glob('*.EPUB'))
+                if epubs:
+                    epub_path = str(epubs[0])
+            
+            if not epub_path:
+                results["skipped_no_epub"] += 1
+                continue
+            
+            if not Path(epub_path).exists():
+                results["skipped_no_file"] += 1
+                continue
+            
+            try:
+                # Extract metadata
+                metadata = await extract_metadata(Path(epub_path))
+                
+                if not metadata:
+                    results["errors"] += 1
+                    continue
+                
+                # Build update query - only update fields that have new values
+                updates = []
+                values = []
+                
+                # Fandom (only if not already set)
+                if metadata.get("fandom") and not current_fandom:
+                    updates.append("fandom = ?")
+                    values.append(metadata["fandom"])
+                    results["details"]["ao3_parsed"] += 1
+                
+                # Relationships
+                if metadata.get("relationships"):
+                    updates.append("relationships = ?")
+                    values.append(metadata["relationships"])
+                
+                # Characters
+                if metadata.get("characters"):
+                    updates.append("characters = ?")
+                    values.append(metadata["characters"])
+                
+                # Content rating
+                if metadata.get("content_rating"):
+                    updates.append("content_rating = ?")
+                    values.append(metadata["content_rating"])
+                
+                # AO3 warnings
+                if metadata.get("ao3_warnings"):
+                    updates.append("ao3_warnings = ?")
+                    values.append(metadata["ao3_warnings"])
+                
+                # AO3 category
+                if metadata.get("ao3_category"):
+                    updates.append("ao3_category = ?")
+                    values.append(metadata["ao3_category"])
+                
+                # Source URL (only if not already set)
+                if metadata.get("source_url") and not current_source_url:
+                    updates.append("source_url = ?")
+                    values.append(metadata["source_url"])
+                    results["details"]["source_urls_found"] += 1
+                
+                # ISBN
+                if metadata.get("isbn"):
+                    updates.append("isbn = ?")
+                    values.append(metadata["isbn"])
+                    results["details"]["isbn_found"] += 1
+                
+                # Publisher
+                if metadata.get("publisher"):
+                    updates.append("publisher = ?")
+                    values.append(metadata["publisher"])
+                
+                # Series (only if not already set and found in Calibre metadata)
+                if metadata.get("series") and not current_series:
+                    updates.append("series = ?")
+                    values.append(metadata["series"])
+                    results["details"]["series_extracted"] += 1
+                    
+                    if metadata.get("series_number"):
+                        updates.append("series_number = ?")
+                        values.append(metadata["series_number"])
+                
+                # Chapter count
+                if metadata.get("chapter_count"):
+                    updates.append("chapter_count = ?")
+                    values.append(metadata["chapter_count"])
+                
+                # Completion status
+                if metadata.get("completion_status"):
+                    updates.append("completion_status = ?")
+                    values.append(metadata["completion_status"])
+                    results["details"]["completion_status_detected"] += 1
+                
+                # Update tags (replace with freeform only)
+                if metadata.get("tags"):
+                    updates.append("tags = ?")
+                    values.append(json.dumps(metadata["tags"]))
+                
+                # Apply updates
+                if updates:
+                    values.append(title_id)
+                    update_query = f"""
+                        UPDATE titles 
+                        SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    """
+                    await db.execute(update_query, values)
+                    results["updated"] += 1
+                
+            except Exception as e:
+                print(f"Error rescanning {title_name}: {e}")
+                results["errors"] += 1
+                continue
+        
+        await db.commit()
+        
+        return results
+    
+    finally:
+        _sync_status.in_progress = False
+        _sync_status.current_operation = None
+
+
+@router.get("/sync/rescan-metadata/preview")
+async def preview_rescan(db = Depends(get_db)):
+    """
+    Preview what a rescan would find - counts books by source type.
+    """
+    # Count total books (all owned, not TBR)
+    cursor = await db.execute("""
+        SELECT COUNT(*) FROM titles
+        WHERE is_tbr = 0 OR is_tbr IS NULL
+    """)
+    total_books = (await cursor.fetchone())[0]
+    
+    # Count books with EPUB files AND their enhanced metadata status
+    # This ensures estimates are accurate (only counting EPUB books)
+    cursor2 = await db.execute("""
+        SELECT 
+            COUNT(DISTINCT t.id) as epub_count,
+            SUM(CASE WHEN t.fandom IS NOT NULL THEN 1 ELSE 0 END) as has_fandom,
+            SUM(CASE WHEN t.source_url IS NOT NULL THEN 1 ELSE 0 END) as has_source_url,
+            SUM(CASE WHEN t.isbn IS NOT NULL THEN 1 ELSE 0 END) as has_isbn,
+            SUM(CASE WHEN t.relationships IS NOT NULL THEN 1 ELSE 0 END) as has_relationships
+        FROM titles t
+        JOIN editions e ON t.id = e.title_id
+        WHERE (e.file_path LIKE '%.epub' OR e.file_path LIKE '%.EPUB')
+        AND (t.is_tbr = 0 OR t.is_tbr IS NULL)
+        GROUP BY t.id
+    """)
+    rows = await cursor2.fetchall()
+    
+    # Aggregate the results (each row is one title due to GROUP BY)
+    epub_count = len(rows)
+    has_fandom = sum(1 for r in rows if r[1])
+    has_source_url = sum(1 for r in rows if r[2])
+    has_isbn = sum(1 for r in rows if r[3])
+    has_relationships = sum(1 for r in rows if r[4])
+    
+    return {
+        "total_books": total_books,
+        "books_with_epub": epub_count,
+        "already_has_fandom": has_fandom,
+        "already_has_source_url": has_source_url,
+        "already_has_isbn": has_isbn,
+        "already_has_relationships": has_relationships,
+        "estimated_to_update": max(0, epub_count - has_fandom)  # Books with EPUB but no fandom yet
+    }

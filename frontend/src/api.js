@@ -293,6 +293,28 @@ export async function getSyncStatus() {
   return apiFetch('/sync/status')
 }
 
+// ============================================================
+// Rescan Metadata (Phase 7.0)
+// ============================================================
+
+/**
+ * Preview what a rescan would find - counts books by source type
+ */
+export async function previewRescan() {
+  return apiFetch('/sync/rescan-metadata/preview')
+}
+
+/**
+ * Re-extract enhanced metadata from all ebook files
+ * @param {string} category - Optional category filter
+ */
+export async function rescanMetadata(category = null) {
+  const params = category ? `?category=${encodeURIComponent(category)}` : ''
+  return apiFetch(`/sync/rescan-metadata${params}`, {
+    method: 'POST'
+  })
+}
+
 // =============================================================================
 // TBR (TO BE READ) API
 // =============================================================================

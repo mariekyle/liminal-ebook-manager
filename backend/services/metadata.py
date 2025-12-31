@@ -588,20 +588,9 @@ def parse_ao3_subjects(subjects: list[str]) -> dict:
                         seen_characters.add(char_lower)
             continue
         
-        # Check if it looks like a standalone character name
-        # Character names are usually 2-4 words, Title Case, no special punctuation
-        words = tag.split()
-        if 1 <= len(words) <= 4 and tag == tag.title() and not any(c in tag for c in ['!', '?', '-', '(', ')']):
-            # Could be a character, but also could be a tag like "Original Characters"
-            # Only add if it looks like a proper name (not generic)
-            generic_patterns = ["original", "characters", "minor", "background", "other"]
-            if not any(g in tag_lower for g in generic_patterns):
-                if tag_lower not in seen_characters:
-                    result["characters"].append(tag)
-                    seen_characters.add(tag_lower)
-                continue
-        
         # Everything else is a freeform tag
+        # Note: We only extract characters from relationships (above) because
+        # standalone character tags are indistinguishable from Title Case freeform tags
         result["freeform_tags"].append(tag)
     
     return result

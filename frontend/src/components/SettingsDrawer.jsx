@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getSettings, updateSetting, syncLibrary } from '../api'
+import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata } from '../api'
 
 function SettingsDrawer({ isOpen, onClose }) {
   const [settings, setSettings] = useState({})
@@ -15,6 +15,9 @@ function SettingsDrawer({ isOpen, onClose }) {
     finished: 'Finished',
     dnf: 'DNF'
   })
+  const [rescanPreview, setRescanPreview] = useState(null)
+  const [rescanLoading, setRescanLoading] = useState(false)
+  const [rescanResults, setRescanResults] = useState(null)
   const drawerRef = useRef(null)
 
   // Load settings when drawer opens
@@ -38,8 +41,39 @@ function SettingsDrawer({ isOpen, onClose }) {
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
+      
+      // Load rescan preview
+      loadRescanPreview()
     }
   }, [isOpen])
+  
+  const loadRescanPreview = async () => {
+    try {
+      const preview = await previewRescan()
+      setRescanPreview(preview)
+    } catch (err) {
+      console.error('Failed to load rescan preview:', err)
+    }
+  }
+
+  const handleRescan = async () => {
+    if (rescanLoading) return
+    
+    setRescanLoading(true)
+    setRescanResults(null)
+    
+    try {
+      const results = await rescanMetadata()
+      setRescanResults(results)
+    } catch (err) {
+      console.error('Rescan failed:', err)
+      setRescanResults({ error: err.message })
+    } finally {
+      setRescanLoading(false)
+      // Refresh preview
+      loadRescanPreview()
+    }
+  }
 
   // Handle click outside to close
   useEffect(() => {
@@ -362,6 +396,104 @@ function SettingsDrawer({ isOpen, onClose }) {
                 <p className={`text-sm mt-2 ${syncResult.success ? 'text-green-400' : 'text-red-400'}`}>
                   {syncResult.message}
                 </p>
+              )}
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Rescan Metadata Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Enhanced Metadata</h3>
+              <p className="text-gray-400 text-sm mb-3">
+                Re-extract metadata from your ebook files to populate fandom, 
+                relationships, source URLs, and more.
+              </p>
+              
+              {rescanPreview && (
+                <div className="bg-zinc-800/50 rounded-lg p-3 mb-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-gray-400">
+                    <span>Total books:</span>
+                    <span className="text-gray-300">{rescanPreview.total_books}</span>
+                    
+                    <span>With EPUB files:</span>
+                    <span className="text-gray-300">{rescanPreview.books_with_epub}</span>
+                    
+                    <span>Already have fandom:</span>
+                    <span className="text-gray-300">{rescanPreview.already_has_fandom}</span>
+                    
+                    <span>Already have source URL:</span>
+                    <span className="text-gray-300">{rescanPreview.already_has_source_url}</span>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={handleRescan}
+                disabled={rescanLoading}
+                className={`
+                  w-full px-4 py-2 rounded text-sm font-medium
+                  ${rescanLoading 
+                    ? 'bg-gray-600 cursor-not-allowed' 
+                    : 'bg-teal-600 hover:bg-teal-500'
+                  }
+                  text-white transition-colors flex items-center justify-center gap-2
+                `}
+              >
+                {rescanLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Rescanning...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Rescan All Metadata
+                  </>
+                )}
+              </button>
+              
+              {rescanResults && !rescanResults.error && (
+                <div className="mt-3 bg-zinc-800/50 rounded-lg p-3 text-xs">
+                  <div className="text-teal-400 font-medium mb-2">Rescan Complete!</div>
+                  <div className="grid grid-cols-2 gap-1 text-gray-400">
+                    <span>Books scanned:</span>
+                    <span className="text-gray-300">{rescanResults.total}</span>
+                    
+                    <span>Updated:</span>
+                    <span className="text-teal-400">{rescanResults.updated}</span>
+                    
+                    <span>AO3 metadata parsed:</span>
+                    <span className="text-gray-300">{rescanResults.details?.ao3_parsed || 0}</span>
+                    
+                    <span>Source URLs found:</span>
+                    <span className="text-gray-300">{rescanResults.details?.source_urls_found || 0}</span>
+                    
+                    <span>Series extracted:</span>
+                    <span className="text-gray-300">{rescanResults.details?.series_extracted || 0}</span>
+                    
+                    <span>Skipped (no EPUB):</span>
+                    <span className="text-gray-500">{rescanResults.skipped_no_epub}</span>
+                    
+                    {rescanResults.errors > 0 && (
+                      <>
+                        <span>Errors:</span>
+                        <span className="text-red-400">{rescanResults.errors}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {rescanResults?.error && (
+                <div className="mt-3 bg-red-900/30 border border-red-800 rounded-lg p-3 text-xs text-red-400">
+                  Error: {rescanResults.error}
+                </div>
               )}
             </section>
           </div>
