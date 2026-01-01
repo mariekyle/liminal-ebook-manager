@@ -45,9 +45,13 @@ export async function checkHealth() {
  * @param {string} params.category - Filter by category
  * @param {string} params.series - Filter by series
  * @param {string} params.search - Search in title/author
- * @param {string} params.sort - Sort field (title, author, series, updated, year)
- * @param {string} params.order - Sort order (asc, desc)
+ * @param {string} params.sort - Sort field (added, title, author, published)
+ * @param {string} params.sort_dir - Sort direction (asc, desc)
  * @param {string} params.acquisition - Filter by acquisition status: 'owned', 'wishlist', or 'all'
+ * @param {string} params.fandom - Filter by fandom (exact match)
+ * @param {string} params.content_rating - Filter by content rating (comma-separated)
+ * @param {string} params.completion_status - Filter by completion status (comma-separated)
+ * @param {string} params.ship - Filter by ship/relationship
  * @param {number} params.limit - Max results
  * @param {number} params.offset - Pagination offset
  */

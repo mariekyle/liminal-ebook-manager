@@ -35,6 +35,17 @@ function Library() {
   const [wpm, setWpm] = useState(250)
   const [gridColumns, setGridColumns] = useState('2')
   
+  // Enhanced metadata filters (Phase 7.2)
+  const [fandom, setFandom] = useState(searchParams.get('fandom') || '')
+  const [contentRating, setContentRating] = useState(
+    searchParams.get('contentRating') ? searchParams.get('contentRating').split(',') : []
+  )
+  const [completionStatus, setCompletionStatus] = useState(
+    searchParams.get('completionStatus') ? searchParams.get('completionStatus').split(',') : []
+  )
+  const [ship, setShip] = useState(searchParams.get('ship') || '')
+  const [sortDir, setSortDir] = useState(searchParams.get('sortDir') || 'desc')
+  
   // View state (tabs) - initialize from URL
   const [activeView, setActiveView] = useState(searchParams.get('view') || 'library')
   
@@ -52,13 +63,15 @@ function Library() {
 
   // Filters that apply to current view
   const hasActiveFilters = activeView === 'library'
-    ? (category || status || selectedTags.length > 0 || search || readTimeFilter)
+    ? (category || status || selectedTags.length > 0 || search || readTimeFilter || 
+       fandom || contentRating.length > 0 || completionStatus.length > 0 || ship)
     : (category || search) // Series view only has category and search
 
   // Count active filters for badge
   // Only count filters relevant to current view
   const activeFilterCount = activeView === 'library'
-    ? [category, status, selectedTags.length > 0, readTimeFilter, search].filter(Boolean).length
+    ? [category, status, selectedTags.length > 0, readTimeFilter, search,
+       fandom, contentRating.length > 0, completionStatus.length > 0, ship].filter(Boolean).length
     : [category, search].filter(Boolean).length // Series view has category and search
 
   // Filter books by read time (client-side filtering since backend doesn't support it)
@@ -122,7 +135,13 @@ function Library() {
       tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
       search: search || undefined,
       sort,
+      sort_dir: sortDir,
       acquisition: acquisition === 'browse' ? 'owned' : (acquisition || 'owned'),
+      // Enhanced metadata filters
+      fandom: fandom || undefined,
+      content_rating: contentRating.length > 0 ? contentRating.join(',') : undefined,
+      completion_status: completionStatus.length > 0 ? completionStatus.join(',') : undefined,
+      ship: ship || undefined,
       limit: 10000, // Load all books
     })
       .then(data => {
@@ -134,7 +153,7 @@ function Library() {
         setBooks([])
       })
       .finally(() => setLoading(false))
-  }, [category, status, selectedTags, search, sort, acquisition])
+  }, [category, status, selectedTags, search, sort, sortDir, acquisition, fandom, contentRating, completionStatus, ship])
 
   // Load series when Series tab is active and filters change
   useEffect(() => {
@@ -161,7 +180,7 @@ function Library() {
   // Regenerate phrase when filters change
   useEffect(() => {
     setPhraseKey(k => k + 1)
-  }, [category, status, selectedTags, search, activeView, readTimeFilter, acquisition])
+  }, [category, status, selectedTags, search, activeView, readTimeFilter, acquisition, fandom, contentRating, completionStatus, ship])
 
   // Sync FROM URL params TO state (for browser back/forward navigation)
   // Only runs when searchParams changes (from browser navigation), not when state changes
@@ -174,6 +193,12 @@ function Library() {
     const urlView = searchParams.get('view') || 'library'
     const urlReadTime = searchParams.get('readTime') || ''
     const urlAcquisition = searchParams.get('acquisition') || 'owned'
+    // Enhanced metadata filters
+    const urlFandom = searchParams.get('fandom') || ''
+    const urlContentRating = searchParams.get('contentRating') ? searchParams.get('contentRating').split(',') : []
+    const urlCompletionStatus = searchParams.get('completionStatus') ? searchParams.get('completionStatus').split(',') : []
+    const urlShip = searchParams.get('ship') || ''
+    const urlSortDir = searchParams.get('sortDir') || 'desc'
     
     // Update state from URL values
     setCategory(urlCategory)
@@ -184,6 +209,12 @@ function Library() {
     setActiveView(urlView)
     setReadTimeFilter(urlReadTime)
     setAcquisition(urlAcquisition)
+    // Enhanced metadata filters
+    setFandom(urlFandom)
+    setContentRating(urlContentRating)
+    setCompletionStatus(urlCompletionStatus)
+    setShip(urlShip)
+    setSortDir(urlSortDir)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -196,7 +227,8 @@ function Library() {
           (Array.isArray(value) && value.length === 0) ||
           (key === 'sort' && value === 'added') ||
           (key === 'view' && value === 'library') ||
-          (key === 'acquisition' && value === 'owned')) {
+          (key === 'acquisition' && value === 'owned') ||
+          (key === 'sortDir' && value === 'desc')) {
         params.delete(key)
       } else if (Array.isArray(value)) {
         params.set(key, value.join(','))
@@ -208,7 +240,7 @@ function Library() {
     setSearchParams(params, { replace: true })
   }, [searchParams, setSearchParams])
 
-  // Clear all filters (preserves sort)
+  // Clear all filters (preserves sort and sort direction)
   const handleClearFilters = useCallback(() => {
     setCategory('')
     setStatus('')
@@ -216,13 +248,21 @@ function Library() {
     setReadTimeFilter('')
     setSearch('')
     setAcquisition('owned')
-    // Preserve current sort - don't reset it
+    // Enhanced metadata filters
+    setFandom('')
+    setContentRating([])
+    setCompletionStatus([])
+    setShip('')
+    // Preserve current sort and direction - don't reset them
     const params = new URLSearchParams()
     if (sort !== 'added') {
       params.set('sort', sort)
     }
+    if (sortDir !== 'desc') {
+      params.set('sortDir', sortDir)
+    }
     setSearchParams(params, { replace: true })
-  }, [setSearchParams, sort])
+  }, [setSearchParams, sort, sortDir])
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-120px)]">
@@ -379,8 +419,12 @@ function Library() {
                 <select
                   value={sort}
                   onChange={(e) => {
-                    setSort(e.target.value)
-                    updateUrlParams({ sort: e.target.value })
+                    const newSort = e.target.value
+                    // Set logical default direction based on sort field
+                    const newDir = (newSort === 'title' || newSort === 'author') ? 'asc' : 'desc'
+                    setSort(newSort)
+                    setSortDir(newDir)
+                    updateUrlParams({ sort: newSort, sortDir: newDir })
                   }}
                   className="appearance-none bg-transparent text-gray-500 text-xs pr-5 cursor-pointer hover:text-white focus:outline-none"
                 >
