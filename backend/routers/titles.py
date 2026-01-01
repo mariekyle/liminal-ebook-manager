@@ -399,10 +399,15 @@ async def list_titles(
     tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     search: Optional[str] = Query(None, description="Search in title/author"),
     sort: str = Query("added", description="Sort field: added, title, author, published"),
-    order: str = Query("asc", description="Sort order: asc or desc"),
+    sort_dir: str = Query("desc", description="Sort direction: asc or desc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     acquisition: Optional[str] = Query(None, description="Filter by acquisition status: owned, wishlist, or omit for all"),
+    # Enhanced metadata filters (Phase 7.2)
+    fandom: Optional[str] = Query(None, description="Filter by fandom (exact match)"),
+    content_rating: Optional[str] = Query(None, description="Filter by content rating (comma-separated for multiple)"),
+    completion_status: Optional[str] = Query(None, description="Filter by completion status (comma-separated for multiple)"),
+    ship: Optional[str] = Query(None, description="Filter by ship/relationship (searches within JSON array)"),
     db = Depends(get_db)
 ):
     """
@@ -457,36 +462,79 @@ async def list_titles(
                 f'%"{tag}"]%',     # Tag followed by ] (last item)
             ])
     
+    # Enhanced metadata filters (Phase 7.2)
+    if fandom:
+        where_clauses.append("fandom = ?")
+        params.append(fandom)
+    
+    if content_rating:
+        # Support comma-separated values for multi-select
+        ratings = [r.strip() for r in content_rating.split(',') if r.strip()]
+        if ratings:
+            placeholders = ",".join("?" * len(ratings))
+            where_clauses.append(f"content_rating IN ({placeholders})")
+            params.extend(ratings)
+    
+    if completion_status:
+        # Support comma-separated values for multi-select
+        statuses = [s.strip() for s in completion_status.split(',') if s.strip()]
+        if statuses:
+            placeholders = ",".join("?" * len(statuses))
+            where_clauses.append(f"completion_status IN ({placeholders})")
+            params.extend(statuses)
+    
+    if ship:
+        # Search within JSON array - ship name is in relationships field
+        where_clauses.append("relationships LIKE ?")
+        params.append(f'%"{ship}"%')
+    
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
-    # Build ORDER BY clause
+    # Build ORDER BY clause with sort direction
+    direction = "ASC" if sort_dir == "asc" else "DESC"
+    reverse_direction = "DESC" if sort_dir == "asc" else "ASC"
+    
     if sort == "added":
-        # Recently Added: newest first
-        order_clause = "created_at DESC"
+        order_clause = f"created_at {direction}"
     elif sort == "title":
         # Title A-Z: numeric-first sorting
-        # Extract leading numbers and sort numerically, then alphabetically
-        order_clause = """
-            CASE 
-                WHEN title GLOB '[0-9]*' THEN 0 
-                ELSE 1 
-            END,
-            CASE 
-                WHEN title GLOB '[0-9]*' THEN CAST(title AS INTEGER)
-                ELSE 0
-            END,
-            title COLLATE NOCASE ASC"""
+        if sort_dir == "asc":
+            order_clause = """
+                CASE 
+                    WHEN title GLOB '[0-9]*' THEN 0 
+                    ELSE 1 
+                END,
+                CASE 
+                    WHEN title GLOB '[0-9]*' THEN CAST(title AS INTEGER)
+                    ELSE 0
+                END,
+                title COLLATE NOCASE ASC"""
+        else:
+            order_clause = """
+                CASE 
+                    WHEN title GLOB '[0-9]*' THEN 1 
+                    ELSE 0 
+                END,
+                title COLLATE NOCASE DESC,
+                CASE 
+                    WHEN title GLOB '[0-9]*' THEN CAST(title AS INTEGER)
+                    ELSE 0
+                END DESC"""
     elif sort == "author":
-        # Author A-Z: alphabetical by first author
-        order_clause = "authors COLLATE NOCASE ASC"
+        order_clause = f"authors COLLATE NOCASE {direction}"
     elif sort == "published":
-        # Recently Published: newest year first, NULLs at bottom
-        order_clause = """
-            CASE WHEN publication_year IS NULL THEN 1 ELSE 0 END,
-            publication_year DESC"""
+        if sort_dir == "asc":
+            # Oldest first, NULLs at bottom
+            order_clause = """
+                CASE WHEN publication_year IS NULL THEN 1 ELSE 0 END,
+                publication_year ASC"""
+        else:
+            # Newest first, NULLs at bottom
+            order_clause = """
+                CASE WHEN publication_year IS NULL THEN 1 ELSE 0 END,
+                publication_year DESC"""
     else:
-        # Default to Recently Added
-        order_clause = "created_at DESC"
+        order_clause = f"created_at {direction}"
     
     # Get total count
     count_sql = f"SELECT COUNT(*) as total FROM titles WHERE {where_sql}"
@@ -522,14 +570,23 @@ async def list_books(
     tags: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     sort: str = Query("added"),
-    order: str = Query("asc"),
+    sort_dir: str = Query("desc"),
     limit: int = Query(50, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     acquisition: Optional[str] = Query(None),
+    # Enhanced metadata filters (Phase 7.2)
+    fandom: Optional[str] = Query(None),
+    content_rating: Optional[str] = Query(None),
+    completion_status: Optional[str] = Query(None),
+    ship: Optional[str] = Query(None),
     db = Depends(get_db)
 ):
     """Backward compatible endpoint - calls list_titles."""
-    return await list_titles(category, status, series, tags, search, sort, order, limit, offset, acquisition, db)
+    return await list_titles(
+        category, status, series, tags, search, sort, sort_dir, 
+        limit, offset, acquisition, fandom, content_rating, 
+        completion_status, ship, db
+    )
 
 
 @router.get("/books/match")
