@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata } from '../api'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -140,6 +140,10 @@ function BookDetail() {
   const [dateFinished, setDateFinished] = useState('')
   const [datesLoading, setDatesLoading] = useState(false)
   const [datesStatus, setDatesStatus] = useState(null)
+  
+  // Rescan metadata state
+  const [rescanning, setRescanning] = useState(false)
+  const [rescanResult, setRescanResult] = useState(null)
   
   // Series data (for books in a series)
   const [seriesBooks, setSeriesBooks] = useState([])
@@ -764,6 +768,31 @@ function BookDetail() {
     setBook(updatedBook)
     // Update local state that might be affected
     setSelectedCategory(updatedBook.category || '')
+  }
+
+  const handleRescanMetadata = async () => {
+    if (!book?.id) return
+    
+    setRescanning(true)
+    setRescanResult(null)
+    
+    try {
+      const result = await rescanBookMetadata(book.id)
+      setRescanResult({ success: true, message: result.message })
+      
+      // Refresh book data - separate try/catch so rescan success isn't hidden
+      try {
+        const updatedBook = await getBook(book.id)
+        setBook(updatedBook)
+      } catch (refreshErr) {
+        console.error('Failed to refresh book data:', refreshErr)
+        // Keep success message, user can manually refresh
+      }
+    } catch (err) {
+      setRescanResult({ success: false, message: err.message })
+    } finally {
+      setRescanning(false)
+    }
   }
 
   const handleTemplateSelect = (templateKey) => {
@@ -1616,6 +1645,37 @@ function BookDetail() {
               )}
               {book.created_at && (
                 <span>Added {new Date(book.created_at).toLocaleDateString()}</span>
+              )}
+            </div>
+          )}
+          
+          {/* Rescan Metadata Button - only show for ebook editions */}
+          {book.folder_path && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <button
+                onClick={handleRescanMetadata}
+                disabled={rescanning}
+                className={`
+                  text-sm px-3 py-1.5 rounded transition-colors
+                  ${rescanning 
+                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'}
+                `}
+              >
+                {rescanning ? (
+                  <>
+                    <span className="inline-block animate-spin mr-2">↻</span>
+                    Rescanning...
+                  </>
+                ) : (
+                  '↻ Rescan Metadata'
+                )}
+              </button>
+              
+              {rescanResult && (
+                <p className={`text-sm mt-2 ${rescanResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                  {rescanResult.message}
+                </p>
               )}
             </div>
           )}

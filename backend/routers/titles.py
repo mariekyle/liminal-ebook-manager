@@ -20,6 +20,8 @@ from pydantic import BaseModel
 
 from database import get_db
 from services.covers import get_cover_style, Theme
+from services.metadata import extract_metadata
+from pathlib import Path
 
 router = APIRouter(tags=["titles"])
 
@@ -1595,3 +1597,145 @@ async def create_title_manual(
         "edition_id": edition_id,
         "status": "created"
     }
+
+
+@router.post("/books/{book_id}/rescan-metadata")
+async def rescan_book_metadata(book_id: int, db = Depends(get_db)):
+    """
+    Re-extract metadata from the book's ebook file.
+    Updates fields with newly extracted values; preserves existing data for fields
+    that extraction doesn't populate (e.g., PDF won't overwrite EPUB-extracted fandom).
+    Series only updated if ebook contains series data.
+    Supports EPUB and PDF formats (EPUB provides richest metadata for fanfiction).
+    """
+    # First check if the book exists
+    cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", [book_id])
+    title_row = await cursor.fetchone()
+    
+    if not title_row:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    title_id = title_row[0]
+    title_name = title_row[1]
+    
+    # Get ebook edition with file_path or folder_path
+    cursor = await db.execute(
+        """SELECT e.file_path, e.folder_path
+           FROM editions e
+           WHERE e.title_id = ? AND (e.folder_path IS NOT NULL OR e.file_path IS NOT NULL)
+           LIMIT 1""",
+        [book_id]
+    )
+    edition_row = await cursor.fetchone()
+    
+    if not edition_row:
+        raise HTTPException(
+            status_code=400, 
+            detail="No ebook edition found for this book. Rescan requires an ebook file."
+        )
+    
+    file_path = edition_row[0]
+    folder_path = edition_row[1]
+    
+    # Find ebook file (prefer EPUB, fall back to other formats)
+    ebook_path = None
+    SUPPORTED_FORMATS = ['.epub', '.pdf']  # Only formats extract_metadata() actually handles
+    
+    # First check if file_path points to a supported format
+    if file_path and Path(file_path).exists():
+        if any(file_path.lower().endswith(ext) for ext in SUPPORTED_FORMATS):
+            ebook_path = file_path
+    
+    # If not, search folder for ebook files (prefer EPUB)
+    if not ebook_path and folder_path and Path(folder_path).exists():
+        folder = Path(folder_path)
+        
+        # Try formats in order of preference
+        for ext in SUPPORTED_FORMATS:
+            matches = list(folder.glob(f'*{ext}')) + list(folder.glob(f'*{ext.upper()}'))
+            if matches:
+                ebook_path = str(matches[0])
+                break
+    
+    if not ebook_path or not Path(ebook_path).exists():
+        raise HTTPException(
+            status_code=400, 
+            detail="No ebook file found for this book. Rescan requires an EPUB or PDF file."
+        )
+    
+    try:
+        # Extract metadata
+        metadata = await extract_metadata(Path(ebook_path))
+        
+        if not metadata:
+            raise HTTPException(status_code=500, detail="Metadata extraction returned empty")
+        
+        # Build update - use COALESCE to preserve existing data when extraction returns NULL
+        await db.execute(
+            """UPDATE titles SET
+                summary = COALESCE(?, summary),
+                tags = COALESCE(?, tags),
+                word_count = COALESCE(?, word_count),
+                publication_year = COALESCE(?, publication_year),
+                fandom = COALESCE(?, fandom),
+                relationships = COALESCE(?, relationships),
+                characters = COALESCE(?, characters),
+                content_rating = COALESCE(?, content_rating),
+                ao3_warnings = COALESCE(?, ao3_warnings),
+                ao3_category = COALESCE(?, ao3_category),
+                source_url = COALESCE(?, source_url),
+                isbn = COALESCE(?, isbn),
+                publisher = COALESCE(?, publisher),
+                chapter_count = COALESCE(?, chapter_count),
+                completion_status = COALESCE(?, completion_status),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?""",
+            [
+                metadata.get('summary'),
+                json.dumps(metadata.get('tags', [])),
+                metadata.get('word_count'),
+                metadata.get('publication_year'),
+                metadata.get('fandom'),
+                metadata.get('relationships'),
+                metadata.get('characters'),
+                metadata.get('content_rating'),
+                metadata.get('ao3_warnings'),
+                metadata.get('ao3_category'),
+                metadata.get('source_url'),
+                metadata.get('isbn'),
+                metadata.get('publisher'),
+                metadata.get('chapter_count'),
+                metadata.get('completion_status'),
+                title_id
+            ]
+        )
+        
+        # Also update series if extracted
+        if metadata.get('series'):
+            await db.execute(
+                """UPDATE titles SET 
+                    series = ?,
+                    series_number = COALESCE(?, series_number)
+                WHERE id = ?""",
+                [metadata.get('series'), metadata.get('series_number'), title_id]
+            )
+        
+        await db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Metadata rescanned for '{title_name}'",
+            "extracted": {
+                "fandom": metadata.get('fandom'),
+                "relationships": bool(metadata.get('relationships')),
+                "characters": bool(metadata.get('characters')),
+                "content_rating": metadata.get('content_rating'),
+                "word_count": metadata.get('word_count'),
+                "source_url": bool(metadata.get('source_url')),
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rescan failed: {str(e)}")

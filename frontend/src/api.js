@@ -256,6 +256,16 @@ export async function updateBookMetadata(bookId, metadata) {
 }
 
 /**
+ * Rescan metadata for a single book from its EPUB file
+ * @param {number} bookId - Book ID
+ */
+export async function rescanBookMetadata(bookId) {
+  return apiFetch(`/books/${bookId}/rescan-metadata`, {
+    method: 'POST'
+  })
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {
