@@ -4,6 +4,7 @@ import Library from './components/Library'
 import BookDetail from './components/BookDetail'
 import SeriesDetail from './components/SeriesDetail'
 import CollectionsTab from './components/CollectionsTab'
+import CollectionDetail from './components/CollectionDetail'
 import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
 import ImportPage from './pages/ImportPage'
@@ -70,6 +71,7 @@ function App() {
           <Route path="/authors" element={<AuthorsList />} />
           <Route path="/author/:name" element={<AuthorDetail />} />
           <Route path="/collections" element={<CollectionsTab />} />
+          <Route path="/collections/:id" element={<CollectionDetail />} />
           {/* Redirect /tbr to library with wishlist filter */}
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />
