@@ -244,20 +244,19 @@ function Library() {
     setSearchParams(params, { replace: true })
   }, [searchParams, setSearchParams])
 
-  // Clear all filters (preserves sort and sort direction)
+  // Clear all filters (preserves sort, sort direction, and current tab)
   const handleClearFilters = useCallback(() => {
     setCategory('')
     setStatus('')
     setSelectedTags([])
     setReadTimeFilter('')
     setSearch('')
-    setAcquisition('owned')
     // Enhanced metadata filters
     setFandom('')
     setContentRating([])
     setCompletionStatus([])
     setShip('')
-    // Preserve current sort and direction - don't reset them
+    // Preserve current sort, direction, and acquisition (stay on current tab)
     const params = new URLSearchParams()
     if (sort !== 'added') {
       params.set('sort', sort)
@@ -265,8 +264,16 @@ function Library() {
     if (sortDir !== 'desc') {
       params.set('sortDir', sortDir)
     }
-    setSearchParams(params, { replace: true })
-  }, [setSearchParams, sort, sortDir])
+   // Keep acquisition if on browse or wishlist
+   if (acquisition === 'browse' || acquisition === 'wishlist') {
+    params.set('acquisition', acquisition)
+  }
+  // Keep view if on series tab
+  if (activeView === 'series') {
+    params.set('view', activeView)
+  }
+  setSearchParams(params, { replace: true })
+}, [setSearchParams, sort, sortDir, acquisition, activeView])
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-120px)]">
@@ -434,8 +441,8 @@ function Library() {
                     className="appearance-none bg-transparent text-gray-500 text-xs pr-4 cursor-pointer hover:text-white focus:outline-none"
                   >
                     <option value="added">Recently Added</option>
-                    <option value="title">Title A-Z</option>
-                    <option value="author">Author A-Z</option>
+                    <option value="title">Title</option>
+                    <option value="author">Author</option>
                     <option value="published">Recently Published</option>
                   </select>
                 </div>

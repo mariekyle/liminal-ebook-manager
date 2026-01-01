@@ -190,9 +190,8 @@ function FilterContent({
 }) {
   const { getLabel } = useStatusLabels()
   
-  // Enhanced filters only show for FanFiction or when no category selected
-  const showEnhancedFilters = showLibraryFilters && 
-    (!selectedCategory || selectedCategory === 'FanFiction')
+  // Enhanced filters only show for FanFiction category
+  const showEnhancedFilters = showLibraryFilters && selectedCategory === 'FanFiction'
   
   // Content rating options
   const contentRatingOptions = [
