@@ -31,6 +31,15 @@ function FilterDrawer({
   selectedTagsCount = 0,
   onClearAll,
   showLibraryFilters = true, // Show status/readTime/tags (false for Series view)
+  // Enhanced metadata filters (Phase 7.2)
+  selectedFandom = '',
+  onOpenFandomModal,
+  selectedContentRating = [],
+  onContentRatingChange,
+  selectedCompletionStatus = [],
+  onCompletionStatusChange,
+  selectedShip = '',
+  onOpenShipModal,
 }) {
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -98,6 +107,14 @@ function FilterDrawer({
             onClearAll={onClearAll}
             onClose={onClose}
             showLibraryFilters={showLibraryFilters}
+            selectedFandom={selectedFandom}
+            onOpenFandomModal={onOpenFandomModal}
+            selectedContentRating={selectedContentRating}
+            onContentRatingChange={onContentRatingChange}
+            selectedCompletionStatus={selectedCompletionStatus}
+            onCompletionStatusChange={onCompletionStatusChange}
+            selectedShip={selectedShip}
+            onOpenShipModal={onOpenShipModal}
           />
         </div>
       </div>
@@ -131,6 +148,14 @@ function FilterDrawer({
             onClearAll={onClearAll}
             onClose={onClose}
             showLibraryFilters={showLibraryFilters}
+            selectedFandom={selectedFandom}
+            onOpenFandomModal={onOpenFandomModal}
+            selectedContentRating={selectedContentRating}
+            onContentRatingChange={onContentRatingChange}
+            selectedCompletionStatus={selectedCompletionStatus}
+            onCompletionStatusChange={onCompletionStatusChange}
+            selectedShip={selectedShip}
+            onOpenShipModal={onOpenShipModal}
           />
         </div>
       </div>
@@ -153,8 +178,38 @@ function FilterContent({
   onClearAll,
   onClose,
   showLibraryFilters = true,
+  // Enhanced metadata filters (Phase 7.2)
+  selectedFandom = '',
+  onOpenFandomModal,
+  selectedContentRating = [],
+  onContentRatingChange,
+  selectedCompletionStatus = [],
+  onCompletionStatusChange,
+  selectedShip = '',
+  onOpenShipModal,
 }) {
   const { getLabel } = useStatusLabels()
+  
+  // Enhanced filters only show for FanFiction or when no category selected
+  const showEnhancedFilters = showLibraryFilters && 
+    (!selectedCategory || selectedCategory === 'FanFiction')
+  
+  // Content rating options
+  const contentRatingOptions = [
+    { value: 'General', label: 'General' },
+    { value: 'Teen', label: 'Teen' },
+    { value: 'Mature', label: 'Mature' },
+    { value: 'Explicit', label: 'Explicit' },
+    { value: 'Not Rated', label: 'Not Rated' },
+  ]
+  
+  // Completion status options
+  const completionStatusOptions = [
+    { value: 'Complete', label: 'Complete' },
+    { value: 'WIP', label: 'WIP' },
+    { value: 'Abandoned', label: 'Abandoned' },
+    { value: 'Hiatus', label: 'Hiatus' },
+  ]
   
   const handleCategoryClick = (cat) => {
     onCategoryChange(cat === 'All' ? '' : cat)
@@ -249,6 +304,115 @@ function FilterContent({
                 <ChevronDown />
               </button>
             </div>
+          )}
+          
+          {/* Enhanced Metadata Filters - FanFiction only */}
+          {showEnhancedFilters && (
+            <>
+              {/* Fandom */}
+              {onOpenFandomModal && (
+                <div className="mb-4">
+                  <p className="text-gray-400 text-sm mb-2">Fandom</p>
+                  <button 
+                    onClick={() => {
+                      onOpenFandomModal()
+                      onClose()
+                    }}
+                    className="w-full bg-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm flex items-center justify-between hover:bg-gray-600"
+                  >
+                    <span>
+                      {selectedFandom || 'Any fandom'}
+                    </span>
+                    <ChevronDown />
+                  </button>
+                </div>
+              )}
+              
+              {/* Ship */}
+              {onOpenShipModal && (
+                <div className="mb-4">
+                  <p className="text-gray-400 text-sm mb-2">Ship</p>
+                  <button 
+                    onClick={() => {
+                      onOpenShipModal()
+                      onClose()
+                    }}
+                    className="w-full bg-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm flex items-center justify-between hover:bg-gray-600"
+                  >
+                    <span>
+                      {selectedShip || 'Any ship'}
+                    </span>
+                    <ChevronDown />
+                  </button>
+                </div>
+              )}
+              
+              {/* Content Rating */}
+              <div className="mb-4">
+                <p className="text-gray-400 text-sm mb-2">Content Rating</p>
+                <div className="space-y-2">
+                  {contentRatingOptions.map(option => (
+                    <label 
+                      key={option.value}
+                      className="flex items-center gap-3 cursor-pointer group"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const newSelection = selectedContentRating.includes(option.value)
+                          ? selectedContentRating.filter(v => v !== option.value)
+                          : [...selectedContentRating, option.value]
+                        onContentRatingChange(newSelection)
+                      }}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedContentRating.includes(option.value)
+                          ? 'bg-library-accent border-library-accent'
+                          : 'border-gray-500 group-hover:border-gray-400'
+                      }`}>
+                        {selectedContentRating.includes(option.value) && (
+                          <span className="text-white text-xs">✓</span>
+                        )}
+                      </div>
+                      <span className="text-gray-300 text-sm group-hover:text-white">
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Completion Status */}
+              <div className="mb-6">
+                <p className="text-gray-400 text-sm mb-2">Completion Status</p>
+                <div className="space-y-2">
+                  {completionStatusOptions.map(option => (
+                    <label 
+                      key={option.value}
+                      className="flex items-center gap-3 cursor-pointer group"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const newSelection = selectedCompletionStatus.includes(option.value)
+                          ? selectedCompletionStatus.filter(v => v !== option.value)
+                          : [...selectedCompletionStatus, option.value]
+                        onCompletionStatusChange(newSelection)
+                      }}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedCompletionStatus.includes(option.value)
+                          ? 'bg-library-accent border-library-accent'
+                          : 'border-gray-500 group-hover:border-gray-400'
+                      }`}>
+                        {selectedCompletionStatus.includes(option.value) && (
+                          <span className="text-white text-xs">✓</span>
+                        )}
+                      </div>
+                      <span className="text-gray-300 text-sm group-hover:text-white">
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </>
       )}

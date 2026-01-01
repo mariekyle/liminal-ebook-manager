@@ -28,6 +28,8 @@ function Library() {
   const [tagsModalOpen, setTagsModalOpen] = useState(false)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [fandomModalOpen, setFandomModalOpen] = useState(false)
+  const [shipModalOpen, setShipModalOpen] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sort, setSort] = useState(searchParams.get('sort') || 'added')
   const [categories, setCategories] = useState([])
@@ -638,6 +640,21 @@ function Library() {
         selectedTagsCount={selectedTags.length}
         onClearAll={handleClearFilters}
         showLibraryFilters={activeView === 'library'}
+        // Enhanced metadata filters (Phase 7.2)
+        selectedFandom={fandom}
+        onOpenFandomModal={() => setFandomModalOpen(true)}
+        selectedContentRating={contentRating}
+        onContentRatingChange={(ratings) => {
+          setContentRating(ratings)
+          updateUrlParams({ contentRating: ratings })
+        }}
+        selectedCompletionStatus={completionStatus}
+        onCompletionStatusChange={(statuses) => {
+          setCompletionStatus(statuses)
+          updateUrlParams({ completionStatus: statuses })
+        }}
+        selectedShip={ship}
+        onOpenShipModal={() => setShipModalOpen(true)}
       />
 
       {/* Search Modal (mobile) */}
