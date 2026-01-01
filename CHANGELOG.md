@@ -11,6 +11,160 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.0] - 2026-01-01
+
+### Added
+
+#### Phase 7.2a: Enhanced Filtering
+Complete filtering system for enhanced metadata fields, enabling powerful fanfiction discovery.
+
+#### Backend: New Filter Parameters
+- **fandom** — Filter by fandom (exact match)
+- **content_rating** — Filter by content rating (comma-separated multi-select)
+- **completion_status** — Filter by completion status (comma-separated multi-select)
+- **ship** — Filter by ship/relationship (searches within JSON array)
+- **sort_dir** — Sort direction parameter (asc/desc, default desc)
+
+#### Frontend: Filter State & URL Persistence
+- All new filters sync to URL params for shareability and browser history
+- Context-aware sort direction (Title/Author default asc, dates default desc)
+- Filter badge count includes all active filters
+
+#### FilterDrawer: Enhanced Filter Controls
+- **Fandom button** — Opens searchable modal with all library fandoms
+- **Ship button** — Opens searchable modal with all library ships
+- **Content Rating checkboxes** — General, Teen, Mature, Explicit, Not Rated
+- **Completion Status checkboxes** — Complete, WIP, Abandoned, Hiatus
+- Filters only visible when FanFiction category is selected
+
+#### New Components
+- **FandomModal** — Searchable single-select fandom filter with radio buttons
+- **ShipModal** — Searchable single-select ship filter with radio buttons
+
+#### Active Filter Pills
+- **Fandom pill** — Purple, shows selected fandom
+- **Ship pill** — Pink, shows selected ship
+- **Content Rating pills** — Red, one per selected rating
+- **Completion Status pills** — Emerald, one per selected status
+- All pills removable with × button
+
+#### Sort Direction Toggle
+- **Toggle button** — ↑/↓ next to sort dropdown
+- Click to reverse current sort order
+- Persists in URL as `sortDir` parameter
+
+### Changed
+
+- **Sort labels** — Simplified "Title A-Z" → "Title", "Author A-Z" → "Author"
+- **Clear all behavior** — Now stays on current tab (Browse/Wishlist/Series)
+- **Enhanced filters visibility** — Only show for FanFiction category (not "All")
+
+### Fixed
+
+- **Clear all on Series tab** — No longer switches to Library tab
+
+### Technical
+
+#### Modified Files
+- `backend/routers/titles.py` — New filter params, sort_dir support
+- `frontend/src/api.js` — listFandoms(), listShips(), updated listBooks params
+- `frontend/src/components/Library.jsx` — Filter state, URL sync, modals, pills
+- `frontend/src/components/FilterDrawer.jsx` — Enhanced filter sections
+- `frontend/src/components/FandomModal.jsx` — NEW
+- `frontend/src/components/ShipModal.jsx` — NEW
+
+---
+
+## [0.13.0] - 2026-01-01
+
+### Added
+
+#### Phase 7.1: Enhanced Metadata System Complete
+Full integration of enhanced metadata across upload, rescan, and editing workflows.
+
+#### Part A: Upload Flow Integration
+- **Metadata extraction during upload** — New uploads get fandom, ships, characters, content_rating, ao3_warnings, ao3_category, source_url, isbn, publisher, chapter_count, completion_status automatically
+- **Category preservation fix** — User's category selection now saves correctly (was being overwritten by sync)
+- **Title creation during upload** — Metadata extracted immediately, no sync dependency
+- **Empty author handling** — Fixed IndexError when author contains only whitespace
+- **Bracket handling** — Series folder names like `[Series 01]` work correctly with glob.escape()
+
+#### Part B: Per-Book Rescan
+- **POST /api/books/{id}/rescan-metadata** — Re-extract metadata from individual book's EPUB/PDF
+- **"Rescan Metadata" button** — Appears on BookDetail for books with files
+- **Multi-format support** — Prefers EPUB, falls back to PDF
+- **COALESCE preservation** — PDF rescan doesn't overwrite EPUB-extracted enhanced fields
+- **Series protection** — Series only updated if extraction finds data
+- **Loading state** — Visual feedback during rescan operation
+
+#### Part C: Enhanced Metadata Editing Modal
+- **"Edit About" modal** — Full editing interface for all enhanced metadata
+- **Summary editing** — Textarea with proper null handling when cleared
+- **Searchable fandom** — Autocomplete from existing library fandoms
+- **Searchable ships** — Autocomplete with input above chips
+- **Searchable characters** — Autocomplete with input above chips
+- **Searchable tags** — Autocomplete with input above chips
+- **Content rating dropdown** — General/Teen/Mature/Explicit/Not Rated
+- **Pairing type multi-select** — F/F, F/M, Gen, M/M, Multi, Other toggles
+- **Archive warnings multi-select** — All AO3 warning options
+- **Completion status dropdown** — Complete/WIP/Abandoned/Hiatus
+- **Source URL input** — Text field for original source link
+- **Category-aware field visibility** — FanFiction-only fields hidden for Fiction/Non-Fiction
+
+#### Backend: New Autocomplete Endpoints
+- **GET /api/autocomplete/fandoms** — Search existing fandoms
+- **GET /api/autocomplete/ships** — Search existing ships/relationships
+- **GET /api/autocomplete/characters** — Search existing characters
+- **GET /api/autocomplete/tags** — Search existing tags
+
+#### Backend: Enhanced Metadata Update
+- **PATCH /api/books/{id}/enhanced-metadata** — Update all enhanced fields
+- **EnhancedMetadataUpdate model** — Pydantic model for validation
+- **Dynamic query building** — Only updates provided fields
+- **JSON serialization** — Proper handling of array fields
+
+### Changed
+
+#### BookDetail UI Improvements
+- **Pairing Type on own row** — Moved from Rating row for better visibility
+- **Rating display read-only** — Shows average from reading sessions (not editable)
+- **Empty rating display** — Shows 5 grey stars when no sessions
+- **Icon-only edit buttons** — Notes and About sections use pencil icon only
+- **About section always visible** — Shows for all books, not just those with files
+- **"Tags" label** — Renamed from "Tropes" for FanFiction books
+
+#### Modal UI Cleanup
+- **Removed footer divider bars** — EditBookModal, EnhancedMetadataModal, NotesEditor
+- **Author input above chips** — Consistent pattern across chip editors
+- **Consistent styling** — All modals use library-bg, library-card, library-accent classes
+
+### Fixed
+
+- **Category not saving on upload** — User's category selection now preserved
+- **Summary not clearing** — Empty summary now saves as null correctly
+- **Backdrop click behavior** — Edit About modal only closes on Escape, not backdrop click
+- **Empty author crash** — Handles whitespace-only author strings
+- **Glob pattern brackets** — Series folders with brackets no longer fail
+
+### Technical
+
+#### Database Changes
+- No schema changes (uses Phase 7.0 columns)
+
+#### New Files
+- `frontend/src/components/EnhancedMetadataModal.jsx` — Full metadata editing modal
+
+#### Modified Files
+- `backend/routers/sync.py` — Enhanced field extraction and saving during sync
+- `backend/routers/upload.py` — Title creation with metadata during upload
+- `backend/routers/titles.py` — Rescan endpoint, enhanced metadata PATCH, autocomplete endpoints
+- `frontend/src/api.js` — rescanBookMetadata(), updateEnhancedMetadata(), autocomplete functions
+- `frontend/src/components/BookDetail.jsx` — Rescan button, Edit About button, rating display, UI cleanup
+- `frontend/src/components/EditBookModal.jsx` — Removed footer border
+- `frontend/src/components/NotesEditor.jsx` — Removed template row border
+
+---
+
 ## [0.12.0] - 2025-12-31
 
 ### Added
@@ -199,51 +353,35 @@ Complete system for tracking multiple reading sessions (re-reads) per book.
 - **POST /api/titles/{id}/sessions** — Create new reading session
 - **PATCH /api/sessions/{id}** — Update session (dates, status, rating)
 - **DELETE /api/sessions/{id}** — Delete session with automatic renumbering
-- **Automatic sync** — Title's cached status/rating updates after every mutation
 
 #### UI: Reading History Section
 - **Session cards** — Display "Read #1", "Read #2", etc. with dates and ratings
 - **"+ Add Session" button** — Start tracking a new read
 - **Session editor modal** — Full edit interface for each session
-- **Status buttons** — Color-coded: Green (Finished), Pink (DNF), Gray (In Progress)
-- **Rating stars** — Disabled and greyed out for in_progress sessions
-- **Delete with confirmation** — Remove sessions safely
-- **Custom status labels** — Uses labels from Settings (e.g., "Read" instead of "Finished")
+- **Custom status labels** — Uses labels from Settings
 
 #### Cumulative Stats
 - **Times Read** — Count of all reading sessions
 - **Average Rating** — Mean of all session ratings
-- **Stats row** — Displays below sessions list
 
 ### Changed
 
 - **Book status** — Now derived from most recent session's status
 - **Book rating** — Now calculated as average of all session ratings
-- **Reading History tab** — Complete redesign with sessions-based display
 
 ### Fixed
 
-- **State reset on navigation** — Sessions clear when switching between books (no stale data flash)
-- **Rating preservation** — Existing rating preserved (greyed out) when switching to in_progress
-- **Date clearing** — Can now remove dates from sessions by clearing the field
-- **Rating validation** — Rating not sent to backend when status is in_progress
+- **State reset on navigation** — Sessions clear when switching between books
+- **Rating preservation** — Existing rating preserved when switching to in_progress
 
 ### Technical
 
 #### Database Changes
 - New table: `reading_sessions` with foreign key to titles
-- Index: `idx_reading_sessions_title_id`
 - Migration: Creates sessions from existing title data
-- Migration: Fixes status for books incorrectly marked Unread
 
 #### New Files
 - `backend/routers/sessions.py` — CRUD endpoints for reading sessions
-
-#### Modified Files
-- `backend/database.py` — Schema, migration, sync_title_from_sessions helper
-- `backend/main.py` — Register sessions router
-- `frontend/src/api.js` — Session API functions
-- `frontend/src/components/BookDetail.jsx` — Sessions display and editor modal
 
 ---
 
@@ -252,47 +390,10 @@ Complete system for tracking multiple reading sessions (re-reads) per book.
 ### Added
 
 #### Phase 5.2: Form Autocomplete
-Complete upgrade to TBRForm (wishlist entry form) with autocomplete features.
-
-#### Multi-Author Support
-- **Author chips** — Multiple authors displayed as removable chips
-- **Enter to add** — Press Enter to add typed author
-- **Remove button** — Click × to remove any author
-- **Validation** — At least one author required
-
-#### Title Autocomplete
-- **Search suggestions** — Shows matching books after 2+ characters
-- **Familiar title warning** — Warns when title matches existing book
-- **85% similarity matching** — Levenshtein distance for fuzzy matching
-- **Status indication** — Warning shows "on wishlist" vs "in library"
-
-#### Author Autocomplete
-- **Suggestions from library** — Shows authors from existing books
-- **Starts-with priority** — Better matches sorted first
-- **Smart replacement** — Selecting autocomplete replaces case variations
-- **Debounced search** — 200ms delay prevents excessive API calls
-
-#### Series Autocomplete
-- **Suggestions from library** — Shows existing series names
-- **Click to fill** — Select suggestion to populate field
-- **Debounced search** — 300ms delay prevents excessive API calls
-
-### Fixed
-
-- **API response handling** — Extract author names from `{authors: [{name}]}` structure
-- **Levenshtein matrix** — Proper 2D array initialization prevents NaN errors
-- **Case-insensitive replacement** — "john smith" replaced by "John Smith" from autocomplete
-
-### Technical
-
-#### Modified Files
-- `frontend/src/components/add/TBRForm.jsx` — Complete refactor with autocomplete
-
-#### Implementation Details
-- Levenshtein distance algorithm for title similarity
-- Debounced API calls (200ms authors, 300ms title/series)
-- Dropdown management with focus/blur handlers
-- Form validation preserved (title + author required)
+- **Title autocomplete** — Warns when title matches existing book
+- **Author autocomplete** — Suggests existing authors
+- **Series autocomplete** — Suggests existing series
+- **Multi-author support** — Multiple authors with chip display
 
 ---
 
@@ -301,76 +402,10 @@ Complete upgrade to TBRForm (wishlist entry form) with autocomplete features.
 ### Added
 
 #### Phase 5.1: Wishlist Unification
-Complete redesign of how wishlist items integrate with the library.
-
-#### Backend: Acquisition Status System
-- **New `acquisition_status` column** — Tracks 'owned' vs 'wishlist' status
-- **`?acquisition=` filter** — API parameter to filter books by ownership status
-- **Automatic migration** — Existing `is_tbr` data migrated to new column
-- **Backward compatible** — TBR endpoints still functional
-
-#### Library: Toggle Bar Navigation
-- **Home / Browse / Wishlist tabs** — Filter library by ownership status
-- **Home tab** — Shows owned books with "Your library awaits" message
-- **Browse tab** — Shows owned books with rotating poetic phrases
-- **Wishlist tab** — Shows wishlist items only
-- **URL persistence** — Toggle state preserved in URL params
-
-#### BookCard: Wishlist Styling
-- **Dotted border** — Wishlist items have dashed border on covers
-- **Bookmark icon** — Badge indicator for wishlist items
-- **Full brightness** — No opacity reduction (cleaner look)
-
-#### BookDetail: Complete UI Redesign
-- **WISHLIST banner** — Clear indicator with "You don't own this yet" message
-- **Horizontal desktop layout** — Cover on left, content on right
-- **Larger cover on desktop** — Increased from w-40 to w-48
-- **Mobile tab navigation** — Details | Notes | History tabs
-- **Edit icon repositioned** — Moved to upper right corner (icon only)
-
-#### Reading History Section
-- **New formatted display** — "Read #1: Jul 14, 2025 — Jul 14, 2025"
-- **Collapsible date editors** — Edit button toggles date input fields
-- **"+ Add dates" button** — Appears when no reading dates recorded
-- **React state management** — Date editors persist through re-renders
-
-#### Navigation Cleanup
-- **TBR tab removed** — From both mobile and desktop navigation
-- **`/tbr` redirect** — Automatically redirects to `/?acquisition=wishlist`
-- **4-tab navigation** — Library, Series, Authors, Add
-
-### Changed
-
-- **Toggle order** — Changed from Home/Wishlist/All to Home/Browse/Wishlist
-- **Browse behavior** — Shows only owned books (same filter as Home, different phrase)
-
-### Fixed
-
-- **Reading History tab visibility** — Only shows in History tab on mobile (not Details)
-- **Date editors state** — No longer closes when changing dates
-- **Tab state reset** — Resets to Details tab when navigating between books
-- **Status/rating visibility** — Hidden on mobile History tab (only shows reading dates)
-
-### Technical
-
-#### Database Changes
-- Migration: Added `acquisition_status TEXT DEFAULT 'owned'` column to titles table
-- Migration: Populated from existing `is_tbr` values
-- Index: Added `idx_titles_acquisition_status`
-
-#### New API Behavior
-- `GET /api/books` — New `?acquisition=` parameter (owned, wishlist, all)
-- Default: Returns 'owned' books when parameter omitted
-
-#### Modified Files
-- `backend/database.py` — Added acquisition_status column and migration
-- `backend/routers/titles.py` — Added acquisition filter, updated queries
-- `frontend/src/components/Library.jsx` — Toggle bar, phrase logic
-- `frontend/src/components/BookCard.jsx` — Wishlist styling
-- `frontend/src/components/BookDetail.jsx` — Complete UI redesign
-- `frontend/src/components/Header.jsx` — Removed TBR tab
-- `frontend/src/components/BottomNav.jsx` — Removed TBR tab
-- `frontend/src/App.jsx` — TBR redirect
+- **Acquisition status system** — 'owned' vs 'wishlist' status
+- **Library toggle bar** — Home / Browse / Wishlist tabs
+- **Wishlist styling** — Dotted border + bookmark icon
+- **BookDetail redesign** — Horizontal desktop layout, mobile tabs
 
 ---
 
@@ -378,28 +413,8 @@ Complete redesign of how wishlist items integrate with the library.
 
 ### Added
 
-#### Orphan Detection System
-- **Automatic orphan detection** — Sync now detects when book folders are missing from the filesystem
-- **New `is_orphaned` column** — Titles table tracks orphan status separately from other fields
-- **Auto-recovery** — If a previously orphaned book's folder reappears, it's automatically un-orphaned
-- **Sync result tracking** — Sync reports now include `orphaned` and `recovered` counts
-- **Preserves all data** — Orphaned books retain their notes, ratings, reading status, and metadata
-
-### Technical
-
-#### Database Changes
-- Migration: Added `is_orphaned INTEGER DEFAULT 0` column to titles table
-
-#### Modified Files
-- `backend/database.py` — Added is_orphaned column to schema and migration
-- `backend/routers/sync.py` — Added orphan detection and auto-recovery logic
-
-#### How It Works
-1. During sync, all found folder paths are tracked
-2. After processing folders, editions with `folder_path` not found on disk are identified
-3. Those titles are marked `is_orphaned = 1`
-4. When a folder reappears (re-uploaded, restored), title is automatically recovered (`is_orphaned = 0`)
-5. TBR items and manual entries (no folder_path) are excluded from orphan checks
+- **Orphan detection** — Sync detects missing book folders
+- **Auto-recovery** — Reappearing folders automatically un-orphaned
 
 ---
 
@@ -407,22 +422,8 @@ Complete redesign of how wishlist items integrate with the library.
 
 ### Fixed
 
-#### Upload Folder Structure Bug
-- **Critical fix:** Uploaded books now correctly placed in flat `/books/Author - Title/` structure
-- Previously, v0.9.0 TBR conversion code incorrectly created category subfolders (`/books/FanFiction/Author - Title/`)
-- Fixed `link_files_to_title` endpoint to use flat folder structure
-- Fixed `add_files_to_existing_title` function to use flat folder structure
-
-#### File Size Display
-- **Small files now display in KB** — Files under 1 MB show as "35.1 KB" instead of "0.0 MB"
-- Files under 1 KB show in bytes (e.g., "512 B")
-- Improves readability on upload review screen
-
-### Technical
-
-#### Modified Files
-- `backend/routers/upload.py` — Removed category from folder path in two locations
-- `frontend/src/components/upload/BookCard.jsx` — Updated `formatSize()` function
+- **Upload folder structure** — Books placed in flat structure correctly
+- **File size display** — Small files show in KB
 
 ---
 
@@ -430,82 +431,11 @@ Complete redesign of how wishlist items integrate with the library.
 
 ### Added
 
-#### TBR (To Be Read) System
-- **TBR List View** — New TBR tab in bottom navigation showing books you want to read
-- **TBR Priority** — Mark items as "High" or "Normal" priority with visual indicators
-- **TBR Reason** — Add "Why I want to read this" notes to any TBR item
-- **Priority Filter** — Filter TBR list by priority level
-- **TBR Count Badge** — Shows number of TBR items in navigation
-
-#### Manual Book Entry
-- **Add to Library** — Add physical, audiobook, or web-based books without uploading files
-- **Add to TBR** — Add future reads with title, author, series, and reason
-- **Multiple Authors** — Add multiple authors with chip display and autocomplete
-- **Author Autocomplete** — Suggests existing library authors while typing
-- **Format Selection** — Choose Physical, Audiobook, or Web/URL format
-- **Completion Status** — Track WIP/Abandoned status for fanfiction
-- **Source URL** — Store AO3/FFN URLs for web-based works
-
-#### TBR → Library Conversion
-- **"I got this book!" Flow** — Convert TBR items to library with format selection
-- **Ebook Upload Option** — Links to upload page to add files
-- **Physical/Audiobook/Web Options** — Convert without uploading files
-- **Metadata Preservation** — Source URL and completion status preserved on conversion
-
-#### Familiar Title Detection
-- **Smart Detection** — Upload warns when title matches existing library book
-- **"A Familiar Title" Banner** — Shows on upload review when match found
-- **Add to Existing** — Option to add files to existing title
-- **Add as Separate** — Override to create new title entry
-- **85% Similarity Matching** — Fuzzy matching catches near-duplicates
-
-#### UI Improvements
-- **Clean Add Page** — Header hidden on main choice screen (no empty bar)
-- **Centered Form Headers** — ManualEntryForm header properly centered
-- **Completion Status Display** — Shows on separate line above author
-- **Web-based Acquire Option** — New option when converting TBR to library
-
-### Changed
-
-- **Bottom Navigation** — Now includes TBR tab (Library, Series, Authors, TBR, Add)
-- **Add Flow Redesigned** — Two-path choice: "A book I have" vs "A future read"
-- **Book Detail Layout** — Completion status moved to own line above author
-
-### Fixed
-
-- **TBR Conversion Preserves Data** — Source URL and completion status no longer lost
-- **Database Migration** — Added missing `source_url` column migration
-- **Author Autocomplete Dropdown** — Properly filters and displays suggestions
-
-### Technical
-
-#### Database Changes
-- Migration: `source_url` column added to titles table if missing
-- TBR fields: `is_tbr`, `tbr_priority`, `tbr_reason` fully utilized
-
-#### New API Endpoints
-- `GET /api/tbr` — List TBR items with optional priority filter
-- `POST /api/tbr` — Create new TBR item
-- `PATCH /api/tbr/{id}` — Update TBR priority/reason/source_url/completion_status
-- `POST /api/tbr/{id}/acquire` — Convert TBR to library
-- `DELETE /api/tbr/{id}` — Remove TBR item
-- `POST /api/titles` — Create manual library entry
-
-#### New Frontend Components
-- `TBRList.jsx` — TBR list page with priority filtering
-- `TBRForm.jsx` — Form for adding TBR items
-- `ManualEntryForm.jsx` — Form for adding library items manually
-- `AddPage.jsx` — Unified add flow with multiple paths
-- `AddChoice.jsx` — Initial choice screen
-- `LibraryChoice.jsx` — Library add method selection
-
-#### Modified Files
-- `BookDetail.jsx` — Acquire modal, completion status display
-- `BookCard.jsx` — FamiliarTitleBanner component
-- `ReviewBooks.jsx` — Familiar title counting
-- `upload.py` — Familiar title detection, add_to_existing action
-- `titles.py` — TBR endpoints, manual entry
-- `database.py` — source_url migration
+#### Phase 5: TBR System
+- **TBR List View** — Books you want to read
+- **Manual Book Entry** — Physical, audiobook, web-based books
+- **TBR → Library conversion** — "I got this book!" flow
+- **Familiar Title Detection** — Upload warns of duplicates
 
 ---
 
@@ -513,7 +443,9 @@ Complete redesign of how wishlist items integrate with the library.
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.12.0 | 2025-12-31 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing, rescan feature ✨ |
+| 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) ✨ |
+| 0.13.0 | 2026-01-01 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
+| 0.12.0 | 2025-12-31 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing, rescan feature |
 | 0.11.0 | 2025-12-30 | **Phase 6** — Library Home Screen, search redesign, sort options |
 | 0.10.0 | 2025-12-30 | **Phase 5.3** — Reading sessions, multiple re-reads |
 | 0.9.4 | 2025-12-30 | **Phase 5.2** — Form autocomplete (title, author, series) |
@@ -542,32 +474,33 @@ Complete redesign of how wishlist items integrate with the library.
 
 ## Upgrade Notes
 
-### Upgrading to 0.12.0
+### Upgrading to 0.13.0
 
-**New Columns (auto-migrated):**
-- fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, isbn, publisher, chapter_count
+**No schema changes** — Uses Phase 7.0 columns
 
 **Modified Files:**
-- `backend/database.py` — Schema, migration
-- `backend/services/metadata.py` — AO3 parser, extractors
-- `backend/routers/sync.py` — Rescan endpoints
-- `backend/routers/titles.py` — TitleDetail model updates
-- `frontend/src/api.js` — Rescan API functions
-- `frontend/src/components/SettingsDrawer.jsx` — Enhanced Metadata section
-- `frontend/src/components/BookDetail.jsx` — Metadata display
+- `backend/routers/sync.py` — Enhanced field saving
+- `backend/routers/upload.py` — Title creation during upload
+- `backend/routers/titles.py` — Rescan endpoint, enhanced metadata PATCH, autocomplete
+- `frontend/src/api.js` — New API functions
+- `frontend/src/components/BookDetail.jsx` — UI updates
+- `frontend/src/components/EnhancedMetadataModal.jsx` — NEW
+- `frontend/src/components/EditBookModal.jsx` — UI cleanup
+- `frontend/src/components/NotesEditor.jsx` — UI cleanup
 
 **Post-upgrade:** 
 1. Rebuild Docker container
-2. Open Settings → Click "Rescan All Metadata" to populate enhanced fields for existing books
+2. New uploads will automatically extract enhanced metadata
+3. Use "Edit About" button to manually edit metadata for any book
 
 ---
 
 ## Links
 
-- [Roadmap](./20251231_ROADMAP.md)
+- [Roadmap](./20250101_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: December 31, 2025*
+*Last updated: January 1, 2026 (v0.14.0 — Phase 7.2a complete)*

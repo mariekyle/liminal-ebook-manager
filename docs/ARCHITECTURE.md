@@ -1,5 +1,12 @@
 # Liminal Ebook Manager - Architecture Guide
 
+
+> ⚠️ **Note:** This document reflects the original system design. 
+> For current schema, features, and components, see CHANGELOG.md and ROADMAP.md.
+> A full revision is planned after the design system refactor.
+
+
+
 ## Overview
 
 Liminal is a self-hosted web application for managing your ebook library. It runs on your Synology NAS (or any Docker-capable machine), scans your book folders, extracts metadata, and provides a mobile-friendly interface for browsing and taking notes.

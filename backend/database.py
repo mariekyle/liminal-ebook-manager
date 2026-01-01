@@ -510,6 +510,32 @@ CREATE TABLE IF NOT EXISTS author_notes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Collections: user-defined book lists (Phase 7.2b)
+CREATE TABLE IF NOT EXISTS collections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    cover_type TEXT DEFAULT 'mosaic',
+    cover_color_1 TEXT,
+    cover_color_2 TEXT,
+    custom_cover_path TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Junction table for collection membership
+CREATE TABLE IF NOT EXISTS collection_books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    collection_id INTEGER NOT NULL,
+    title_id INTEGER NOT NULL,
+    position INTEGER DEFAULT 0,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+    FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
+    UNIQUE(collection_id, title_id)
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_titles_category ON titles(category);
 CREATE INDEX IF NOT EXISTS idx_titles_series ON titles(series);
@@ -522,4 +548,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_title_id ON notes(title_id);
 CREATE INDEX IF NOT EXISTS idx_links_to_title ON links(to_title_id);
 CREATE INDEX IF NOT EXISTS idx_links_from_note ON links(from_note_id);
 CREATE INDEX IF NOT EXISTS idx_reading_sessions_title_id ON reading_sessions(title_id);
+CREATE INDEX IF NOT EXISTS idx_collection_books_collection ON collection_books(collection_id);
+CREATE INDEX IF NOT EXISTS idx_collection_books_title ON collection_books(title_id);
+CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_order);
 """

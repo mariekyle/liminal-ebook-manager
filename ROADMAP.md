@@ -6,12 +6,13 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.12.0)
+## Current State (v0.14.0)
 
 **What Liminal can do today:**
 - Scan books from NAS storage (single folder structure)
 - Upload new books directly from mobile or desktop
 - Extract metadata from EPUB/PDF files (author, title, summary, tags)
+- **Enhanced metadata on upload** — Fandom, ships, characters extracted automatically
 - All ebook formats work on mobile (.epub, .pdf, .mobi, .azw3, .azw, .html)
 - Smart FanFiction detection from filename patterns (AO3, FFN, tropes)
 - Override false duplicate matches with "Upload as New" option
@@ -23,6 +24,9 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Poetic category phrases — "780 what-ifs. Explore freely."
 - Filter state persistence — URL params preserve filters across navigation
 - Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
+- **Enhanced filtering for FanFiction** — Fandom, ship, content rating, completion status ✨
+- **Sort direction toggle** — ↑/↓ button to reverse sort order ✨
+- **Active filter pills** — Color-coded removable pills for all filters ✨
 - Series tab — Browse series with square gradient covers
 - Authors tab — Browse all authors alphabetically with search
 - Series detail pages — View all books in a series
@@ -41,7 +45,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - Author autocomplete — Suggests existing authors when editing
 - **Series autocomplete** — Suggests existing series when editing
 - Track read status (Unread, In Progress, Finished, DNF)
-- Rate books 1-5 stars with custom labels
+- **Read-only rating display** — Shows average from reading sessions ✨
 - **Multiple reading sessions** — Track re-reads with separate dates/ratings
 - **Reading History display** — "Read #1", "Read #2" with dates and ratings
 - **Session editor modal** — Add/edit/delete reading sessions
@@ -83,12 +87,18 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - **Numeric-first title sort** — "4-Hour Chef" before "10 Things"
 - **Activity bars** — Visual indicator on in-progress book covers
 - **Reading stats** — Words read, reading time, titles finished with category breakdown
-- **Enhanced metadata extraction** — Fandom, ships, characters, ratings from AO3 EPUBs ✨
-- **Rescan metadata** — Re-extract enhanced data from existing library ✨
-- **Contextual tag display** — "Tropes" for FanFiction, "Genre" for published books ✨
-- **Source URL display** — Clickable links to original Wattpad/AO3 sources ✨
-- **Publisher/ISBN display** — For published books ✨
-- **Completion status badges** — WIP/Complete/Abandoned indicators ✨
+- **Enhanced metadata extraction** — Fandom, ships, characters, ratings from AO3 EPUBs
+- **Per-book rescan** — Re-extract metadata from individual books ✨
+- **Edit About modal** — Full editing for all enhanced metadata fields ✨
+- **Searchable autocomplete** — Fandom, ships, characters, tags with suggestions ✨
+- **Category-aware fields** — FanFiction-specific fields hidden for other categories ✨
+- **Pairing Type display** — F/M, M/M, F/F shown on own row ✨
+- **About section for all books** — Manual entries can have metadata too ✨
+- **Rescan metadata** — Re-extract enhanced data from existing library
+- **Tags display** — Contextual labeling (Tags for FanFiction, Genre for published)
+- **Source URL display** — Clickable links to original Wattpad/AO3 sources
+- **Publisher/ISBN display** — For published books
+- **Completion status badges** — WIP/Complete/Abandoned indicators
 
 ---
 
@@ -125,7 +135,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 ### BookDetail Display ✅
 - ✅ **MetadataRow component** — Responsive label/value layout
 - ✅ **TagChip component** — Color variants for different data types
-- ✅ **FanFiction display** — Fandom, Rating, Ships, Characters, Warnings, Tropes
+- ✅ **FanFiction display** — Fandom, Rating, Ships, Characters, Warnings, Tags
 - ✅ **Fiction/Non-Fiction display** — Publisher, ISBN, Genre
 - ✅ **Source URL links** — Clickable, truncated display
 - ✅ **Completion status badges** — Color-coded indicators
@@ -137,43 +147,69 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Phase 7.1: Enhanced Metadata Improvements ← NEXT
+## Phase 7.1: Enhanced Metadata Improvements ✅ COMPLETE
 
-**Goal:** Complete the enhanced metadata system with editing and upload integration.
+**Completed: January 1, 2026**
 
-### Upload Flow Integration
-- [ ] **Enhanced extraction on upload** — New uploads get fandom/ships/etc. automatically
-- [ ] Update `upload_service.py` to use enhanced extraction
-- [ ] Pass all new fields when creating title records
+### Part A: Upload Flow Integration ✅
+- ✅ **Enhanced extraction on upload** — New uploads get fandom/ships/etc. automatically
+- ✅ **Category selection preserved** — User's category choice saved correctly
+- ✅ **No sync dependency** — Metadata extracted during upload, not background sync
+- ✅ **All enhanced fields** — fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, source_url, isbn, publisher, chapter_count, completion_status
 
-### Metadata Editing
-- [ ] **Edit fandom** — Inline edit on BookDetail
-- [ ] **Edit ships** — Add/remove relationship chips
-- [ ] **Edit characters** — Add/remove character chips
-- [ ] **Edit content rating** — Dropdown selector
-- [ ] **Edit warnings** — Multi-select
-- [ ] **Edit tags/tropes** — Add/remove tag chips
-- [ ] **Edit source URL** — Text input
-- [ ] **Edit completion status** — Dropdown (Complete/WIP/Abandoned/Hiatus)
+### Part B: Per-Book Rescan ✅
+- ✅ **"Rescan Metadata" button** — On BookDetail page
+- ✅ **Multi-format support** — EPUB and PDF (EPUB preferred)
+- ✅ **COALESCE preservation** — PDF rescan doesn't wipe EPUB-extracted data
+- ✅ **Series protection** — Series only updated if extraction finds data
+- ✅ **Loading states** — Visual feedback during rescan
 
-### Per-Book Rescan
-- [ ] **"Rescan this book" button** — Force re-extract from EPUB
-- [ ] Overwrites existing data (unlike bulk rescan)
-- [ ] Useful when EPUB is updated/fixed
+### Part C: Metadata Editing Modal ✅
+- ✅ **"Edit About" modal** — Full editing interface
+- ✅ **Summary field** — Editable, clears properly when emptied
+- ✅ **Searchable fandom** — Autocomplete from existing library
+- ✅ **Searchable ships** — Autocomplete with chip editor
+- ✅ **Searchable characters** — Autocomplete with chip editor
+- ✅ **Searchable tags** — Autocomplete with chip editor
+- ✅ **Content rating dropdown** — General/Teen/Mature/Explicit/Not Rated
+- ✅ **Pairing type multi-select** — F/F, F/M, Gen, M/M, Multi, Other
+- ✅ **Archive warnings multi-select** — All AO3 warning options
+- ✅ **Completion status dropdown** — Complete/WIP/Abandoned/Hiatus
+- ✅ **Source URL input** — Text field for original source
+- ✅ **Category-aware visibility** — FanFiction fields hidden for other categories
 
-### Filter by Enhanced Fields
-- [ ] **Filter by fandom** — Dropdown or searchable
-- [ ] **Filter by content rating** — Checkboxes
-- [ ] **Filter by completion status** — Checkboxes
-- [ ] **Filter by ships** — Searchable
+### UI Improvements ✅
+- ✅ **Pairing Type on own row** — Moved from Rating row
+- ✅ **Rating display read-only** — Shows average from sessions
+- ✅ **Icon-only edit buttons** — Cleaner UI, matches other sections
+- ✅ **About section for all books** — Not just ebooks
+- ✅ **Renamed "Tropes" to "Tags"** — Consistent labeling
+- ✅ **Removed divider bars** — Cleaner modal appearance
+- ✅ **Author input above chips** — Consistent with chip editor pattern
+
+### Backend: New Endpoints ✅
+- ✅ **PATCH /books/{id}/enhanced-metadata** — Update enhanced fields
+- ✅ **POST /books/{id}/rescan-metadata** — Per-book rescan
+- ✅ **GET /autocomplete/fandoms** — Fandom suggestions
+- ✅ **GET /autocomplete/ships** — Ship suggestions
+- ✅ **GET /autocomplete/characters** — Character suggestions
+- ✅ **GET /autocomplete/tags** — Tag suggestions
 
 ---
 
-## Phase 7.2: Discovery & Collections
+## Phase 7.2: Discovery & Collections ← CURRENT
 
 **Goal:** Rediscover your library. Find your next read with joy.
 
-### Collections
+### Enhanced Filtering ✅ COMPLETE (v0.14.0)
+- ✅ **Filter by fandom** — Searchable modal
+- ✅ **Filter by content rating** — Multi-select checkboxes
+- ✅ **Filter by completion status** — Multi-select checkboxes
+- ✅ **Filter by ships** — Searchable modal
+- ✅ **Sort direction toggle** — ↑/↓ button with URL persistence
+- ✅ **Active filter pills** — Color-coded, removable
+
+### Collections ← NEXT
 - [ ] Manual collections (curated lists)
 - [ ] Smart collections (auto-populate based on rules)
 - [ ] Collection cover (mosaic or custom)
@@ -211,9 +247,8 @@ Liminal is a personal reading companion that eliminates the friction of managing
 ### Smart Filtering
 - [ ] Multi-filter: combine status + category + tags + rating + read time
 - [ ] Complex queries: "Unread 5-star fiction under 3 hours"
-- [ ] Sort direction toggle (asc/desc)
+- [x] ~~Sort direction toggle (asc/desc)~~ ✅
 - [x] ~~Clear search button (X icon)~~ ✅
-
 
 ---
 
@@ -226,6 +261,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 - [x] ~~**Edit/add tags**~~ ✅ (Covered in Phase 7.1)
 - [ ] **"In Library" / "In Wishlist" banner** — Show status banner on book detail screen
 - [ ] **Move "Referenced by" to Details tab (mobile)** — Backlinks currently on Notes tab, should be on Details
+- [ ] **Display edition formats** — Show EPUB, PDF, Physical, Audiobook indicators
 
 ### Cover Improvements
 - [x] ~~Match Obsidian plugin gradient style~~ ✅
@@ -303,7 +339,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ### High Priority
 - [ ] **PDF duplicates not detected** — Upload screen doesn't detect existing PDFs
-- [ ] **Upload flow missing enhanced extraction** — New uploads don't get fandom/ships/etc. (workaround: run Rescan after upload)
+- [x] ~~**Upload flow missing enhanced extraction**~~ ✅ (Fixed in Phase 7.1)
 
 ### Medium Priority
 - [ ] **Word count extraction fails for some EPUBs** — "MONEY Master the Game" by Tony Robbins shows 116 words instead of ~200,000+. The metadata extraction fix (Phase 6.3) resolved most books but not all. Needs investigation:
@@ -322,6 +358,10 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ### Low Priority
 - [ ] Some non-book files getting scanned
+
+### Deferred
+- [ ] **Merge characters into tags** — Character data overlaps with tags; consider consolidating during import
+- [ ] **Independent wishlist filters** — Separate filter state per tab (Browse vs Wishlist)
 
 ---
 
@@ -372,12 +412,13 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
 | v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads |
 | v0.11.0 | Dec 30, 2025 | **Phase 6** — Library Home Screen, search redesign, sort options |
-| v0.12.0 | Dec 31, 2025 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing ✨ |
-| v0.13.0 | TBD | Phase 7.1 — Metadata editing, upload integration |
-| v0.14.0 | TBD | Phase 7.2 — Discovery & Collections |
-| v0.15.0 | TBD | Phase 8 — Integration & Polish |
+| v0.12.0 | Dec 31, 2025 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing |
+| v0.13.0 | Jan 1, 2026 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
+| v0.14.0 | Jan 1, 2026 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) ✨ |
+| v0.15.0 | TBD | Phase 7.2b — Collections |
+| v0.16.0 | TBD | Phase 8 — Integration & Polish |
 | v1.0.0 | TBD | Phase 9 — Full Obsidian replacement complete |
 
 ---
 
-*Last updated: December 31, 2025 (v0.12.0 — Phase 7.0 complete)*
+*Last updated: January 1, 2026 (v0.14.0 — Phase 7.2a complete)*
