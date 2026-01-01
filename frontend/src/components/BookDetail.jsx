@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata, updateEnhancedMetadata } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
+import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
@@ -148,7 +149,12 @@ function BookDetail() {
   
   // Enhanced metadata modal state
   const [showEnhancedModal, setShowEnhancedModal] = useState(false)
-  
+
+  // Collections state
+  const [bookCollections, setBookCollections] = useState([])
+  const [collectionsLoading, setCollectionsLoading] = useState(false)
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false)
+
   // Series data (for books in a series)
   const [seriesBooks, setSeriesBooks] = useState([])
   const [seriesLoading, setSeriesLoading] = useState(false)
@@ -212,6 +218,26 @@ function BookDetail() {
       })
       .catch(err => console.error('Failed to load settings:', err))
   }, [])
+
+  // Load collections this book belongs to
+  useEffect(() => {
+    if (book?.id) {
+      loadBookCollections()
+    }
+  }, [book?.id])
+
+  const loadBookCollections = async () => {
+    if (!book?.id) return
+    try {
+      setCollectionsLoading(true)
+      const collections = await getCollectionsForBook(book.id)
+      setBookCollections(collections)
+    } catch (err) {
+      console.error('Failed to load collections:', err)
+    } finally {
+      setCollectionsLoading(false)
+    }
+  }
 
   // Fetch sessions for the book
   const fetchSessions = async () => {
@@ -1660,6 +1686,51 @@ function BookDetail() {
         </div>
       )}
 
+      {/* Collections Section - show for owned books */}
+      {!isWishlist && (
+        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-400">Collections</h2>
+            <button
+              onClick={() => setShowCollectionPicker(true)}
+              className="text-gray-400 hover:text-white p-1 flex items-center gap-1 text-sm"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add
+            </button>
+          </div>
+          
+          {collectionsLoading ? (
+            <div className="text-gray-500 text-sm">Loading...</div>
+          ) : bookCollections.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {bookCollections.map(collection => (
+                <a
+                  key={collection.id}
+                  href={`/collections/${collection.id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-full text-sm text-gray-200 transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                  {collection.name}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Not in any collections</p>
+          )}
+        </div>
+      )}
+
       {/* Notes Section */}
       {/* On mobile: only show in Notes tab (or always for wishlist). On desktop: always show */}
       <div className={`bg-library-card rounded-lg p-4 mb-6 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
@@ -2161,6 +2232,16 @@ function BookDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Collection Picker Modal */}
+      {showCollectionPicker && (
+        <CollectionPicker
+          bookId={book.id}
+          currentCollectionIds={bookCollections.map(c => c.id)}
+          onClose={() => setShowCollectionPicker(false)}
+          onUpdate={loadBookCollections}
+        />
       )}
 
       {/* Enhanced Metadata Modal */}
