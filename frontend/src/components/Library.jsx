@@ -417,27 +417,39 @@ function Library() {
               }
             </p>
             
-            {/* Sort dropdown */}
+            {/* Sort dropdown + direction toggle */}
             {activeView === 'library' && (
-              <div className="relative flex items-center flex-shrink-0">
-                <select
-                  value={sort}
-                  onChange={(e) => {
-                    const newSort = e.target.value
-                    // Set logical default direction based on sort field
-                    const newDir = (newSort === 'title' || newSort === 'author') ? 'asc' : 'desc'
-                    setSort(newSort)
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="relative flex items-center">
+                  <select
+                    value={sort}
+                    onChange={(e) => {
+                      const newSort = e.target.value
+                      // Set logical default direction based on sort field
+                      const newDir = (newSort === 'title' || newSort === 'author') ? 'asc' : 'desc'
+                      setSort(newSort)
+                      setSortDir(newDir)
+                      updateUrlParams({ sort: newSort, sortDir: newDir })
+                    }}
+                    className="appearance-none bg-transparent text-gray-500 text-xs pr-4 cursor-pointer hover:text-white focus:outline-none"
+                  >
+                    <option value="added">Recently Added</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="author">Author A-Z</option>
+                    <option value="published">Recently Published</option>
+                  </select>
+                </div>
+                <button
+                  onClick={() => {
+                    const newDir = sortDir === 'asc' ? 'desc' : 'asc'
                     setSortDir(newDir)
-                    updateUrlParams({ sort: newSort, sortDir: newDir })
+                    updateUrlParams({ sortDir: newDir })
                   }}
-                  className="appearance-none bg-transparent text-gray-500 text-xs pr-5 cursor-pointer hover:text-white focus:outline-none"
+                  className="text-gray-500 hover:text-white text-xs p-1 transition-colors"
+                  title={sortDir === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
                 >
-                  <option value="added">Recently Added</option>
-                  <option value="title">Title A-Z</option>
-                  <option value="author">Author A-Z</option>
-                  <option value="published">Recently Published</option>
-                </select>
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">↑</span>
+                  {sortDir === 'asc' ? '↑' : '↓'}
+                </button>
               </div>
             )}
           </div>
@@ -498,6 +510,63 @@ function Library() {
                   >×</button>
                 </span>
               )}
+              {/* Enhanced metadata filter pills */}
+              {activeView === 'library' && fandom && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
+                  {fandom}
+                  <button 
+                    onClick={() => {
+                      setFandom('')
+                      updateUrlParams({ fandom: '' })
+                    }} 
+                    className="hover:text-white ml-0.5"
+                  >×</button>
+                </span>
+              )}
+              {activeView === 'library' && ship && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs">
+                  {ship}
+                  <button 
+                    onClick={() => {
+                      setShip('')
+                      updateUrlParams({ ship: '' })
+                    }} 
+                    className="hover:text-white ml-0.5"
+                  >×</button>
+                </span>
+              )}
+              {activeView === 'library' && contentRating.map(rating => (
+                <span 
+                  key={rating}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs"
+                >
+                  {rating}
+                  <button 
+                    onClick={() => {
+                      const newRatings = contentRating.filter(r => r !== rating)
+                      setContentRating(newRatings)
+                      updateUrlParams({ contentRating: newRatings })
+                    }} 
+                    className="hover:text-white ml-0.5"
+                  >×</button>
+                </span>
+              ))}
+              {activeView === 'library' && completionStatus.map(status => (
+                <span 
+                  key={status}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs"
+                >
+                  {status}
+                  <button 
+                    onClick={() => {
+                      const newStatuses = completionStatus.filter(s => s !== status)
+                      setCompletionStatus(newStatuses)
+                      updateUrlParams({ completionStatus: newStatuses })
+                    }} 
+                    className="hover:text-white ml-0.5"
+                  >×</button>
+                </span>
+              ))}
               {search && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
                   "{search}"
