@@ -1,12 +1,47 @@
 /**
- * MosaicCover - 2x2 grid of mini gradient covers for collections
+ * MosaicCover - Collection cover with multiple display modes
  * 
- * Shows up to 4 book gradients in a mosaic pattern.
- * Falls back to placeholder gradient if fewer than 2 books.
+ * Supports:
+ * - mosaic: 2x2 grid of book gradients (default)
+ * - gradient: Single gradient background
+ * - custom: User-uploaded image
  */
 
-export default function MosaicCover({ books = [], className = '' }) {
-  // If fewer than 2 books, show a placeholder gradient
+export default function MosaicCover({ 
+  books = [], 
+  coverType = 'mosaic',
+  coverPath = null,
+  className = '' 
+}) {
+  // Custom cover - show uploaded image
+  if (coverType === 'custom' && coverPath) {
+    return (
+      <div className={`aspect-[2/3] rounded-lg overflow-hidden ${className}`}>
+        <img 
+          src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+          alt="Collection cover"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback to gradient on error
+            e.target.style.display = 'none'
+            e.target.parentElement.classList.add('bg-gradient-to-br', 'from-purple-600', 'to-pink-500')
+          }}
+        />
+      </div>
+    )
+  }
+  
+  // Gradient cover - single color gradient
+  if (coverType === 'gradient') {
+    return (
+      <div className={`aspect-[2/3] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
+        <span className="text-white/60 text-4xl">📚</span>
+      </div>
+    )
+  }
+  
+  // Mosaic cover (default) - 2x2 grid of book covers
+  // If fewer than 2 books, show placeholder gradient
   if (!books || books.length < 2) {
     return (
       <div className={`aspect-[2/3] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
@@ -43,4 +78,3 @@ export default function MosaicCover({ books = [], className = '' }) {
     </div>
   )
 }
-

@@ -19,7 +19,11 @@ export default function CollectionCard({ collection }) {
     >
       {/* Cover */}
       <div className="relative rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
-        <MosaicCover books={collection.preview_books || []} />
+        <MosaicCover 
+          books={collection.preview_books || []}
+          coverType={collection.cover_type || 'mosaic'}
+          coverPath={collection.custom_cover_path}
+        />
       </div>
       
       {/* Info */}

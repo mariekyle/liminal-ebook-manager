@@ -782,3 +782,47 @@ export async function getCollectionsForBook(titleId) {
 export async function getAllCollectionsSimple() {
   return apiFetch('/collections/all/simple')
 }
+
+/**
+ * Upload a custom cover for a collection
+ * @param {number} collectionId - Collection ID
+ * @param {File} file - Image file to upload
+ */
+export async function uploadCollectionCover(collectionId, file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const response = await fetch(`${API_BASE}/collections/${collectionId}/cover`, {
+    method: 'POST',
+    body: formData
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || 'Failed to upload cover')
+  }
+  
+  return response.json()
+}
+
+/**
+ * Update collection cover type
+ * @param {number} collectionId - Collection ID
+ * @param {string} coverType - 'mosaic', 'gradient', or 'custom'
+ */
+export async function updateCollectionCoverType(collectionId, coverType) {
+  return apiFetch(`/collections/${collectionId}/cover-type`, {
+    method: 'PATCH',
+    body: JSON.stringify({ cover_type: coverType })
+  })
+}
+
+/**
+ * Delete custom cover (reverts to mosaic)
+ * @param {number} collectionId - Collection ID
+ */
+export async function deleteCollectionCover(collectionId) {
+  return apiFetch(`/collections/${collectionId}/cover`, {
+    method: 'DELETE'
+  })
+}

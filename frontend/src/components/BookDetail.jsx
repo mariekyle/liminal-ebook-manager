@@ -221,23 +221,35 @@ function BookDetail() {
 
   // Load collections this book belongs to
   useEffect(() => {
-    if (book?.id) {
-      loadBookCollections()
+    if (!book?.id) return
+    
+    let cancelled = false
+    setBookCollections([]) // Reset on navigation
+    setCollectionsLoading(true)
+    
+    const loadCollections = async () => {
+      try {
+        const collections = await getCollectionsForBook(book.id)
+        if (!cancelled) {
+          setBookCollections(collections)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load collections:', err)
+        }
+      } finally {
+        if (!cancelled) {
+          setCollectionsLoading(false)
+        }
+      }
+    }
+    
+    loadCollections()
+    
+    return () => {
+      cancelled = true
     }
   }, [book?.id])
-
-  const loadBookCollections = async () => {
-    if (!book?.id) return
-    try {
-      setCollectionsLoading(true)
-      const collections = await getCollectionsForBook(book.id)
-      setBookCollections(collections)
-    } catch (err) {
-      console.error('Failed to load collections:', err)
-    } finally {
-      setCollectionsLoading(false)
-    }
-  }
 
   // Fetch sessions for the book
   const fetchSessions = async () => {
@@ -2240,7 +2252,14 @@ function BookDetail() {
           bookId={book.id}
           currentCollectionIds={bookCollections.map(c => c.id)}
           onClose={() => setShowCollectionPicker(false)}
-          onUpdate={loadBookCollections}
+          onUpdate={async () => {
+            try {
+              const collections = await getCollectionsForBook(book.id)
+              setBookCollections(collections)
+            } catch (err) {
+              console.error('Failed to refresh collections:', err)
+            }
+          }}
         />
       )}
 

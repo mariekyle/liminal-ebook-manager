@@ -9,10 +9,13 @@ Endpoints:
 """
 
 import json
+import os
 import re
+import shutil
+import uuid
 from typing import Optional, List
 from difflib import SequenceMatcher
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from database import get_db
@@ -435,4 +438,120 @@ async def list_all_collections_simple(db=Depends(get_db)):
     collections = await cursor.fetchall()
     
     return [dict(c) for c in collections]
+
+
+# =============================================================================
+# COVER UPLOAD
+# =============================================================================
+
+COVERS_DIR = os.environ.get("COVERS_DIR", "/data/covers")
+
+@router.post("/collections/{id}/cover")
+async def upload_collection_cover(
+    id: int,
+    file: UploadFile = File(...),
+    db=Depends(get_db)
+):
+    """Upload a custom cover image for a collection."""
+    
+    # Verify collection exists
+    cursor = await db.execute("SELECT id, custom_cover_path FROM collections WHERE id = ?", [id])
+    collection = await cursor.fetchone()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Use JPEG, PNG, WebP, or GIF.")
+    
+    # Create covers directory if needed
+    os.makedirs(COVERS_DIR, exist_ok=True)
+    
+    # Delete old cover if exists
+    old_path = collection["custom_cover_path"]
+    if old_path and os.path.exists(old_path):
+        try:
+            os.remove(old_path)
+        except:
+            pass
+    
+    # Generate unique filename
+    ext = os.path.splitext(file.filename)[1] or ".jpg"
+    filename = f"collection_{id}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(COVERS_DIR, filename)
+    
+    # Save file
+    try:
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    # Update collection
+    await db.execute("""
+        UPDATE collections 
+        SET cover_type = 'custom', custom_cover_path = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, [filepath, id])
+    await db.commit()
+    
+    return {"success": True, "custom_cover_path": filepath}
+
+
+@router.patch("/collections/{id}/cover-type")
+async def update_collection_cover_type(
+    id: int,
+    data: dict,
+    db=Depends(get_db)
+):
+    """Update collection cover type (mosaic, gradient, or custom)."""
+    
+    cover_type = data.get("cover_type")
+    if cover_type not in ["mosaic", "gradient", "custom"]:
+        raise HTTPException(status_code=400, detail="Invalid cover type")
+    
+    # Verify collection exists
+    cursor = await db.execute("SELECT id FROM collections WHERE id = ?", [id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    await db.execute("""
+        UPDATE collections 
+        SET cover_type = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, [cover_type, id])
+    await db.commit()
+    
+    return {"success": True, "cover_type": cover_type}
+
+
+@router.delete("/collections/{id}/cover")
+async def delete_collection_cover(
+    id: int,
+    db=Depends(get_db)
+):
+    """Delete custom cover and revert to mosaic."""
+    
+    cursor = await db.execute("SELECT custom_cover_path FROM collections WHERE id = ?", [id])
+    collection = await cursor.fetchone()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    # Delete file if exists
+    if collection["custom_cover_path"] and os.path.exists(collection["custom_cover_path"]):
+        try:
+            os.remove(collection["custom_cover_path"])
+        except:
+            pass
+    
+    # Reset to mosaic
+    await db.execute("""
+        UPDATE collections 
+        SET cover_type = 'mosaic', custom_cover_path = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, [id])
+    await db.commit()
+    
+    return {"success": True}
 

@@ -62,6 +62,11 @@ app.include_router(sessions_router)
 app.include_router(home_router)
 app.include_router(collections_router, prefix="/api")
 
+# Serve cover images - create directory if needed
+COVERS_DIR = os.environ.get("COVERS_DIR", "/data/covers")
+os.makedirs(COVERS_DIR, exist_ok=True)
+app.mount("/api/covers", StaticFiles(directory=COVERS_DIR), name="covers")
+
 
 # Health check endpoint
 @app.get("/api/health")
