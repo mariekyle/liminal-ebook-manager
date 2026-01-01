@@ -301,6 +301,22 @@ export async function autocompleteTags(query) {
 }
 
 /**
+ * List all fandoms with counts for filter modal
+ */
+export async function listFandoms() {
+  const response = await apiFetch('/autocomplete/fandoms?q=&limit=500')
+  return response.items || []
+}
+
+/**
+ * List all ships with counts for filter modal
+ */
+export async function listShips() {
+  const response = await apiFetch('/autocomplete/ships?q=&limit=500')
+  return response.items || []
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {

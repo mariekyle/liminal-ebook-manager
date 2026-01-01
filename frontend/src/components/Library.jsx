@@ -10,6 +10,8 @@ import SearchBar from './SearchBar'
 import FilterDrawer from './FilterDrawer'
 import HomeTab from './HomeTab'
 import SearchModal from './SearchModal'
+import FandomModal from './FandomModal'
+import ShipModal from './ShipModal'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -668,6 +670,28 @@ function Library() {
           currentSearch={search}
         />
       )}
+
+      {/* Fandom Modal */}
+      <FandomModal
+        isOpen={fandomModalOpen}
+        onClose={() => setFandomModalOpen(false)}
+        selectedFandom={fandom}
+        onApply={(f) => {
+          setFandom(f)
+          updateUrlParams({ fandom: f })
+        }}
+      />
+
+      {/* Ship Modal */}
+      <ShipModal
+        isOpen={shipModalOpen}
+        onClose={() => setShipModalOpen(false)}
+        selectedShip={ship}
+        onApply={(s) => {
+          setShip(s)
+          updateUrlParams({ ship: s })
+        }}
+      />
 
       {/* Tags Modal - keep existing */}
       <TagsModal
