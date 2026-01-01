@@ -99,6 +99,20 @@ class TitleDetail(BaseModel):
     chapter_count: Optional[int] = None
 
 
+class EnhancedMetadataUpdate(BaseModel):
+    """Request model for updating enhanced metadata fields."""
+    summary: Optional[str] = None
+    fandom: Optional[str] = None
+    relationships: Optional[List[str]] = None  # List of ship strings
+    characters: Optional[List[str]] = None
+    content_rating: Optional[str] = None
+    ao3_warnings: Optional[List[str]] = None
+    ao3_category: Optional[List[str]] = None  # Pairing types
+    tags: Optional[List[str]] = None
+    source_url: Optional[str] = None
+    completion_status: Optional[str] = None
+
+
 class SeriesSummary(BaseModel):
     """Summary of a series for the series library view."""
     name: str
@@ -1739,3 +1753,159 @@ async def rescan_book_metadata(book_id: int, db = Depends(get_db)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rescan failed: {str(e)}")
+
+
+@router.patch("/books/{book_id}/enhanced-metadata")
+async def update_enhanced_metadata(
+    book_id: int, 
+    updates: EnhancedMetadataUpdate,
+    db = Depends(get_db)
+):
+    """
+    Update enhanced metadata fields for a book.
+    Only updates fields that are explicitly provided (not None).
+    """
+    # Verify book exists
+    cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Build dynamic update query for provided fields only
+    update_fields = []
+    values = []
+    
+    if updates.summary is not None:
+        update_fields.append("summary = ?")
+        values.append(updates.summary if updates.summary else None)
+    
+    if updates.fandom is not None:
+        update_fields.append("fandom = ?")
+        values.append(updates.fandom if updates.fandom else None)
+    
+    if updates.relationships is not None:
+        update_fields.append("relationships = ?")
+        values.append(json.dumps(updates.relationships) if updates.relationships else None)
+    
+    if updates.characters is not None:
+        update_fields.append("characters = ?")
+        values.append(json.dumps(updates.characters) if updates.characters else None)
+    
+    if updates.content_rating is not None:
+        update_fields.append("content_rating = ?")
+        values.append(updates.content_rating if updates.content_rating else None)
+    
+    if updates.ao3_warnings is not None:
+        update_fields.append("ao3_warnings = ?")
+        values.append(json.dumps(updates.ao3_warnings) if updates.ao3_warnings else None)
+    
+    if updates.ao3_category is not None:
+        update_fields.append("ao3_category = ?")
+        values.append(json.dumps(updates.ao3_category) if updates.ao3_category else None)
+    
+    if updates.tags is not None:
+        update_fields.append("tags = ?")
+        values.append(json.dumps(updates.tags) if updates.tags else None)
+    
+    if updates.source_url is not None:
+        update_fields.append("source_url = ?")
+        values.append(updates.source_url if updates.source_url else None)
+    
+    if updates.completion_status is not None:
+        update_fields.append("completion_status = ?")
+        values.append(updates.completion_status if updates.completion_status else None)
+    
+    if not update_fields:
+        return {"success": True, "message": "No fields to update"}
+    
+    update_fields.append("updated_at = CURRENT_TIMESTAMP")
+    values.append(book_id)
+    
+    query = f"UPDATE titles SET {', '.join(update_fields)} WHERE id = ?"
+    await db.execute(query, values)
+    await db.commit()
+    
+    return {"success": True, "message": "Enhanced metadata updated"}
+
+
+@router.get("/autocomplete/fandoms")
+async def autocomplete_fandoms(q: str = "", limit: int = 10, db = Depends(get_db)):
+    """Get unique fandoms for autocomplete."""
+    cursor = await db.execute(
+        """SELECT DISTINCT fandom FROM titles 
+           WHERE fandom IS NOT NULL AND fandom != '' 
+           AND fandom LIKE ?
+           ORDER BY fandom
+           LIMIT ?""",
+        [f"%{q}%", limit]
+    )
+    rows = await cursor.fetchall()
+    return {"items": [row[0] for row in rows]}
+
+
+@router.get("/autocomplete/characters")
+async def autocomplete_characters(q: str = "", limit: int = 15, db = Depends(get_db)):
+    """Get unique characters for autocomplete."""
+    # Characters are stored as JSON arrays, need to extract unique values
+    cursor = await db.execute(
+        """SELECT DISTINCT characters FROM titles 
+           WHERE characters IS NOT NULL AND characters != '[]'"""
+    )
+    rows = await cursor.fetchall()
+    
+    # Extract and deduplicate characters
+    all_chars = set()
+    for row in rows:
+        try:
+            chars = json.loads(row[0])
+            all_chars.update(chars)
+        except:
+            pass
+    
+    # Filter by query
+    q_lower = q.lower()
+    filtered = [c for c in sorted(all_chars) if q_lower in c.lower()]
+    return {"items": filtered[:limit]}
+
+
+@router.get("/autocomplete/ships")
+async def autocomplete_ships(q: str = "", limit: int = 15, db = Depends(get_db)):
+    """Get unique ships/relationships for autocomplete."""
+    cursor = await db.execute(
+        """SELECT DISTINCT relationships FROM titles 
+           WHERE relationships IS NOT NULL AND relationships != '[]'"""
+    )
+    rows = await cursor.fetchall()
+    
+    all_ships = set()
+    for row in rows:
+        try:
+            ships = json.loads(row[0])
+            all_ships.update(ships)
+        except:
+            pass
+    
+    q_lower = q.lower()
+    filtered = [s for s in sorted(all_ships) if q_lower in s.lower()]
+    return {"items": filtered[:limit]}
+
+
+@router.get("/autocomplete/tags")
+async def autocomplete_tags(q: str = "", limit: int = 20, db = Depends(get_db)):
+    """Get unique tags for autocomplete."""
+    cursor = await db.execute(
+        """SELECT DISTINCT tags FROM titles 
+           WHERE tags IS NOT NULL AND tags != '[]'"""
+    )
+    rows = await cursor.fetchall()
+    
+    all_tags = set()
+    for row in rows:
+        try:
+            tags = json.loads(row[0])
+            all_tags.update(tags)
+        except:
+            pass
+    
+    q_lower = q.lower()
+    filtered = [t for t in sorted(all_tags) if q_lower in t.lower()]
+    return {"items": filtered[:limit]}

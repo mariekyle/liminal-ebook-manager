@@ -145,55 +145,7 @@ function AuthorChips({ authors, onChange }) {
 
   return (
     <div className="space-y-3">
-      {/* Author chips */}
-      <div className="flex flex-wrap gap-2">
-        {authors.map((author, index) => (
-          <div
-            key={`${author}-${index}`}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-lg
-              bg-library-card border cursor-grab active:cursor-grabbing
-              transition-all duration-150
-              ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
-              ${dragOverIndex === index ? 'border-library-accent ring-1 ring-library-accent' : 'border-gray-600'}
-            `}
-          >
-            {/* Drag handle */}
-            <svg 
-              className="w-4 h-4 text-gray-500 flex-shrink-0" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-            </svg>
-            
-            <span className="text-white text-sm">{author}</span>
-            
-            {/* Remove button - only show if more than 1 author */}
-            {authors.length > 1 && (
-              <button
-                type="button"
-                onClick={() => handleRemoveAuthor(index)}
-                className="text-gray-400 hover:text-red-400 transition-colors ml-1"
-                aria-label={`Remove ${author}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Add author input with autocomplete */}
+      {/* Add author input with autocomplete - FIRST */}
       <div className="relative">
         <div className="flex gap-2">
           <input
@@ -246,6 +198,54 @@ function AuthorChips({ authors, onChange }) {
       <p className="text-gray-500 text-xs">
         Drag to reorder. First author appears on cover.
       </p>
+
+      {/* Author chips - BELOW input */}
+      <div className="flex flex-wrap gap-2">
+        {authors.map((author, index) => (
+          <div
+            key={`${author}-${index}`}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            className={`
+              flex items-center gap-2 px-3 py-1.5 rounded-lg
+              bg-library-card border cursor-grab active:cursor-grabbing
+              transition-all duration-150
+              ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
+              ${dragOverIndex === index ? 'border-library-accent ring-1 ring-library-accent' : 'border-gray-600'}
+            `}
+          >
+            {/* Drag handle */}
+            <svg 
+              className="w-4 h-4 text-gray-500 flex-shrink-0" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+            </svg>
+            
+            <span className="text-white text-sm">{author}</span>
+            
+            {/* Remove button - only show if more than 1 author */}
+            {authors.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveAuthor(index)}
+                className="text-gray-400 hover:text-red-400 transition-colors ml-1"
+                aria-label={`Remove ${author}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata, updateEnhancedMetadata } from '../api'
+import EnhancedMetadataModal from './EnhancedMetadataModal'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import BookLinkPopup from './BookLinkPopup'
@@ -144,6 +145,9 @@ function BookDetail() {
   // Rescan metadata state
   const [rescanning, setRescanning] = useState(false)
   const [rescanResult, setRescanResult] = useState(null)
+  
+  // Enhanced metadata modal state
+  const [showEnhancedModal, setShowEnhancedModal] = useState(false)
   
   // Series data (for books in a series)
   const [seriesBooks, setSeriesBooks] = useState([])
@@ -795,6 +799,13 @@ function BookDetail() {
     }
   }
 
+  const handleSaveEnhancedMetadata = async (metadata) => {
+    await updateEnhancedMetadata(book.id, metadata)
+    // Refresh book data
+    const updatedBook = await getBook(book.id)
+    setBook(updatedBook)
+  }
+
   const handleTemplateSelect = (templateKey) => {
     if (!templateKey || !NOTE_TEMPLATES[templateKey]) return
     
@@ -1320,69 +1331,18 @@ function BookDetail() {
                 )}
               </div>
               
-              {/* Rating Chip + Popup */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setRatingPopupOpen(!ratingPopupOpen)
-                    setStatusPopupOpen(false)
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
-                >
-                  <span className="text-sm text-gray-300">
-                    {selectedRating 
-                      ? `${'★'.repeat(selectedRating)}${'☆'.repeat(5-selectedRating)}`
-                      : 'No Rating'
-                    }
+              {/* Rating Display - Read Only (shows average from sessions) */}
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-library-bg border border-gray-600 rounded-full">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <span 
+                    key={star} 
+                    className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-yellow-400' : 'text-gray-600'}`}
+                  >
+                    ★
                   </span>
-                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {ratingPopupOpen && (
-                  <>
-                    {/* Backdrop to close popup */}
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setRatingPopupOpen(false)}
-                    />
-                    {/* Popup */}
-                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[180px]">
-                      <button
-                        onClick={() => {
-                          handleRatingChange('')
-                          setRatingPopupOpen(false)
-                        }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                          !selectedRating ? 'text-library-accent' : 'text-gray-300'
-                        }`}
-                      >
-                        No Rating
-                      </button>
-                      {[5, 4, 3, 2, 1].map(num => (
-                        <button
-                          key={num}
-                          onClick={() => {
-                            handleRatingChange(num.toString())
-                            setRatingPopupOpen(false)
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                            selectedRating === num ? 'text-library-accent' : 'text-gray-300'
-                          }`}
-                        >
-                          {'★'.repeat(num)}{'☆'.repeat(5-num)} <span className="text-gray-500 ml-1">{RATING_LABELS[num]}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-                
-                {ratingStatus === 'saved' && (
-                  <span className="text-green-400 text-sm ml-1">✓</span>
-                )}
-                {ratingStatus === 'error' && (
-                  <span className="text-red-400 text-sm ml-1">!</span>
+                ))}
+                {sessionsStats.average_rating > 0 && (
+                  <span className="text-gray-400 text-sm ml-1">({sessionsStats.average_rating})</span>
                 )}
               </div>
               
@@ -1486,24 +1446,38 @@ function BookDetail() {
         )}
       </div>
 
-      {/* About This Book Card (hide for wishlist - no metadata yet) */}
+      {/* About This Book Card - Always show for non-wishlist, allows editing even for physical/audiobooks */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
-      {!isWishlist && (book.summary || (book.tags && book.tags.length > 0) || book.word_count ||
-        book.fandom || book.content_rating || book.relationships?.length > 0 ||
-        book.characters?.length > 0 || book.ao3_category?.length > 0 || book.ao3_warnings?.length > 0 ||
-        book.isbn || book.publisher || book.chapter_count != null) && (
+      {!isWishlist && (
         <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <h2 className="text-sm font-medium text-gray-400 mb-3">About This Book</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-400">About This Book</h2>
+            <button
+              onClick={() => setShowEnhancedModal(true)}
+              className="text-gray-400 hover:text-white p-1"
+              aria-label="Edit about"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </button>
+          </div>
           
-          {/* Summary */}
-          {book.summary && (
-            <p className="text-gray-300 text-sm leading-relaxed mb-4">
-              {decodeHtmlEntities(book.summary)}
-            </p>
-          )}
-          
-          {/* Enhanced Metadata Display (Phase 7.0) */}
-          {book.category === 'FanFiction' ? (
+          {/* Show content if any exists, or show placeholder */}
+          {(book.summary || (book.tags && book.tags.length > 0) || book.word_count ||
+            book.fandom || book.content_rating || book.relationships?.length > 0 ||
+            book.characters?.length > 0 || book.ao3_category?.length > 0 || book.ao3_warnings?.length > 0 ||
+            book.isbn || book.publisher || book.chapter_count != null) ? (
+            <>
+              {/* Summary */}
+              {book.summary && (
+                <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                  {decodeHtmlEntities(book.summary)}
+                </p>
+              )}
+              
+              {/* Enhanced Metadata Display (Phase 7.0) */}
+              {book.category === 'FanFiction' ? (
             // FanFiction: Structured display
             <div className="space-y-2 mb-4">
               {/* Fandom */}
@@ -1593,10 +1567,10 @@ function BookDetail() {
                 {book.chapter_count} chapters
               </MetadataRow>
               
-              {/* Tropes (freeform tags) */}
+              {/* Tags (freeform tags) */}
               {book.tags && book.tags.length > 0 && (
                 <div className="pt-2 border-t border-zinc-800">
-                  <span className="text-zinc-500 text-xs block mb-2">Tropes</span>
+                  <span className="text-zinc-500 text-xs block mb-2">Tags</span>
                   <div className="flex flex-wrap gap-1.5">
                     {book.tags.map((tag, i) => (
                       <TagChip key={i}>{tag}</TagChip>
@@ -1648,6 +1622,10 @@ function BookDetail() {
               )}
             </div>
           )}
+            </>
+          ) : (
+            <p className="text-gray-500 text-sm italic">No details yet. Click the edit button to add information about this book.</p>
+          )}
           
           {/* Rescan Metadata Button - only show for ebook editions */}
           {book.folder_path && (
@@ -1698,13 +1676,12 @@ function BookDetail() {
             
             <button
               onClick={() => setIsEditingNotes(true)}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+              className="text-gray-400 hover:text-white p-1"
               aria-label="Edit notes"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              Edit
             </button>
           </div>
         </div>
@@ -1756,7 +1733,7 @@ function BookDetail() {
             </ReactMarkdown>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm italic">No notes yet. Click Edit to add some.</p>
+          <p className="text-gray-500 text-sm italic">No notes yet. Click the edit button to add some.</p>
         )}
       </div>
 
@@ -1794,7 +1771,7 @@ function BookDetail() {
           </div>
           
           {/* Toolbar */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-700">
+          <div className="flex items-center gap-2 px-4 py-2">
             <select
               onChange={(e) => {
                 handleTemplateSelect(e.target.value)
@@ -2184,6 +2161,15 @@ function BookDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Enhanced Metadata Modal */}
+      {showEnhancedModal && (
+        <EnhancedMetadataModal
+          book={book}
+          onClose={() => setShowEnhancedModal(false)}
+          onSave={handleSaveEnhancedMetadata}
+        />
       )}
     </div>
   )

@@ -266,6 +266,37 @@ export async function rescanBookMetadata(bookId) {
 }
 
 /**
+ * Update enhanced metadata for a book
+ * @param {number} bookId - Book ID
+ * @param {Object} metadata - Enhanced metadata fields to update
+ */
+export async function updateEnhancedMetadata(bookId, metadata) {
+  return apiFetch(`/books/${bookId}/enhanced-metadata`, {
+    method: 'PATCH',
+    body: JSON.stringify(metadata)
+  })
+}
+
+/**
+ * Autocomplete functions for enhanced metadata fields
+ */
+export async function autocompleteFandoms(query) {
+  return apiFetch(`/autocomplete/fandoms?q=${encodeURIComponent(query)}`)
+}
+
+export async function autocompleteCharacters(query) {
+  return apiFetch(`/autocomplete/characters?q=${encodeURIComponent(query)}`)
+}
+
+export async function autocompleteShips(query) {
+  return apiFetch(`/autocomplete/ships?q=${encodeURIComponent(query)}`)
+}
+
+export async function autocompleteTags(query) {
+  return apiFetch(`/autocomplete/tags?q=${encodeURIComponent(query)}`)
+}
+
+/**
  * Get list of valid statuses
  */
 export async function getStatuses() {

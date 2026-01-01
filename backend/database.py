@@ -238,7 +238,7 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             await db.commit()
             print("Migration: Created reading_sessions from existing title data")
             print("Migration: Fixed status for books incorrectly marked as Unread")
-    
+
     # Migration: Add enhanced metadata fields (Phase 7.0)
     enhanced_metadata_columns = [
         ("fandom", "TEXT"),
