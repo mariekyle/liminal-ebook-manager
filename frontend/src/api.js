@@ -690,3 +690,95 @@ export async function getHomeQuickReads() {
 export async function getHomeStats(period = 'month') {
   return apiFetch(`/home/stats?period=${period}`)
 }
+
+// =============================================================================
+// COLLECTIONS API (Phase 7.2b)
+// =============================================================================
+
+/**
+ * List all collections with book counts and preview books
+ */
+export async function listCollections() {
+  return apiFetch('/collections')
+}
+
+/**
+ * Create a new collection
+ * @param {Object} data - Collection data
+ * @param {string} data.name - Collection name
+ * @param {string} [data.description] - Optional description (markdown)
+ */
+export async function createCollection(data) {
+  return apiFetch('/collections', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Get collection details with all books
+ * @param {number} id - Collection ID
+ */
+export async function getCollection(id) {
+  return apiFetch(`/collections/${id}`)
+}
+
+/**
+ * Update a collection
+ * @param {number} id - Collection ID
+ * @param {Object} data - Fields to update
+ */
+export async function updateCollection(id, data) {
+  return apiFetch(`/collections/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
+ * Delete a collection
+ * @param {number} id - Collection ID
+ */
+export async function deleteCollection(id) {
+  return apiFetch(`/collections/${id}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
+ * Add books to a collection
+ * @param {number} collectionId - Collection ID
+ * @param {number[]} titleIds - Array of book IDs to add
+ */
+export async function addBooksToCollection(collectionId, titleIds) {
+  return apiFetch(`/collections/${collectionId}/books`, {
+    method: 'POST',
+    body: JSON.stringify({ title_ids: titleIds })
+  })
+}
+
+/**
+ * Remove a book from a collection
+ * @param {number} collectionId - Collection ID
+ * @param {number} titleId - Book ID to remove
+ */
+export async function removeBookFromCollection(collectionId, titleId) {
+  return apiFetch(`/collections/${collectionId}/books/${titleId}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
+ * Get all collections a book belongs to
+ * @param {number} titleId - Book ID
+ */
+export async function getCollectionsForBook(titleId) {
+  return apiFetch(`/collections/for-book/${titleId}`)
+}
+
+/**
+ * Get simple list of all collections (for picker UI)
+ */
+export async function getAllCollectionsSimple() {
+  return apiFetch('/collections/all/simple')
+}

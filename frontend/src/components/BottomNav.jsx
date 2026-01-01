@@ -30,9 +30,21 @@ const PlusIcon = () => (
   </svg>
 )
 
+const ListIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" />
+    <line x1="3" y1="12" x2="3.01" y2="12" />
+    <line x1="3" y1="18" x2="3.01" y2="18" />
+  </svg>
+)
+
 const navItems = [
   { to: '/', label: 'Library', icon: BookIcon, match: 'library' },
   { to: '/?view=series', label: 'Series', icon: StackIcon, match: 'series' },
+  { to: '/collections', label: 'Collections', icon: ListIcon, match: 'collections' },
   { to: '/authors', label: 'Authors', icon: UserIcon, match: 'authors' },
   { to: '/add', label: 'Add', icon: PlusIcon, match: 'add' },
 ]
@@ -49,6 +61,9 @@ function BottomNav() {
     }
     if (item.match === 'authors') {
       return location.pathname === '/authors' || location.pathname.startsWith('/author/')
+    }
+    if (item.match === 'collections') {
+      return location.pathname === '/collections' || location.pathname.startsWith('/collections/')
     }
     if (item.match === 'add') {
       return location.pathname === '/add' || location.pathname === '/upload'

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Library from './components/Library'
 import BookDetail from './components/BookDetail'
 import SeriesDetail from './components/SeriesDetail'
+import CollectionsTab from './components/CollectionsTab'
 import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
 import ImportPage from './pages/ImportPage'
@@ -68,6 +69,7 @@ function App() {
           <Route path="/series/:name" element={<SeriesDetail />} />
           <Route path="/authors" element={<AuthorsList />} />
           <Route path="/author/:name" element={<AuthorDetail />} />
+          <Route path="/collections" element={<CollectionsTab />} />
           {/* Redirect /tbr to library with wishlist filter */}
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />
