@@ -11,6 +11,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.15.0] - 2026-01-02
+
+### Added
+
+#### Phase 7.2b: Collections System
+Complete collections feature for organizing books into curated lists.
+
+#### Database: Collections Schema
+- **collections table** — id, name, description, cover_type, custom_cover_path, timestamps
+- **collection_books table** — Junction table with position for ordering
+- **cover_type options** — 'gradient' (default) or 'custom'
+
+#### Backend: Collections API
+- **GET /api/collections** — List all collections with book counts
+- **POST /api/collections** — Create new collection
+- **GET /api/collections/{id}** — Get collection with all books
+- **PATCH /api/collections/{id}** — Update collection details
+- **DELETE /api/collections/{id}** — Delete collection
+- **POST /api/collections/{id}/books** — Add books to collection
+- **DELETE /api/collections/{id}/books/{title_id}** — Remove book from collection
+- **GET /api/collections/for-book/{id}** — Get collections containing a book
+- **GET /api/collections/all/simple** — Simple list for picker UI
+
+#### Backend: Collection Covers
+- **POST /api/collections/{id}/cover** — Upload custom cover image
+- **PATCH /api/collections/{id}/cover-type** — Change cover type
+- **DELETE /api/collections/{id}/cover** — Delete custom cover
+- **/api/covers/** — Static file serving for uploaded covers
+
+#### Backend: Smart Paste
+- **POST /api/collections/smart-paste/preview** — Parse markdown, match [[Title]] links
+- **POST /api/collections/{id}/smart-paste/apply** — Add matched books to collection
+- **Fuzzy matching** — 85% similarity threshold for title matching
+- **Confidence levels** — exact, fuzzy, none
+
+#### Frontend: Collections Tab
+- **CollectionsTab component** — Grid of collection cards
+- **CollectionCard component** — Square cover with name and book count
+- **CollectionModal component** — Create/edit collections with cover options
+- **Mobile navigation** — Collections tab in bottom nav
+- **Desktop navigation** — Collections in header nav
+
+#### Frontend: Collection Detail Page
+- **Banner cover** — Full-width cropped header (h-48 mobile, h-56 desktop)
+- **Collection info** — Name, book count, description below banner
+- **Books grid** — All books in collection with standard BookCard
+- **Remove mode** — Tap books to remove from collection
+- **Three-dot menu** — Edit, Smart Paste, Remove Books, Delete
+
+#### Frontend: Book Assignment
+- **CollectionPicker modal** — Add book to collections from BookDetail
+- **Collection chips** — Show which collections a book belongs to
+- **Quick add** — Toggle collections on/off with checkmarks
+
+#### Frontend: Smart Paste UI
+- **SmartPasteModal component** — Two-step paste and preview flow
+- **Paste step** — Textarea for markdown with [[Title]] links
+- **Preview step** — Shows matches with confidence indicators
+- **Selectable results** — Toggle which matched books to add
+- **Color-coded confidence** — Green (exact), yellow (fuzzy), red (not found)
+
+#### Frontend: Cover Options
+- **Gradient covers** — Purple-pink gradient with list icon (default)
+- **Custom covers** — Upload JPEG/PNG/WebP/GIF (5MB max)
+- **Banner variant** — Full-width cropped for detail page
+- **Square variant** — 1:1 aspect for collection grid
+- **Cover options in edit modal** — Choose gradient or upload custom
+
+#### Calibre Web Shelf Migration
+- **Migration script** — `migrate_calibre_shelves.py`
+- **95.9% match rate** — 756 books matched across 15 collections
+- **Fuzzy matching** — Handles minor title differences
+- **Dry-run mode** — Preview before applying changes
+
+### Changed
+
+- **Docker compose** — Added COVERS_DIR environment variable for persistent covers
+- **Book data processing** — Collections API returns processed cover gradients and parsed authors
+
+### Fixed
+
+- **Race condition** — BookDetail collections loading no longer fails on rapid navigation
+- **Cover persistence** — Custom covers survive container rebuilds
+- **Column name mismatch** — Fixed `cover_path` vs `custom_cover_path` inconsistency
+- **Error alerts** — Cover management functions now show user feedback on failure
+
+### Technical
+
+#### Database Changes
+- New table: `collections`
+- New table: `collection_books`
+- Auto-migration on startup
+
+#### New Files
+- `backend/routers/collections.py` — All collections endpoints
+- `frontend/src/components/CollectionsTab.jsx` — Collections grid
+- `frontend/src/components/CollectionCard.jsx` — Collection card component
+- `frontend/src/components/CollectionDetail.jsx` — Collection detail page
+- `frontend/src/components/CollectionModal.jsx` — Create/edit modal
+- `frontend/src/components/CollectionPicker.jsx` — Book assignment modal
+- `frontend/src/components/MosaicCover.jsx` — Collection cover component
+- `frontend/src/components/SmartPasteModal.jsx` — Smart paste UI
+- `migrate_calibre_shelves.py` — Calibre shelf migration script
+
+#### Modified Files
+- `backend/main.py` — Collections router, static file serving
+- `backend/database.py` — Collections schema
+- `frontend/src/api.js` — Collections API functions
+- `frontend/src/components/BottomNav.jsx` — Collections tab
+- `frontend/src/components/Header.jsx` — Collections in desktop nav
+- `frontend/src/components/BookDetail.jsx` — Collection chips and picker
+- `frontend/src/App.jsx` — Collections routes
+- `docker-compose.yml` — COVERS_DIR environment variable
+
+---
+
 ## [0.14.0] - 2026-01-01
 
 ### Added
@@ -191,259 +307,14 @@ Complete system for extracting and displaying structured metadata from EPUB file
 - **detect_completion_status()** — Detects WIP/Complete from tags/summary
 - **count_chapters_from_manifest()** — Counts chapter files in EPUB
 
-#### Backend: Rescan Feature
-- **POST /api/sync/rescan-metadata** — Re-extract metadata from all EPUB files
-- **GET /api/sync/rescan-metadata/preview** — Preview stats before rescan
-- **Concurrency protection** — Prevents sync/rescan from running simultaneously
-- **User edit protection** — Rescan only fills NULL fields, preserves user edits
-
-#### Frontend: Settings Enhancement
-- **"Enhanced Metadata" section** — New section in Settings drawer
-- **Preview statistics** — Shows books with/without enhanced metadata
-- **"Rescan All Metadata" button** — Triggers full library rescan
-- **Results display** — Shows what was extracted after rescan
-
-#### Frontend: BookDetail Metadata Display
-- **MetadataRow component** — Responsive label/value display
-- **TagChip component** — Styled chips with color variants
-- **FanFiction display:**
-  - Fandom (purple chip)
-  - Rating (red chip) with AO3 category
-  - Ships (pink chips, max 5 shown with "+X more")
-  - Characters (comma list, max 8 shown)
-  - Warnings (amber chips)
-  - Source URL (clickable link)
-  - Completion status (color-coded badge)
-  - Tropes (freeform tags, labeled separately)
-- **Fiction/Non-Fiction display:**
-  - Publisher
-  - ISBN (monospace font)
-  - Genre (tags labeled as "Genre" not "Tags")
-  - Chapter count
-
-#### Results
-- **657 books** with fandom extracted from AO3 metadata
-- **56 books** with source URLs from FanFicFare/Wattpad
-- Clean character extraction from relationship tags only
-
-### Changed
-
-- **Tags display** — Now contextual: "Tropes" for FanFiction, "Genre" for published books
-- **About This Book card** — Visibility includes all enhanced metadata fields
-
-### Fixed
-
-- **Optional chaining** — Prevents crashes when relationships/characters/source_url are null
-- **Chapter count display** — Shows 0 chapters correctly (was hidden)
-- **AO3 category visibility** — Shows even when content_rating is missing
-- **Character parsing** — No longer catches freeform tags as characters
-- **SQL query duplicates** — GROUP BY prevents multiple rows per title
-- **SQL syntax error** — WHERE clause built before GROUP BY
-
-### Technical
-
-#### Database Changes
-- New columns in titles table: fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, isbn, publisher, chapter_count
-- Migration: Auto-adds columns on startup
-
-#### New/Modified Files
-- `backend/database.py` — Schema updates, migration
-- `backend/services/metadata.py` — AO3 parser, source detection, all extractors
-- `backend/routers/sync.py` — Rescan endpoints, concurrency protection
-- `backend/routers/titles.py` — TitleDetail model, JSON field parsing
-- `frontend/src/api.js` — previewRescan(), rescanMetadata()
-- `frontend/src/components/SettingsDrawer.jsx` — Enhanced Metadata section
-- `frontend/src/components/BookDetail.jsx` — MetadataRow, TagChip, contextual display
-
----
-
-## [0.11.0] - 2025-12-30
-
-### Added
-
-#### Phase 6: Library Home Screen
-Complete dashboard experience replacing the simple library grid on the Home tab.
-
-#### Home Dashboard Sections
-- **Currently Reading** — Up to 5 in-progress books with activity bars on covers
-- **Recently Added** — 20 most recently uploaded books in horizontal scroll
-- **Discover Something New** — 6 random unread books with refresh button
-- **Quick Reads** — Unread books under 3 hours based on user's WPM setting
-- **Your Reading Stats** — Words read, reading time, titles finished with category breakdown
-
-#### Backend: Home API Endpoints
-- **GET /api/home/in-progress** — Returns up to 5 in-progress owned books
-- **GET /api/home/recently-added** — Returns 20 most recently added books
-- **GET /api/home/discover** — Returns 6 random unread books (refreshable)
-- **GET /api/home/quick-reads** — Returns unread books under 3 hours
-- **GET /api/home/stats?period=month|year** — Reading statistics with category breakdown
-
-#### Search Redesign
-- **SearchModal component** — Full-screen search modal for mobile
-- **Live search results** — Debounced search with keyboard navigation
-- **Dual action** — Click book to navigate, or "Filter library by X" to apply as filter
-- **Responsive layout** — Mobile uses modal, desktop keeps inline search bar
-- **Icon buttons** — Search and filter icons on mobile Browse/Wishlist tabs
-
-#### Sort Options Redesign
-- **Recently Added** — Sort by `created_at` DESC (new default)
-- **Title A-Z** — Numeric-first sorting ("4-Hour" before "10 Things")
-- **Author A-Z** — Alphabetical, case-insensitive
-- **Recently Published** — Year DESC with NULLs sorted to bottom
-- **Removed** — Series, Year, Updated sort options
-
-#### BookCard Enhancement
-- **Activity bar** — 50% width teal bar on in-progress book covers (Home tab only)
-- **showActivityBar prop** — Optional prop to enable activity indicator
-
-#### EPUB Word Count Fix
-- **Improved path resolution** — Multiple strategies for finding content files
-- **URL decoding** — Handles encoded paths in EPUB manifests
-- **Debug logging** — Warns when word count is suspiciously low
-- **Minimum threshold** — Quick Reads requires 1000+ words (filters broken data)
-
-### Changed
-
-- **Home tab** — Now shows dashboard instead of book grid
-- **Browse/Wishlist tabs** — Show book grid with search/filter
-- **Search bar hidden on Home** — Clean dashboard experience
-- **Default sort** — Changed from "Title" to "Recently Added"
-- **Toggle bar repositioned** — Integrated with search/filter row
-
-### Fixed
-
-- **EPUB word count extraction** — Most books now extract correctly (was returning near-zero for some EPUBs)
-- **Desktop search layout** — Inline search between toggle bar and filter icon
-
-### Technical
-
-#### New Files
-- `backend/routers/home.py` — Dashboard API endpoints
-- `frontend/src/components/HomeTab.jsx` — Dashboard component
-- `frontend/src/components/SearchModal.jsx` — Mobile search modal
-
-#### Modified Files
-- `backend/routers/titles.py` — New sort options, updated defaults
-- `backend/services/metadata.py` — EPUB word count extraction fix
-- `frontend/src/api.js` — Home API functions
-- `frontend/src/components/BookCard.jsx` — Activity bar support
-- `frontend/src/components/SearchBar.jsx` — Icons-only mode for mobile
-- `frontend/src/components/Library.jsx` — HomeTab integration, search redesign
-
----
-
-## [0.10.0] - 2025-12-30
-
-### Added
-
-#### Phase 5.3: Reading Sessions
-Complete system for tracking multiple reading sessions (re-reads) per book.
-
-#### Database: reading_sessions Table
-- **New table** — Stores multiple reading sessions per book
-- **session_number** — Tracks which read (1st, 2nd, 3rd, etc.)
-- **Per-session dates** — date_started and date_finished (both optional)
-- **Per-session rating** — 1-5 stars per reading session
-- **Per-session status** — in_progress, finished, dnf
-- **Smart migration** — Existing reading data migrated to first session
-- **Data integrity fix** — 9 books incorrectly marked "Unread" with dates/ratings now corrected
-
-#### API: Session Endpoints
-- **GET /api/titles/{id}/sessions** — List all sessions with cumulative stats
-- **POST /api/titles/{id}/sessions** — Create new reading session
-- **PATCH /api/sessions/{id}** — Update session (dates, status, rating)
-- **DELETE /api/sessions/{id}** — Delete session with automatic renumbering
-
-#### UI: Reading History Section
-- **Session cards** — Display "Read #1", "Read #2", etc. with dates and ratings
-- **"+ Add Session" button** — Start tracking a new read
-- **Session editor modal** — Full edit interface for each session
-- **Custom status labels** — Uses labels from Settings
-
-#### Cumulative Stats
-- **Times Read** — Count of all reading sessions
-- **Average Rating** — Mean of all session ratings
-
-### Changed
-
-- **Book status** — Now derived from most recent session's status
-- **Book rating** — Now calculated as average of all session ratings
-
-### Fixed
-
-- **State reset on navigation** — Sessions clear when switching between books
-- **Rating preservation** — Existing rating preserved when switching to in_progress
-
-### Technical
-
-#### Database Changes
-- New table: `reading_sessions` with foreign key to titles
-- Migration: Creates sessions from existing title data
-
-#### New Files
-- `backend/routers/sessions.py` — CRUD endpoints for reading sessions
-
----
-
-## [0.9.4] - 2025-12-30
-
-### Added
-
-#### Phase 5.2: Form Autocomplete
-- **Title autocomplete** — Warns when title matches existing book
-- **Author autocomplete** — Suggests existing authors
-- **Series autocomplete** — Suggests existing series
-- **Multi-author support** — Multiple authors with chip display
-
----
-
-## [0.9.3] - 2025-12-29
-
-### Added
-
-#### Phase 5.1: Wishlist Unification
-- **Acquisition status system** — 'owned' vs 'wishlist' status
-- **Library toggle bar** — Home / Browse / Wishlist tabs
-- **Wishlist styling** — Dotted border + bookmark icon
-- **BookDetail redesign** — Horizontal desktop layout, mobile tabs
-
----
-
-## [0.9.2] - 2025-12-29
-
-### Added
-
-- **Orphan detection** — Sync detects missing book folders
-- **Auto-recovery** — Reappearing folders automatically un-orphaned
-
----
-
-## [0.9.1] - 2025-12-29
-
-### Fixed
-
-- **Upload folder structure** — Books placed in flat structure correctly
-- **File size display** — Small files show in KB
-
----
-
-## [0.9.0] - 2025-12-28
-
-### Added
-
-#### Phase 5: TBR System
-- **TBR List View** — Books you want to read
-- **Manual Book Entry** — Physical, audiobook, web-based books
-- **TBR → Library conversion** — "I got this book!" flow
-- **Familiar Title Detection** — Upload warns of duplicates
-
 ---
 
 ## Version History Summary
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) ✨ |
+| 0.15.0 | 2026-01-02 | **Phase 7.2b** — Collections system, smart paste, Calibre migration ✨ |
+| 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) |
 | 0.13.0 | 2026-01-01 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
 | 0.12.0 | 2025-12-31 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing, rescan feature |
 | 0.11.0 | 2025-12-30 | **Phase 6** — Library Home Screen, search redesign, sort options |
@@ -474,33 +345,44 @@ Complete system for tracking multiple reading sessions (re-reads) per book.
 
 ## Upgrade Notes
 
-### Upgrading to 0.13.0
+### Upgrading to 0.15.0
 
-**No schema changes** — Uses Phase 7.0 columns
+**Database Changes:**
+- New `collections` table (auto-created on startup)
+- New `collection_books` table (auto-created on startup)
 
-**Modified Files:**
-- `backend/routers/sync.py` — Enhanced field saving
-- `backend/routers/upload.py` — Title creation during upload
-- `backend/routers/titles.py` — Rescan endpoint, enhanced metadata PATCH, autocomplete
-- `frontend/src/api.js` — New API functions
-- `frontend/src/components/BookDetail.jsx` — UI updates
-- `frontend/src/components/EnhancedMetadataModal.jsx` — NEW
-- `frontend/src/components/EditBookModal.jsx` — UI cleanup
-- `frontend/src/components/NotesEditor.jsx` — UI cleanup
+**Docker Compose Changes:**
+Add `COVERS_DIR` environment variable for persistent custom covers:
+```yaml
+environment:
+  - COVERS_DIR=/app/data/covers
+```
 
-**Post-upgrade:** 
-1. Rebuild Docker container
-2. New uploads will automatically extract enhanced metadata
-3. Use "Edit About" button to manually edit metadata for any book
+**New Files to Upload:**
+- `backend/routers/collections.py`
+- `frontend/src/components/CollectionsTab.jsx`
+- `frontend/src/components/CollectionCard.jsx`
+- `frontend/src/components/CollectionDetail.jsx`
+- `frontend/src/components/CollectionModal.jsx`
+- `frontend/src/components/CollectionPicker.jsx`
+- `frontend/src/components/MosaicCover.jsx`
+- `frontend/src/components/SmartPasteModal.jsx`
+
+**Post-upgrade:**
+1. Update docker-compose.yml with COVERS_DIR
+2. Upload all new files
+3. Rebuild Docker container
+4. Collections tab will appear in navigation
+5. Optionally run `migrate_calibre_shelves.py` to import Calibre Web shelves
 
 ---
 
 ## Links
 
-- [Roadmap](./20250101_ROADMAP.md)
+- [Roadmap](./20250102_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: January 1, 2026 (v0.14.0 — Phase 7.2a complete)*
+*Last updated: January 2, 2026 (v0.15.0 — Phase 7.2b complete)*

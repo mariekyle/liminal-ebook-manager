@@ -1,387 +1,310 @@
 # Liminal Product Roadmap
 
-## Vision Statement
+> **Last Updated:** January 2, 2026 (v0.15.0)
+
+---
+
+## Vision
 
 Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books — both owned and wished for — so that the reader can spend less time managing and more time in the liminal space of reading.
 
 ---
 
-## Current State (v0.14.0)
-
-**What Liminal can do today:**
-- Scan books from NAS storage (single folder structure)
-- Upload new books directly from mobile or desktop
-- Extract metadata from EPUB/PDF files (author, title, summary, tags)
-- **Enhanced metadata on upload** — Fandom, ships, characters extracted automatically
-- All ebook formats work on mobile (.epub, .pdf, .mobi, .azw3, .azw, .html)
-- Smart FanFiction detection from filename patterns (AO3, FFN, tropes)
-- Override false duplicate matches with "Upload as New" option
-- Display library with rich gradient covers (10 presets, HSL color lanes, vignettes)
-- **Mobile bottom navigation** — Fixed nav bar with Library, Series, Authors, Add
-- **Desktop header navigation** — Centered nav tabs on single line
-- **Filter drawer** — Slides up on mobile, slides from right on desktop
-- **Library toggle bar** — Home / Browse / Wishlist tabs
-- Poetic category phrases — "780 what-ifs. Explore freely."
-- Filter state persistence — URL params preserve filters across navigation
-- Read time filter — 8 tiers from "Under 30 min" to "30+ hours"
-- **Enhanced filtering for FanFiction** — Fandom, ship, content rating, completion status ✨
-- **Sort direction toggle** — ↑/↓ button to reverse sort order ✨
-- **Active filter pills** — Color-coded removable pills for all filters ✨
-- Series tab — Browse series with square gradient covers
-- Authors tab — Browse all authors alphabetically with search
-- Series detail pages — View all books in a series
-- Author detail pages — View author with notes and all their books
-- Tag filtering — Multi-select tags with searchable modal
-- Active filters row — Clear individual filters or all at once
-- Search and filter by category, status, tags, read time
-- **Sort inline with count** — Sort dropdown next to book/series count
-- **Books per row setting** — Choose 2, 3, or 4 columns on mobile
-- Scroll through full library (1700+ books)
-- View book detail page with full metadata
-- **Horizontal desktop layout** — Cover left, content right
-- **Mobile tab navigation** — Details / Notes / History tabs
-- Edit book metadata — Title, authors, series, category, year
-- Draggable author chips — Reorder authors, first appears on cover
-- Author autocomplete — Suggests existing authors when editing
-- **Series autocomplete** — Suggests existing series when editing
-- Track read status (Unread, In Progress, Finished, DNF)
-- **Read-only rating display** — Shows average from reading sessions ✨
-- **Multiple reading sessions** — Track re-reads with separate dates/ratings
-- **Reading History display** — "Read #1", "Read #2" with dates and ratings
-- **Session editor modal** — Add/edit/delete reading sessions
-- **Times Read & Average Rating** — Cumulative stats from all sessions
-- **Custom status labels** — Apply throughout app including Reading History
-- Estimated read time — Based on word count and WPM setting
-- Finished checkmark on book covers
-- **Finished checkmarks on author pages**
-- Series section on book detail — Navigate between books in series
-- Auto-detect FanFiction based on metadata patterns
-- **Full-screen notes editor** — Distraction-free writing
-- **Note templates** — Structured Review, Reading Notes
-- **Book linking** — Type `[[` to search and link books
-- **Rendered markdown** — Notes display with formatting in read mode
-- **Backlinks** — "Referenced by" shows which books link to current book
-- **251 book notes imported from Obsidian**
-- Author notes — Free-form notes about any author
-- Author rename — Update author name across all books
-- Settings drawer — WPM, grid columns, status labels, sync controls
-- "Added to library" date — Shows when book was added
-- Mobile-responsive design
-- Import reading data from Obsidian (status, rating, dates, notes)
-- **Wishlist system** — Track books you want to read
-- **Wishlist priority** — Mark items as High or Normal priority
-- **WISHLIST banner** — Clear indicator on book detail page
-- **Wishlist styling** — Dotted border + bookmark icon in library
-- **Manual Book Entry** — Add physical, audiobook, or web-based books
-- **Multiple Authors** — Add multiple authors with autocomplete
-- **Familiar Title Detection** — Upload warns when title matches existing book
-- **"I got this book!" flow** — Convert wishlist to owned with format selection
-- **Title autocomplete** — Wishlist form warns of duplicate titles
-- **Author autocomplete** — Wishlist form suggests existing authors
-- **Series autocomplete** — Wishlist form suggests existing series
-- **Smart author replacement** — Autocomplete fixes capitalization
-- **Home Dashboard** — Currently Reading, Recently Added, Discover, Quick Reads, Stats
-- **Search modal (mobile)** — Full-screen search with live results
-- **Inline search (desktop)** — Search bar between toggle and filter
-- **New sort options** — Recently Added (default), Title A-Z, Author A-Z, Recently Published
-- **Numeric-first title sort** — "4-Hour Chef" before "10 Things"
-- **Activity bars** — Visual indicator on in-progress book covers
-- **Reading stats** — Words read, reading time, titles finished with category breakdown
-- **Enhanced metadata extraction** — Fandom, ships, characters, ratings from AO3 EPUBs
-- **Per-book rescan** — Re-extract metadata from individual books ✨
-- **Edit About modal** — Full editing for all enhanced metadata fields ✨
-- **Searchable autocomplete** — Fandom, ships, characters, tags with suggestions ✨
-- **Category-aware fields** — FanFiction-specific fields hidden for other categories ✨
-- **Pairing Type display** — F/M, M/M, F/F shown on own row ✨
-- **About section for all books** — Manual entries can have metadata too ✨
-- **Rescan metadata** — Re-extract enhanced data from existing library
-- **Tags display** — Contextual labeling (Tags for FanFiction, Genre for published)
-- **Source URL display** — Clickable links to original Wattpad/AO3 sources
-- **Publisher/ISBN display** — For published books
-- **Completion status badges** — WIP/Complete/Abandoned indicators
-
----
-
-## Phase 7.0: Enhanced Metadata Extraction ✅ COMPLETE
-
-**Completed: December 31, 2025**
-
-### Database Schema ✅
-- ✅ **fandom** — Extracted from AO3 dc:subject tags
-- ✅ **relationships** — JSON array of ships
-- ✅ **characters** — JSON array from relationship parsing
-- ✅ **content_rating** — Explicit/Mature/Teen/General
-- ✅ **ao3_warnings** — JSON array of archive warnings
-- ✅ **ao3_category** — JSON array (F/M, M/M, F/F, etc.)
-- ✅ **isbn** — From published book metadata
-- ✅ **publisher** — From dc:publisher
-- ✅ **chapter_count** — From EPUB manifest
-
-### Backend: Extraction Logic ✅
-- ✅ **AO3 tag parser** — Separates fandom/ships/characters/tropes
-- ✅ **Source type detection** — ao3, fanficfare, fichub, calibre
-- ✅ **Source URL extraction** — From FanFicFare downloads
-- ✅ **Calibre series extraction** — From calibre:series meta tag
-- ✅ **Completion status detection** — From tags/summary patterns
-- ✅ **Chapter count** — From manifest analysis
-
-### Rescan Feature ✅
-- ✅ **POST /sync/rescan-metadata** — Bulk re-extraction endpoint
-- ✅ **GET /sync/rescan-metadata/preview** — Pre-scan statistics
-- ✅ **Settings UI** — "Enhanced Metadata" section with button
-- ✅ **User edit protection** — Only fills NULL fields
-- ✅ **Concurrency protection** — Prevents sync/rescan conflicts
-
-### BookDetail Display ✅
-- ✅ **MetadataRow component** — Responsive label/value layout
-- ✅ **TagChip component** — Color variants for different data types
-- ✅ **FanFiction display** — Fandom, Rating, Ships, Characters, Warnings, Tags
-- ✅ **Fiction/Non-Fiction display** — Publisher, ISBN, Genre
-- ✅ **Source URL links** — Clickable, truncated display
-- ✅ **Completion status badges** — Color-coded indicators
-
-### Results
-- ✅ **657 books** with fandom extracted
-- ✅ **56 books** with source URLs
-- ✅ Clean character extraction (no false positives)
-
----
-
-## Phase 7.1: Enhanced Metadata Improvements ✅ COMPLETE
-
-**Completed: January 1, 2026**
-
-### Part A: Upload Flow Integration ✅
-- ✅ **Enhanced extraction on upload** — New uploads get fandom/ships/etc. automatically
-- ✅ **Category selection preserved** — User's category choice saved correctly
-- ✅ **No sync dependency** — Metadata extracted during upload, not background sync
-- ✅ **All enhanced fields** — fandom, relationships, characters, content_rating, ao3_warnings, ao3_category, source_url, isbn, publisher, chapter_count, completion_status
-
-### Part B: Per-Book Rescan ✅
-- ✅ **"Rescan Metadata" button** — On BookDetail page
-- ✅ **Multi-format support** — EPUB and PDF (EPUB preferred)
-- ✅ **COALESCE preservation** — PDF rescan doesn't wipe EPUB-extracted data
-- ✅ **Series protection** — Series only updated if extraction finds data
-- ✅ **Loading states** — Visual feedback during rescan
-
-### Part C: Metadata Editing Modal ✅
-- ✅ **"Edit About" modal** — Full editing interface
-- ✅ **Summary field** — Editable, clears properly when emptied
-- ✅ **Searchable fandom** — Autocomplete from existing library
-- ✅ **Searchable ships** — Autocomplete with chip editor
-- ✅ **Searchable characters** — Autocomplete with chip editor
-- ✅ **Searchable tags** — Autocomplete with chip editor
-- ✅ **Content rating dropdown** — General/Teen/Mature/Explicit/Not Rated
-- ✅ **Pairing type multi-select** — F/F, F/M, Gen, M/M, Multi, Other
-- ✅ **Archive warnings multi-select** — All AO3 warning options
-- ✅ **Completion status dropdown** — Complete/WIP/Abandoned/Hiatus
-- ✅ **Source URL input** — Text field for original source
-- ✅ **Category-aware visibility** — FanFiction fields hidden for other categories
-
-### UI Improvements ✅
-- ✅ **Pairing Type on own row** — Moved from Rating row
-- ✅ **Rating display read-only** — Shows average from sessions
-- ✅ **Icon-only edit buttons** — Cleaner UI, matches other sections
-- ✅ **About section for all books** — Not just ebooks
-- ✅ **Renamed "Tropes" to "Tags"** — Consistent labeling
-- ✅ **Removed divider bars** — Cleaner modal appearance
-- ✅ **Author input above chips** — Consistent with chip editor pattern
-
-### Backend: New Endpoints ✅
-- ✅ **PATCH /books/{id}/enhanced-metadata** — Update enhanced fields
-- ✅ **POST /books/{id}/rescan-metadata** — Per-book rescan
-- ✅ **GET /autocomplete/fandoms** — Fandom suggestions
-- ✅ **GET /autocomplete/ships** — Ship suggestions
-- ✅ **GET /autocomplete/characters** — Character suggestions
-- ✅ **GET /autocomplete/tags** — Tag suggestions
-
----
-
-## Phase 7.2: Discovery & Collections ← CURRENT
-
-**Goal:** Rediscover your library. Find your next read with joy.
-
-### Enhanced Filtering ✅ COMPLETE (v0.14.0)
-- ✅ **Filter by fandom** — Searchable modal
-- ✅ **Filter by content rating** — Multi-select checkboxes
-- ✅ **Filter by completion status** — Multi-select checkboxes
-- ✅ **Filter by ships** — Searchable modal
-- ✅ **Sort direction toggle** — ↑/↓ button with URL persistence
-- ✅ **Active filter pills** — Color-coded, removable
-
-### Collections ← NEXT
-- [ ] Manual collections (curated lists)
-- [ ] Smart collections (auto-populate based on rules)
-- [ ] Collection cover (mosaic or custom)
-- [ ] Import Obsidian collection notes
-
-### Statistics Dashboard
-- [ ] Books read per month/year
-- [ ] Reading by category breakdown
-- [ ] Average rating given
-- [ ] Total books, total read, completion percentage
-- [ ] Reading streak/pace
-- [ ] Total reading time
-
-### Author Pages (Enhanced)
-- [ ] Author statistics (books read, average rating)
-- [ ] Author photo/avatar support
-- [x] ~~Finished checkmark on author page book grid~~ ✅
-- [ ] **Improved series display** — Series books cluttering author page need better organization
-- [ ] **Series grouping option** — Show series cover instead of individual books, or use tabs (Standalone / Series)
-- [ ] **Sort by publication date** — Default to newest first
-- [ ] **Visual hierarchy** — Cleaner separation between standalone titles and series
-
-### Multi-Series Support
-- [ ] Books can belong to multiple series
-- [ ] Database schema: `book_series` junction table
-- [ ] UI for managing multiple series assignments
-- [ ] Display all series on book detail page
-
-### Series Pages (Enhanced)
-- [ ] Series mosaic covers
-- [ ] Progress bar on series cover
-- [ ] Series completion tracking
-- [ ] Navigate between books in series (prev/next)
-
-### Smart Filtering
-- [ ] Multi-filter: combine status + category + tags + rating + read time
-- [ ] Complex queries: "Unread 5-star fiction under 3 hours"
-- [x] ~~Sort direction toggle (asc/desc)~~ ✅
-- [x] ~~Clear search button (X icon)~~ ✅
-
----
-
-## Phase 8: Integration & Polish
-
-**Goal:** Streamline workflows. Reduce remaining friction points.
-
-### Book Detail Enhancements
-- [ ] **Download link** — Make stored book location a clickable download link (prefer EPUB, fallback to MOBI)
-- [x] ~~**Edit/add tags**~~ ✅ (Covered in Phase 7.1)
-- [ ] **"In Library" / "In Wishlist" banner** — Show status banner on book detail screen
-- [ ] **Move "Referenced by" to Details tab (mobile)** — Backlinks currently on Notes tab, should be on Details
-- [ ] **Display edition formats** — Show EPUB, PDF, Physical, Audiobook indicators
-
-### Cover Improvements
-- [x] ~~Match Obsidian plugin gradient style~~ ✅
-- [ ] Extract actual covers from EPUB files
-- [ ] Ability to upload custom covers
-- [ ] Series info displayed on cover
-- [ ] Theme-based cover generation
-
-### Metadata Extraction (Enhanced)
-- [x] ~~**Extract series from ebooks**~~ ✅ (Calibre series extraction)
-- [x] ~~**Extract fanfiction URL from ebooks**~~ ✅ (Source URL extraction)
-- [x] ~~**Extract publication year from EPUB**~~ ✅ (Already existed)
-- [x] ~~**Extract tags from EPUB**~~ ✅ (Enhanced tag parsing)
-- [x] ~~**Extract source URL from EPUB**~~ ✅ (Source URL extraction)
-
-### UI Polish
-- [x] ~~Clear search button (X icon)~~ ✅
-- [x] ~~Books per row setting~~ ✅
-- [ ] **Sort direction toggle** — Asc/desc option for all sort fields in library view
-- [ ] Loading states and animations
-- [ ] Error handling improvements
-- [ ] "No summary available" notice on book detail page
-- [ ] Virtual scrolling for library grid (performance)
-
-
-### Settings Enhancements
-- [ ] Customizable rating labels
-- [x] ~~Custom status labels~~ ✅
-- [ ] Light/dark mode toggle
-- [ ] Display preferences
-- [ ] **Cover display settings:**
-  - [ ] Show/hide title below cover
-  - [ ] Show/hide series below cover
-  - [ ] Show/hide author below cover
-  - [ ] Show/hide title on cover
-  - [ ] Show/hide author on cover
-  - [ ] Show/hide series on cover
-
-### Storage & Sync
-- [ ] Settings: view/change storage location
-- [ ] Sync progress indicator
-- [ ] Incremental sync
-
-### Export & Backup
-- [ ] Export library as spreadsheet
-- [ ] Full database backup/restore
-- [ ] Import from spreadsheet
-
-
-### Advanced Upload Features
-- [x] ~~Fix mobile file picker for .mobi/.azw3~~ ✅
-- [ ] Background uploads
-- [ ] Upload queue management
-- [ ] Resume interrupted uploads
-- [ ] PWA notifications for upload completion
-
-### Data Import (Low Priority)
-- [ ] **In-app notes import UI** — Drag & drop .md files, preview matches, import with confirmation (replaces command-line migration script)
-
----
-
-## Phase 9: AI Enhancements
-
-**Goal:** Let AI reduce manual work and enhance discovery.
-
-### AI Features
-- [ ] Auto-generate "Hot Take" summaries
-- [ ] Auto-extract/suggest themes and tags
-- [ ] Reading recommendations based on library and ratings
-- [ ] Similar book suggestions
-
----
-
-## Technical Debt & Bugs
-
-### High Priority
-- [ ] **PDF duplicates not detected** — Upload screen doesn't detect existing PDFs
-- [x] ~~**Upload flow missing enhanced extraction**~~ ✅ (Fixed in Phase 7.1)
-
-### Medium Priority
-- [ ] **Word count extraction fails for some EPUBs** — "MONEY Master the Game" by Tony Robbins shows 116 words instead of ~200,000+. The metadata extraction fix (Phase 6.3) resolved most books but not all. Needs investigation:
-  - Check if EPUB structure uses non-standard paths (encrypted content, DRM artifacts, unusual nesting)
-  - Check if content is in formats other than HTML/XHTML (e.g., pure XML, PDF-in-EPUB)
-  - Test extraction locally with `python backend/services/metadata.py /path/to/book.epub`
-  - Consider adding fallback: estimate from file size if word count extraction fails
-  - Related: Some PDFs may have similar issues with text extraction
-- [ ] Folder name parsing too strict on dash separator
-- [x] ~~Sort direction unclear (no visual indicator)~~ ✅ (now shows ↑ arrow)
-- [ ] Status filter on Series page
-- [ ] Redundant title below covers
-- [ ] Storage location display and validation
-- [ ] Mobile notes editor scrollbar (cosmetic)
-- [ ] **BISAC codes showing as genre** — Some Calibre books show codes like "bus041000" instead of readable genre names
-
-### Low Priority
-- [ ] Some non-book files getting scanned
-
-### Deferred
-- [ ] **Merge characters into tags** — Character data overlaps with tags; consider consolidating during import
-- [ ] **Independent wishlist filters** — Separate filter state per tab (Browse vs Wishlist)
-
----
-
-## What's NOT on the Roadmap
-
-- Calibre integration
-- Social features
-- In-app reading
-- Audiobook support
-- Library lending tracking
-
----
-
-## Development Principles
+## Development Philosophy
 
 1. **Mobile-first** — Every feature should work great on Android
 2. **Single source of truth** — Liminal is THE place for book data
 3. **Reduce friction** — If it takes more than 2 taps, simplify it
 4. **Data integrity** — Never lose user's notes or reading history
-5. **Offline-capable** — Core features should work without internet (future PWA)
+5. **Complete visibility** — Every book in storage should be visible in the app
+6. **Calm UX** — Interfaces should feel peaceful, not overwhelming *(Phase 10 focus)*
+
+---
+
+## Current State (v0.15.0)
+
+The app is fully functional for daily use with 1,700+ books. Core systems are stable:
+
+| System | Status |
+|--------|--------|
+| Library browsing & search | ✅ Stable |
+| Book upload & metadata extraction | ✅ Stable |
+| Reading status & session tracking | ✅ Stable |
+| Notes with wiki-style linking | ✅ Stable |
+| Wishlist management | ✅ Stable |
+| Collections system | ✅ Stable |
+| Enhanced fanfiction metadata | ✅ Stable |
+
+**Recent milestones:**
+- Phase 7.2b: Collections system with smart paste (Jan 2, 2026)
+- Phase 7.2a: Enhanced filtering for fanfiction metadata (Jan 1, 2026)
+- Phase 7.1: Per-book rescan and enhanced editing (Jan 1, 2026)
+- Phase 7.0: AO3 metadata extraction (Dec 31, 2025)
+
+---
+
+## Roadmap Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  CURRENT  │  Phase 8: Quick Fixes & Polish                  │
+│           │  Bug fixes, UX improvements, small features     │
+├───────────┼─────────────────────────────────────────────────┤
+│   NEXT    │  Phase 9: Feature Completion                    │
+│           │  Unprocessed files, collections enhancements    │
+├───────────┼─────────────────────────────────────────────────┤
+│   MAJOR   │  Phase 10: Design System Refactor               │
+│           │  Unified components, calm UX, consistency       │
+├───────────┼─────────────────────────────────────────────────┤
+│  FUTURE   │  Phase 11: AI Enhancements                      │
+│           │  Recommendations, auto-summaries, tagging       │
+└───────────┴─────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 8: Quick Fixes & Polish ← CURRENT
+
+**Goal:** Address accumulated bugs and UX friction before major refactors.
+
+### 8.1 Bug Fixes (High Priority)
+
+| Issue | Description |
+|-------|-------------|
+| PDF duplicates not detected | Upload screen doesn't detect existing PDFs |
+| Obsidian backlinks broken | Notes imported with [[links]] aren't showing in "Referenced by" |
+| Word count extraction fails | Some EPUBs show wrong word count (e.g., 116 instead of 200,000) |
+| BISAC codes as genre | Some Calibre books show codes like "bus041000" |
+
+### 8.2 Add Book Flow Improvements
+
+- [ ] **Clarify owned book flow** — Current flow is disorienting; needs clearer guidance
+- [ ] **"View in Library" destination** — Upload complete button should navigate to BookDetail, not Library grid
+- [ ] **PDF duplicate detection** — Match existing PDFs like EPUBs
+
+### 8.3 Book Detail Enhancements
+
+- [ ] **Header metadata** — Move read-only status, rating, and category to header area
+- [ ] **Edition formats display** — Show EPUB, PDF, Physical, Audiobook indicators
+- [ ] **Collections section refresh** — Update look/feel/layout of collections display
+- [ ] **"Referenced by" placement** — Move backlinks from Notes tab to Details tab (mobile)
+- [ ] **Download link** — Make stored book location a clickable download link
+- [ ] **"No summary" notice** — Show placeholder when book has no summary
+
+### 8.4 Settings Improvements
+
+- [ ] **Editable rating labels** — Customize star rating descriptions
+- [ ] **Remove WPM helper text** — Delete "💡 Average adult: 200–300 WPM"
+- [ ] **Fix default DNF label** — Change from "Def" to "Abandoned"
+- [ ] **Cover display options:**
+  - [ ] Show/hide title below cover
+  - [ ] Show/hide author below cover
+  - [ ] Show/hide title on cover
+
+### 8.5 Minor UI Polish
+
+- [ ] Loading states and skeleton screens
+- [ ] Error handling improvements
+- [ ] Mobile notes editor scrollbar fix (cosmetic)
+
+---
+
+## Phase 9: Feature Completion
+
+**Goal:** Complete remaining planned features before design refactor.
+
+### 9.1 Folder Structure Independence
+
+**Problem:** The current sync logic extracts title, author, and series data from folder names (a pattern inherited from the Obsidian NAS importer). This creates a dependency that won't work for other users who organize their libraries differently.
+
+**Goal:** Remove all reliance on folder naming conventions. Metadata should come entirely from:
+1. EPUB/PDF file metadata
+2. Manual user entry
+3. Future: spreadsheet import
+
+**Tasks:**
+- [ ] Audit current folder-parsing logic in sync.py
+- [ ] Document which fields currently depend on folder names
+- [ ] Create fallback behavior when folder parsing yields nothing
+- [ ] Update sync to prioritize file metadata over folder names
+- [ ] Test with various folder structures (flat, nested, random names)
+- [ ] Update documentation for new users
+
+### 9.2 Unprocessed Files Detection
+
+**Problem:** Some NAS folders contain only HTML files or have missing/corrupted ebook files. These books don't appear in Liminal library.
+
+**Database:**
+- [ ] `unprocessed_folders` table — folder_path, detected_files, status (new/dismissed/resolved)
+
+**Backend:**
+- [ ] Detect unsupported folders during sync (folders with files but no EPUB/PDF/MOBI/AZW)
+- [ ] GET /api/unprocessed — List unprocessed folders
+- [ ] POST /api/unprocessed/{id}/dismiss — Hide from list
+- [ ] POST /api/unprocessed/{id}/create-title — Manually create title entry
+
+**Frontend:**
+- [ ] Settings section with "Unprocessed Files" count badge
+- [ ] List view showing folder name, detected files, actions
+- [ ] "Add Manually" button opens form to create title
+- [ ] "Dismiss" button hides folder from list
+
+### 9.3 Collections Enhancements
+
+**List view option:**
+- [ ] Toggle view mode — Grid vs list for collections
+- [ ] List view with compact rows showing name, count, description preview
+
+**Reordering:**
+- [ ] Drag-drop collections in grid/list
+- [ ] Drag-drop books within collection
+- [ ] Position persistence to database
+
+**Picker improvements:**
+- [ ] Search input in CollectionPicker modal
+- [ ] Recent collections shown at top
+
+### 9.4 Cover Improvements
+
+- [ ] Extract actual covers from EPUB files
+- [ ] Upload custom covers for individual books
+- [ ] Series info displayed on cover
+- [ ] Theme-based cover generation (dark, light, colorful)
+
+### 9.5 Data Import & Export
+
+**Export:**
+- [ ] Export library as spreadsheet (CSV/JSON)
+- [ ] Full database backup/restore
+
+**Import:**
+- [ ] **Import from spreadsheet** — Populate library from CSV/Excel with title, author, series, category, status, rating
+- [ ] Column mapping UI for flexible import
+- [ ] Preview and validation before import
+- [ ] Duplicate detection during import
+
+---
+
+## Phase 10: Design System Refactor 🎨
+
+**Goal:** Establish a unified component library with calm UX principles, improving consistency, maintainability, and user experience across all 29+ screens.
+
+> **Reference:** See `DESIGN_SYSTEM_REFACTOR.md` for audit findings, component specs, and implementation details.
+
+### The Problem
+
+Liminal grew organically from a simple scanner to a 29-screen application. UI components were built ad-hoc without a unified system, resulting in:
+
+- **7+ modal patterns** with different close button positions and footer layouts
+- **Inconsistent button colors** (green, blue, teal used interchangeably)
+- **Form variations** (chip inputs sometimes above, sometimes below)
+- **No reusable components** — similar patterns reimplemented differently
+
+### The Vision
+
+The design refactor isn't just about consistency — it's about creating a **calm, peaceful reading companion**. Every screen should feel like a quiet library, not a cluttered dashboard.
+
+**Calm UX Principles to Embed:**
+- Generous whitespace and breathing room
+- Muted, harmonious color palette
+- Subtle animations that don't demand attention
+- Microcopy that feels warm, not robotic
+- Progressive disclosure — show only what's needed
+- Forgiveness in interactions — easy undo, clear escape routes
+
+### 10A: Tokens & Primitives (2-3 days)
+
+- [ ] Design token files (colors, spacing, typography, radius)
+- [ ] `Button` component (primary, secondary, danger, ghost)
+- [ ] `TextInput`, `TextArea`, `Select` components
+- [ ] `Chip` component with semantic colors
+- [ ] Component preview page for testing
+
+### 10B: Modal System (2-3 days)
+
+**Critical fixes:**
+- × always on right side
+- Primary buttons consistently blue
+- Standard footer pattern: Cancel (text) + Action (button)
+
+**Components:**
+- [ ] Unified `Modal` with Header, Body, Footer
+- [ ] `Drawer` component (right slide-out)
+- [ ] Migrate all 7+ modal variants
+
+### 10C: Layout Components (1-2 days)
+
+- [ ] `SectionCard` — card with header and edit action
+- [ ] `PageHeader` — title, subtitle, meta, action
+- [ ] `SectionHeader` — all-caps label with optional action
+- [ ] `MetadataRow` — label/value display
+- [ ] Migrate all detail pages
+
+### 10D: Interactive Components (2-3 days)
+
+- [ ] `ToggleGroup` (Home/Browse/Wishlist tabs)
+- [ ] `SegmentedControl` (Reading/Done/DNF)
+- [ ] `ChipInput` (standardized: input above chips)
+- [ ] `SearchInput` with clear button
+- [ ] `StarRating` (display and interactive)
+
+### 10E: Cards & Flows (2-3 days)
+
+- [ ] Unified `CoverCard` with aspect variants
+- [ ] `ChoiceCard` for selection flows
+- [ ] `FileDropZone` for uploads
+- [ ] `SuccessState` for confirmations
+- [ ] `WarningBanner` for alerts
+
+### 10F: Cleanup & Documentation (1-2 days)
+
+- [ ] Remove all unused component files
+- [ ] Performance audit
+- [ ] Update ARCHITECTURE.md
+- [ ] Component usage guide
+
+### Expected Outcomes
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Modal patterns | 7+ variants | 2 (standard + full-screen) |
+| Button consistency | Mixed colors | Single primary color |
+| Reusable components | ~10 | ~30 |
+| User experience | Inconsistent | Calm, predictable |
+
+---
+
+## Phase 11: AI Enhancements (Future)
+
+**Goal:** Let AI reduce manual work and enhance discovery.
+
+- [ ] Auto-generate "Hot Take" summaries
+- [ ] Auto-extract/suggest themes and tags
+- [ ] Reading recommendations based on library and ratings
+- [ ] Similar book suggestions ("If you liked X...")
+- [ ] Smart collections with AI-suggested groupings
+
+---
+
+## Technical Debt
+
+### Deferred (Low Priority)
+
+| Issue | Notes |
+|-------|-------|
+| Merge characters into tags | Character data overlaps with tags |
+| Independent wishlist filters | Separate filter state per tab |
+| Folder name parsing | Too strict on dash separator |
+| Status filter on Series page | Not yet implemented |
+| Virtual scrolling | For very large libraries |
+
+### Not Planned
+
+- Calibre integration (beyond migration scripts)
+- Social features / sharing
+- In-app reading
+- Audiobook playback
+- Library lending tracking
 
 ---
 
@@ -390,35 +313,42 @@ Liminal is a personal reading companion that eliminates the friction of managing
 | Version | Date | Milestone |
 |---------|------|-----------|
 | v0.1.0 | Dec 14, 2025 | Initial release |
-| v0.1.1 | Dec 16, 2025 | Single folder migration |
-| v0.1.2 | Dec 17, 2025 | Phase 0 complete |
-| v0.2.0 | Dec 17, 2025 | Phase 1 core tracking |
-| v0.3.0 | Dec 19, 2025 | Phase 1 complete |
-| v0.4.0 | Dec 20, 2025 | Phase 1.5 complete |
-| v0.5.0 | Dec 22, 2025 | Phase 2 complete — Book upload system |
-| v0.5.1 | Dec 22, 2025 | Background sync fix |
-| v0.5.2 | Dec 22, 2025 | Category detection, .azw support |
-| v0.5.3 | Dec 23, 2025 | EPUB metadata, "Upload as New" |
-| v0.5.4 | Dec 23, 2025 | Phase 2.1 complete — Mobile file picker fixed |
-| v0.6.0 | Dec 24, 2025 | Phase 3 complete — Settings, metadata editing, read time, author pages |
-| v0.7.0 | Dec 25, 2025 | Phase 3.5 complete — Navigation redesign, filter drawer, grid settings |
-| v0.8.0 | Dec 26, 2025 | Phase 4 complete — Notes enhancement, templates, book linking, backlinks |
-| v0.8.1 | Dec 26, 2025 | Phase 4.5 complete — Obsidian notes migration (251 notes) |
-| v0.8.2 | Dec 27, 2025 | Custom status labels, finished checkmarks on author pages |
-| v0.9.0 | Dec 28, 2025 | **Phase 5** — TBR system, manual entry, familiar title detection |
-| v0.9.1 | Dec 29, 2025 | Bug fix — Upload folder structure |
-| v0.9.2 | Dec 29, 2025 | Orphan detection system |
-| v0.9.3 | Dec 29, 2025 | **Phase 5.1** — Wishlist unification, BookDetail redesign |
-| v0.9.4 | Dec 30, 2025 | **Phase 5.2** — Form autocomplete |
-| v0.10.0 | Dec 30, 2025 | **Phase 5.3** — Reading sessions, multiple re-reads |
-| v0.11.0 | Dec 30, 2025 | **Phase 6** — Library Home Screen, search redesign, sort options |
-| v0.12.0 | Dec 31, 2025 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing |
-| v0.13.0 | Jan 1, 2026 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
-| v0.14.0 | Jan 1, 2026 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) ✨ |
-| v0.15.0 | TBD | Phase 7.2b — Collections |
-| v0.16.0 | TBD | Phase 8 — Integration & Polish |
-| v1.0.0 | TBD | Phase 9 — Full Obsidian replacement complete |
+| v0.2.0 | Dec 17, 2025 | Core tracking |
+| v0.3.0 | Dec 19, 2025 | Series system |
+| v0.4.0 | Dec 20, 2025 | Obsidian import |
+| v0.5.0 | Dec 22, 2025 | Book upload |
+| v0.6.0 | Dec 24, 2025 | Settings, author pages |
+| v0.7.0 | Dec 25, 2025 | Navigation redesign |
+| v0.8.0 | Dec 26, 2025 | Notes & linking |
+| v0.9.0 | Dec 28, 2025 | Wishlist system |
+| v0.10.0 | Dec 30, 2025 | Reading sessions |
+| v0.11.0 | Dec 30, 2025 | Home dashboard |
+| v0.12.0 | Dec 31, 2025 | Enhanced metadata |
+| v0.13.0 | Jan 1, 2026 | Metadata editing |
+| v0.14.0 | Jan 1, 2026 | Enhanced filtering |
+| v0.15.0 | Jan 2, 2026 | Collections ✨ |
+
+### Upcoming
+
+| Version | Phase | Focus |
+|---------|-------|-------|
+| v0.16.0 | 8 | Quick fixes & polish |
+| v0.17.0 | 9 | Feature completion |
+| v0.18.0 | 10 | Design system refactor |
+| v1.0.0 | 11 | AI enhancements |
 
 ---
 
-*Last updated: January 1, 2026 (v0.14.0 — Phase 7.2a complete)*
+## Related Documentation
+
+| Document | Description |
+|----------|-------------|
+| `ARCHITECTURE.md` | System design, data flow, file structure |
+| `DEVELOPMENT_WORKFLOW.md` | Dev environment, deployment process |
+| `CURSOR_PROMPT_GUIDE.md` | How to write effective Cursor prompts |
+| `CHANGELOG.md` | Detailed version history |
+| `DESIGN_SYSTEM_REFACTOR.md` | UI audit, component specs, migration plan |
+
+---
+
+*"A reader lives a thousand lives before he dies."*
