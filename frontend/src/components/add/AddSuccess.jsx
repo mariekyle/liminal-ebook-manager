@@ -7,10 +7,11 @@
 import { useNavigate } from 'react-router-dom'
 import StepIndicator from './StepIndicator'
 
-export default function AddSuccess({ type, title, onAddAnother }) {
+export default function AddSuccess({ type, title, titleId, onAddAnother }) {
   const navigate = useNavigate()
   
   const isWishlist = type === 'wishlist'
+  const canViewStory = !isWishlist && titleId
   
   return (
     <div className="py-6">
@@ -41,12 +42,21 @@ export default function AddSuccess({ type, title, onAddAnother }) {
         >
           Add Another
         </button>
-        <button
-          onClick={() => navigate(isWishlist ? '/?acquisition=wishlist' : '/')}
-          className="bg-library-accent text-white px-6 py-2 rounded-lg hover:opacity-90 transition-colors"
-        >
-          {isWishlist ? 'View Wishlist' : 'View Library'}
-        </button>
+        {canViewStory ? (
+          <button
+            onClick={() => navigate(`/book/${titleId}`)}
+            className="bg-library-accent text-white px-6 py-2 rounded-lg hover:opacity-90 transition-colors"
+          >
+            View Story
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate(isWishlist ? '/?acquisition=wishlist' : '/')}
+            className="bg-library-accent text-white px-6 py-2 rounded-lg hover:opacity-90 transition-colors"
+          >
+            {isWishlist ? 'View Wishlist' : 'View Library'}
+          </button>
+        )}
       </div>
       </div>
     </div>

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { listAuthors } from '../../api'
+import { listAuthors, listBooks } from '../../api'
 
 export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, initialFormat = 'physical' }) {
   const [form, setForm] = useState({
@@ -25,6 +25,12 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   const [filteredAuthors, setFilteredAuthors] = useState([])
   const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
   const authorInputRef = useRef(null)
+
+  // Title autocomplete state
+  const [titleSuggestions, setTitleSuggestions] = useState([])
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false)
+  const titleSearchTimeoutRef = useRef(null)
+  const titleJustSelectedRef = useRef(false)
   
   const showFanficFields = form.category === 'FanFiction'
   const showUrlField = form.format === 'web' || showFanficFields
@@ -51,6 +57,46 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
       setShowAuthorDropdown(false)
     }
   }, [form.authorInput, allAuthors, form.authors])
+
+  // Search titles as user types (debounced)
+  useEffect(() => {
+    // Clear previous timeout
+    if (titleSearchTimeoutRef.current) {
+      clearTimeout(titleSearchTimeoutRef.current)
+    }
+    
+    // Skip search if we just selected a suggestion
+    if (titleJustSelectedRef.current) {
+      titleJustSelectedRef.current = false
+      return
+    }
+    
+    if (form.title.trim().length >= 2) {
+      // Debounce search by 300ms
+      titleSearchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const response = await listBooks({ search: form.title.trim(), limit: 8 })
+          const suggestions = response.books || []
+          setTitleSuggestions(suggestions)
+          setShowTitleDropdown(suggestions.length > 0)
+        } catch (err) {
+          console.error('Title search failed:', err)
+          setTitleSuggestions([])
+          setShowTitleDropdown(false)
+        }
+      }, 300)
+    } else {
+      setTitleSuggestions([])
+      setShowTitleDropdown(false)
+    }
+    
+    // Cleanup on unmount or before next effect run
+    return () => {
+      if (titleSearchTimeoutRef.current) {
+        clearTimeout(titleSearchTimeoutRef.current)
+      }
+    }
+  }, [form.title])
   
   const validate = () => {
     const newErrors = {}
@@ -120,6 +166,22 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
       authors: prev.authors.filter(a => a !== author)
     }))
   }
+
+  const selectTitleSuggestion = (book) => {
+    titleJustSelectedRef.current = true
+    setForm(prev => ({
+      ...prev,
+      title: book.title,
+      authors: book.authors || [],
+      authorInput: '',
+      series: book.series || '',
+      seriesNumber: book.series_number || '',
+      category: book.category || prev.category,
+    }))
+    setTitleSuggestions([])
+    setShowTitleDropdown(false)
+    setErrors({})
+  }
   
   const handleAuthorKeyDown = (e) => {
     if (e.key === 'Enter' && form.authorInput.trim()) {
@@ -168,17 +230,42 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
         </div>
         
         {/* Title */}
-        <div>
+        <div className="relative">
           <label className="block text-sm text-gray-400 mb-2">Title *</label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => updateForm('title', e.target.value)}
+            onFocus={() => titleSuggestions.length > 0 && setShowTitleDropdown(true)}
+            onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
             placeholder="What's it called?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.title ? 'border-red-500' : 'border-gray-700'
             }`}
           />
+          
+          {/* Title suggestions dropdown */}
+          {showTitleDropdown && (
+            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-700">
+                Already in your library:
+              </div>
+              {titleSuggestions.map(book => (
+                <button
+                  key={book.id}
+                  type="button"
+                  onClick={() => selectTitleSuggestion(book)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors"
+                >
+                  <div className="text-sm text-white">{book.title}</div>
+                  <div className="text-xs text-gray-400">
+                    {book.authors?.join(', ')} • {book.category}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          
           {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
         </div>
         

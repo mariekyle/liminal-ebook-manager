@@ -93,8 +93,9 @@ export default function AddPage() {
   }, [linkToId])
   
   // Success state
-  const [successType, setSuccessType] = useState(null) // 'tbr' or 'library'
+  const [successType, setSuccessType] = useState(null) // 'wishlist' or 'library'
   const [successTitle, setSuccessTitle] = useState(null)
+  const [successTitleId, setSuccessTitleId] = useState(null)
   
   // Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -152,6 +153,7 @@ export default function AddPage() {
     setCurrentScreen(SCREENS.MAIN_CHOICE)
     setSuccessType(null)
     setSuccessTitle(null)
+    setSuccessTitleId(null)
     setError(null)
     setSelectedFiles([])
     setIsAnalyzing(false)
@@ -186,9 +188,10 @@ export default function AddPage() {
     setError(null)
     
     try {
-      await createTitle(data)
+      const response = await createTitle(data)
       setSuccessType('library')
       setSuccessTitle(data.title)
+      setSuccessTitleId(response.id || response.title_id || null)
       setCurrentScreen(SCREENS.SUCCESS)
     } catch (err) {
       setError(err.message)
@@ -567,11 +570,12 @@ export default function AddPage() {
           />
         )}
 
-        {/* Success Screen (for TBR and Manual) */}
+        {/* Success Screen (for Wishlist and Manual) */}
         {currentScreen === SCREENS.SUCCESS && (
           <AddSuccess
             type={successType}
             title={successTitle}
+            titleId={successTitleId}
             onAddAnother={handleReset}
           />
         )}

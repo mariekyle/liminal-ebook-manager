@@ -34,9 +34,9 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
   const bookResults = results.results
     .filter(r => r.status !== 'skipped')
     .map(result => {
-      const book = books.find(b => b.id === result.id);
-      return { ...result, book };
-    });
+    const book = books.find(b => b.id === result.id);
+    return { ...result, book };
+  });
 
   // Check if single successful book with valid title_id (for "View Story" button)
   // Only show "View Story" if we have a real database title_id (not a session UUID)
@@ -82,7 +82,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
         <h1 className="text-xl font-semibold text-white mb-1">Added to your library</h1>
         <p className="text-gray-400">
           {successCount === 1 ? 'Your collection grows' : `${successCount} stories added`}
-        </p>
+      </p>
       </div>
 
       {/* Stats summary */}
@@ -101,7 +101,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
             <SummaryRow label="Total Size" value={`${totalSizeMB} MB`} />
           )}
         </div>
-      </div>
+        </div>
 
       {/* Results list - tappable */}
       {bookResults.length > 0 && (
@@ -152,19 +152,19 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
         </div>
       )}
 
-      {/* Error messages */}
-      {errors > 0 && (
+        {/* Error messages */}
+        {errors > 0 && (
         <div className="mb-6 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
           <h3 className="text-sm text-red-400 mb-2">Errors</h3>
-          {bookResults
-            .filter(r => r.status === 'error')
-            .map(({ id, book, message }) => (
+            {bookResults
+              .filter(r => r.status === 'error')
+              .map(({ id, book, message }) => (
               <p key={id} className="text-sm text-red-300">
                 • {book?.title || 'Unknown'}: {message}
               </p>
-            ))}
-        </div>
-      )}
+              ))}
+          </div>
+        )}
 
       {/* Action buttons */}
       <div className={`flex gap-3 ${singleSuccess ? '' : 'flex-col'}`}>
