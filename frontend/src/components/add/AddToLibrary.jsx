@@ -190,9 +190,16 @@ export default function AddToLibrary({
           {/* Continue Button */}
           <button
             onClick={onContinue}
-            className="w-full mt-4 py-4 px-6 bg-[#667eea] hover:bg-[#5a6fd6] text-white font-medium rounded-lg transition-colors"
+            disabled={isAnalyzing}
+            className={`
+              w-full mt-4 py-4 px-6 font-medium rounded-lg transition-colors
+              ${isAnalyzing 
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                : 'bg-[#667eea] hover:bg-[#5a6fd6] text-white'
+              }
+            `}
           >
-            Continue
+            {isAnalyzing ? 'Analyzing...' : 'Continue'}
           </button>
         </div>
       )}

@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { listAuthors } from '../../api'
 
-export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
+export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, initialFormat = 'physical' }) {
   const [form, setForm] = useState({
     title: '',
     authors: [],
@@ -15,7 +15,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting }) {
     series: '',
     seriesNumber: '',
     category: 'FanFiction',
-    format: 'physical',
+    format: initialFormat,
     sourceUrl: '',
     completionStatus: '',
   })

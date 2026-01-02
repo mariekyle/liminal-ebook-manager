@@ -15,7 +15,7 @@
  * - /add?mode=upload → skip to ebook upload
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, getBook, linkFilesToTitle } from '../api'
 
@@ -28,10 +28,10 @@ import WishlistForm from '../components/add/WishlistForm'
 import ManualEntryForm from '../components/add/ManualEntryForm'
 import AddSuccess from '../components/add/AddSuccess'
 
-// Existing upload components
-import UploadZone from '../components/upload/UploadZone'
-import FilesSelected from '../components/upload/FilesSelected'
-import AnalyzingProgress from '../components/upload/AnalyzingProgress'
+// Unified add component
+import AddToLibrary from '../components/add/AddToLibrary'
+
+// Existing upload components (used in review/progress/success)
 import ReviewBooks from '../components/upload/ReviewBooks'
 import UploadProgress from '../components/upload/UploadProgress'
 import UploadSuccess from '../components/upload/UploadSuccess'
@@ -49,10 +49,8 @@ const SCREENS = {
   // Manual library entry
   MANUAL_FORM: 'manual_form',
   
-  // Ebook upload flow (existing)
-  UPLOAD_SELECT: 'upload_select',
-  UPLOAD_FILES_SELECTED: 'upload_files_selected',
-  UPLOAD_ANALYZING: 'upload_analyzing',
+  // Digital files flow (consolidated)
+  ADD_TO_LIBRARY: 'add_to_library',
   UPLOAD_REVIEW: 'upload_review',
   UPLOAD_UPLOADING: 'upload_uploading',
   UPLOAD_SUCCESS: 'upload_success',
@@ -76,8 +74,9 @@ export default function AddPage() {
   const getInitialScreen = () => {
     const mode = searchParams.get('mode')
     if (mode === 'tbr') return SCREENS.WISHLIST_FORM
+    if (mode === 'wishlist') return SCREENS.WISHLIST_FORM
     if (mode === 'library') return SCREENS.LIBRARY_CHOICE
-    if (mode === 'upload') return SCREENS.UPLOAD_SELECT
+    if (mode === 'upload') return SCREENS.ADD_TO_LIBRARY
     return SCREENS.MAIN_CHOICE
   }
   
@@ -104,10 +103,13 @@ export default function AddPage() {
   // Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  // Manual entry format choice
+  const [manualEntryFormat, setManualEntryFormat] = useState('physical')
   
   // ========== UPLOAD STATE (from original UploadPage) ==========
   const [selectedFiles, setSelectedFiles] = useState([])
-  const fileInputRef = useRef(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
   const [sessionId, setSessionId] = useState(null)
   const [books, setBooks] = useState([])
@@ -127,7 +129,7 @@ export default function AddPage() {
   
   const handleLibraryChoice = (choice) => {
     if (choice === 'ebook') {
-      setCurrentScreen(SCREENS.UPLOAD_SELECT)
+      setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
     } else {
       setCurrentScreen(SCREENS.MANUAL_FORM)
     }
@@ -135,7 +137,7 @@ export default function AddPage() {
   
   const handleBack = () => {
     // If in link mode, back goes to book detail
-    if (linkToId && currentScreen === SCREENS.UPLOAD_SELECT) {
+    if (linkToId && currentScreen === SCREENS.ADD_TO_LIBRARY) {
       navigate(`/book/${linkToId}`)
       return
     }
@@ -146,19 +148,11 @@ export default function AddPage() {
         setCurrentScreen(SCREENS.MAIN_CHOICE)
         break
       case SCREENS.MANUAL_FORM:
-      case SCREENS.UPLOAD_SELECT:
+      case SCREENS.ADD_TO_LIBRARY:
         setCurrentScreen(SCREENS.LIBRARY_CHOICE)
         break
-      case SCREENS.UPLOAD_FILES_SELECTED:
-        // If in link mode, back from files selected goes to book detail
-        if (linkToId) {
-          navigate(`/book/${linkToId}`)
-          return
-        }
-        setCurrentScreen(SCREENS.UPLOAD_SELECT)
-        break
       case SCREENS.UPLOAD_REVIEW:
-        setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
+        setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
         break
       default:
         setCurrentScreen(SCREENS.MAIN_CHOICE)
@@ -171,9 +165,11 @@ export default function AddPage() {
     setSuccessTitle(null)
     setError(null)
     setSelectedFiles([])
+    setIsAnalyzing(false)
     setSessionId(null)
     setBooks([])
     setUploadResults(null)
+    setManualEntryFormat('physical')
   }
 
   // ========== TBR FORM SUBMISSION ==========
@@ -214,29 +210,27 @@ export default function AddPage() {
 
   // ========== UPLOAD FLOW (from original UploadPage) ==========
 
-  const handleFileSelect = useCallback((files) => {
-    const fileArray = Array.from(files)
-    setSelectedFiles(fileArray)
-    setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
+  // Handler for AddToLibrary component
+  const handleFilesChange = useCallback((files) => {
+    setSelectedFiles(files)
     setError(null)
   }, [])
 
-  const handleFileDrop = useCallback((e) => {
-    e.preventDefault()
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      handleFileSelect(files)
-    }
-  }, [handleFileSelect])
-
-  const handleSelectDifferent = useCallback(() => {
-    setSelectedFiles([])
-    setCurrentScreen(SCREENS.UPLOAD_SELECT)
+  // Handler for manual entry format selection
+  const handleManualEntryFromAdd = useCallback((format) => {
     setError(null)
+    // Map format from AddToLibrary to ManualEntryForm values
+    const formatMap = {
+      'physical': 'physical',
+      'audiobook': 'audiobook',
+      'web_url': 'web',
+    }
+    setManualEntryFormat(formatMap[format] || 'physical')
+    setCurrentScreen(SCREENS.MANUAL_FORM)
   }, [])
 
   const handleAnalyze = useCallback(async () => {
-    setCurrentScreen(SCREENS.UPLOAD_ANALYZING)
+    setIsAnalyzing(true)
     setAnalyzeProgress(0)
     setError(null)
 
@@ -252,14 +246,18 @@ export default function AddPage() {
         edited: false,
       })))
       
+      setIsAnalyzing(false)
+      
       // In link mode, skip review and go straight to upload
       if (linkToId) {
         // Trigger upload immediately
         setCurrentScreen(SCREENS.UPLOAD_UPLOADING)
         setUploadProgress(0)
         
+        let progressInterval = null
+        
         try {
-          const progressInterval = setInterval(() => {
+          progressInterval = setInterval(() => {
             setUploadProgress(prev => Math.min(prev + 10, 90))
           }, 500)
 
@@ -268,22 +266,36 @@ export default function AddPage() {
           clearInterval(progressInterval)
           setUploadProgress(100)
           
-          // Navigate to the book detail page
+          // Include linked book info for success screen display
+          setBooks([{
+            id: linkToId,
+            title: linkedBook?.title || 'Unknown',
+            author: linkedBook?.authors?.join(', ') || 'Unknown',
+            files: selectedFiles.map(f => ({ name: f.name, size: f.size })),
+            action: 'add_to_existing',
+          }])
+          setUploadResults({
+            results: [{ id: linkToId, status: 'format_added' }]
+          })
+          
           setTimeout(() => {
-            navigate(`/book/${linkToId}`)
+            setCurrentScreen(SCREENS.UPLOAD_SUCCESS)
           }, 500)
         } catch (err) {
+          if (progressInterval) clearInterval(progressInterval)
           setError(err.message)
-          setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
+          setIsAnalyzing(false)
+          setCurrentScreen(SCREENS.ADD_TO_LIBRARY)  // Return to recoverable state
         }
+        return
       } else {
         setCurrentScreen(SCREENS.UPLOAD_REVIEW)
       }
     } catch (err) {
       setError(err.message)
-      setCurrentScreen(SCREENS.UPLOAD_FILES_SELECTED)
+      setIsAnalyzing(false)
     }
-  }, [selectedFiles, linkToId, navigate])
+  }, [selectedFiles, linkToId, linkedBook, navigate])
 
   const handleBookUpdate = useCallback((bookId, updates) => {
     setBooks(prev => prev.map(book => 
@@ -387,17 +399,15 @@ export default function AddPage() {
 
   const handleUploadMore = useCallback(() => {
     setSelectedFiles([])
+    setIsAnalyzing(false)
     setSessionId(null)
     setBooks([])
     setUploadResults(null)
     setError(null)
-    setCurrentScreen(SCREENS.UPLOAD_SELECT)
+    setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
   }, [])
 
   // ========== COMPUTED VALUES ==========
-
-  const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0)
-  const totalSizeMB = (totalSize / 1024 / 1024).toFixed(1)
   
   const booksToUpload = books.filter(b => b.action !== 'skip').length
   const filesToUpload = books
@@ -415,15 +425,12 @@ export default function AddPage() {
     // Special headers for link mode
     if (linkToId && linkedBook) {
       switch (currentScreen) {
-        case SCREENS.UPLOAD_SELECT:
-        case SCREENS.UPLOAD_FILES_SELECTED:
-          return { title: 'Upload Files', showBack: true }
-        case SCREENS.UPLOAD_ANALYZING:
-          return { title: 'Analyzing...', showBack: false }
+        case SCREENS.ADD_TO_LIBRARY:
+          return { title: 'Add Files', showBack: true }
         case SCREENS.UPLOAD_REVIEW:
           return { title: 'Review Files', showBack: true }
         case SCREENS.UPLOAD_UPLOADING:
-          return { title: 'Uploading...', showBack: false }
+          return { title: 'Adding...', showBack: false }
       }
     }
     
@@ -436,18 +443,14 @@ export default function AddPage() {
         return { title: 'Save to Wishlist', showBack: true }
       case SCREENS.MANUAL_FORM:
         return { title: 'Add to Library', showBack: true }
-      case SCREENS.UPLOAD_SELECT:
+      case SCREENS.ADD_TO_LIBRARY:
         return { title: 'Add to Library', showBack: true }
-      case SCREENS.UPLOAD_FILES_SELECTED:
-        return { title: 'Add to Library', showBack: true }
-      case SCREENS.UPLOAD_ANALYZING:
-        return { title: 'Analyzing...', showBack: false }
       case SCREENS.UPLOAD_REVIEW:
-        return { title: `Review (${books.length} books)`, showBack: true }
+        return { title: `Review ${books.length} ${books.length === 1 ? 'story' : 'stories'}`, showBack: true }
       case SCREENS.UPLOAD_UPLOADING:
-        return { title: 'Uploading...', showBack: false }
+        return { title: 'Adding...', showBack: false }
       case SCREENS.UPLOAD_SUCCESS:
-        return { title: 'Upload Complete', showBack: false }
+        return { title: 'Added to Library', showBack: false }
       case SCREENS.SUCCESS:
         return { title: successType === 'wishlist' ? 'Saved to Wishlist' : 'Added to Library', showBack: false }
       default:
@@ -523,13 +526,14 @@ export default function AddPage() {
             onSubmit={handleManualSubmit}
             onCancel={handleBack}
             isSubmitting={isSubmitting}
+            initialFormat={manualEntryFormat}
           />
         )}
 
-        {/* Upload Flow */}
-        {currentScreen === SCREENS.UPLOAD_SELECT && (
+        {/* Add to Library (unified file selection) */}
+        {currentScreen === SCREENS.ADD_TO_LIBRARY && (
           <>
-            {/* Context banner when uploading for a linked TBR book */}
+            {/* Context banner when uploading for a linked wishlist book */}
             {linkedBook && (
               <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -540,25 +544,15 @@ export default function AddPage() {
                 <p className="text-gray-400 text-sm">by {linkedBook.authors?.join(', ')}</p>
               </div>
             )}
-            <UploadZone
-              onFileSelect={handleFileSelect}
-              onFileDrop={handleFileDrop}
-              fileInputRef={fileInputRef}
+            <AddToLibrary
+              files={selectedFiles}
+              onFilesChange={handleFilesChange}
+              onContinue={handleAnalyze}
+              onManualEntry={handleManualEntryFromAdd}
+              isAnalyzing={isAnalyzing}
+              analyzeProgress={analyzeProgress}
             />
           </>
-        )}
-
-        {currentScreen === SCREENS.UPLOAD_FILES_SELECTED && (
-          <FilesSelected
-            files={selectedFiles}
-            totalSizeMB={totalSizeMB}
-            onAnalyze={handleAnalyze}
-            onSelectDifferent={handleSelectDifferent}
-          />
-        )}
-
-        {currentScreen === SCREENS.UPLOAD_ANALYZING && (
-          <AnalyzingProgress progress={analyzeProgress} />
         )}
 
         {currentScreen === SCREENS.UPLOAD_REVIEW && (
