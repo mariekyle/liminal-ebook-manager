@@ -50,16 +50,16 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
       <div className="text-6xl text-[#28a745] mb-6">✓</div>
       
       {/* Title */}
-      <h1 className="text-2xl font-semibold mb-2">Upload Complete!</h1>
+      <h1 className="text-2xl font-semibold mb-2">Added to your library</h1>
       <p className="text-base text-[#aaa] mb-8">
-        {created + formatAdded} book{created + formatAdded !== 1 ? 's' : ''} processed
+        {created + formatAdded} {created + formatAdded !== 1 ? 'stories' : 'story'} processed
       </p>
 
       {/* Summary */}
       <div className="bg-[#2a2a2a] rounded-lg p-5 mb-8 text-left">
         <div className="space-y-2">
           {created > 0 && (
-            <SummaryRow label="New Books Added" value={created} />
+            <SummaryRow label="New Stories Added" value={created} />
           )}
           {formatAdded > 0 && (
             <SummaryRow label="Formats Added" value={formatAdded} />
@@ -124,7 +124,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
           onClick={onGoToLibrary}
           className="w-full py-4 px-6 bg-[#667eea] hover:bg-[#5568d3] text-white font-medium rounded-lg transition-colors min-h-[52px]"
         >
-          View in Library
+          View Library
         </button>
         <button
           onClick={onUploadMore}

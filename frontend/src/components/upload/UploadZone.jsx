@@ -39,7 +39,7 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
     <div>
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Upload digital files</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Add digital files</h1>
       </div>
 
       {/* Hidden file input */}
@@ -69,7 +69,7 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
       >
         <div className="text-5xl mb-4">📚</div>
         <div className="text-base mb-2">
-          {isDragging ? 'Drop files here' : 'Tap to choose files'}
+          {isDragging ? 'Drop files here' : 'Drop files here or tap to browse'}
         </div>
         <div className="text-sm text-[#aaa]">
           EPUB • PDF • MOBI • AZW3 • HTML
@@ -78,11 +78,11 @@ export default function UploadZone({ onFileSelect, onFileDrop, fileInputRef }) {
 
       {/* Tips */}
       <div className="border-t border-[#3a3a3a] pt-5 mt-5">
-        <h3 className="text-sm text-[#aaa] mb-3">A few things to know:</h3>
+        <h3 className="text-sm text-[#aaa] mb-3">A few things to know</h3>
         <ul className="space-y-2">
           <Tip>Select all files at once</Tip>
-          <Tip>Fanfic formats auto-group by title</Tip>
-          <Tip>You can edit metadata before upload</Tip>
+          <Tip>Multiple formats auto-group by title</Tip>
+          <Tip>Edit metadata before adding</Tip>
           <Tip>Duplicates detected automatically</Tip>
         </ul>
       </div>

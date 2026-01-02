@@ -11,9 +11,9 @@ export default function AnalyzingProgress({ progress }) {
       <div className="text-5xl mb-4 animate-pulse">⏳</div>
       
       {/* Title */}
-      <h2 className="text-lg font-medium mb-2">Analyzing files...</h2>
+      <h2 className="text-lg font-medium mb-2">Analyzing files</h2>
       <p className="text-sm text-[#aaa] mb-6">
-        Extracting metadata & grouping files
+        Extracting metadata and grouping formats
       </p>
 
       {/* Progress bar */}

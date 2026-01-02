@@ -39,7 +39,7 @@ export default function ReviewBooks({
       {needsAttention > 0 && (
         <div className="mb-4 p-3 bg-[#3a3a2a] border border-[#ffc107] rounded-lg text-sm">
           <span className="mr-2">⚠️</span>
-          {needsAttention} book{needsAttention !== 1 ? 's need' : ' needs'} your attention before uploading.
+          {needsAttention} {needsAttention !== 1 ? 'items need' : 'item needs'} your attention
         </div>
       )}
 
@@ -71,7 +71,7 @@ export default function ReviewBooks({
               : 'bg-[#3a3a3a] text-[#666] cursor-not-allowed'}
           `}
         >
-          Upload {booksToUpload} Book{booksToUpload !== 1 ? 's' : ''} ({filesToUpload} file{filesToUpload !== 1 ? 's' : ''})
+          Add {booksToUpload} {booksToUpload !== 1 ? 'Stories' : 'Story'} ({filesToUpload} {filesToUpload !== 1 ? 'files' : 'file'})
         </button>
         <button
           onClick={onCancel}

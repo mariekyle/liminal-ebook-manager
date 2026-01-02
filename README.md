@@ -10,7 +10,9 @@
 
 If you're like me, you have books *everywhere*. EPUBs scattered across cloud drives. Fanfiction downloaded from AO3. PDFs from Humble Bundles you bought three years ago. Physical books stacked in corners. And somewhere in all of that chaos — a vague memory of which ones you've actually read, which ones you abandoned, and which ones changed your life.
 
-I tried everything. Goodreads felt too public. Obsidian was perfect for notes but miserable on mobile. Calibre is powerful but wasn't built for *reading* management — it's built for *file* management. And none of them understood that half my library is fanfiction with metadata that doesn't fit into "author, title, year."
+I've been chasing the perfect book management system for over a decade. Calibre was the love of my life for years — until I stopped using dedicated e-readers and moved all my reading to mobile. Suddenly, the tool that once felt indispensable became an obstacle. I tried everything: Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets, and more. I even built a custom ebook manager plugin for Obsidian, but I couldn't get it to work properly on mobile where I actually read.
+
+Every solution had the same problem: a disconnect between what *I* needed and what the tool was designed to do. And things completely fell apart once I started reading fanfiction. None of these apps understood that half my library has metadata that doesn't fit into "author, title, year" — I needed fields for fandoms, ships, content ratings, and completion status.
 
 I needed one place. One screen. One source of truth for my entire reading life.
 
@@ -22,12 +24,12 @@ So I built Liminal.
 
 Liminal is a **self-hosted web app** for managing your personal ebook library. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
 
-- 📚 **Browsing** your library with beautiful gradient covers
-- 📝 **Taking notes** with wiki-style `[[linking]]` between books
-- 📊 **Tracking** reading status, ratings, and re-reads
-- 🔖 **Wishlisting** books you want to acquire
-- 📁 **Organizing** into curated collections
-- 🔍 **Filtering** by dozens of criteria — including fanfiction-specific metadata
+- **Browsing** your library with beautiful gradient covers
+- **Taking notes** with wiki-style `[[linking]]` between books
+- **Tracking** reading status, ratings, and re-reads
+- **Wishlisting** books you want to acquire
+- **Organizing** into curated collections
+- **Filtering** by dozens of criteria — including fanfiction-specific metadata
 
 The name comes from that transported mental state you enter when you're truly absorbed in a book — the *liminal space* between the real world and the world on the page. The app is designed to get out of your way so you can spend less time managing and more time *there*.
 
@@ -235,10 +237,18 @@ MIT
 
 ## Acknowledgments
 
-- Built with [Cursor](https://cursor.sh/) and Claude
-- Gradient cover system inspired by Spotify's album art generation
-- Metadata extraction patterns adapted from Calibre and FanFicFare
-- UI patterns informed by Hardcover, Literal, and Moon+ Reader
+**Apps and experiences that inspired Liminal:**
+- [Hardcover](https://hardcover.app) — the biggest inspiration for what a modern reading tracker could be
+- [Moon+ Reader](https://www.moondownload.com/) — my daily reading companion on Android
+- [Notion](https://notion.so) — proof that personal databases can be beautiful
+- [Plex](https://plex.tv) — the gold standard for self-hosted media management
+- [Book of the Month](https://www.bookofthemonth.com/) — for showing how book discovery can feel curated and personal
+- [Calibre](https://calibre-ebook.com/) — my library manager since 2007, through trans-Atlantic moves, countless devices, and massive changes in technology. Today it feels like using a death laser to kill a single gnat (lol), but it taught me how powerful true customization could be
+- *Swan Song* (2021) — Ben Cleary's film is an embodiment of calm UX, and a reminder that letting go to build something greater is the hardest and most necessary part of the process
+
+**Built with:**
+- [Cursor](https://cursor.sh/) and Claude
+- FastAPI, React, Tailwind CSS, SQLite
 
 ---
 

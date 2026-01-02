@@ -1,14 +1,14 @@
 /**
- * TBRForm.jsx
+ * WishlistForm.jsx
  * 
- * Form for adding books to the Wishlist (formerly TBR)
+ * Form for adding stories to the Wishlist
  * Features: Multi-author chips, autocomplete for title/author/series
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { listBooks, listAuthors, listSeries } from '../../api'
 
-export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
+export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
   const [form, setForm] = useState({
     title: '',
     authors: [],
@@ -269,8 +269,8 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
   return (
     <div className="py-4">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Add a Future Read</h1>
-        <p className="text-gray-400">You'll get to it when you get to it</p>
+        <h1 className="text-2xl font-bold text-white mb-2">Save to Wishlist</h1>
+        <p className="text-gray-400">A story for another day</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
@@ -546,10 +546,11 @@ export default function TBRForm({ onSubmit, onCancel, isSubmitting }) {
             disabled={isSubmitting}
             className="flex-1 bg-library-accent text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50"
           >
-            {isSubmitting ? 'Saving...' : 'Save for Someday'}
+            {isSubmitting ? 'Saving...' : 'Save for Later'}
           </button>
         </div>
       </form>
     </div>
   )
 }
+

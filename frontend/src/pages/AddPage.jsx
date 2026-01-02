@@ -24,7 +24,7 @@ import AddChoice from '../components/add/AddChoice'
 import LibraryChoice from '../components/add/LibraryChoice'
 
 // Form screens
-import TBRForm from '../components/add/TBRForm'
+import WishlistForm from '../components/add/WishlistForm'
 import ManualEntryForm from '../components/add/ManualEntryForm'
 import AddSuccess from '../components/add/AddSuccess'
 
@@ -43,8 +43,8 @@ const SCREENS = {
   MAIN_CHOICE: 'main_choice',
   LIBRARY_CHOICE: 'library_choice',
   
-  // TBR flow
-  TBR_FORM: 'tbr_form',
+  // Wishlist flow
+  WISHLIST_FORM: 'wishlist_form',
   
   // Manual library entry
   MANUAL_FORM: 'manual_form',
@@ -75,7 +75,7 @@ export default function AddPage() {
   // Determine initial screen based on URL params
   const getInitialScreen = () => {
     const mode = searchParams.get('mode')
-    if (mode === 'tbr') return SCREENS.TBR_FORM
+    if (mode === 'tbr') return SCREENS.WISHLIST_FORM
     if (mode === 'library') return SCREENS.LIBRARY_CHOICE
     if (mode === 'upload') return SCREENS.UPLOAD_SELECT
     return SCREENS.MAIN_CHOICE
@@ -118,8 +118,8 @@ export default function AddPage() {
   // ========== NAVIGATION ==========
   
   const handleMainChoice = (choice) => {
-    if (choice === 'tbr') {
-      setCurrentScreen(SCREENS.TBR_FORM)
+    if (choice === 'wishlist') {
+      setCurrentScreen(SCREENS.WISHLIST_FORM)
     } else {
       setCurrentScreen(SCREENS.LIBRARY_CHOICE)
     }
@@ -141,7 +141,7 @@ export default function AddPage() {
     }
     
     switch (currentScreen) {
-      case SCREENS.TBR_FORM:
+      case SCREENS.WISHLIST_FORM:
       case SCREENS.LIBRARY_CHOICE:
         setCurrentScreen(SCREENS.MAIN_CHOICE)
         break
@@ -178,13 +178,13 @@ export default function AddPage() {
 
   // ========== TBR FORM SUBMISSION ==========
   
-  const handleTBRSubmit = async (data) => {
+  const handleWishlistSubmit = async (data) => {
     setIsSubmitting(true)
     setError(null)
     
     try {
-      await addToTBR(data)
-      setSuccessType('tbr')
+      await addToTBR(data)  // API function name unchanged
+      setSuccessType('wishlist')
       setSuccessTitle(data.title)
       setCurrentScreen(SCREENS.SUCCESS)
     } catch (err) {
@@ -432,8 +432,8 @@ export default function AddPage() {
         return { title: '', showBack: false }
       case SCREENS.LIBRARY_CHOICE:
         return { title: 'Add to Library', showBack: true }
-      case SCREENS.TBR_FORM:
-        return { title: 'Add to TBR', showBack: true }
+      case SCREENS.WISHLIST_FORM:
+        return { title: 'Save to Wishlist', showBack: true }
       case SCREENS.MANUAL_FORM:
         return { title: 'Add to Library', showBack: true }
       case SCREENS.UPLOAD_SELECT:
@@ -449,7 +449,7 @@ export default function AddPage() {
       case SCREENS.UPLOAD_SUCCESS:
         return { title: 'Upload Complete', showBack: false }
       case SCREENS.SUCCESS:
-        return { title: successType === 'tbr' ? 'Added to TBR' : 'Added to Library', showBack: false }
+        return { title: successType === 'wishlist' ? 'Saved to Wishlist' : 'Added to Library', showBack: false }
       default:
         return { title: 'Add', showBack: false }
     }
@@ -508,10 +508,10 @@ export default function AddPage() {
           <LibraryChoice onChoice={handleLibraryChoice} />
         )}
 
-        {/* TBR Form */}
-        {currentScreen === SCREENS.TBR_FORM && (
-          <TBRForm 
-            onSubmit={handleTBRSubmit}
+        {/* Wishlist Form */}
+        {currentScreen === SCREENS.WISHLIST_FORM && (
+          <WishlistForm 
+            onSubmit={handleWishlistSubmit}
             onCancel={handleBack}
             isSubmitting={isSubmitting}
           />

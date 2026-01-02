@@ -68,7 +68,7 @@ export default function FilesSelected({ files, totalSizeMB, onAnalyze, onSelectD
           onClick={onAnalyze}
           className="w-full py-4 px-6 bg-[#667eea] hover:bg-[#5568d3] text-white font-medium rounded-lg transition-colors min-h-[52px]"
         >
-          Analyze & Group Files
+          Continue
         </button>
         <button
           onClick={onSelectDifferent}
