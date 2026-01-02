@@ -19,8 +19,32 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from database import get_db
+from services.covers import get_cover_style, Theme
 
 router = APIRouter(tags=["collections"])
+
+
+def process_book_for_response(book_row) -> dict:
+    """Process a book database row into API response format with cover styles."""
+    book = dict(book_row)
+    
+    # Parse authors from JSON string to list
+    authors_raw = book.get("authors", "[]")
+    try:
+        authors = json.loads(authors_raw) if authors_raw else []
+    except (json.JSONDecodeError, TypeError):
+        authors = []
+    
+    primary_author = authors[0] if authors else "Unknown Author"
+    book["authors"] = authors
+    
+    # Generate cover style
+    cover_style = get_cover_style(book.get("title") or "Untitled", primary_author, Theme.DARK)
+    book["cover_gradient"] = cover_style.css_gradient
+    book["cover_bg_color"] = cover_style.background_color
+    book["cover_text_color"] = cover_style.text_color
+    
+    return book
 
 
 # --------------------------------------------------------------------------
@@ -30,7 +54,7 @@ router = APIRouter(tags=["collections"])
 class CollectionCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    cover_type: str = 'mosaic'  # 'mosaic', 'gradient', 'custom'
+    cover_type: str = 'gradient'  # 'gradient' or 'custom'
     cover_color_1: Optional[str] = None
     cover_color_2: Optional[str] = None
 
@@ -76,25 +100,7 @@ async def list_collections(db=Depends(get_db)):
     ''')
     collections = await cursor.fetchall()
     
-    result = []
-    for c in collections:
-        # Get first 4 books for mosaic preview
-        preview_cursor = await db.execute('''
-            SELECT t.id, t.title, t.authors, t.cover_color_1, t.cover_color_2
-            FROM collection_books cb
-            JOIN titles t ON cb.title_id = t.id
-            WHERE cb.collection_id = ?
-            ORDER BY cb.position ASC
-            LIMIT 4
-        ''', (c['id'],))
-        preview_books = await preview_cursor.fetchall()
-        
-        result.append({
-            **dict(c),
-            'preview_books': [dict(b) for b in preview_books]
-        })
-    
-    return result
+    return [dict(c) for c in collections]
 
 
 @router.post("/collections")
@@ -139,7 +145,7 @@ async def get_collection(collection_id: int, db=Depends(get_db)):
     return {
         **dict(collection),
         'book_count': len(books),
-        'books': [dict(b) for b in books]
+        'books': [process_book_for_response(b) for b in books]
     }
 
 

@@ -1,19 +1,87 @@
 /**
- * MosaicCover - Collection cover with multiple display modes
+ * CollectionCover - Collection cover display
  * 
  * Supports:
- * - mosaic: 2x2 grid of book gradients (default)
- * - gradient: Single gradient background
+ * - gradient: Purple-pink gradient with list icon (default)
  * - custom: User-uploaded image
+ * 
+ * Props:
+ * - coverType: 'gradient' or 'custom'
+ * - coverPath: Path to custom cover image
+ * - className: Additional CSS classes
+ * - variant: 'card' (2:3 aspect), 'square' (1:1), or 'banner' (cropped header)
  */
 
-export default function MosaicCover({ 
-  books = [], 
-  coverType = 'mosaic',
+export default function CollectionCover({ 
+  coverType = 'gradient',
   coverPath = null,
-  className = '' 
+  className = '',
+  variant = 'card'
 }) {
-  // Custom cover - show uploaded image
+  const ListIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-white/60">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  )
+
+  // Square variant - for collection grid cards
+  if (variant === 'square') {
+    if (coverType === 'custom' && coverPath) {
+      return (
+        <div className={`aspect-square rounded-lg overflow-hidden ${className}`}>
+          <img 
+            src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+            alt="Collection cover"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.parentElement.classList.add('bg-gradient-to-br', 'from-purple-600', 'to-pink-500', 'flex', 'items-center', 'justify-center')
+            }}
+          />
+        </div>
+      )
+    }
+    
+    // Gradient square
+    return (
+      <div className={`aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
+        <ListIcon />
+      </div>
+    )
+  }
+
+  // Banner variant - cropped header style
+  if (variant === 'banner') {
+    if (coverType === 'custom' && coverPath) {
+      return (
+        <div className={`w-full h-48 md:h-56 rounded-lg overflow-hidden ${className}`}>
+          <img 
+            src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+            alt="Collection cover"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.parentElement.classList.add('bg-gradient-to-br', 'from-purple-600', 'to-pink-500', 'flex', 'items-center', 'justify-center')
+            }}
+          />
+        </div>
+      )
+    }
+    
+    // Gradient banner
+    return (
+      <div className={`w-full h-48 md:h-56 rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
+        <ListIcon />
+      </div>
+    )
+  }
+
+  // Card variant (default) - 2:3 aspect ratio for grid
   if (coverType === 'custom' && coverPath) {
     return (
       <div className={`aspect-[2/3] rounded-lg overflow-hidden ${className}`}>
@@ -22,59 +90,18 @@ export default function MosaicCover({
           alt="Collection cover"
           className="w-full h-full object-cover"
           onError={(e) => {
-            // Fallback to gradient on error
             e.target.style.display = 'none'
-            e.target.parentElement.classList.add('bg-gradient-to-br', 'from-purple-600', 'to-pink-500')
+            e.target.parentElement.classList.add('bg-gradient-to-br', 'from-purple-600', 'to-pink-500', 'flex', 'items-center', 'justify-center')
           }}
         />
       </div>
     )
   }
   
-  // Gradient cover - single color gradient
-  if (coverType === 'gradient') {
-    return (
-      <div className={`aspect-[2/3] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
-        <span className="text-white/60 text-4xl">📚</span>
-      </div>
-    )
-  }
-  
-  // Mosaic cover (default) - 2x2 grid of book covers
-  // If fewer than 2 books, show placeholder gradient
-  if (!books || books.length < 2) {
-    return (
-      <div className={`aspect-[2/3] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
-        <span className="text-white/60 text-4xl">📚</span>
-      </div>
-    )
-  }
-  
-  // Get up to 4 books for the mosaic
-  const mosaicBooks = books.slice(0, 4)
-  
-  // Pad to 4 if we have 2-3 books
-  while (mosaicBooks.length < 4) {
-    mosaicBooks.push(null)
-  }
-  
-  // Generate gradient from cover colors
-  const getGradient = (book) => {
-    if (!book) return 'linear-gradient(135deg, #374151 0%, #1f2937 100%)'
-    const c1 = book.cover_color_1 || '#667eea'
-    const c2 = book.cover_color_2 || '#764ba2'
-    return `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`
-  }
-  
+  // Gradient card (default)
   return (
-    <div className={`aspect-[2/3] rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 bg-gray-800 ${className}`}>
-      {mosaicBooks.map((book, index) => (
-        <div 
-          key={index} 
-          className="relative overflow-hidden"
-          style={{ backgroundImage: getGradient(book) }}
-        />
-      ))}
+    <div className={`aspect-[2/3] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center ${className}`}>
+      <ListIcon />
     </div>
   )
 }

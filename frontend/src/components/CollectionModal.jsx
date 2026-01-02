@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react'
-import { createCollection, updateCollection } from '../api'
+import { createCollection, updateCollection, updateCollectionCoverType, uploadCollectionCover, deleteCollectionCover } from '../api'
 
 // X icon for close button
 const XIcon = () => (
@@ -13,14 +13,73 @@ const XIcon = () => (
   </svg>
 )
 
+const CameraIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+)
+
 export default function CollectionModal({ collection = null, onClose, onSuccess }) {
   const isEditing = !!collection
   
   const [name, setName] = useState(collection?.name || '')
   const [description, setDescription] = useState(collection?.description || '')
+  const [coverType, setCoverType] = useState(collection?.cover_type || 'gradient')
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   
+  const handleCoverTypeChange = async (type) => {
+    if (!collection?.id) {
+      // For new collections, just update local state
+      setCoverType(type)
+      return
+    }
+    
+    // For existing collections, update via API
+    try {
+      await updateCollectionCoverType(collection.id, type)
+      setCoverType(type)
+    } catch (err) {
+      console.error('Failed to update cover type:', err)
+      alert('Failed to update cover type')
+    }
+  }
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !collection?.id) return
+    
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB')
+      return
+    }
+    
+    try {
+      setUploadingCover(true)
+      await uploadCollectionCover(collection.id, file)
+      setCoverType('custom')
+    } catch (err) {
+      console.error('Failed to upload cover:', err)
+      alert('Failed to upload cover')
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  const handleDeleteCover = async () => {
+    if (!collection?.id) return
+    
+    try {
+      await deleteCollectionCover(collection.id)
+      setCoverType('gradient')
+    } catch (err) {
+      console.error('Failed to delete cover:', err)
+      alert('Failed to remove cover')
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
@@ -41,7 +100,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       if (isEditing) {
         await updateCollection(collection.id, data)
       } else {
-        await createCollection(data)
+        await createCollection({ ...data, cover_type: coverType })
       }
       
       onSuccess()
@@ -107,6 +166,66 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
             />
             <p className="mt-1 text-xs text-gray-500">Supports markdown formatting</p>
           </div>
+          
+          {/* Cover Type - only show when editing existing collection */}
+          {collection?.id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Cover Style
+              </label>
+              <div className="space-y-2">
+                {/* Gradient option */}
+                <button
+                  type="button"
+                  onClick={() => handleCoverTypeChange('gradient')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                    coverType === 'gradient'
+                      ? 'bg-library-accent/20 text-white ring-1 ring-library-accent'
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                  }`}
+                >
+                  <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-600 to-pink-500" />
+                  <span className="text-sm">Gradient</span>
+                </button>
+                
+                {/* Custom upload option */}
+                <label
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                    coverType === 'custom'
+                      ? 'bg-library-accent/20 text-white ring-1 ring-library-accent'
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                  } ${uploadingCover ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <div className="w-6 h-6 rounded bg-gray-600 flex items-center justify-center">
+                    {uploadingCover ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                    ) : (
+                      <CameraIcon />
+                    )}
+                  </div>
+                  <span className="text-sm flex-1">Custom image</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleCoverUpload}
+                    className="hidden"
+                    disabled={uploadingCover}
+                  />
+                </label>
+                
+                {/* Remove custom cover */}
+                {coverType === 'custom' && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteCover}
+                    className="w-full text-sm text-red-400 hover:text-red-300 py-1"
+                  >
+                    Remove custom cover
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Error */}
           {error && (
