@@ -31,7 +31,7 @@ import AddSuccess from '../components/add/AddSuccess'
 // Unified add component
 import AddToLibrary from '../components/add/AddToLibrary'
 
-// Existing upload components (used in review/progress/success)
+// Upload flow components
 import ReviewBooks from '../components/upload/ReviewBooks'
 import UploadProgress from '../components/upload/UploadProgress'
 import UploadSuccess from '../components/upload/UploadSuccess'
