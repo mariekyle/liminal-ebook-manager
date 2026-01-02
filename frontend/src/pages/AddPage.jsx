@@ -2,17 +2,15 @@
  * AddPage.jsx
  * 
  * Main "Add" page that routes between:
- * - Initial choice (library vs TBR)
- * - Library: format choice (ebook vs manual)
- * - Library: ebook upload flow
- * - Library: manual entry form
- * - TBR: entry form
+ * - Initial choice (owned vs wishlist)
+ * - Owned: add to library (upload or manual entry)
+ * - Wishlist: entry form
  * 
  * Supports deep linking:
  * - /add → initial choice
- * - /add?mode=tbr → skip to TBR form
- * - /add?mode=library → skip to library choice
- * - /add?mode=upload → skip to ebook upload
+ * - /add?mode=wishlist → skip to wishlist form
+ * - /add?mode=library → skip to add to library
+ * - /add?mode=upload → skip to add to library
  */
 
 import { useState, useCallback, useEffect } from 'react'
@@ -21,7 +19,6 @@ import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTit
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'
-import LibraryChoice from '../components/add/LibraryChoice'
 
 // Form screens
 import WishlistForm from '../components/add/WishlistForm'
@@ -41,7 +38,6 @@ import CancelModal from '../components/upload/CancelModal'
 const SCREENS = {
   // Choice screens
   MAIN_CHOICE: 'main_choice',
-  LIBRARY_CHOICE: 'library_choice',
   
   // Wishlist flow
   WISHLIST_FORM: 'wishlist_form',
@@ -75,7 +71,7 @@ export default function AddPage() {
     const mode = searchParams.get('mode')
     if (mode === 'tbr') return SCREENS.WISHLIST_FORM
     if (mode === 'wishlist') return SCREENS.WISHLIST_FORM
-    if (mode === 'library') return SCREENS.LIBRARY_CHOICE
+    if (mode === 'library') return SCREENS.ADD_TO_LIBRARY
     if (mode === 'upload') return SCREENS.ADD_TO_LIBRARY
     return SCREENS.MAIN_CHOICE
   }
@@ -123,15 +119,7 @@ export default function AddPage() {
     if (choice === 'wishlist') {
       setCurrentScreen(SCREENS.WISHLIST_FORM)
     } else {
-      setCurrentScreen(SCREENS.LIBRARY_CHOICE)
-    }
-  }
-  
-  const handleLibraryChoice = (choice) => {
-    if (choice === 'ebook') {
       setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
-    } else {
-      setCurrentScreen(SCREENS.MANUAL_FORM)
     }
   }
   
@@ -144,12 +132,13 @@ export default function AddPage() {
     
     switch (currentScreen) {
       case SCREENS.WISHLIST_FORM:
-      case SCREENS.LIBRARY_CHOICE:
+        setCurrentScreen(SCREENS.MAIN_CHOICE)
+        break
+      case SCREENS.ADD_TO_LIBRARY:
         setCurrentScreen(SCREENS.MAIN_CHOICE)
         break
       case SCREENS.MANUAL_FORM:
-      case SCREENS.ADD_TO_LIBRARY:
-        setCurrentScreen(SCREENS.LIBRARY_CHOICE)
+        setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
         break
       case SCREENS.UPLOAD_REVIEW:
         setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
@@ -437,8 +426,6 @@ export default function AddPage() {
     switch (currentScreen) {
       case SCREENS.MAIN_CHOICE:
         return { title: '', showBack: false }
-      case SCREENS.LIBRARY_CHOICE:
-        return { title: 'Add to Library', showBack: true }
       case SCREENS.WISHLIST_FORM:
         return { title: 'Save to Wishlist', showBack: true }
       case SCREENS.MANUAL_FORM:
@@ -505,10 +492,6 @@ export default function AddPage() {
         {/* Choice Screens */}
         {currentScreen === SCREENS.MAIN_CHOICE && (
           <AddChoice onChoice={handleMainChoice} />
-        )}
-
-        {currentScreen === SCREENS.LIBRARY_CHOICE && (
-          <LibraryChoice onChoice={handleLibraryChoice} />
         )}
 
         {/* Wishlist Form */}

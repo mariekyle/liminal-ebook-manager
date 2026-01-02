@@ -687,14 +687,15 @@ async def finalize_batch_endpoint(
             books_data = [book.dict() for book in other_books]
             other_results = await finalize_batch(session, books_data, BOOKS_DIR)
             
-            # Create title records for successfully uploaded books
-            # This ensures user's category selection is saved before sync runs
+            # Process results: create titles for new books, look up title_id for format_added
             for i, result in enumerate(other_results):
-                if result['status'] == 'created' and result.get('folder'):
+                folder_path = result.get('folder')
+                
+                if result['status'] == 'created' and folder_path:
+                    # Create title record for new books
                     book_data = books_data[i]
                     try:
                         # Find the primary ebook file in the folder
-                        folder_path = result['folder']
                         file_path = None
                         for ext in ['.epub', '.pdf', '.mobi', '.azw3']:
                             import glob
@@ -719,6 +720,21 @@ async def finalize_batch_endpoint(
                     except Exception as e:
                         print(f"Warning: Failed to create title record during upload: {e}")
                         # Don't fail the upload - sync will create it later
+                
+                elif result['status'] == 'format_added' and folder_path:
+                    # Look up existing title_id by folder_path for format_added
+                    try:
+                        cursor = await db.execute(
+                            """SELECT t.id FROM titles t
+                               JOIN editions e ON e.title_id = t.id
+                               WHERE e.folder_path = ?""",
+                            [folder_path]
+                        )
+                        row = await cursor.fetchone()
+                        if row:
+                            result['title_id'] = row[0]
+                    except Exception as e:
+                        print(f"Warning: Failed to look up title_id for format_added: {e}")
             
             results.extend(other_results)
         

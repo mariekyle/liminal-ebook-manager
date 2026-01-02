@@ -11,4 +11,5 @@ services:
     environment:
       - BOOKS_PATH=/books
       - DATABASE_PATH=/app/data/library.db
+      - COVERS_DIR=/app/data/covers
     restart: unless-stopped
