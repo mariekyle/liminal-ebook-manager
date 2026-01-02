@@ -826,3 +826,27 @@ export async function deleteCollectionCover(collectionId) {
     method: 'DELETE'
   })
 }
+
+/**
+ * Preview smart paste matches from markdown with [[Title]] links
+ * @param {string} markdown - Markdown text containing [[Title]] links
+ * @returns {Object} - { matches, total_found, total_matched, total_unmatched }
+ */
+export async function smartPastePreview(markdown) {
+  return apiFetch('/collections/smart-paste/preview', {
+    method: 'POST',
+    body: JSON.stringify({ markdown })
+  })
+}
+
+/**
+ * Apply smart paste - add matched books to a collection
+ * @param {number} collectionId - Collection ID
+ * @param {number[]} titleIds - Array of matched book IDs to add
+ */
+export async function smartPasteApply(collectionId, titleIds) {
+  return apiFetch(`/collections/${collectionId}/smart-paste/apply`, {
+    method: 'POST',
+    body: JSON.stringify({ title_ids: titleIds })
+  })
+}

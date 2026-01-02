@@ -8,6 +8,7 @@ import { getCollection, deleteCollection, removeBookFromCollection, updateCollec
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
+import SmartPasteModal from './SmartPasteModal'
 
 // Icons
 const BackIcon = () => (
@@ -44,6 +45,13 @@ const XIcon = () => (
   </svg>
 )
 
+const PasteIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+  </svg>
+)
+
 export default function CollectionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -55,6 +63,7 @@ export default function CollectionDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
+  const [showSmartPaste, setShowSmartPaste] = useState(false)
   
   const fetchCollection = async () => {
     try {
@@ -171,6 +180,16 @@ export default function CollectionDetail() {
                 <button
                   onClick={() => {
                     setShowMenu(false)
+                    setShowSmartPaste(true)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                >
+                  <PasteIcon />
+                  Smart Paste
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
                     setRemoveMode(!removeMode)
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
@@ -267,7 +286,7 @@ export default function CollectionDetail() {
         </div>
       )}
       
-      {/* Edit Modal */}
+{/* Edit Modal */}
       {showEditModal && (
         <CollectionModal
           collection={collection}
@@ -275,7 +294,19 @@ export default function CollectionDetail() {
           onSuccess={handleEditSuccess}
         />
       )}
-      
+
+      {/* Smart Paste Modal */}
+      {showSmartPaste && (
+        <SmartPasteModal
+          collectionId={parseInt(id)}
+          onClose={() => setShowSmartPaste(false)}
+          onSuccess={() => {
+            setShowSmartPaste(false)
+            fetchCollection()
+          }}
+        />
+      )}
+
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
