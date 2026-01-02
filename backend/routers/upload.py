@@ -116,6 +116,7 @@ class FinalizeResult(BaseModel):
     folder: Optional[str] = None
     files_added: Optional[int] = None
     message: Optional[str] = None
+    title_id: Optional[int] = None  # Database title ID for navigation
 
 
 class FinalizeResponse(BaseModel):
@@ -439,7 +440,8 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
         'status': 'format_added',
         'folder': folder_path,
         'files_added': files_moved,
-        'message': f'Added {files_moved} file(s) to existing title'
+        'message': f'Added {files_moved} file(s) to existing title',
+        'title_id': title_id
     }
 
 
@@ -702,7 +704,7 @@ async def finalize_batch_endpoint(
                                 file_path = matches[0]
                                 break
                         
-                        await create_title_from_upload(
+                        title_id = await create_title_from_upload(
                             db=db,
                             title=book_data.get('title', 'Unknown Title'),
                             author=book_data.get('author', 'Unknown Author'),
@@ -712,6 +714,8 @@ async def finalize_batch_endpoint(
                             folder_path=folder_path,
                             file_path=file_path
                         )
+                        # Add title_id to result for frontend navigation
+                        result['title_id'] = title_id
                     except Exception as e:
                         print(f"Warning: Failed to create title record during upload: {e}")
                         # Don't fail the upload - sync will create it later
@@ -737,7 +741,8 @@ async def finalize_batch_endpoint(
                 status=r['status'],
                 folder=r.get('folder'),
                 files_added=r.get('files_added'),
-                message=r.get('message')
+                message=r.get('message'),
+                title_id=r.get('title_id')
             )
             for r in results
         ]

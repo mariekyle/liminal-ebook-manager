@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import BookCard from './BookCard';
+import StepIndicator from '../add/StepIndicator';
 
 export default function ReviewBooks({
   books,
@@ -35,6 +36,9 @@ export default function ReviewBooks({
 
   return (
     <div>
+      {/* Step Indicator */}
+      <StepIndicator steps={['Add', 'Review', 'Done']} currentStep={1} />
+
       {/* Needs attention notice */}
       {needsAttention > 0 && (
         <div className="mb-4 p-3 bg-[#3a3a2a] border border-[#ffc107] rounded-lg text-sm">
@@ -71,7 +75,7 @@ export default function ReviewBooks({
               : 'bg-[#3a3a3a] text-[#666] cursor-not-allowed'}
           `}
         >
-          Add {booksToUpload} {booksToUpload !== 1 ? 'Stories' : 'Story'} ({filesToUpload} {filesToUpload !== 1 ? 'files' : 'file'})
+          Add {booksToUpload} {booksToUpload === 1 ? 'Story' : 'Stories'}
         </button>
         <button
           onClick={onCancel}

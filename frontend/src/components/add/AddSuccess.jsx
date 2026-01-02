@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from 'react-router-dom'
+import StepIndicator from './StepIndicator'
 
 export default function AddSuccess({ type, title, onAddAnother }) {
   const navigate = useNavigate()
@@ -12,12 +13,16 @@ export default function AddSuccess({ type, title, onAddAnother }) {
   const isWishlist = type === 'wishlist'
   
   return (
-    <div className="py-12 flex flex-col items-center justify-center text-center">
-      <div className="text-6xl mb-4">✨</div>
+    <div className="py-6">
+      {/* Step Indicator - 2 steps for manual/wishlist flow */}
+      <StepIndicator steps={['Add', 'Done']} currentStep={1} />
+
+      <div className="py-6 flex flex-col items-center justify-center text-center">
+        <div className="text-5xl mb-4">✨</div>
       
-      <h2 className="text-xl font-semibold text-white mb-2">
+      <h1 className="text-xl font-semibold text-white mb-1">
         {isWishlist ? 'Saved to your wishlist' : 'Added to your library'}
-      </h2>
+        </h1>
       
       <p className="text-gray-400 mb-2">
         {isWishlist 
@@ -42,6 +47,7 @@ export default function AddSuccess({ type, title, onAddAnother }) {
         >
           {isWishlist ? 'View Wishlist' : 'View Library'}
         </button>
+      </div>
       </div>
     </div>
   )
