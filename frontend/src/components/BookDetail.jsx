@@ -1029,7 +1029,7 @@ function BookDetail() {
       {/* Book Header - Horizontal on desktop, stacked on mobile */}
       <div className="flex flex-col md:flex-row gap-6 mb-6">
         {/* Cover - larger on desktop */}
-        <div className="w-28 md:w-48 shrink-0 mx-auto md:mx-0">
+        <div className="w-48 md:w-48 shrink-0 mx-auto md:mx-0">
           <GradientCover
             title={book.title}
             author={primaryAuthor}
@@ -1056,69 +1056,115 @@ function BookDetail() {
           
           {/* Series badge */}
           {book.series && (
-            <div className="text-gray-500 text-xs mb-1">
+            <div className="text-gray-500 text-xs mb-1 text-center md:text-left">
               {book.series} #{book.series_number || '?'}
             </div>
           )}
           
-          <h1 className="text-xl md:text-2xl font-bold text-white mb-1">
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-1 text-center md:text-left">
             {book.title}
           </h1>
           
           {/* Completion status */}
           {book.completion_status && book.completion_status !== 'Complete' && (
-            <div className="text-gray-500 text-sm mb-1">
+            <div className="text-gray-500 text-sm mb-1 text-center md:text-left">
               {book.completion_status}
             </div>
           )}
           
-          <p className="text-gray-400 mb-2">
-            by{' '}
-            {book.authors?.length > 0 ? (
-              book.authors.map((author, index) => (
-                <span key={`${author}-${index}`}>
-                  <Link
-                    to={`/author/${encodeURIComponent(author)}`}
-                    className="hover:text-library-accent transition-colors"
-                  >
-                    {author}
-                  </Link>
-                  {index < book.authors.length - 1 && ', '}
-                </span>
-              ))
-            ) : (
-              'Unknown Author'
+          <p className="text-gray-400 mb-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
+            <span>By{' '}
+              {book.authors?.length > 0 ? (
+                book.authors.map((author, index) => (
+                  <span key={`${author}-${index}`}>
+                    <Link
+                      to={`/author/${encodeURIComponent(author)}`}
+                      className="hover:text-library-accent transition-colors"
+                    >
+                      {author}
+                    </Link>
+                    {index < book.authors.length - 1 && ', '}
+                  </span>
+                ))
+              ) : (
+                'Unknown Author'
+              )}
+            </span>
+            {book.publication_year && (
+              <>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-500">{book.publication_year}</span>
+              </>
             )}
           </p>
           
-          {/* Source URL */}
-          {book.source_url && (
+          {/* Metadata Pill Boxes - only for owned books */}
+          {!isWishlist && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+              {/* Read Time */}
+              {readTimeData && (
+                <div className="bg-library-card rounded-lg px-3 py-2 text-center">
+                  <div className="text-white font-semibold">{readTimeData.display}</div>
+                  <div className="text-gray-500 text-xs">{readTimeData.microcopy}</div>
+                </div>
+              )}
+              
+              {/* Status - clickable to jump to reading history */}
+              <button
+                onClick={() => {
+                  const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
+                  target?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="bg-library-card rounded-lg px-3 py-2 text-center hover:bg-gray-700 transition-colors"
+              >
+                <div className="text-white font-semibold">{getLabel(selectedStatus)}</div>
+                <div className="text-gray-500 text-xs">status</div>
+              </button>
+              
+              {/* Rating - clickable to jump to reading history */}
+              <button
+                onClick={() => {
+                  const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
+                  target?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="bg-library-card rounded-lg px-3 py-2 text-center hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <span 
+                      key={star} 
+                      className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-yellow-400' : 'text-gray-600'}`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  {sessionsStats.average_rating > 0 
+                    ? RATING_LABELS[Math.round(sessionsStats.average_rating)] || 'rating'
+                    : 'no rating'}
+                </div>
+              </button>
+              
+              {/* Category */}
+              <div className="bg-library-card rounded-lg px-3 py-2 text-center">
+                <div className="text-white font-semibold">{selectedCategory || 'Uncategorized'}</div>
+                <div className="text-gray-500 text-xs">category</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Source URL - full display below pills (only for owned books with source) */}
+          {!isWishlist && book.source_url && (
             <a
               href={book.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-library-accent hover:underline text-sm mb-2 block truncate"
+              className="text-library-accent hover:underline text-sm mt-3 block truncate"
             >
-              {book.source_url.replace(/^https?:\/\//, '').split('/').slice(0, 2).join('/')}...
+              {book.source_url.replace(/^https?:\/\//, '')}
             </a>
           )}
-          
-          {/* Year and Read Time in a row on desktop */}
-          <div className="flex flex-wrap items-center gap-4 mt-3">
-            {book.publication_year && (
-              <span className="text-gray-500 text-sm">
-                {book.publication_year}
-              </span>
-            )}
-            
-            {/* Estimated Read Time (only for owned books) */}
-            {!isWishlist && readTimeData && (
-              <div className="bg-library-card rounded-lg px-3 py-2">
-                <span className="text-lg font-semibold text-white">{readTimeData.display}</span>
-                <span className="text-gray-400 text-sm ml-2">{readTimeData.microcopy}</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -1160,9 +1206,15 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Reading Tracker Card OR TBR Card */}
-      {/* On mobile: show in Details tab OR History tab. On desktop: always show */}
-      <div className={`bg-library-card rounded-lg p-4 mb-6 ${!isWishlist && activeTab !== 'details' && activeTab !== 'history' ? 'hidden md:block' : ''}`}>
+      {/* TBR Card (Wishlist) OR Reading History Card (Mobile only for Library books) */}
+      {/* On mobile: show in Details tab OR History tab. On desktop: only show for Wishlist */}
+      <div className={`bg-library-card rounded-lg p-4 mb-6 ${
+  isWishlist 
+    ? '' 
+    : (activeTab === 'details' || activeTab === 'history') 
+      ? 'md:hidden'
+      : 'hidden'
+}`}>
         {isWishlist ? (
           /* TBR UI */
           <div>
@@ -1308,96 +1360,14 @@ function BookDetail() {
             </div>
           </div>
         ) : (
-          /* Library Reading Tracker UI */
+          /* Library Reading Tracker UI - Reading History Only */
           <>
-            {/* Status and Rating Controls - hide on mobile History tab */}
-            <div className={`flex flex-wrap gap-3 items-center mb-4 ${activeTab === 'history' ? 'hidden md:flex' : ''}`}>
-              {/* Status Chip + Popup */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setStatusPopupOpen(!statusPopupOpen)
-                    setRatingPopupOpen(false)
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
-                >
-                  <span className={`text-sm ${
-                    selectedStatus === 'Finished' ? 'text-green-400' :
-                    selectedStatus === 'In Progress' ? 'text-blue-400' :
-                    selectedStatus === 'DNF' ? 'text-red-400' :
-                    'text-gray-300'
-                  }`}>
-                    {getLabel(selectedStatus)}
-                  </span>
-                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {statusPopupOpen && (
-                  <>
-                    {/* Backdrop to close popup */}
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setStatusPopupOpen(false)}
-                    />
-                    {/* Popup */}
-                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
-                      {getStatusOptions().map(({ value, label }) => (
-                        <button
-                          key={value}
-                          onClick={() => {
-                            handleStatusChange(value)
-                            setStatusPopupOpen(false)
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                            selectedStatus === value ? 'text-library-accent' : 'text-gray-300'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-                
-                {statusStatus === 'saved' && (
-                  <span className="text-green-400 text-sm ml-1">✓</span>
-                )}
-                {statusStatus === 'error' && (
-                  <span className="text-red-400 text-sm ml-1">!</span>
-                )}
-              </div>
-              
-              {/* Rating Display - Read Only (shows average from sessions) */}
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-library-bg border border-gray-600 rounded-full">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <span 
-                    key={star} 
-                    className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-yellow-400' : 'text-gray-600'}`}
-                  >
-                    ★
-                  </span>
-                ))}
-                {sessionsStats.average_rating > 0 && (
-                  <span className="text-gray-400 text-sm ml-1">({sessionsStats.average_rating})</span>
-                )}
-              </div>
-              
-              {/* Category - Read Only Chip */}
-              {selectedCategory && (
-                <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
-                  {selectedCategory}
-                </span>
-              )}
-            </div>
-            
             {/* Reading History Section */}
             <div className={`mt-4 pt-4 border-t border-gray-700 ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
               <div className="space-y-4">
                 {/* Header with Add button */}
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+                  <h3 id="reading-history" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
                     Reading History
                   </h3>
                   <button
@@ -1695,6 +1665,97 @@ function BookDetail() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Reading History Section - Desktop only (appears after About This Book) */}
+      {!isWishlist && (
+        <div className="hidden md:block bg-library-card rounded-lg p-4 mb-6">
+          <div className="space-y-4">
+            {/* Header with Add button */}
+            <div className="flex justify-between items-center">
+              <h3 id="reading-history-desktop" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+                Reading History
+              </h3>
+              <button
+                className="text-violet-400 hover:text-violet-300 text-sm font-medium"
+                onClick={openAddSession}
+              >
+                + Add Session
+              </button>
+            </div>
+
+            {/* Sessions List */}
+            {sessionsLoading ? (
+              <div className="text-gray-500 text-sm">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-gray-500 text-sm">No reading sessions recorded</div>
+            ) : (
+              <div className="space-y-3">
+                {sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="bg-gray-800/50 rounded-lg p-4 relative"
+                  >
+                    {/* Edit button */}
+                    <button
+                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-300"
+                      onClick={() => openEditSession(session)}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+
+                    {/* Session number */}
+                    <div className="font-semibold text-white mb-1">
+                      Read #{session.session_number}
+                    </div>
+
+                    {/* Date range */}
+                    {formatSessionDateRange(session.date_started, session.date_finished) && (
+                      <div className="text-gray-400 text-sm mb-2">
+                        {formatSessionDateRange(session.date_started, session.date_finished)}
+                      </div>
+                    )}
+
+                    {/* Status and rating */}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${
+                        session.session_status === 'finished' ? 'text-green-400' :
+                        session.session_status === 'dnf' ? 'text-pink-400' :
+                        'text-gray-400'
+                      }`}>
+                        {getLabel(session.session_status)}
+                      </span>
+                      {session.rating && renderStars(session.rating)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Stats Row */}
+            {sessions.length > 0 && (
+              <div className="border-t border-gray-700 pt-4 mt-4">
+                <div className="flex justify-between text-sm">
+                  <div>
+                    <div className="text-gray-400">Times Read</div>
+                    <div className="text-white font-semibold text-lg">{sessionsStats.times_read}</div>
+                  </div>
+                  {sessionsStats.average_rating && (
+                    <div className="text-right">
+                      <div className="text-gray-400">Average Rating</div>
+                      <div className="text-white font-semibold text-lg flex items-center justify-end gap-1">
+                        {sessionsStats.average_rating}
+                        <span className="text-yellow-400">★</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
