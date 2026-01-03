@@ -193,7 +193,8 @@ function BookDetail() {
     date_started: '',
     date_finished: '',
     session_status: 'in_progress',
-    rating: null
+    rating: null,
+    format: ''
   })
   const [sessionSaving, setSessionSaving] = useState(false)
   const [sessionError, setSessionError] = useState(null)
@@ -270,7 +271,8 @@ function BookDetail() {
       date_started: '',
       date_finished: '',
       session_status: 'in_progress',
-      rating: null
+      rating: null,
+      format: ''
     })
     setSessionError(null)
     setSessionModalOpen(true)
@@ -282,7 +284,8 @@ function BookDetail() {
       date_started: session.date_started || '',
       date_finished: session.date_finished || '',
       session_status: session.session_status,
-      rating: session.rating
+      rating: session.rating,
+      format: session.format || ''
     })
     setSessionError(null)
     setSessionModalOpen(true)
@@ -315,10 +318,12 @@ function BookDetail() {
         // Send empty string to clear, actual value to set
         data.date_started = sessionForm.date_started
         data.date_finished = sessionForm.date_finished
+        data.format = sessionForm.format
       } else {
         // For new sessions, only include if set
         if (sessionForm.date_started) data.date_started = sessionForm.date_started
         if (sessionForm.date_finished) data.date_finished = sessionForm.date_finished
+        if (sessionForm.format) data.format = sessionForm.format
       }
       
       if (editingSession) {
@@ -1727,9 +1732,26 @@ function BookDetail() {
                       </svg>
                     </button>
 
-                    {/* Session number */}
-                    <div className="font-semibold text-white mb-1">
-                      Read #{session.session_number}
+                    {/* Session number and format */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-white">
+                        Read #{session.session_number}
+                      </span>
+                      {session.format && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          session.format === 'ebook' ? 'bg-blue-900/50 text-blue-300' :
+                          session.format === 'physical' ? 'bg-amber-900/50 text-amber-300' :
+                          session.format === 'audiobook' ? 'bg-purple-900/50 text-purple-300' :
+                          session.format === 'web' ? 'bg-emerald-900/50 text-emerald-300' :
+                          'bg-gray-700 text-gray-300'
+                        }`}>
+                          {session.format === 'ebook' ? '📱 Digital' :
+                           session.format === 'physical' ? '📖 Physical' :
+                           session.format === 'audiobook' ? '🎧 Audiobook' :
+                           session.format === 'web' ? '🌐 Web' :
+                           session.format}
+                        </span>
+                      )}
                     </div>
 
                     {/* Date range */}
@@ -2236,6 +2258,22 @@ function BookDetail() {
                   onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
                 />
+              </div>
+
+              {/* Format */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Format</label>
+                <select
+                  value={sessionForm.format}
+                  onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value="">— Not specified</option>
+                  <option value="ebook">📱 Digital</option>
+                  <option value="physical">📖 Physical</option>
+                  <option value="audiobook">🎧 Audiobook</option>
+                  <option value="web">🌐 Web</option>
+                </select>
               </div>
 
               {/* Status */}

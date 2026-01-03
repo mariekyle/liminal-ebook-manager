@@ -8,13 +8,19 @@
 
 ## The Problem
 
-If you're like me, you have books *everywhere*. EPUBs scattered across cloud drives. Fanfiction downloaded from AO3. PDFs from bundles you bought three years ago. Physical books stacked in corners. And somewhere in all of that chaos — a vague memory of which ones you've actually read, which ones you abandoned, and which ones changed your life.
+If you're like me, you have books everywhere. EPUBs scattered across cloud drives. Fanfiction downloaded from AO3. PDFs from bundles you bought three years ago. Physical books stacked in corners. And somewhere in all of that chaos — a vague memory of which ones you've actually read, which ones you abandoned, and which ones changed your life.
+I've tried many excellent tools over the years — Calibre, Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets and more. Each one does what it was designed to do remarkably well. But I kept finding myself falling between the cracks:
 
-I've been chasing the perfect book management system for over a decade. Calibre was the love of my life for years — until I stopped using dedicated e-readers and moved all my reading to mobile. Suddenly, the tool that once felt indispensable became an obstacle. I tried everything: Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets, and more. I even built a custom ebook manager plugin for Obsidian, but I couldn't get it to work properly on mobile where I actually read.
+- Library managers excel at organizing files, but aren't built for mobile browsing or personal note-taking
+- Social reading platforms are great for discovery and community, but I wanted something private and personal
+- Reading servers serve books beautifully, but tracking and metadata live elsewhere
+- Note-taking apps handle thoughts well, but don't understand books as a concept
 
-Every solution had the same problem: a disconnect between what *I* needed and what the tool was designed to do. And things completely fell apart once I started reading fanfiction. None of these apps understood that half my library has metadata that doesn't fit into "author, title, year" — I needed fields for fandoms, ships, content ratings, and completion status.
+And then there's fanfiction — a significant part of my reading life that most tools either ignore entirely or treat as an afterthought. I needed a system that could handle a 200,000-word enemies-to-lovers epic with the same care as a published novel, complete with fandom, ships, content ratings, and completion status.
 
-I needed one place. One screen. One source of truth for my entire reading life.
+What I actually needed was something purpose-built for how I read: on my phone, across formats, with rich private notes, tracking re-reads, and metadata for literary work in various formats. 
+
+One place. One screen. One source of truth.
 
 So I built Liminal.
 
@@ -243,11 +249,10 @@ MIT
 - [Notion](https://notion.so) — proof that personal databases can be beautiful
 - [Plex](https://plex.tv) — the gold standard for self-hosted media management
 - [Book of the Month](https://www.bookofthemonth.com/) — for showing how book discovery can feel curated and personal
-- [Calibre](https://calibre-ebook.com/) — my library manager since 2007, through trans-Atlantic moves, countless devices, and massive changes in technology. It's a death laser for killing gnats now, but it taught me how powerful true customization could be
-- *Swan Song* (2021) — Ben Cleary's film is an embodiment of calm UX, and a reminder that letting go to build something greater is the hardest and most necessary part of the process
+- [Calibre](https://calibre-ebook.com/) — My constant companion since 2007. Calibre has followed me through trans-Atlantic moves, countless devices, format wars, and nearly two decades of evolving reading habits. It taught me that a personal library could be truly mine — organized exactly how I wanted, converted to any format I needed, backed up and portable forever. The fact that such powerful software exists for free, maintained with such dedication for so many years, is a gift to readers everywhere. Liminal exists because Calibre showed me what was possible.
+- *Swan Song* (2021) — the interfaces and experiences enabled by technology in Ben Cleary's film are the embodiment of calm UX. It's one of my favorite movies and is a reminder that letting go to build something greater is the hardest and most necessary part of any process.
 
 **Built with:**
-- [Cursor](https://cursor.sh/) and Claude
 - FastAPI, React, Tailwind CSS, SQLite
 
 ---

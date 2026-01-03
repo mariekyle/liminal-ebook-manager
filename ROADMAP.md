@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 2, 2026 (v0.16.0)
+> **Last Updated:** January 3, 2026 (v0.17.0)
 
 ---
 
@@ -21,7 +21,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.16.0)
+## Current State (v0.17.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,12 +35,13 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Collections system | ✅ Stable |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
+| Book detail header | ✅ Redesigned |
 
 **Recent milestones:**
+- Phase 8.3 + 8.4: Header redesign, cover toggles, format badges, rating labels (Jan 3, 2026)
 - Phase 8.1 + 8.6: Add book flow redesign & manual entry improvements (Jan 2, 2026)
 - Phase 7.2b: Collections system with smart paste (Jan 2, 2026)
 - Phase 7.2a: Enhanced filtering for fanfiction metadata (Jan 1, 2026)
-- Phase 7.1: Per-book rescan and enhanced editing (Jan 1, 2026)
 
 ---
 
@@ -49,7 +50,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  CURRENT  │  Phase 8: Quick Fixes & Polish                  │
-│           │  Bug fixes, UX improvements, small features     │
+│           │  Bug fixes, UX improvements, editions system    │
 ├───────────┼─────────────────────────────────────────────────┤
 │   NEXT    │  Phase 9: Feature Completion                    │
 │           │  Unprocessed files, collections enhancements    │
@@ -81,55 +82,60 @@ Complete overhaul of the "Add" page user experience:
 - [x] **View Story button** — Navigate to book detail after successful upload
 - [x] **format_added fix** — "View Story" works when adding format to existing book
 
-**New flow:**
-```
-Main Choice ("I have this") → Add to Library → Review → Success
-                                    ↓
-                          (Manual entry links at bottom)
-                                    ↓
-                              Manual Form → Success
-```
+### 8.2 Bug Fixes ✅ PARTIAL
 
-### 8.6 Manual Entry Form Improvements ✅ COMPLETE
+| Issue | Status |
+|-------|--------|
+| Obsidian backlinks broken | ✅ Fixed — Migration repopulates links table |
+| PDF duplicates not detected | ⏳ Pending |
+| Word count extraction fails | ⏳ Pending |
+| BISAC codes as genre | ⏳ Pending |
 
-- [x] **Title autocomplete** — Search existing titles with debounced queries
-- [x] **Auto-fill on selection** — Selecting suggestion fills title, authors, series, category
-- [x] **"View Story" button** — Navigate to book detail after manual entry success
-- [x] **Proper cleanup** — useRef for timeout cleanup, selection flag prevents dropdown reopen
+### 8.3 Book Detail Header Redesign ✅ COMPLETE
 
-### 8.2 Bug Fixes (High Priority)
+- [x] **Pill box metadata** — Status, Rating, Category as clickable pills
+- [x] **Read time pill** — Shows estimated time with microcopy
+- [x] **Mobile centering** — Title/author/series centered on mobile
+- [x] **Larger mobile cover** — w-28 → w-48 on mobile
+- [x] **Full source URL** — Not truncated below pills
 
-| Issue | Description |
-|-------|-------------|
-| PDF duplicates not detected | Upload screen doesn't detect existing PDFs |
-| Obsidian backlinks broken | Notes imported with [[links]] aren't showing in "Referenced by" |
-| Word count extraction fails | Some EPUBs show wrong word count (e.g., 116 instead of 200,000) |
-| BISAC codes as genre | Some Calibre books show codes like "bus041000" |
+### 8.4 Settings & Display Options ✅ COMPLETE
 
-### 8.3 Book Detail Enhancements
+- [x] **Cover display toggles** — Show/hide title, author, series below covers
+- [x] **Editable rating labels** — Customize 1-5 star descriptions
+- [x] **Remove WPM helper text** — Cleaner settings UI
+- [x] **Fix DNF → Abandoned** — Default label and field label fixed
 
-- [ ] **Header metadata** — Move read-only status, rating, and category to header area
-- [ ] **Edition formats display** — Show EPUB, PDF, Physical, Audiobook indicators
-- [ ] **Collections section refresh** — Update look/feel/layout of collections display
-- [ ] **"Referenced by" placement** — Move backlinks from Notes tab to Details tab (mobile)
-- [ ] **Download link** — Make stored book location a clickable download link
-- [ ] **"No summary" notice** — Show placeholder when book has no summary
+### 8.5 Edition Format Display ✅ COMPLETE
 
-### 8.4 Settings Improvements
+- [x] **Format badges** — Show Digital, Physical, Audiobook, Web badges
+- [x] **Color coding** — Each format has distinct color
+- [x] **File path tooltips** — Hover shows location
 
-- [ ] **Editable rating labels** — Customize star rating descriptions
-- [ ] **Remove WPM helper text** — Delete "💡 Average adult: 200–300 WPM"
-- [ ] **Fix default DNF label** — Change from "Def" to "Abandoned"
-- [ ] **Cover display options:**
-  - [ ] Show/hide title below cover
-  - [ ] Show/hide author below cover
-  - [ ] Show/hide title on cover
+### 8.6 Manual Entry Improvements ✅ COMPLETE
 
-### 8.5 Minor UI Polish
+- [x] **Title autocomplete** — Search existing titles
+- [x] **Auto-fill on selection** — Fill title, authors, series, category
+- [x] **View Story button** — Navigate to book after manual entry
+
+### 8.7 Editions Consolidation ⏳ NEXT
+
+> **Reference:** See `PHASE_8_7_EDITIONS.md` for detailed planning
+
+**Problem identified:** Adding a book via manual entry creates duplicate title records instead of adding an edition to existing title. The editions system needs consolidation.
+
+**Sub-phases:**
+- [ ] **8.7a: Foundation** — Add format field to reading sessions
+- [ ] **8.7b: Add Edition** — "+ Add Format" on BookDetail page
+- [ ] **8.7c: Add Flow** — Prevent accidental duplicates, offer "add as edition"
+- [ ] **8.7d: Merge Tool** — Combine duplicate titles
+- [ ] **8.7e: Format Filter** — Filter library by owned formats
+
+### 8.8 Minor UI Polish (Deferred)
 
 - [ ] Loading states and skeleton screens
 - [ ] Error handling improvements
-- [ ] Mobile notes editor scrollbar fix (cosmetic)
+- [ ] Mobile notes editor scrollbar fix
 
 ---
 
@@ -351,15 +357,16 @@ The design refactor isn't just about consistency — it's about creating a **cal
 | v0.13.0 | Jan 1, 2026 | Metadata editing |
 | v0.14.0 | Jan 1, 2026 | Enhanced filtering |
 | v0.15.0 | Jan 2, 2026 | Collections |
-| v0.16.0 | Jan 2, 2026 | Add flow redesign ✨ |
+| v0.16.0 | Jan 2, 2026 | Add flow redesign |
+| v0.17.0 | Jan 3, 2026 | Header redesign, format badges ✨ |
 
 ### Upcoming
 
 | Version | Phase | Focus |
 |---------|-------|-------|
-| v0.17.0 | 8 | Remaining quick fixes & polish |
-| v0.18.0 | 9 | Feature completion |
-| v0.19.0 | 10 | Design system refactor |
+| v0.18.0 | 8.7 | Editions consolidation |
+| v0.19.0 | 9 | Feature completion |
+| v0.20.0 | 10 | Design system refactor |
 | v1.0.0 | 11 | AI enhancements |
 
 ---
@@ -373,6 +380,7 @@ The design refactor isn't just about consistency — it's about creating a **cal
 | `CURSOR_PROMPT_GUIDE.md` | How to write effective Cursor prompts |
 | `CHANGELOG.md` | Detailed version history |
 | `DESIGN_SYSTEM_REFACTOR.md` | UI audit, component specs, migration plan |
+| `PHASE_8_7_EDITIONS.md` | Editions consolidation planning |
 
 ---
 

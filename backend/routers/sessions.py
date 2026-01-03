@@ -25,12 +25,14 @@ class SessionCreate(BaseModel):
     date_finished: Optional[str] = None     # ISO date: YYYY-MM-DD
     session_status: str = "in_progress"     # in_progress, finished, dnf
     rating: Optional[int] = None            # 1-5
+    format: Optional[str] = None            # ebook, physical, audiobook, web
 
 class SessionUpdate(BaseModel):
     date_started: Optional[str] = None
     date_finished: Optional[str] = None
     session_status: Optional[str] = None
     rating: Optional[int] = None
+    format: Optional[str] = None            # ebook, physical, audiobook, web
 
 class SessionResponse(BaseModel):
     id: int
@@ -40,6 +42,7 @@ class SessionResponse(BaseModel):
     date_finished: Optional[str]
     session_status: str
     rating: Optional[int]
+    format: Optional[str]
     created_at: str
     updated_at: str
 
@@ -67,7 +70,7 @@ async def list_sessions(title_id: int, db: aiosqlite.Connection = Depends(get_db
     # Get sessions, newest first (highest session_number)
     cursor = await db.execute("""
         SELECT id, title_id, session_number, date_started, date_finished, 
-               session_status, rating, created_at, updated_at
+               session_status, rating, format, created_at, updated_at
         FROM reading_sessions
         WHERE title_id = ?
         ORDER BY session_number DESC
@@ -85,8 +88,9 @@ async def list_sessions(title_id: int, db: aiosqlite.Connection = Depends(get_db
             date_finished=row[4],
             session_status=row[5],
             rating=row[6],
-            created_at=row[7],
-            updated_at=row[8]
+            format=row[7],
+            created_at=row[8],
+            updated_at=row[9]
         ))
         if row[6] is not None:
             ratings.append(row[6])
@@ -136,6 +140,15 @@ async def create_session(
             detail="Cannot rate a session that is still in progress"
         )
     
+    # Validate format if provided
+    if session.format is not None:
+        valid_formats = ['ebook', 'physical', 'audiobook', 'web']
+        if session.format not in valid_formats:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid format. Must be one of: {valid_formats}"
+            )
+    
     # Get next session number
     cursor = await db.execute(
         "SELECT COALESCE(MAX(session_number), 0) + 1 FROM reading_sessions WHERE title_id = ?",
@@ -148,11 +161,11 @@ async def create_session(
     cursor = await db.execute("""
         INSERT INTO reading_sessions (
             title_id, session_number, date_started, date_finished, 
-            session_status, rating, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            session_status, rating, format, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         title_id, next_number, session.date_started, session.date_finished,
-        session.session_status, session.rating, now, now
+        session.session_status, session.rating, session.format, now, now
     ))
     session_id = cursor.lastrowid
     await db.commit()
@@ -163,7 +176,7 @@ async def create_session(
     # Return created session
     cursor = await db.execute("""
         SELECT id, title_id, session_number, date_started, date_finished,
-               session_status, rating, created_at, updated_at
+               session_status, rating, format, created_at, updated_at
         FROM reading_sessions WHERE id = ?
     """, (session_id,))
     row = await cursor.fetchone()
@@ -176,8 +189,9 @@ async def create_session(
         date_finished=row[4],
         session_status=row[5],
         rating=row[6],
-        created_at=row[7],
-        updated_at=row[8]
+        format=row[7],
+        created_at=row[8],
+        updated_at=row[9]
     )
 
 
@@ -225,6 +239,15 @@ async def update_session(
             detail="Cannot rate a session that is still in progress"
         )
     
+   # Validate format if provided (empty string is allowed to clear)
+    if updates.format is not None and updates.format != '':
+        valid_formats = ['ebook', 'physical', 'audiobook', 'web']
+        if updates.format not in valid_formats:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid format. Must be one of: {valid_formats}"
+            )
+    
     # Build update query dynamically
     update_fields = []
     params = []
@@ -246,6 +269,11 @@ async def update_session(
         update_fields.append("rating = ?")
         params.append(updates.rating)
     
+    if updates.format is not None:
+        update_fields.append("format = ?")
+        # Empty string means clear, None means don't change
+        params.append(updates.format if updates.format != '' else None)
+    
     # Always update updated_at
     update_fields.append("updated_at = ?")
     params.append(datetime.utcnow().isoformat())
@@ -266,7 +294,7 @@ async def update_session(
     # Return updated session
     cursor = await db.execute("""
         SELECT id, title_id, session_number, date_started, date_finished,
-               session_status, rating, created_at, updated_at
+               session_status, rating, format, created_at, updated_at
         FROM reading_sessions WHERE id = ?
     """, (session_id,))
     row = await cursor.fetchone()
@@ -279,8 +307,9 @@ async def update_session(
         date_finished=row[4],
         session_status=row[5],
         rating=row[6],
-        created_at=row[7],
-        updated_at=row[8]
+        format=row[7],
+        created_at=row[8],
+        updated_at=row[9]
     )
 
 

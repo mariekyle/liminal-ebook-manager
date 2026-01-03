@@ -138,6 +138,17 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             (key, value)
         )
     
+    # Migration: Add format column to reading_sessions
+    cursor = await db.execute("PRAGMA table_info(reading_sessions)")
+    session_columns = await cursor.fetchall()
+    session_column_names = {col[1] for col in session_columns}
+    
+    if 'format' not in session_column_names:
+        print("Migration: Adding 'format' column to reading_sessions table...")
+        await db.execute("ALTER TABLE reading_sessions ADD COLUMN format TEXT")
+        await db.commit()
+        print("Migration: 'format' column added successfully")
+    
     # Ensure author_notes table exists
     await db.execute("""
         CREATE TABLE IF NOT EXISTS author_notes (
@@ -510,6 +521,7 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
     date_finished TEXT,
     session_status TEXT DEFAULT 'in_progress',
     rating INTEGER,
+    format TEXT,                  -- ebook, physical, audiobook, web (nullable)
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE

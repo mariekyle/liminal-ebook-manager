@@ -11,6 +11,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.17.0] - 2026-01-03
+
+### Added
+
+#### Phase 8.3: Book Detail Header Redesign
+Complete redesign of the book detail header with metadata pill boxes.
+
+- **Pill box layout** — Status, Rating, Category displayed as clickable pill boxes
+- **Read time pill** — Shows estimated read time with microcopy (e.g., "2 hours / a short journey")
+- **Clickable pills** — Status and Rating pills scroll to Reading History section
+- **Rating descriptions** — Shows label like "Better than Good" under stars
+- **Mobile centering** — Title, author, series centered on mobile, left-aligned on desktop
+- **Larger mobile cover** — Cover size increased from w-28 to w-48 on mobile
+- **Full source URL** — Source URL displayed in full below pills (not truncated)
+
+#### Phase 8.4: Cover Display Options
+Three independent toggles for customizing book card display in library grid.
+
+- **Show title below cover** — Toggle to show/hide title text below book covers
+- **Show author below cover** — Toggle to show/hide author text below book covers
+- **Show series below cover** — Toggle to show/hide series info below book covers
+- **Settings persistence** — All toggles saved to database and sync across sessions
+- **Real-time updates** — Changes apply immediately via settingsChanged event
+
+#### Edition Format Badges
+Visual indicators showing which formats user owns for each book.
+
+- **Format badges** — Colored pills showing Digital, Physical, Audiobook, Web
+- **Color coding** — Blue (Digital), Amber (Physical), Purple (Audiobook), Green (Web)
+- **Emoji icons** — 📱 Digital, 📖 Physical, 🎧 Audiobook, 🌐 Web
+- **Tooltip on hover** — Shows file path or folder path
+- **Responsive layout** — Centered on mobile, left-aligned on desktop
+
+#### Editable Rating Labels
+Customize the descriptive text shown for each star rating.
+
+- **Settings UI** — New "Rating Labels" section in Settings drawer
+- **Five customizable labels** — One for each star rating (1-5)
+- **Star preview** — Shows ★★★★★ pattern next to each input
+- **useRatingLabels hook** — New hook for loading custom rating labels
+- **Real-time sync** — Changes propagate to BookDetail immediately
+
+### Changed
+
+#### Status Label Improvements
+- **DNF → Abandoned** — Default label changed from "DNF" to "Abandoned" throughout
+- **Field labels fixed** — Settings shows "Abandoned" instead of "Dnf" as field label
+- **Backwards compatible** — API accepts both "DNF" and "Abandoned" values
+- **Migration support** — Existing "DNF" data handled correctly
+
+#### Settings Cleanup
+- **Removed WPM helper text** — Deleted "💡 Average adult: 200–300 WPM" hint
+- **Cleaner UI** — Less visual clutter in settings drawer
+
+### Fixed
+
+#### Backlinks Bug Fix
+- **Links table population** — One-time migration parses existing notes for [[links]]
+- **Obsidian import fix** — Notes imported from Obsidian now show in "Referenced by"
+- **Case-insensitive matching** — Title lookups ignore case differences
+- **Tuple indexing fix** — Migration uses integer indices (runs before row_factory)
+
+### Technical
+
+#### New Files
+- `frontend/src/hooks/useRatingLabels.js` — Hook to load custom rating labels
+
+#### Modified Files
+- `frontend/src/components/BookDetail.jsx` — Header redesign, format badges, rating labels
+- `frontend/src/components/SettingsDrawer.jsx` — Cover toggles, rating labels, DNF fix
+- `frontend/src/hooks/useStatusLabels.js` — Abandoned handling
+- `frontend/src/components/BookCard.jsx` — Conditional title/author/series display
+- `backend/database.py` — Links migration, DNF defaults
+- `backend/routers/titles.py` — Abandoned status support
+
+---
+
 ## [0.16.0] - 2026-01-02
 
 ### Added
@@ -413,7 +490,8 @@ Complete system for extracting and displaying structured metadata from EPUB file
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.16.0 | 2026-01-02 | **Phase 8.1 + 8.6** — Add flow redesign, manual entry improvements ✨ |
+| 0.17.0 | 2026-01-03 | **Phase 8.3 + 8.4** — Header redesign, cover toggles, format badges, rating labels ✨ |
+| 0.16.0 | 2026-01-02 | **Phase 8.1 + 8.6** — Add flow redesign, manual entry improvements |
 | 0.15.0 | 2026-01-02 | **Phase 7.2b** — Collections system, smart paste, Calibre migration |
 | 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) |
 | 0.13.0 | 2026-01-01 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
@@ -445,6 +523,27 @@ Complete system for extracting and displaying structured metadata from EPUB file
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.17.0
+
+**No database schema changes required.** One-time migration runs automatically to populate links table.
+
+**New Files to Upload:**
+- `frontend/src/hooks/useRatingLabels.js`
+
+**Modified Files:**
+- `frontend/src/components/BookDetail.jsx`
+- `frontend/src/components/SettingsDrawer.jsx`
+- `frontend/src/components/BookCard.jsx`
+- `frontend/src/hooks/useStatusLabels.js`
+- `backend/database.py`
+- `backend/routers/titles.py`
+
+**Post-upgrade:**
+1. Upload all new and modified files
+2. Rebuild Docker container
+3. Links migration runs automatically on first startup
+4. Backlinks should now appear in "Referenced by" sections
 
 ### Upgrading to 0.16.0
 
@@ -509,10 +608,10 @@ environment:
 
 ## Links
 
-- [Roadmap](./20250102_ROADMAP.md)
+- [Roadmap](./20250103_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: January 2, 2026 (v0.16.0 — Phase 8.1 + 8.6 complete)*
+*Last updated: January 3, 2026 (v0.17.0 — Phase 8.3 + 8.4 complete)*
