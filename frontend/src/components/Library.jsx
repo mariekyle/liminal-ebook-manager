@@ -38,6 +38,7 @@ function Library() {
   const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
   const [wpm, setWpm] = useState(250)
   const [gridColumns, setGridColumns] = useState('2')
+  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
   
   // Enhanced metadata filters (Phase 7.2)
   const [fandom, setFandom] = useState(searchParams.get('fandom') || '')
@@ -112,6 +113,9 @@ function Library() {
         if (settings.grid_columns) {
           setGridColumns(settings.grid_columns)
         }
+        if (settings.show_title_below_cover !== undefined) {
+          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        }
       })
       .catch(err => console.error('Failed to load settings:', err))
   }, [])
@@ -121,6 +125,9 @@ function Library() {
     const handleSettingsChange = (event) => {
       if (event.detail.grid_columns) {
         setGridColumns(event.detail.grid_columns)
+      }
+      if (event.detail.show_title_below_cover !== undefined) {
+        setShowTitleBelowCover(event.detail.show_title_below_cover)
       }
     }
     
@@ -643,7 +650,7 @@ function Library() {
             'grid-cols-4'
           }`}>
             {filteredBooks.map(book => (
-              <BookCard key={book.id} book={book} />
+              <BookCard key={book.id} book={book} showTitleBelowCover={showTitleBelowCover} />
             ))}
           </div>
         )}

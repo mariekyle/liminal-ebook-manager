@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { getAuthor } from '../api'
+import { getAuthor, getSettings } from '../api'
 import GradientCover from './GradientCover'
 import EditAuthorModal from './EditAuthorModal'
 
@@ -13,6 +13,7 @@ function AuthorDetail() {
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -27,6 +28,29 @@ function AuthorDetail() {
       })
       .finally(() => setLoading(false))
   }, [name])
+
+  // Load display settings
+  useEffect(() => {
+    getSettings()
+      .then(settings => {
+        if (settings.show_title_below_cover !== undefined) {
+          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
+  }, [])
+
+  // Listen for display setting changes
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail.show_title_below_cover !== undefined) {
+        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      }
+    }
+    
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
+  }, [])
 
   const handleAuthorSave = (result) => {
     // If author was renamed, navigate to new URL
@@ -142,13 +166,17 @@ function AuthorDetail() {
                   </div>
                 )}
               </div>
-              <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
-                {book.title}
-              </h3>
-              {book.series && (
-                <p className="text-gray-500 text-xs truncate">
-                  {book.series} #{book.series_number || '?'}
-                </p>
+              {showTitleBelowCover && (
+                <>
+                  <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
+                    {book.title}
+                  </h3>
+                  {book.series && (
+                    <p className="text-gray-500 text-xs truncate">
+                      {book.series} #{book.series_number || '?'}
+                    </p>
+                  )}
+                </>
               )}
             </Link>
           ))}

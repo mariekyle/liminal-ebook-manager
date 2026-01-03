@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getCollection, deleteCollection, removeBookFromCollection, updateCollection } from '../api'
+import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings } from '../api'
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
@@ -64,6 +64,7 @@ export default function CollectionDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
   const [showSmartPaste, setShowSmartPaste] = useState(false)
+  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
   
   const fetchCollection = async () => {
     try {
@@ -82,6 +83,29 @@ export default function CollectionDetail() {
   useEffect(() => {
     fetchCollection()
   }, [id])
+
+  // Load display settings
+  useEffect(() => {
+    getSettings()
+      .then(settings => {
+        if (settings.show_title_below_cover !== undefined) {
+          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
+  }, [])
+
+  // Listen for display setting changes
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail.show_title_below_cover !== undefined) {
+        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      }
+    }
+    
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
+  }, [])
   
   const handleDelete = async () => {
     try {
@@ -261,7 +285,7 @@ export default function CollectionDetail() {
                   className="w-full text-left group"
                 >
                   <div className="relative">
-                    <BookCard book={book} />
+                    <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
                     {/* Remove overlay */}
                     <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-red-600 rounded-full p-2">
@@ -271,7 +295,7 @@ export default function CollectionDetail() {
                   </div>
                 </button>
               ) : (
-                <BookCard book={book} />
+                <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
               )}
             </div>
           ))}

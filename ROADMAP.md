@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 2, 2026 (v0.15.0)
+> **Last Updated:** January 2, 2026 (v0.16.0)
 
 ---
 
@@ -21,7 +21,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.15.0)
+## Current State (v0.16.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -34,12 +34,13 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Wishlist management | ✅ Stable |
 | Collections system | ✅ Stable |
 | Enhanced fanfiction metadata | ✅ Stable |
+| Add book flow | ✅ Redesigned |
 
 **Recent milestones:**
+- Phase 8.1 + 8.6: Add book flow redesign & manual entry improvements (Jan 2, 2026)
 - Phase 7.2b: Collections system with smart paste (Jan 2, 2026)
 - Phase 7.2a: Enhanced filtering for fanfiction metadata (Jan 1, 2026)
 - Phase 7.1: Per-book rescan and enhanced editing (Jan 1, 2026)
-- Phase 7.0: AO3 metadata extraction (Dec 31, 2025)
 
 ---
 
@@ -67,7 +68,36 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Address accumulated bugs and UX friction before major refactors.
 
-### 8.1 Bug Fixes (High Priority)
+### 8.1 Add Book Flow Redesign ✅ COMPLETE
+
+Complete overhaul of the "Add" page user experience:
+
+- [x] **Language cleanup** — TBR → Wishlist terminology throughout
+- [x] **Step indicators** — Visual progress for multi-step flows
+- [x] **Unified AddToLibrary component** — Single screen for file selection
+- [x] **AnalyzingModal** — Full-screen overlay during file analysis
+- [x] **Success screens** — Step indicators, tappable results, "View Story" navigation
+- [x] **Streamlined flow** — Skip LibraryChoice, go directly to AddToLibrary
+- [x] **View Story button** — Navigate to book detail after successful upload
+- [x] **format_added fix** — "View Story" works when adding format to existing book
+
+**New flow:**
+```
+Main Choice ("I have this") → Add to Library → Review → Success
+                                    ↓
+                          (Manual entry links at bottom)
+                                    ↓
+                              Manual Form → Success
+```
+
+### 8.6 Manual Entry Form Improvements ✅ COMPLETE
+
+- [x] **Title autocomplete** — Search existing titles with debounced queries
+- [x] **Auto-fill on selection** — Selecting suggestion fills title, authors, series, category
+- [x] **"View Story" button** — Navigate to book detail after manual entry success
+- [x] **Proper cleanup** — useRef for timeout cleanup, selection flag prevents dropdown reopen
+
+### 8.2 Bug Fixes (High Priority)
 
 | Issue | Description |
 |-------|-------------|
@@ -75,12 +105,6 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Obsidian backlinks broken | Notes imported with [[links]] aren't showing in "Referenced by" |
 | Word count extraction fails | Some EPUBs show wrong word count (e.g., 116 instead of 200,000) |
 | BISAC codes as genre | Some Calibre books show codes like "bus041000" |
-
-### 8.2 Add Book Flow Improvements
-
-- [ ] **Clarify owned book flow** — Current flow is disorienting; needs clearer guidance
-- [ ] **"View in Library" destination** — Upload complete button should navigate to BookDetail, not Library grid
-- [ ] **PDF duplicate detection** — Match existing PDFs like EPUBs
 
 ### 8.3 Book Detail Enhancements
 
@@ -326,15 +350,16 @@ The design refactor isn't just about consistency — it's about creating a **cal
 | v0.12.0 | Dec 31, 2025 | Enhanced metadata |
 | v0.13.0 | Jan 1, 2026 | Metadata editing |
 | v0.14.0 | Jan 1, 2026 | Enhanced filtering |
-| v0.15.0 | Jan 2, 2026 | Collections ✨ |
+| v0.15.0 | Jan 2, 2026 | Collections |
+| v0.16.0 | Jan 2, 2026 | Add flow redesign ✨ |
 
 ### Upcoming
 
 | Version | Phase | Focus |
 |---------|-------|-------|
-| v0.16.0 | 8 | Quick fixes & polish |
-| v0.17.0 | 9 | Feature completion |
-| v0.18.0 | 10 | Design system refactor |
+| v0.17.0 | 8 | Remaining quick fixes & polish |
+| v0.18.0 | 9 | Feature completion |
+| v0.19.0 | 10 | Design system refactor |
 | v1.0.0 | 11 | AI enhancements |
 
 ---

@@ -19,6 +19,7 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [rescanLoading, setRescanLoading] = useState(false)
   const [rescanResults, setRescanResults] = useState(null)
   const drawerRef = useRef(null)
+  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -38,6 +39,8 @@ function SettingsDrawer({ isOpen, onClose }) {
             finished: data.status_label_finished || 'Finished',
             dnf: data.status_label_dnf || 'DNF'
           })
+          // Load display settings
+          setShowTitleBelowCover(data.show_title_below_cover === 'true')
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
@@ -178,6 +181,22 @@ function SettingsDrawer({ isOpen, onClose }) {
     }
   }
 
+  const handleTitleBelowCoverToggle = async () => {
+    const newValue = !showTitleBelowCover
+    setShowTitleBelowCover(newValue)
+    try {
+      await updateSetting('show_title_below_cover', newValue.toString())
+      // Notify other components of the change
+      window.dispatchEvent(new CustomEvent('settingsChanged', { 
+        detail: { show_title_below_cover: newValue } 
+      }))
+    } catch (err) {
+      console.error('Failed to save display setting:', err)
+      // Revert on failure
+      setShowTitleBelowCover(!newValue)
+    }
+  }
+
   const handleSync = async () => {
     if (syncing) return
     
@@ -312,6 +331,42 @@ function SettingsDrawer({ isOpen, onClose }) {
               <p className="text-gray-500 text-xs mt-2">
                 Desktop always shows 4–6 columns
               </p>
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Display Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Display</h3>
+              <p className="text-gray-400 text-sm mb-3">
+                Customize how books appear in your library.
+              </p>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-gray-300 text-sm">Show title below cover</span>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    Display title and author text beneath book covers
+                  </p>
+                </div>
+                <button
+                  onClick={handleTitleBelowCoverToggle}
+                  className={`
+                    relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                    ${showTitleBelowCover ? 'bg-library-accent' : 'bg-gray-600'}
+                  `}
+                  role="switch"
+                  aria-checked={showTitleBelowCover}
+                >
+                  <span
+                    className={`
+                      inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                      ${showTitleBelowCover ? 'translate-x-6' : 'translate-x-1'}
+                    `}
+                  />
+                </button>
+              </div>
             </section>
 
             {/* Divider */}

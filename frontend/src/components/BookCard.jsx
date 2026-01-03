@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import GradientCover from './GradientCover'
 
-function BookCard({ book, showActivityBar = false }) {
+function BookCard({ book, showActivityBar = false, showTitleBelowCover = false }) {
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   
   // Format series display
@@ -81,20 +81,22 @@ function BookCard({ book, showActivityBar = false }) {
         )}
       </div>
       
-      {/* Info */}
-      <div className="mt-2 px-1">
-        <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
-          {book.title}
-        </h3>
-        <p className="text-gray-400 text-xs truncate">
-          {primaryAuthor}
-        </p>
-        {seriesDisplay && (
-          <p className="text-gray-500 text-xs truncate">
-            {seriesDisplay}
+      {/* Info - only show if setting is enabled */}
+      {showTitleBelowCover && (
+        <div className="mt-2 px-1">
+          <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
+            {book.title}
+          </h3>
+          <p className="text-gray-400 text-xs truncate">
+            {primaryAuthor}
           </p>
-        )}
-      </div>
+          {seriesDisplay && (
+            <p className="text-gray-500 text-xs truncate">
+              {seriesDisplay}
+            </p>
+          )}
+        </div>
+      )}
     </Link>
   )
 }

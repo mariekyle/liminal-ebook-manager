@@ -8,7 +8,7 @@
 
 ## The Problem
 
-If you're like me, you have books *everywhere*. EPUBs scattered across cloud drives. Fanfiction downloaded from AO3. PDFs from Humble Bundles you bought three years ago. Physical books stacked in corners. And somewhere in all of that chaos — a vague memory of which ones you've actually read, which ones you abandoned, and which ones changed your life.
+If you're like me, you have books *everywhere*. EPUBs scattered across cloud drives. Fanfiction downloaded from AO3. PDFs from bundles you bought three years ago. Physical books stacked in corners. And somewhere in all of that chaos — a vague memory of which ones you've actually read, which ones you abandoned, and which ones changed your life.
 
 I've been chasing the perfect book management system for over a decade. Calibre was the love of my life for years — until I stopped using dedicated e-readers and moved all my reading to mobile. Suddenly, the tool that once felt indispensable became an obstacle. I tried everything: Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets, and more. I even built a custom ebook manager plugin for Obsidian, but I couldn't get it to work properly on mobile where I actually read.
 
@@ -24,12 +24,12 @@ So I built Liminal.
 
 Liminal is a **self-hosted web app** for managing your personal ebook library. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
 
-- **Browsing** your library with beautiful gradient covers
-- **Taking notes** with wiki-style `[[linking]]` between books
-- **Tracking** reading status, ratings, and re-reads
-- **Wishlisting** books you want to acquire
-- **Organizing** into curated collections
-- **Filtering** by dozens of criteria — including fanfiction-specific metadata
+- 📚 **Browsing** your library with beautiful gradient covers
+- 📝 **Taking notes** with wiki-style `[[linking]]` between books
+- 📊 **Tracking** reading status, ratings, and re-reads
+- 🔖 **Wishlisting** books you want to acquire
+- 📁 **Organizing** into curated collections
+- 🔍 **Filtering** by dozens of criteria — including fanfiction-specific metadata
 
 The name comes from that transported mental state you enter when you're truly absorbed in a book — the *liminal space* between the real world and the world on the page. The app is designed to get out of your way so you can spend less time managing and more time *there*.
 
@@ -243,7 +243,7 @@ MIT
 - [Notion](https://notion.so) — proof that personal databases can be beautiful
 - [Plex](https://plex.tv) — the gold standard for self-hosted media management
 - [Book of the Month](https://www.bookofthemonth.com/) — for showing how book discovery can feel curated and personal
-- [Calibre](https://calibre-ebook.com/) — my library manager since 2007, through trans-Atlantic moves, countless devices, and massive changes in technology. Today it feels like using a death laser to kill a single gnat (lol), but it taught me how powerful true customization could be
+- [Calibre](https://calibre-ebook.com/) — my library manager since 2007, through trans-Atlantic moves, countless devices, and massive changes in technology. It's a death laser for killing gnats now, but it taught me how powerful true customization could be
 - *Swan Song* (2021) — Ben Cleary's film is an embodiment of calm UX, and a reminder that letting go to build something greater is the hardest and most necessary part of the process
 
 **Built with:**

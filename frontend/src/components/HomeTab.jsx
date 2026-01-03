@@ -9,6 +9,7 @@ function HomeTab() {
   const [stats, setStats] = useState(null)
   const [statsPeriod, setStatsPeriod] = useState('month')
   const [wpm, setWpm] = useState(250)
+  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
   
   const [loadingInProgress, setLoadingInProgress] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
@@ -24,8 +25,23 @@ function HomeTab() {
         if (settings.reading_wpm) {
           setWpm(parseInt(settings.reading_wpm, 10) || 250)
         }
+        if (settings.show_title_below_cover !== undefined) {
+          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        }
       })
       .catch(err => console.error('Failed to load settings:', err))
+  }, [])
+
+  // Listen for display setting changes
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail.show_title_below_cover !== undefined) {
+        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      }
+    }
+    
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
   // Load in-progress books
@@ -123,7 +139,7 @@ function HomeTab() {
           <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
             {inProgress.map(book => (
               <div key={book.id} className="flex-shrink-0 w-32">
-                <BookCard book={book} showActivityBar={true} />
+                <BookCard book={book} showActivityBar={true} showTitleBelowCover={showTitleBelowCover} />
               </div>
             ))}
           </div>
@@ -150,7 +166,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {recentlyAdded.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} />
+                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
                 </div>
               ))}
             </div>
@@ -200,7 +216,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {discover.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} />
+                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
                 </div>
               ))}
             </div>
@@ -229,7 +245,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {quickReads.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} />
+                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
                 </div>
               ))}
             </div>

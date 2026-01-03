@@ -11,6 +11,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.16.0] - 2026-01-02
+
+### Added
+
+#### Phase 8.1: Add Book Flow Redesign
+Complete overhaul of the "Add" page with improved UX, clearer navigation, and better feedback.
+
+#### New Components
+- **StepIndicator** — Reusable step progress component for multi-step flows
+- **AddToLibrary** — Unified file selection component replacing three separate screens
+- **AnalyzingModal** — Full-screen overlay during file analysis with progress indicator
+
+#### Success Screen Improvements
+- **Step indicators** — Visual progress showing current step in flow
+- **Tappable result rows** — Click individual books to navigate to their detail pages
+- **"View Story" button** — Navigate directly to newly added book's detail page
+- **Smart button logic** — Shows "View Story" for single successful upload, "Add More" for multiple
+
+#### Flow Simplification
+- **Skip LibraryChoice** — "I have this" now goes directly to AddToLibrary
+- **Consolidated upload screens** — Merged file selection, files selected, and analyzing into single flow
+- **Manual entry access** — Physical/Audiobook/Web links at bottom of AddToLibrary screen
+
+#### Backend: format_added Navigation
+- **title_id lookup** — Finalize endpoint now returns title_id for format_added results
+- **Database query** — Looks up title_id by folder_path after adding format to existing book
+
+#### Phase 8.6: Manual Entry Form Improvements
+
+#### Title Autocomplete
+- **Debounced search** — Searches existing titles after 2+ characters (300ms delay)
+- **Dropdown results** — Shows "Already in your library:" with matching books
+- **Auto-fill on selection** — Selecting a suggestion fills title, authors, series, and category
+- **Selection flag** — Prevents dropdown from reopening after selecting a suggestion
+
+#### Success Navigation
+- **"View Story" button** — AddSuccess shows button when titleId is available
+- **titleId capture** — AddPage captures created title ID from createTitle response
+- **Direct navigation** — Users can go straight to their newly added book
+
+### Changed
+
+#### Language & Terminology
+- **TBR → Wishlist** — Consistent "Wishlist" terminology throughout Add flows
+- **Voice/tone alignment** — Updated microcopy to match Liminal design philosophy
+- **"Stories" not "books"** — More inclusive language for fanfiction
+
+#### Navigation Flow
+- **Streamlined path** — Main Choice → Add to Library → Review → Success
+- **Back navigation** — Back from ManualForm goes to AddToLibrary (not MainChoice)
+- **Deep links updated** — ?mode=library and ?mode=upload both go to AddToLibrary
+
+#### Upload Success Screen
+- **Complete rewrite** — New layout with step indicator and summary stats
+- **Result badges** — NEW (green), +FORMAT (blue), ERROR (red)
+- **Clickable rows** — Navigate to book detail with chevron indicator
+- **Disabled error rows** — Error results are dimmed and not clickable
+
+### Removed
+
+#### Deprecated Components
+- **UploadZone.jsx** — Replaced by AddToLibrary
+- **FilesSelected.jsx** — Merged into AddToLibrary
+- **AnalyzingProgress.jsx** — Replaced by AnalyzingModal
+- **LibraryChoice.jsx** — Flow now skips this screen entirely
+
+### Fixed
+
+- **format_added navigation** — "View Story" now works when adding format to existing book
+- **Link mode success** — Shows correct book title when linking files to existing title
+- **Stale closure** — Fixed linkedBook reference in handleAnalyze
+- **Double submission** — Continue button disabled during analysis
+- **Error recovery** — Returns to AddToLibrary on error (not stuck state)
+- **Interval cleanup** — Clear progress timer on link mode upload error
+- **Timeout cleanup** — Use useRef instead of useState for debounce timeout
+- **Dropdown reopen** — Title autocomplete stays closed after selection
+
+### Technical
+
+#### New Files
+- `frontend/src/components/add/StepIndicator.jsx` — Step progress indicator
+- `frontend/src/components/add/AddToLibrary.jsx` — Unified file selection
+- `frontend/src/components/add/AnalyzingModal.jsx` — Analysis overlay
+
+#### Modified Files
+- `frontend/src/pages/AddPage.jsx` — Complete flow restructure
+- `frontend/src/components/add/AddSuccess.jsx` — titleId prop, View Story button
+- `frontend/src/components/add/ManualEntryForm.jsx` — Title autocomplete
+- `frontend/src/components/upload/ReviewBooks.jsx` — Step indicator
+- `frontend/src/components/upload/UploadSuccess.jsx` — Complete rewrite
+- `backend/routers/upload.py` — title_id in FinalizeResult, format_added lookup
+
+#### Deleted Files
+- `frontend/src/components/upload/UploadZone.jsx`
+- `frontend/src/components/upload/FilesSelected.jsx`
+- `frontend/src/components/upload/AnalyzingProgress.jsx`
+- `frontend/src/components/add/LibraryChoice.jsx`
+
+---
+
 ## [0.15.0] - 2026-01-02
 
 ### Added
@@ -313,7 +413,8 @@ Complete system for extracting and displaying structured metadata from EPUB file
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.15.0 | 2026-01-02 | **Phase 7.2b** — Collections system, smart paste, Calibre migration ✨ |
+| 0.16.0 | 2026-01-02 | **Phase 8.1 + 8.6** — Add flow redesign, manual entry improvements ✨ |
+| 0.15.0 | 2026-01-02 | **Phase 7.2b** — Collections system, smart paste, Calibre migration |
 | 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) |
 | 0.13.0 | 2026-01-01 | **Phase 7.1** — Upload integration, per-book rescan, editing modal |
 | 0.12.0 | 2025-12-31 | **Phase 7.0** — Enhanced metadata extraction, AO3 parsing, rescan feature |
@@ -344,6 +445,35 @@ Complete system for extracting and displaying structured metadata from EPUB file
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.16.0
+
+**No database changes required.**
+
+**Deleted Files:**
+- `frontend/src/components/upload/UploadZone.jsx`
+- `frontend/src/components/upload/FilesSelected.jsx`
+- `frontend/src/components/upload/AnalyzingProgress.jsx`
+- `frontend/src/components/add/LibraryChoice.jsx`
+
+**New Files to Upload:**
+- `frontend/src/components/add/StepIndicator.jsx`
+- `frontend/src/components/add/AddToLibrary.jsx`
+- `frontend/src/components/add/AnalyzingModal.jsx`
+
+**Modified Files:**
+- `frontend/src/pages/AddPage.jsx`
+- `frontend/src/components/add/AddSuccess.jsx`
+- `frontend/src/components/add/ManualEntryForm.jsx`
+- `frontend/src/components/upload/ReviewBooks.jsx`
+- `frontend/src/components/upload/UploadSuccess.jsx`
+- `backend/routers/upload.py`
+
+**Post-upgrade:**
+1. Upload all new and modified files
+2. Delete the deprecated files listed above
+3. Rebuild Docker container
+4. Add flow will use new streamlined navigation
 
 ### Upgrading to 0.15.0
 
@@ -385,4 +515,4 @@ environment:
 
 ---
 
-*Last updated: January 2, 2026 (v0.15.0 — Phase 7.2b complete)*
+*Last updated: January 2, 2026 (v0.16.0 — Phase 8.1 + 8.6 complete)*
