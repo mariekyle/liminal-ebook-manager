@@ -9,7 +9,9 @@ function HomeTab() {
   const [stats, setStats] = useState(null)
   const [statsPeriod, setStatsPeriod] = useState('month')
   const [wpm, setWpm] = useState(250)
-  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
+  const [showTitleBelow, setShowTitleBelow] = useState(false)
+  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
+  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
   
   const [loadingInProgress, setLoadingInProgress] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
@@ -25,8 +27,14 @@ function HomeTab() {
         if (settings.reading_wpm) {
           setWpm(parseInt(settings.reading_wpm, 10) || 250)
         }
-        if (settings.show_title_below_cover !== undefined) {
-          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        if (settings.show_title_below !== undefined) {
+          setShowTitleBelow(settings.show_title_below === 'true')
+        }
+        if (settings.show_author_below !== undefined) {
+          setShowAuthorBelow(settings.show_author_below === 'true')
+        }
+        if (settings.show_series_below !== undefined) {
+          setShowSeriesBelow(settings.show_series_below === 'true')
         }
       })
       .catch(err => console.error('Failed to load settings:', err))
@@ -35,8 +43,14 @@ function HomeTab() {
   // Listen for display setting changes
   useEffect(() => {
     const handleSettingsChange = (event) => {
-      if (event.detail.show_title_below_cover !== undefined) {
-        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      if (event.detail.show_title_below !== undefined) {
+        setShowTitleBelow(event.detail.show_title_below)
+      }
+      if (event.detail.show_author_below !== undefined) {
+        setShowAuthorBelow(event.detail.show_author_below)
+      }
+      if (event.detail.show_series_below !== undefined) {
+        setShowSeriesBelow(event.detail.show_series_below)
       }
     }
     
@@ -139,7 +153,7 @@ function HomeTab() {
           <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
             {inProgress.map(book => (
               <div key={book.id} className="flex-shrink-0 w-32">
-                <BookCard book={book} showActivityBar={true} showTitleBelowCover={showTitleBelowCover} />
+                <BookCard book={book} showActivityBar={true} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
               </div>
             ))}
           </div>
@@ -166,7 +180,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {recentlyAdded.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
+                  <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
                 </div>
               ))}
             </div>
@@ -216,7 +230,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {discover.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
+                  <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
                 </div>
               ))}
             </div>
@@ -245,7 +259,7 @@ function HomeTab() {
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2 scrollbar-hide">
               {quickReads.map(book => (
                 <div key={book.id} className="flex-shrink-0 w-32">
-                  <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
+                  <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
                 </div>
               ))}
             </div>

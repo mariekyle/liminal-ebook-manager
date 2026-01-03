@@ -13,7 +13,9 @@ function AuthorDetail() {
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
-  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
+  const [showTitleBelow, setShowTitleBelow] = useState(false)
+  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
+  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -33,8 +35,14 @@ function AuthorDetail() {
   useEffect(() => {
     getSettings()
       .then(settings => {
-        if (settings.show_title_below_cover !== undefined) {
-          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        if (settings.show_title_below !== undefined) {
+          setShowTitleBelow(settings.show_title_below === 'true')
+        }
+        if (settings.show_author_below !== undefined) {
+          setShowAuthorBelow(settings.show_author_below === 'true')
+        }
+        if (settings.show_series_below !== undefined) {
+          setShowSeriesBelow(settings.show_series_below === 'true')
         }
       })
       .catch(err => console.error('Failed to load settings:', err))
@@ -43,8 +51,14 @@ function AuthorDetail() {
   // Listen for display setting changes
   useEffect(() => {
     const handleSettingsChange = (event) => {
-      if (event.detail.show_title_below_cover !== undefined) {
-        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      if (event.detail.show_title_below !== undefined) {
+        setShowTitleBelow(event.detail.show_title_below)
+      }
+      if (event.detail.show_author_below !== undefined) {
+        setShowAuthorBelow(event.detail.show_author_below)
+      }
+      if (event.detail.show_series_below !== undefined) {
+        setShowSeriesBelow(event.detail.show_series_below)
       }
     }
     
@@ -166,18 +180,16 @@ function AuthorDetail() {
                   </div>
                 )}
               </div>
-              {showTitleBelowCover && (
-                <>
-                  <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
-                    {book.title}
-                  </h3>
-                  {book.series && (
-                    <p className="text-gray-500 text-xs truncate">
-                      {book.series} #{book.series_number || '?'}
-                    </p>
-                  )}
-                </>
-              )}
+              {showTitleBelow && (
+              <h3 className="text-white text-sm font-medium truncate group-hover:text-library-accent transition-colors">
+                {book.title}
+              </h3>
+            )}
+            {showSeriesBelow && book.series && (
+              <p className="text-gray-500 text-xs truncate">
+                {book.series} #{book.series_number || '?'}
+              </p>
+            )}
             </Link>
           ))}
         </div>

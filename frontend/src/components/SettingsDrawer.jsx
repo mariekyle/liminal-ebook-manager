@@ -19,7 +19,9 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [rescanLoading, setRescanLoading] = useState(false)
   const [rescanResults, setRescanResults] = useState(null)
   const drawerRef = useRef(null)
-  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
+  const [showTitleBelow, setShowTitleBelow] = useState(false)
+  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
+  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -40,7 +42,9 @@ function SettingsDrawer({ isOpen, onClose }) {
             dnf: data.status_label_dnf || 'DNF'
           })
           // Load display settings
-          setShowTitleBelowCover(data.show_title_below_cover === 'true')
+          setShowTitleBelow(data.show_title_below === 'true')
+          setShowAuthorBelow(data.show_author_below === 'true')
+          setShowSeriesBelow(data.show_series_below === 'true')
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
@@ -181,19 +185,19 @@ function SettingsDrawer({ isOpen, onClose }) {
     }
   }
 
-  const handleTitleBelowCoverToggle = async () => {
-    const newValue = !showTitleBelowCover
-    setShowTitleBelowCover(newValue)
+  const handleDisplayToggle = async (setting, currentValue, setter) => {
+    const newValue = !currentValue
+    setter(newValue)
     try {
-      await updateSetting('show_title_below_cover', newValue.toString())
+      await updateSetting(setting, newValue.toString())
       // Notify other components of the change
       window.dispatchEvent(new CustomEvent('settingsChanged', { 
-        detail: { show_title_below_cover: newValue } 
+        detail: { [setting]: newValue } 
       }))
     } catch (err) {
       console.error('Failed to save display setting:', err)
       // Revert on failure
-      setShowTitleBelowCover(!newValue)
+      setter(!newValue)
     }
   }
 
@@ -339,33 +343,73 @@ function SettingsDrawer({ isOpen, onClose }) {
             {/* Display Section */}
             <section>
               <h3 className="text-sm font-medium text-white mb-2">Display</h3>
-              <p className="text-gray-400 text-sm mb-3">
-                Customize how books appear in your library.
+              <p className="text-gray-400 text-sm mb-4">
+                Choose what to show below book covers.
               </p>
               
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-gray-300 text-sm">Show title below cover</span>
-                  <p className="text-gray-500 text-xs mt-0.5">
-                    Display title and author text beneath book covers
-                  </p>
-                </div>
-                <button
-                  onClick={handleTitleBelowCoverToggle}
-                  className={`
-                    relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                    ${showTitleBelowCover ? 'bg-library-accent' : 'bg-gray-600'}
-                  `}
-                  role="switch"
-                  aria-checked={showTitleBelowCover}
-                >
-                  <span
+              <div className="space-y-4">
+                {/* Title toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300 text-sm">Show title</span>
+                  <button
+                    onClick={() => handleDisplayToggle('show_title_below', showTitleBelow, setShowTitleBelow)}
                     className={`
-                      inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                      ${showTitleBelowCover ? 'translate-x-6' : 'translate-x-1'}
+                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                      ${showTitleBelow ? 'bg-library-accent' : 'bg-gray-600'}
                     `}
-                  />
-                </button>
+                    role="switch"
+                    aria-checked={showTitleBelow}
+                  >
+                    <span
+                      className={`
+                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${showTitleBelow ? 'translate-x-6' : 'translate-x-1'}
+                      `}
+                    />
+                  </button>
+                </div>
+                
+                {/* Author toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300 text-sm">Show author</span>
+                  <button
+                    onClick={() => handleDisplayToggle('show_author_below', showAuthorBelow, setShowAuthorBelow)}
+                    className={`
+                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                      ${showAuthorBelow ? 'bg-library-accent' : 'bg-gray-600'}
+                    `}
+                    role="switch"
+                    aria-checked={showAuthorBelow}
+                  >
+                    <span
+                      className={`
+                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${showAuthorBelow ? 'translate-x-6' : 'translate-x-1'}
+                      `}
+                    />
+                  </button>
+                </div>
+                
+                {/* Series toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300 text-sm">Show series</span>
+                  <button
+                    onClick={() => handleDisplayToggle('show_series_below', showSeriesBelow, setShowSeriesBelow)}
+                    className={`
+                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                      ${showSeriesBelow ? 'bg-library-accent' : 'bg-gray-600'}
+                    `}
+                    role="switch"
+                    aria-checked={showSeriesBelow}
+                  >
+                    <span
+                      className={`
+                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${showSeriesBelow ? 'translate-x-6' : 'translate-x-1'}
+                      `}
+                    />
+                  </button>
+                </div>
               </div>
             </section>
 

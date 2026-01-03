@@ -64,7 +64,9 @@ export default function CollectionDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
   const [showSmartPaste, setShowSmartPaste] = useState(false)
-  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
+  const [showTitleBelow, setShowTitleBelow] = useState(false)
+  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
+  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
   
   const fetchCollection = async () => {
     try {
@@ -88,8 +90,14 @@ export default function CollectionDetail() {
   useEffect(() => {
     getSettings()
       .then(settings => {
-        if (settings.show_title_below_cover !== undefined) {
-          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        if (settings.show_title_below !== undefined) {
+          setShowTitleBelow(settings.show_title_below === 'true')
+        }
+        if (settings.show_author_below !== undefined) {
+          setShowAuthorBelow(settings.show_author_below === 'true')
+        }
+        if (settings.show_series_below !== undefined) {
+          setShowSeriesBelow(settings.show_series_below === 'true')
         }
       })
       .catch(err => console.error('Failed to load settings:', err))
@@ -98,8 +106,14 @@ export default function CollectionDetail() {
   // Listen for display setting changes
   useEffect(() => {
     const handleSettingsChange = (event) => {
-      if (event.detail.show_title_below_cover !== undefined) {
-        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      if (event.detail.show_title_below !== undefined) {
+        setShowTitleBelow(event.detail.show_title_below)
+      }
+      if (event.detail.show_author_below !== undefined) {
+        setShowAuthorBelow(event.detail.show_author_below)
+      }
+      if (event.detail.show_series_below !== undefined) {
+        setShowSeriesBelow(event.detail.show_series_below)
       }
     }
     
@@ -285,7 +299,7 @@ export default function CollectionDetail() {
                   className="w-full text-left group"
                 >
                   <div className="relative">
-                    <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
+                    <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
                     {/* Remove overlay */}
                     <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-red-600 rounded-full p-2">
@@ -295,7 +309,7 @@ export default function CollectionDetail() {
                   </div>
                 </button>
               ) : (
-                <BookCard book={book} showTitleBelowCover={showTitleBelowCover} />
+                <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
               )}
             </div>
           ))}

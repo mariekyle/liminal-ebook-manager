@@ -38,7 +38,9 @@ function Library() {
   const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
   const [wpm, setWpm] = useState(250)
   const [gridColumns, setGridColumns] = useState('2')
-  const [showTitleBelowCover, setShowTitleBelowCover] = useState(false)
+  const [showTitleBelow, setShowTitleBelow] = useState(false)
+  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
+  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
   
   // Enhanced metadata filters (Phase 7.2)
   const [fandom, setFandom] = useState(searchParams.get('fandom') || '')
@@ -113,8 +115,14 @@ function Library() {
         if (settings.grid_columns) {
           setGridColumns(settings.grid_columns)
         }
-        if (settings.show_title_below_cover !== undefined) {
-          setShowTitleBelowCover(settings.show_title_below_cover === 'true')
+        if (settings.show_title_below !== undefined) {
+          setShowTitleBelow(settings.show_title_below === 'true')
+        }
+        if (settings.show_author_below !== undefined) {
+          setShowAuthorBelow(settings.show_author_below === 'true')
+        }
+        if (settings.show_series_below !== undefined) {
+          setShowSeriesBelow(settings.show_series_below === 'true')
         }
       })
       .catch(err => console.error('Failed to load settings:', err))
@@ -126,8 +134,14 @@ function Library() {
       if (event.detail.grid_columns) {
         setGridColumns(event.detail.grid_columns)
       }
-      if (event.detail.show_title_below_cover !== undefined) {
-        setShowTitleBelowCover(event.detail.show_title_below_cover)
+      if (event.detail.show_title_below !== undefined) {
+        setShowTitleBelow(event.detail.show_title_below)
+      }
+      if (event.detail.show_author_below !== undefined) {
+        setShowAuthorBelow(event.detail.show_author_below)
+      }
+      if (event.detail.show_series_below !== undefined) {
+        setShowSeriesBelow(event.detail.show_series_below)
       }
     }
     
@@ -650,7 +664,7 @@ function Library() {
             'grid-cols-4'
           }`}>
             {filteredBooks.map(book => (
-              <BookCard key={book.id} book={book} showTitleBelowCover={showTitleBelowCover} />
+              <BookCard key={book.id} book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
             ))}
           </div>
         )}
