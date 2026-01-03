@@ -745,19 +745,19 @@ async def update_book_status(
 ):
     """
     Update a title's read status.
-    Valid statuses: Unread, In Progress, Finished, DNF
+    Valid statuses: Unread, In Progress, Finished, Abandoned (legacy: DNF)
     """
     # Verify title exists
     cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
     
-    # Validate status value
-    valid_statuses = ['Unread', 'In Progress', 'Finished', 'DNF']
+    # Validate status value (accept both Abandoned and legacy DNF)
+    valid_statuses = ['Unread', 'In Progress', 'Finished', 'Abandoned', 'DNF']
     if update.status not in valid_statuses:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            detail=f"Invalid status. Must be one of: Unread, In Progress, Finished, Abandoned"
         )
     
     # Update status
@@ -1116,7 +1116,7 @@ async def list_statuses():
     Get all valid read statuses.
     Returns static list since statuses are predefined.
     """
-    return ["Unread", "In Progress", "Finished", "DNF"]
+    return ["Unread", "In Progress", "Finished", "Abandoned"]
 
 
 @router.get("/series", response_model=SeriesListResponse)

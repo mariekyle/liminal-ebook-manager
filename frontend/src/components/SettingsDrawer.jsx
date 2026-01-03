@@ -13,7 +13,7 @@ function SettingsDrawer({ isOpen, onClose }) {
     unread: 'Unread',
     in_progress: 'In Progress',
     finished: 'Finished',
-    dnf: 'DNF'
+    dnf: 'Abandoned'
   })
   const [rescanPreview, setRescanPreview] = useState(null)
   const [rescanLoading, setRescanLoading] = useState(false)
@@ -39,7 +39,7 @@ function SettingsDrawer({ isOpen, onClose }) {
             unread: data.status_label_unread || 'Unread',
             in_progress: data.status_label_in_progress || 'In Progress',
             finished: data.status_label_finished || 'Finished',
-            dnf: data.status_label_dnf || 'DNF'
+            dnf: data.status_label_dnf || 'Abandoned'
           })
           // Load display settings
           setShowTitleBelow(data.show_title_below === 'true')
@@ -174,7 +174,7 @@ function SettingsDrawer({ isOpen, onClose }) {
 
   const handleStatusLabelBlur = async (key) => {
     const value = statusLabels[key]
-    const defaults = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'DNF' }
+    const defaults = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'Abandoned' }
     
     if (!value.trim()) {
       // Reset to default if empty
@@ -302,9 +302,6 @@ function SettingsDrawer({ isOpen, onClose }) {
                 )}
               </div>
               
-              <p className="text-gray-500 text-xs mt-2">
-                💡 Average adult: 200–300 WPM
-              </p>
             </section>
 
             {/* Divider */}
@@ -428,7 +425,7 @@ function SettingsDrawer({ isOpen, onClose }) {
                   { key: 'unread', placeholder: 'Unread' },
                   { key: 'in_progress', placeholder: 'In Progress' },
                   { key: 'finished', placeholder: 'Finished' },
-                  { key: 'dnf', placeholder: 'DNF' }
+                  { key: 'dnf', placeholder: 'Abandoned' }
                 ].map(({ key, placeholder }) => (
                   <div key={key} className="flex items-center gap-3">
                     <span className="text-gray-500 text-sm w-24 capitalize">

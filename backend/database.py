@@ -130,7 +130,7 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
         ('status_label_unread', 'Unread'),
         ('status_label_in_progress', 'In Progress'),
         ('status_label_finished', 'Finished'),
-        ('status_label_dnf', 'DNF'),
+        ('status_label_dnf', 'Abandoned'),
     ]
     for key, value in default_settings:
         await db.execute(
@@ -191,6 +191,7 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
                         WHEN status = 'In Progress' THEN 'in_progress'
                         WHEN status = 'Finished' THEN 'finished'
                         WHEN status = 'DNF' THEN 'dnf'
+                        WHEN status = 'Abandoned' THEN 'dnf'
                         -- Unread but has date_finished: was actually finished
                         WHEN status = 'Unread' AND date_finished IS NOT NULL THEN 'finished'
                         -- Unread but has date_started only: was actually in progress
@@ -205,8 +206,8 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
                     CURRENT_TIMESTAMP
                 FROM titles
                 WHERE 
-                    -- Include all non-unread books
-                    status IN ('In Progress', 'Finished', 'DNF')
+                    -- Include all non-unread books (both Abandoned and legacy DNF)
+                    status IN ('In Progress', 'Finished', 'DNF', 'Abandoned')
                     -- OR include 'Unread' books that have reading evidence
                     OR (status = 'Unread' AND (
                         date_started IS NOT NULL 
@@ -369,7 +370,7 @@ async def sync_title_from_sessions(db, title_id: int):
         status_map = {
             'in_progress': 'In Progress',
             'finished': 'Finished',
-            'dnf': 'DNF'
+            'dnf': 'Abandoned'
         }
         title_status = status_map.get(new_status, 'In Progress')
         
@@ -431,7 +432,7 @@ CREATE TABLE IF NOT EXISTS titles (
     cover_color_2 TEXT,
     
     -- Reading tracking
-    status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, DNF
+    status TEXT DEFAULT 'Unread', -- Unread, In Progress, Finished, Abandoned (legacy: DNF)
     rating INTEGER,               -- 1-5 star rating
     date_started TEXT,            -- ISO date: YYYY-MM-DD
     date_finished TEXT,           -- ISO date: YYYY-MM-DD

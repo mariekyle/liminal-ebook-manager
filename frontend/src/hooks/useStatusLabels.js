@@ -9,7 +9,7 @@ const DEFAULT_LABELS = {
   unread: 'Unread',
   in_progress: 'In Progress',
   finished: 'Finished',
-  dnf: 'DNF'
+  dnf: 'Abandoned'
 }
 
 // Map from display value to internal key (for backwards compatibility)
@@ -17,7 +17,8 @@ const VALUE_TO_KEY = {
   'Unread': 'unread',
   'In Progress': 'in_progress',
   'Finished': 'finished',
-  'DNF': 'dnf'
+  'DNF': 'dnf',
+  'Abandoned': 'dnf'
 }
 
 export function useStatusLabels() {
