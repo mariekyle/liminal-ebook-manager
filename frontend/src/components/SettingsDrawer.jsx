@@ -15,6 +15,13 @@ function SettingsDrawer({ isOpen, onClose }) {
     finished: 'Finished',
     dnf: 'Abandoned'
   })
+  const [ratingLabels, setRatingLabels] = useState({
+    1: 'Disliked',
+    2: 'Disappointing', 
+    3: 'Decent/Fine',
+    4: 'Better than Good',
+    5: 'All-time Fav'
+  })
   const [rescanPreview, setRescanPreview] = useState(null)
   const [rescanLoading, setRescanLoading] = useState(false)
   const [rescanResults, setRescanResults] = useState(null)
@@ -40,6 +47,14 @@ function SettingsDrawer({ isOpen, onClose }) {
             in_progress: data.status_label_in_progress || 'In Progress',
             finished: data.status_label_finished || 'Finished',
             dnf: data.status_label_dnf || 'Abandoned'
+          })
+          // Load rating labels
+          setRatingLabels({
+            1: data.rating_label_1 || 'Disliked',
+            2: data.rating_label_2 || 'Disappointing',
+            3: data.rating_label_3 || 'Decent/Fine',
+            4: data.rating_label_4 || 'Better than Good',
+            5: data.rating_label_5 || 'All-time Fav'
           })
           // Load display settings
           setShowTitleBelow(data.show_title_below === 'true')
@@ -182,6 +197,30 @@ function SettingsDrawer({ isOpen, onClose }) {
       await updateSetting(`status_label_${key}`, defaults[key])
     } else {
       await updateSetting(`status_label_${key}`, value.trim())
+    }
+  }
+
+  // Rating label handlers (similar to status labels)
+  const handleRatingLabelChange = (star, value) => {
+    setRatingLabels(prev => ({ ...prev, [star]: value }))
+  }
+
+  const handleRatingLabelBlur = async (star) => {
+    const value = ratingLabels[star]
+    const defaults = { 1: 'Disliked', 2: 'Disappointing', 3: 'Decent/Fine', 4: 'Better than Good', 5: 'All-time Fav' }
+    
+    try {
+      if (!value.trim() || value.trim() === defaults[star]) {
+        // Reset to default
+        await updateSetting(`rating_label_${star}`, defaults[star])
+        setRatingLabels(prev => ({ ...prev, [star]: defaults[star] }))
+      } else {
+        await updateSetting(`rating_label_${star}`, value.trim())
+      }
+      // Emit event for other components to refresh
+      window.dispatchEvent(new Event('settingsChanged'))
+    } catch (err) {
+      console.error('Failed to save rating label:', err)
     }
   }
 
@@ -436,6 +475,45 @@ function SettingsDrawer({ isOpen, onClose }) {
                       value={statusLabels[key]}
                       onChange={(e) => handleStatusLabelChange(key, e.target.value)}
                       onBlur={() => handleStatusLabelBlur(key)}
+                      placeholder={placeholder}
+                      className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-gray-500 text-xs mt-2">
+                💡 Changes apply throughout the app
+              </p>
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Rating Labels Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Rating Labels</h3>
+              <p className="text-gray-400 text-sm mb-3">
+                Customize the descriptions shown for each star rating.
+              </p>
+              
+              <div className="space-y-3">
+                {[
+                  { star: 5, label: '★★★★★', placeholder: 'All-time Fav' },
+                  { star: 4, label: '★★★★☆', placeholder: 'Better than Good' },
+                  { star: 3, label: '★★★☆☆', placeholder: 'Decent/Fine' },
+                  { star: 2, label: '★★☆☆☆', placeholder: 'Disappointing' },
+                  { star: 1, label: '★☆☆☆☆', placeholder: 'Disliked' }
+                ].map(({ star, label, placeholder }) => (
+                  <div key={star} className="flex items-center gap-3">
+                    <span className="text-yellow-400 text-sm w-24 font-mono">
+                      {label}
+                    </span>
+                    <input
+                      type="text"
+                      value={ratingLabels[star]}
+                      onChange={(e) => handleRatingLabelChange(star, e.target.value)}
+                      onBlur={() => handleRatingLabelBlur(star)}
                       placeholder={placeholder}
                       className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
                     />

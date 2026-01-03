@@ -9,6 +9,7 @@ import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 import { useStatusLabels } from '../hooks/useStatusLabels'
+import { useRatingLabels } from '../hooks/useRatingLabels'
 
 // Decode HTML entities in text (e.g., &amp; -> &, &quot; -> ")
 function decodeHtmlEntities(text) {
@@ -18,14 +19,6 @@ function decodeHtmlEntities(text) {
   return textarea.value
 }
 
-// Rating labels - can be customized in future settings
-const RATING_LABELS = {
-  1: 'Disliked',
-  2: 'Disappointing',
-  3: 'Decent/Fine',
-  4: 'Better than Good',
-  5: 'All-time Fav'
-}
 
 // Helper component for displaying labeled metadata (Phase 7.0)
 const MetadataRow = ({ label, children, show = true }) => {
@@ -207,6 +200,7 @@ function BookDetail() {
 
   // Custom status labels
   const { getLabel, getStatusOptions } = useStatusLabels()
+  const { getLabel: getRatingLabel } = useRatingLabels()
 
   // Load settings (for WPM)
   useEffect(() => {
@@ -1141,7 +1135,7 @@ function BookDetail() {
                 </div>
                 <div className="text-gray-500 text-xs">
                   {sessionsStats.average_rating > 0 
-                    ? RATING_LABELS[Math.round(sessionsStats.average_rating)] || 'rating'
+                    ? getRatingLabel(sessionsStats.average_rating)
                     : 'no rating'}
                 </div>
               </button>
@@ -1151,6 +1145,32 @@ function BookDetail() {
                 <div className="text-white font-semibold">{selectedCategory || 'Uncategorized'}</div>
                 <div className="text-gray-500 text-xs">category</div>
               </div>
+            </div>
+          )}
+          
+          {/* Edition Format Badges - show which formats user owns */}
+          {!isWishlist && book.editions && book.editions.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+              {book.editions.map((edition) => {
+                const formatConfig = {
+                  ebook: { icon: '📱', label: 'Digital', color: 'bg-blue-900/50 text-blue-300 border-blue-700' },
+                  physical: { icon: '📖', label: 'Physical', color: 'bg-amber-900/50 text-amber-300 border-amber-700' },
+                  audiobook: { icon: '🎧', label: 'Audiobook', color: 'bg-purple-900/50 text-purple-300 border-purple-700' },
+                  web: { icon: '🌐', label: 'Web', color: 'bg-emerald-900/50 text-emerald-300 border-emerald-700' }
+                }
+                const config = formatConfig[edition.format] || { icon: '📄', label: edition.format, color: 'bg-gray-700 text-gray-300 border-gray-600' }
+                
+                return (
+                  <span
+                    key={edition.id}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
+                    title={edition.file_path || edition.folder_path || `${config.label} edition`}
+                  >
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                  </span>
+                )
+              })}
             </div>
           )}
           
