@@ -24,18 +24,25 @@ One place. One screen. One source of truth.
 
 So I built Liminal.
 
+
+
+: Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets,
+
+
+
+a disconnect
 ---
 
 ## What Is Liminal?
 
 Liminal is a **self-hosted web app** for managing your personal ebook library. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
 
-- 📚 **Browsing** your library with beautiful gradient covers
-- 📝 **Taking notes** with wiki-style `[[linking]]` between books
-- 📊 **Tracking** reading status, ratings, and re-reads
-- 🔖 **Wishlisting** books you want to acquire
-- 📁 **Organizing** into curated collections
-- 🔍 **Filtering** by dozens of criteria — including fanfiction-specific metadata
+- **Browsing** your library with beautiful gradient covers
+- **Taking notes** with wiki-style `[[linking]]` between books
+- **Tracking** reading status, ratings, and re-reads
+- **Wishlisting** books you want to acquire
+- **Organizing** into curated collections
+- **Filtering** by dozens of criteria — including fanfiction-specific metadata
 
 The name comes from that transported mental state you enter when you're truly absorbed in a book — the *liminal space* between the real world and the world on the page. The app is designed to get out of your way so you can spend less time managing and more time *there*.
 

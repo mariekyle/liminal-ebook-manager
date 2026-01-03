@@ -138,7 +138,7 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             (key, value)
         )
     
-    # Migration: Add format column to reading_sessions
+   # Migration: Add format column to reading_sessions (Phase 8.7a)
     cursor = await db.execute("PRAGMA table_info(reading_sessions)")
     session_columns = await cursor.fetchall()
     session_column_names = {col[1] for col in session_columns}
@@ -148,6 +148,13 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
         await db.execute("ALTER TABLE reading_sessions ADD COLUMN format TEXT")
         await db.commit()
         print("Migration: 'format' column added successfully")
+    
+    # Migration: Add unique constraint on editions(title_id, format) (Phase 8.7b)
+    # Prevents duplicate formats per title at database level
+    await db.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_editions_title_format 
+        ON editions(title_id, format)
+    """)
     
     # Ensure author_notes table exists
     await db.execute("""

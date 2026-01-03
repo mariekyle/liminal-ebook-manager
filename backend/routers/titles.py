@@ -14,9 +14,11 @@ but internally query the 'titles' table.
 
 import json
 import re
+from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+import aiosqlite
 
 from database import get_db
 from services.covers import get_cover_style, Theme
@@ -38,6 +40,12 @@ class EditionSummary(BaseModel):
     folder_path: Optional[str] = None
     narrators: Optional[List[str]] = None
     acquired_date: Optional[str] = None
+
+
+class EditionCreate(BaseModel):
+    """Request model for creating a new edition."""
+    format: str  # ebook, physical, audiobook, web
+    acquired_date: Optional[str] = None  # ISO date: YYYY-MM-DD
 
 
 class TitleSummary(BaseModel):
@@ -1966,3 +1974,79 @@ async def autocomplete_tags(q: str = "", limit: int = 20, db = Depends(get_db)):
     q_lower = q.lower()
     filtered = [t for t in sorted(all_tags) if q_lower in t.lower()]
     return {"items": filtered[:limit]}
+
+
+# =============================================================================
+# EDITION ENDPOINTS (Phase 8.7b)
+# =============================================================================
+
+@router.post("/books/{book_id}/editions", response_model=EditionSummary)
+async def create_edition(
+    book_id: int,
+    edition: EditionCreate,
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """
+    Add a new edition (format) to an existing title.
+    Used when user owns multiple formats of the same book.
+    """
+    # Verify title exists
+    cursor = await db.execute("SELECT id, is_tbr FROM titles WHERE id = ?", (book_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Title not found")
+    
+    # If title is wishlist, convert to owned
+    if row[1] == 1:  # is_tbr = 1 means wishlist
+        await db.execute(
+            "UPDATE titles SET is_tbr = 0, acquisition_status = 'owned' WHERE id = ?",
+            (book_id,)
+        )
+    
+    # Validate format
+    valid_formats = ['ebook', 'physical', 'audiobook', 'web']
+    if edition.format not in valid_formats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format. Must be one of: {valid_formats}"
+        )
+    
+    # Check if this format already exists for this title
+    cursor = await db.execute(
+        "SELECT id FROM editions WHERE title_id = ? AND format = ?",
+        (book_id, edition.format)
+    )
+    existing = await cursor.fetchone()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"This title already has a {edition.format} edition"
+        )
+    
+    # Create the edition
+    now = datetime.utcnow().isoformat()
+    try:
+        cursor = await db.execute("""
+            INSERT INTO editions (title_id, format, acquired_date, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (book_id, edition.format, edition.acquired_date, now))
+        edition_id = cursor.lastrowid
+        await db.commit()
+    except Exception as e:
+        # Handle unique constraint violation (race condition)
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail=f"This title already has a {edition.format} edition"
+            )
+        raise
+    
+    # Return the created edition
+    return EditionSummary(
+        id=edition_id,
+        format=edition.format,
+        file_path=None,
+        folder_path=None,
+        narrators=None,
+        acquired_date=edition.acquired_date
+    )

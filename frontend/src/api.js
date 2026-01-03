@@ -777,6 +777,20 @@ export async function getCollectionsForBook(titleId) {
 }
 
 /**
+ * Add a new edition (format) to an existing title
+ * @param {number} bookId - Book ID
+ * @param {Object} data - Edition data
+ * @param {string} data.format - Format: 'ebook', 'physical', 'audiobook', 'web'
+ * @param {string} [data.acquired_date] - Optional acquisition date (YYYY-MM-DD)
+ */
+export async function createEdition(bookId, data) {
+  return apiFetch(`/books/${bookId}/editions`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+/**
  * Get simple list of all collections (for picker UI)
  */
 export async function getAllCollectionsSimple() {

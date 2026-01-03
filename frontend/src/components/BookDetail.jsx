@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
+import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
@@ -189,6 +189,13 @@ function BookDetail() {
   // Session editor modal state
   const [sessionModalOpen, setSessionModalOpen] = useState(false)
   const [editingSession, setEditingSession] = useState(null) // null = creating new, object = editing existing
+  
+  // Edition modal state (Phase 8.7b)
+  const [editionModalOpen, setEditionModalOpen] = useState(false)
+  const [editionForm, setEditionForm] = useState({ format: '', acquired_date: '' })
+  const [editionSaving, setEditionSaving] = useState(false)
+  const [editionError, setEditionError] = useState(null)
+  
   const [sessionForm, setSessionForm] = useState({
     date_started: '',
     date_finished: '',
@@ -377,6 +384,44 @@ function BookDetail() {
     }
   }
   
+  // Edition handlers (Phase 8.7b)
+  const openAddEdition = () => {
+    setEditionForm({ format: '', acquired_date: '' })
+    setEditionError(null)
+    setEditionModalOpen(true)
+  }
+  
+  const handleSaveEdition = async () => {
+    if (!editionForm.format) {
+      setEditionError('Please select a format')
+      return
+    }
+    
+    setEditionSaving(true)
+    setEditionError(null)
+    
+    try {
+      const data = { format: editionForm.format }
+      if (editionForm.acquired_date) {
+        data.acquired_date = editionForm.acquired_date
+      }
+      
+      await createEdition(book.id, data)
+      
+      // Refresh book data to show new edition (before closing modal)
+      const updatedBook = await getBook(id)
+      setBook(updatedBook)
+      
+      // Only close modal after everything succeeds
+      setEditionModalOpen(false)
+    } catch (err) {
+      console.error('Failed to add edition:', err)
+      setEditionError(err.message || 'Failed to add edition')
+    } finally {
+      setEditionSaving(false)
+    }
+  }
+
   // Load book and notes (essential for page)
   useEffect(() => {
     setLoading(true)
@@ -1154,9 +1199,9 @@ function BookDetail() {
           )}
           
           {/* Edition Format Badges - show which formats user owns */}
-          {!isWishlist && book.editions && book.editions.length > 0 && (
+          {!isWishlist && (
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
-              {book.editions.map((edition) => {
+              {book.editions?.map((edition) => {
                 const formatConfig = {
                   ebook: { icon: '📱', label: 'Digital', color: 'bg-blue-900/50 text-blue-300 border-blue-700' },
                   physical: { icon: '📖', label: 'Physical', color: 'bg-amber-900/50 text-amber-300 border-amber-700' },
@@ -1176,6 +1221,16 @@ function BookDetail() {
                   </span>
                 )
               })}
+              
+              {/* Add Format Button */}
+              <button
+                onClick={openAddEdition}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300 transition-colors"
+                title="Add another format"
+              >
+                <span>+</span>
+                <span>Add Format</span>
+              </button>
             </div>
           )}
           
@@ -2359,6 +2414,77 @@ function BookDetail() {
                 className="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded font-medium transition-colors disabled:opacity-50"
               >
                 {sessionSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Edition Modal (Phase 8.7b) */}
+      {editionModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-library-card rounded-lg w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white">Add Format</h3>
+              <button
+                onClick={() => setEditionModalOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {editionError && (
+                <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm">
+                  {editionError}
+                </div>
+              )}
+              
+              {/* Format Selection */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Format *</label>
+                <select
+                  value={editionForm.format}
+                  onChange={(e) => setEditionForm({ ...editionForm, format: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value="">Select format...</option>
+                  <option value="ebook">📱 Digital (ebook)</option>
+                  <option value="physical">📖 Physical</option>
+                  <option value="audiobook">🎧 Audiobook</option>
+                  <option value="web">🌐 Web</option>
+                </select>
+              </div>
+              
+              {/* Acquired Date (optional) */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Acquired Date (optional)</label>
+                <input
+                  type="date"
+                  value={editionForm.acquired_date}
+                  onChange={(e) => setEditionForm({ ...editionForm, acquired_date: e.target.value })}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-700">
+              <button
+                onClick={() => setEditionModalOpen(false)}
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdition}
+                disabled={editionSaving || !editionForm.format}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {editionSaving ? 'Adding...' : 'Add Format'}
               </button>
             </div>
           </div>
