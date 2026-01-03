@@ -757,7 +757,7 @@ async def update_book_status(
     if update.status not in valid_statuses:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid status. Must be one of: Unread, In Progress, Finished, Abandoned"
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
         )
     
     # Update status

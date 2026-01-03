@@ -262,6 +262,58 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
                 if "duplicate column name" not in str(e).lower():
                     print(f"  Note: {col_name} column: {e}")
 
+    # Migration: Reparse all notes to populate links table (backlinks fix)
+    cursor = await db.execute(
+        "SELECT value FROM settings WHERE key = 'links_reparsed'"
+    )
+    links_reparsed = await cursor.fetchone()
+    
+    if not links_reparsed:
+        import re
+        print("Migration: Reparsing all notes to populate links table...")
+        
+        # Get all notes with [[...]] patterns
+        cursor = await db.execute(
+            "SELECT id, content FROM notes WHERE content LIKE '%[[%]]%'"
+        )
+        notes_with_links = await cursor.fetchall()
+        
+        links_created = 0
+        for note in notes_with_links:
+            note_id = note[0]  # id
+            content = note[1] or ""  # content
+            
+            # Extract [[...]] patterns
+            link_pattern = r'\[\[(.+?)\]\]'
+            matches = re.findall(link_pattern, content)
+            unique_titles = list(dict.fromkeys(matches))
+            
+            # Clear existing links for this note (in case of partial previous run)
+            await db.execute("DELETE FROM links WHERE from_note_id = ?", [note_id])
+            
+            # Look up and insert links
+            for link_text in unique_titles:
+                cursor = await db.execute(
+                    "SELECT id FROM titles WHERE LOWER(title) = LOWER(?)",
+                    [link_text.strip()]
+                )
+                title_row = await cursor.fetchone()
+                
+                if title_row:
+                    await db.execute(
+                        "INSERT INTO links (from_note_id, to_title_id, link_text) VALUES (?, ?, ?)",
+                        [note_id, title_row[0], link_text]  # title_row[0] is id
+                    )
+                    links_created += 1
+        
+        # Mark migration as complete
+        await db.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            ("links_reparsed", "true")
+        )
+        await db.commit()
+        print(f"Migration: Created {links_created} links from {len(notes_with_links)} notes")
+
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for old 'books' schema (pre-Phase 5)."""

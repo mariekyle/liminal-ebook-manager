@@ -422,14 +422,14 @@ function SettingsDrawer({ isOpen, onClose }) {
               
               <div className="space-y-3">
                 {[
-                  { key: 'unread', placeholder: 'Unread' },
-                  { key: 'in_progress', placeholder: 'In Progress' },
-                  { key: 'finished', placeholder: 'Finished' },
-                  { key: 'dnf', placeholder: 'Abandoned' }
-                ].map(({ key, placeholder }) => (
+                  { key: 'unread', label: 'Unread', placeholder: 'Unread' },
+                  { key: 'in_progress', label: 'In Progress', placeholder: 'In Progress' },
+                  { key: 'finished', label: 'Finished', placeholder: 'Finished' },
+                  { key: 'dnf', label: 'Abandoned', placeholder: 'Abandoned' }
+                ].map(({ key, label, placeholder }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <span className="text-gray-500 text-sm w-24 capitalize">
-                      {key.replace('_', ' ')}
+                    <span className="text-gray-500 text-sm w-24">
+                      {label}
                     </span>
                     <input
                       type="text"
