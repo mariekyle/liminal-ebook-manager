@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
+import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
@@ -195,6 +195,16 @@ function BookDetail() {
   const [editionForm, setEditionForm] = useState({ format: '', acquired_date: '' })
   const [editionSaving, setEditionSaving] = useState(false)
   const [editionError, setEditionError] = useState(null)
+  
+  // Merge modal state (Phase 8.7d)
+  const [mergeModalOpen, setMergeModalOpen] = useState(false)
+  const [mergeStep, setMergeStep] = useState('search') // 'search' | 'confirm'
+  const [mergeSearch, setMergeSearch] = useState('')
+  const [mergeResults, setMergeResults] = useState([])
+  const [mergeSearching, setMergeSearching] = useState(false)
+  const [mergeTarget, setMergeTarget] = useState(null) // The book we're merging INTO
+  const [mergeSaving, setMergeSaving] = useState(false)
+  const [mergeError, setMergeError] = useState(null)
   
   const [sessionForm, setSessionForm] = useState({
     date_started: '',
@@ -419,6 +429,61 @@ function BookDetail() {
       setEditionError(err.message || 'Failed to add edition')
     } finally {
       setEditionSaving(false)
+    }
+  }
+
+  // Merge handlers (Phase 8.7d)
+  const openMergeModal = () => {
+    setMergeStep('search')
+    setMergeSearch('')
+    setMergeResults([])
+    setMergeTarget(null)
+    setMergeError(null)
+    setMergeModalOpen(true)
+  }
+  
+  const handleMergeSearch = async (query) => {
+    setMergeSearch(query)
+    if (query.length < 2) {
+      setMergeResults([])
+      return
+    }
+    
+    setMergeSearching(true)
+    try {
+      const data = await listBooks({ search: query, limit: 10 })
+      // Filter out the current book
+      const filtered = (data.books || []).filter(b => b.id !== book.id)
+      setMergeResults(filtered)
+    } catch (err) {
+      console.error('Search failed:', err)
+    } finally {
+      setMergeSearching(false)
+    }
+  }
+  
+  const selectMergeTarget = (target) => {
+    setMergeTarget(target)
+    setMergeStep('confirm')
+  }
+  
+  const handleMerge = async () => {
+    if (!mergeTarget) return
+    
+    setMergeSaving(true)
+    setMergeError(null)
+    
+    try {
+      // Current book is the SOURCE (will be deleted)
+      // Selected book is the TARGET (will be kept)
+      await mergeTitles(mergeTarget.id, book.id)
+      
+      // Navigate to the target book (since current book no longer exists)
+      navigate(`/book/${mergeTarget.id}`)
+    } catch (err) {
+      console.error('Merge failed:', err)
+      setMergeError(err.message || 'Failed to merge titles')
+      setMergeSaving(false)
     }
   }
 
@@ -1085,8 +1150,18 @@ function BookDetail() {
         
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-          {/* Edit button - positioned at top right */}
-          <div className="flex justify-end mb-2">
+          {/* Edit and Merge buttons - positioned at top right */}
+          <div className="flex justify-end gap-1 mb-2">
+            <button
+              onClick={openMergeModal}
+              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
+              aria-label="Merge with another book"
+              title="Merge with another book"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </button>
             <button
               onClick={() => setEditModalOpen(true)}
               className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
@@ -2486,6 +2561,171 @@ function BookDetail() {
               >
                 {editionSaving ? 'Adding...' : 'Add Format'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge Modal (Phase 8.7d) */}
+      {mergeModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-library-card rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white">
+                {mergeStep === 'search' ? 'Merge into Another Book' : 'Confirm Merge'}
+              </h3>
+              <button
+                onClick={() => setMergeModalOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-4 flex-1 overflow-y-auto">
+              {mergeError && (
+                <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm mb-4">
+                  {mergeError}
+                </div>
+              )}
+              
+              {mergeStep === 'search' && (
+                <>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Search for the book you want to merge this one INTO. The selected book will be kept, and this book's data will be moved to it.
+                  </p>
+                  
+                  {/* Current book preview */}
+                  <div className="bg-library-bg rounded-lg p-3 mb-4">
+                    <div className="text-xs text-gray-500 mb-1">This book (will be merged and deleted):</div>
+                    <div className="font-medium text-white">{book.title}</div>
+                    <div className="text-sm text-gray-400">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                  </div>
+                  
+                  {/* Search input */}
+                  <div className="relative mb-4">
+                    <input
+                      type="text"
+                      value={mergeSearch}
+                      onChange={(e) => handleMergeSearch(e.target.value)}
+                      placeholder="Search by title..."
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                      autoFocus
+                    />
+                    {mergeSearching && (
+                      <div className="absolute right-3 top-2.5 text-gray-400 text-sm">
+                        Searching...
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Search results */}
+                  {mergeResults.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs text-gray-500 mb-2">Select the book to merge into:</div>
+                      {mergeResults.map((result) => (
+                        <button
+                          key={result.id}
+                          onClick={() => selectMergeTarget(result)}
+                          className="w-full text-left bg-library-bg hover:bg-gray-700 rounded-lg p-3 transition-colors"
+                        >
+                          <div className="font-medium text-white">{result.title}</div>
+                          <div className="text-sm text-gray-400">{result.authors?.join(', ') || 'Unknown Author'}</div>
+                          {result.category && (
+                            <div className="text-xs text-gray-500 mt-1">{result.category}</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {mergeSearch.length >= 2 && mergeResults.length === 0 && !mergeSearching && (
+                    <div className="text-gray-500 text-sm text-center py-4">
+                      No matching books found
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {mergeStep === 'confirm' && mergeTarget && (
+                <>
+                  <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <span className="text-amber-400 text-lg">⚠️</span>
+                      <div>
+                        <div className="font-medium text-amber-300">This action cannot be undone</div>
+                        <div className="text-sm text-amber-200/80 mt-1">
+                          All data from the source book will be moved to the target, and the source will be permanently deleted.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Visual merge preview */}
+                  <div className="space-y-3">
+                    {/* Source (current book - will be deleted) */}
+                    <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
+                      <div className="text-xs text-red-400 mb-1 font-medium">SOURCE (will be deleted)</div>
+                      <div className="font-medium text-white">{book.title}</div>
+                      <div className="text-sm text-gray-400">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                    </div>
+                    
+                    {/* Arrow */}
+                    <div className="flex justify-center text-gray-500">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    </div>
+                    
+                    {/* Target (selected book - will be kept) */}
+                    <div className="bg-green-900/20 border border-green-800 rounded-lg p-3">
+                      <div className="text-xs text-green-400 mb-1 font-medium">TARGET (will be kept)</div>
+                      <div className="font-medium text-white">{mergeTarget.title}</div>
+                      <div className="text-sm text-gray-400">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-sm text-gray-400">
+                    <div className="font-medium text-gray-300 mb-2">What will be moved:</div>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>All editions (file formats)</li>
+                      <li>All reading sessions</li>
+                      <li>All notes</li>
+                      <li>All collection memberships</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-between gap-3 p-4 border-t border-gray-700">
+              {mergeStep === 'confirm' && (
+                <button
+                  onClick={() => setMergeStep('search')}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  ← Back
+                </button>
+              )}
+              <div className="flex-1" />
+              <button
+                onClick={() => setMergeModalOpen(false)}
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              {mergeStep === 'confirm' && (
+                <button
+                  onClick={handleMerge}
+                  disabled={mergeSaving}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                >
+                  {mergeSaving ? 'Merging...' : 'Merge & Delete'}
+                </button>
+              )}
             </div>
           </div>
         </div>

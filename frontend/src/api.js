@@ -791,6 +791,19 @@ export async function createEdition(bookId, data) {
 }
 
 /**
+ * Merge source title into target title
+ * Moves all editions, sessions, notes, collections from source to target
+ * @param {number} targetId - ID of title to keep
+ * @param {number} sourceId - ID of title to merge and delete
+ */
+export async function mergeTitles(targetId, sourceId) {
+  return apiFetch(`/titles/${targetId}/merge`, {
+    method: 'POST',
+    body: JSON.stringify({ source_id: sourceId })
+  })
+}
+
+/**
  * Get simple list of all collections (for picker UI)
  */
 export async function getAllCollectionsSimple() {

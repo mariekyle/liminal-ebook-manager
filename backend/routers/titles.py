@@ -16,7 +16,7 @@ import json
 import re
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel
 import aiosqlite
 
@@ -2050,3 +2050,149 @@ async def create_edition(
         narrators=None,
         acquired_date=edition.acquired_date
     )
+
+
+@router.post("/titles/{target_id}/merge")
+async def merge_titles(
+    target_id: int,
+    source_id: int = Body(..., embed=True),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """
+    Merge source title into target title.
+    
+    Operations:
+    1. Move all editions from source → target
+    2. Move all reading_sessions from source → target
+    3. Move all notes from source → target
+    4. Move all collection_books entries from source → target
+    5. Move all links (backlinks) from source → target
+    6. Delete source title
+    
+    The target title keeps its metadata. Source title is deleted.
+    """
+    # Validate target exists
+    cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", (target_id,))
+    target = await cursor.fetchone()
+    if not target:
+        raise HTTPException(status_code=404, detail="Target title not found")
+    
+    # Validate source exists
+    cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", (source_id,))
+    source = await cursor.fetchone()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source title not found")
+    
+    # Can't merge a title with itself
+    if target_id == source_id:
+        raise HTTPException(status_code=400, detail="Cannot merge a title with itself")
+    
+    # Count what we're moving (for response)
+    cursor = await db.execute("SELECT COUNT(*) FROM editions WHERE title_id = ?", (source_id,))
+    editions_count = (await cursor.fetchone())[0]
+    
+    cursor = await db.execute("SELECT COUNT(*) FROM reading_sessions WHERE title_id = ?", (source_id,))
+    sessions_count = (await cursor.fetchone())[0]
+    
+    cursor = await db.execute("SELECT COUNT(*) FROM notes WHERE title_id = ?", (source_id,))
+    notes_count = (await cursor.fetchone())[0]
+    
+    cursor = await db.execute("SELECT COUNT(*) FROM collection_books WHERE title_id = ?", (source_id,))
+    collections_count = (await cursor.fetchone())[0]
+    
+    cursor = await db.execute("SELECT COUNT(*) FROM links WHERE to_title_id = ?", (source_id,))
+    links_count = (await cursor.fetchone())[0]
+    
+    # 1. Move editions (update title_id, handle potential format conflicts)
+    # First, get existing formats on target to avoid duplicates
+    cursor = await db.execute("SELECT format FROM editions WHERE title_id = ?", (target_id,))
+    target_formats = {row[0] for row in await cursor.fetchall()}
+    
+    # Move editions that don't conflict, delete ones that do
+    cursor = await db.execute("SELECT id, format FROM editions WHERE title_id = ?", (source_id,))
+    source_editions = await cursor.fetchall()
+    editions_moved = 0
+    for edition_id, edition_format in source_editions:
+        if edition_format not in target_formats:
+            await db.execute(
+                "UPDATE editions SET title_id = ? WHERE id = ?",
+                (target_id, edition_id)
+            )
+            target_formats.add(edition_format)
+            editions_moved += 1
+        else:
+            # Duplicate format - delete it (target already has this format)
+            await db.execute("DELETE FROM editions WHERE id = ?", (edition_id,))
+    
+    # 2. Move reading sessions (renumber to continue sequence)
+    cursor = await db.execute(
+        "SELECT COALESCE(MAX(session_number), 0) FROM reading_sessions WHERE title_id = ?",
+        (target_id,)
+    )
+    max_session = (await cursor.fetchone())[0]
+    
+    cursor = await db.execute(
+        "SELECT id FROM reading_sessions WHERE title_id = ? ORDER BY session_number",
+        (source_id,)
+    )
+    source_sessions = await cursor.fetchall()
+    for i, (session_id,) in enumerate(source_sessions, start=1):
+        await db.execute(
+            "UPDATE reading_sessions SET title_id = ?, session_number = ? WHERE id = ?",
+            (target_id, max_session + i, session_id)
+        )
+    
+    # 3. Move notes
+    await db.execute(
+        "UPDATE notes SET title_id = ? WHERE title_id = ?",
+        (target_id, source_id)
+    )
+    
+    # 4. Move collection memberships (avoid duplicates)
+    cursor = await db.execute(
+        "SELECT collection_id FROM collection_books WHERE title_id = ?",
+        (target_id,)
+    )
+    target_collections = {row[0] for row in await cursor.fetchall()}
+    
+    cursor = await db.execute(
+        "SELECT id, collection_id FROM collection_books WHERE title_id = ?",
+        (source_id,)
+    )
+    source_memberships = await cursor.fetchall()
+    for membership_id, collection_id in source_memberships:
+        if collection_id not in target_collections:
+            await db.execute(
+                "UPDATE collection_books SET title_id = ? WHERE id = ?",
+                (target_id, membership_id)
+            )
+            target_collections.add(collection_id)
+        else:
+            # Already in this collection - delete duplicate membership
+            await db.execute("DELETE FROM collection_books WHERE id = ?", (membership_id,))
+    
+    # 5. Move backlinks (links pointing TO the source should point to target)
+    await db.execute(
+        "UPDATE links SET to_title_id = ? WHERE to_title_id = ?",
+        (target_id, source_id)
+    )
+    
+    # 6. Delete source title (cascades to any remaining FK references)
+    await db.execute("DELETE FROM titles WHERE id = ?", (source_id,))
+    
+    await db.commit()
+    
+    return {
+        "success": True,
+        "target_id": target_id,
+        "target_title": target[1],
+        "source_id": source_id,
+        "source_title": source[1],
+        "merged": {
+            "editions": editions_moved,
+            "sessions": sessions_count,
+            "notes": notes_count,
+            "collections": collections_count,
+            "links": links_count
+        }
+    }
