@@ -32,7 +32,11 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   const titleSearchTimeoutRef = useRef(null)
   const titleJustSelectedRef = useRef(false)
   
+  // Track if user selected an existing title (for "add format" mode)
+  const [selectedExistingTitle, setSelectedExistingTitle] = useState(null)
+  
   const showFanficFields = form.category === 'FanFiction'
+  const isAddingFormat = selectedExistingTitle !== null
   const showUrlField = form.format === 'web' || showFanficFields
   
   // Fetch all authors on mount
@@ -138,6 +142,8 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
       source_url: form.sourceUrl.trim() || null,
       completion_status: form.completionStatus || null,
       is_tbr: false,
+      // Include existing title ID if adding format to existing book
+      existingTitleId: selectedExistingTitle?.id || null,
     })
   }
   
@@ -169,6 +175,13 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
 
   const selectTitleSuggestion = (book) => {
     titleJustSelectedRef.current = true
+    // Store the existing title for "add format" mode
+    setSelectedExistingTitle({
+      id: book.id,
+      title: book.title,
+      authors: book.authors || [],
+      category: book.category,
+    })
     setForm(prev => ({
       ...prev,
       title: book.title,
@@ -181,6 +194,10 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
     setTitleSuggestions([])
     setShowTitleDropdown(false)
     setErrors({})
+  }
+
+  const clearExistingSelection = () => {
+    setSelectedExistingTitle(null)
   }
   
   const handleAuthorKeyDown = (e) => {
@@ -235,7 +252,13 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           <input
             type="text"
             value={form.title}
-            onChange={(e) => updateForm('title', e.target.value)}
+            onChange={(e) => {
+              updateForm('title', e.target.value)
+              // Clear existing selection if user manually edits the title
+              if (selectedExistingTitle && e.target.value !== selectedExistingTitle.title) {
+                clearExistingSelection()
+              }
+            }}
             onFocus={() => titleSuggestions.length > 0 && setShowTitleDropdown(true)}
             onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
             placeholder="What's it called?"
@@ -268,6 +291,31 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           
           {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
         </div>
+
+        {/* Adding Format Banner - show when existing title selected */}
+        {isAddingFormat && (
+          <div className="p-4 rounded-lg bg-green-900/30 border border-green-700/50">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-medium text-green-300 flex items-center gap-2 mb-1">
+                  <span>✓</span> Adding format to existing title
+                </div>
+                <p className="text-sm text-gray-400">
+                  "{selectedExistingTitle.title}" is already in your library. 
+                  This will add a new {form.format} format.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={clearExistingSelection}
+                className="text-gray-500 hover:text-gray-300 p-1"
+                title="Create as new title instead"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* Author */}
         <div className="relative">
@@ -420,9 +468,16 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 bg-library-accent text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50"
+            className={`flex-1 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 ${
+              isAddingFormat ? 'bg-green-600 hover:bg-green-700' : 'bg-library-accent'
+            }`}
           >
-            {isSubmitting ? 'Adding...' : 'Add to Library'}
+            {isSubmitting 
+              ? 'Adding...' 
+              : isAddingFormat 
+                ? 'Add Format' 
+                : 'Add to Library'
+            }
           </button>
         </div>
       </form>

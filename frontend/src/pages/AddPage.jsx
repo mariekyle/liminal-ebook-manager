@@ -15,7 +15,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, getBook, linkFilesToTitle } from '../api'
+import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, createEdition, getBook, linkFilesToTitle } from '../api'
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'
@@ -188,10 +188,24 @@ export default function AddPage() {
     setError(null)
     
     try {
-      const response = await createTitle(data)
+      let titleId
+      
+      if (data.existingTitleId) {
+        // Adding format to existing title
+        await createEdition(data.existingTitleId, {
+          format: data.format,
+          acquired_date: new Date().toISOString().split('T')[0], // Today's date
+        })
+        titleId = data.existingTitleId
+      } else {
+        // Creating new title
+        const response = await createTitle(data)
+        titleId = response.id || response.title_id || null
+      }
+      
       setSuccessType('library')
       setSuccessTitle(data.title)
-      setSuccessTitleId(response.id || response.title_id || null)
+      setSuccessTitleId(titleId)
       setCurrentScreen(SCREENS.SUCCESS)
     } catch (err) {
       setError(err.message)
