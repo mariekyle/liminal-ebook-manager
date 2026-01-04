@@ -474,15 +474,17 @@ function BookDetail() {
     setMergeError(null)
     
     try {
-      // Current book is the SOURCE (will be deleted)
-      // Selected book is the TARGET (will be kept)
       await mergeTitles(mergeTarget.id, book.id)
+      
+      // Close modal before navigating
+      setMergeModalOpen(false)
       
       // Navigate to the target book (since current book no longer exists)
       navigate(`/book/${mergeTarget.id}`)
     } catch (err) {
       console.error('Merge failed:', err)
       setMergeError(err.message || 'Failed to merge titles')
+    } finally {
       setMergeSaving(false)
     }
   }
