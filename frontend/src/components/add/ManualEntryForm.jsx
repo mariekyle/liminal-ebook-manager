@@ -42,7 +42,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   // Fetch all authors on mount
   useEffect(() => {
     listAuthors().then(data => {
-      setAllAuthors(data.map(a => a.name))
+      setAllAuthors((data.authors || []).map(a => a.name))
     }).catch(console.error)
   }, [])
   
@@ -222,28 +222,21 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
         <div>
           <label className="block text-sm text-gray-400 mb-2">Format</label>
           <div className="flex gap-2">
-            {[
-              { value: 'physical', label: 'Physical' },
-              { value: 'audiobook', label: 'Audiobook' },
-              { value: 'web', label: 'Web/URL' },
-            ].map(opt => (
+            {['physical', 'audiobook', 'web'].map(fmt => (
               <button
-                key={opt.value}
+                key={fmt}
                 type="button"
-                onClick={() => updateForm('format', opt.value)}
+                onClick={() => updateForm('format', fmt)}
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  form.format === opt.value
+                  form.format === fmt
                     ? 'bg-library-accent text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                {opt.label}
+                {fmt === 'physical' ? 'Physical' : fmt === 'audiobook' ? 'Audiobook' : 'Web/URL'}
               </button>
             ))}
           </div>
-          {form.format === 'web' && (
-            <p className="text-gray-500 text-sm mt-2 italic">Choose this option for web-based works</p>
-          )}
         </div>
         
         {/* Title */}
