@@ -11,6 +11,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.18.0] - 2026-01-04
+
+### Added
+
+#### Phase 8.7a: Session Format Tracking
+Track which format (ebook, physical, audiobook, web) was used for each reading session.
+
+- **Format column** — New `format` TEXT column in `reading_sessions` table
+- **Format dropdown** — Session modal includes format picker (after End Date)
+- **Format validation** — Backend validates format is one of: ebook, physical, audiobook, web
+- **Format badges on sessions** — Reading History cards show format with color-coded badge:
+  - 📱 Digital (blue)
+  - 📖 Physical (amber)
+  - 🎧 Audiobook (purple)
+  - 🌐 Web (emerald)
+- **Backward compatible** — Existing sessions display correctly with no format set
+- **Empty string handling** — Users can clear format by selecting "— Not specified"
+
+#### Phase 8.7b: Add Edition to Existing Title
+Add new formats to existing books without creating duplicate title records.
+
+- **"+ Add Format" button** — Appears on BookDetail page next to format badges
+- **AddEditionModal** — Modal with format picker (Digital, Physical, Audiobook, Web)
+- **POST /api/books/{id}/editions** — New endpoint to create edition records
+- **Wishlist conversion** — Adding edition to wishlist item automatically converts to owned
+- **Race condition handling** — Returns friendly error for concurrent duplicate edition attempts
+- **Modal waits for refresh** — Modal stays open until book data refreshes (ensures errors visible)
+
+#### Phase 8.7d: Merge Duplicate Titles Tool
+Combine duplicate title records into a single consolidated entry.
+
+- **"Merge Into..." menu option** — Available in BookDetail three-dot menu
+- **MergeTitleModal** — Search for target title with preview of merge results
+- **POST /api/titles/{id}/merge** — Merge endpoint that:
+  - Moves all editions from source to target
+  - Moves all reading sessions from source to target
+  - Moves all notes from source to target
+  - Moves all collection memberships from source to target
+  - Deletes the empty source title
+- **Duplicate check** — Prevents merging into self
+- **Success navigation** — Navigates to merged title after completion
+
+### Changed
+
+- **Session models** — SessionCreate, SessionUpdate, SessionResponse now include optional `format` field
+- **Session queries** — All SELECT/INSERT/UPDATE queries updated for format column
+
+### Fixed
+
+- **Format validation edge case** — Empty strings now allowed to clear format field
+- **Merge modal state** — Modal properly closes and resets mergeSaving state after completion
+- **Edition modal timing** — Modal waits for book refresh before closing
+
+### Technical
+
+#### Database Changes
+- Migration: `ALTER TABLE reading_sessions ADD COLUMN format TEXT`
+- Index: `CREATE INDEX IF NOT EXISTS idx_sessions_format ON reading_sessions(format)`
+
+#### New Files
+- `frontend/src/components/AddEditionModal.jsx` — Add format modal
+- `frontend/src/components/MergeTitleModal.jsx` — Merge titles modal
+
+#### Modified Files
+- `backend/database.py` — Migration for format column
+- `backend/routers/sessions.py` — Format field in all session operations
+- `backend/routers/titles.py` — Create edition endpoint, merge endpoint
+- `frontend/src/components/BookDetail.jsx` — Format dropdown in session modal, session badges, "+ Add Format" button, merge menu option
+- `frontend/src/api.js` — createEdition(), mergeTitles() functions
+
+---
+
 ## [0.17.0] - 2026-01-03
 
 ### Added
@@ -490,7 +562,8 @@ Complete system for extracting and displaying structured metadata from EPUB file
 
 | Version | Date | Milestone |
 |---------|------|-----------|
-| 0.17.0 | 2026-01-03 | **Phase 8.3 + 8.4** — Header redesign, cover toggles, format badges, rating labels ✨ |
+| 0.18.0 | 2026-01-04 | **Phase 8.7** — Editions consolidation (session format, add edition, merge tool) ✨ |
+| 0.17.0 | 2026-01-03 | **Phase 8.3 + 8.4** — Header redesign, cover toggles, format badges, rating labels |
 | 0.16.0 | 2026-01-02 | **Phase 8.1 + 8.6** — Add flow redesign, manual entry improvements |
 | 0.15.0 | 2026-01-02 | **Phase 7.2b** — Collections system, smart paste, Calibre migration |
 | 0.14.0 | 2026-01-01 | **Phase 7.2a** — Enhanced filtering (fandom, rating, status, ships) |
@@ -523,6 +596,31 @@ Complete system for extracting and displaying structured metadata from EPUB file
 ---
 
 ## Upgrade Notes
+
+### Upgrading to 0.18.0
+
+**Database Changes:**
+- Migration: `ALTER TABLE reading_sessions ADD COLUMN format TEXT`
+- Migration runs automatically on startup
+
+**New Files to Upload:**
+- `frontend/src/components/AddEditionModal.jsx`
+- `frontend/src/components/MergeTitleModal.jsx`
+
+**Modified Files:**
+- `backend/database.py`
+- `backend/routers/sessions.py`
+- `backend/routers/titles.py`
+- `frontend/src/components/BookDetail.jsx`
+- `frontend/src/api.js`
+
+**Post-upgrade:**
+1. Upload all new and modified files
+2. Rebuild Docker container
+3. Format migration runs automatically on first startup
+4. Reading sessions can now track format
+5. "+ Add Format" button appears on book detail pages
+6. "Merge Into..." option available in book menu
 
 ### Upgrading to 0.17.0
 
@@ -608,10 +706,10 @@ environment:
 
 ## Links
 
-- [Roadmap](./20250103_ROADMAP.md)
+- [Roadmap](./20250104_ROADMAP.md)
 - [Development Workflow](./20251219_DEVELOPMENT_WORKFLOW.md)
 - [Architecture](./ARCHITECTURE.md)
 
 ---
 
-*Last updated: January 3, 2026 (v0.17.0 — Phase 8.3 + 8.4 complete)*
+*Last updated: January 4, 2026 (v0.18.0 — Phase 8.7a + 8.7b + 8.7d complete)*

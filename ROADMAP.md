@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 3, 2026 (v0.17.0)
+> **Last Updated:** January 4, 2026 (v0.18.0)
 
 ---
 
@@ -21,7 +21,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.17.0)
+## Current State (v0.18.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -36,12 +36,13 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
 | Book detail header | ✅ Redesigned |
+| Editions system | ✅ NEW — Add formats, merge duplicates |
 
 **Recent milestones:**
+- Phase 8.7a-d: Editions consolidation — session format, add edition, merge tool (Jan 4, 2026)
 - Phase 8.3 + 8.4: Header redesign, cover toggles, format badges, rating labels (Jan 3, 2026)
 - Phase 8.1 + 8.6: Add book flow redesign & manual entry improvements (Jan 2, 2026)
 - Phase 7.2b: Collections system with smart paste (Jan 2, 2026)
-- Phase 7.2a: Enhanced filtering for fanfiction metadata (Jan 1, 2026)
 
 ---
 
@@ -118,18 +119,29 @@ Complete overhaul of the "Add" page user experience:
 - [x] **Auto-fill on selection** — Fill title, authors, series, category
 - [x] **View Story button** — Navigate to book after manual entry
 
-### 8.7 Editions Consolidation ⏳ NEXT
+### 8.7 Editions Consolidation ⏳ IN PROGRESS
 
 > **Reference:** See `PHASE_8_7_EDITIONS.md` for detailed planning
 
 **Problem identified:** Adding a book via manual entry creates duplicate title records instead of adding an edition to existing title. The editions system needs consolidation.
 
 **Sub-phases:**
-- [ ] **8.7a: Foundation** — Add format field to reading sessions
-- [ ] **8.7b: Add Edition** — "+ Add Format" on BookDetail page
-- [ ] **8.7c: Add Flow** — Prevent accidental duplicates, offer "add as edition"
-- [ ] **8.7d: Merge Tool** — Combine duplicate titles
+- [x] **8.7a: Foundation** — Add format field to reading sessions ✅ COMPLETE
+- [x] **8.7b: Add Edition** — "+ Add Format" on BookDetail page ✅ COMPLETE
+- [x] **8.7d: Merge Tool** — Combine duplicate titles ✅ COMPLETE
+- [ ] **8.7c: Add Flow** — Prevent accidental duplicates, offer "add as edition" 🔜 NEXT
 - [ ] **8.7e: Format Filter** — Filter library by owned formats
+- [ ] **8.7f: Duplicate Finder** — Tool to find potential duplicates (identified, not yet planned)
+
+**Completed features:**
+- Session format tracking — Track which format (ebook, physical, audiobook, web) was read
+- Format dropdown in session modal with color-coded badges
+- "+ Add Format" button on BookDetail page
+- AddEditionModal for adding formats to existing titles
+- Wishlist → owned automatic conversion when adding edition
+- "Merge Into..." option in BookDetail menu
+- MergeTitleModal with title search and merge preview
+- Merge endpoint moves editions, sessions, notes, collections
 
 ### 8.8 Minor UI Polish (Deferred)
 
@@ -358,15 +370,16 @@ The design refactor isn't just about consistency — it's about creating a **cal
 | v0.14.0 | Jan 1, 2026 | Enhanced filtering |
 | v0.15.0 | Jan 2, 2026 | Collections |
 | v0.16.0 | Jan 2, 2026 | Add flow redesign |
-| v0.17.0 | Jan 3, 2026 | Header redesign, format badges ✨ |
+| v0.17.0 | Jan 3, 2026 | Header redesign, format badges |
+| v0.18.0 | Jan 4, 2026 | Editions consolidation ✨ |
 
 ### Upcoming
 
 | Version | Phase | Focus |
 |---------|-------|-------|
-| v0.18.0 | 8.7 | Editions consolidation |
-| v0.19.0 | 9 | Feature completion |
-| v0.20.0 | 10 | Design system refactor |
+| v0.19.0 | 8.7c-f | Editions completion (add flow dedup, format filter) |
+| v0.20.0 | 9 | Feature completion |
+| v0.21.0 | 10 | Design system refactor |
 | v1.0.0 | 11 | AI enhancements |
 
 ---
