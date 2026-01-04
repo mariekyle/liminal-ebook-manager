@@ -22,20 +22,13 @@ What I actually needed was something purpose-built for how I read: on my phone, 
 
 One place. One screen. One source of truth.
 
-So I built Liminal.
+So I built Liminal
 
-
-
-: Goodreads, LibraryThing, StoryGraph, BookFusion, Kavita, Komga, Ubooquity, Calibre Web Automated, Airtable spreadsheets,
-
-
-
-a disconnect
 ---
 
 ## What Is Liminal?
 
-Liminal is a **self-hosted web app** for managing your personal ebook library. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
+Liminal is a **self-hosted web app** for managing your personal ebook library. If you have ebooks in a folder, Liminal can instantly allow you begin making sense of your reading life in a visual way. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
 
 - **Browsing** your library with beautiful gradient covers
 - **Taking notes** with wiki-style `[[linking]]` between books
@@ -257,7 +250,7 @@ MIT
 - [Plex](https://plex.tv) — the gold standard for self-hosted media management
 - [Book of the Month](https://www.bookofthemonth.com/) — for showing how book discovery can feel curated and personal
 - [Calibre](https://calibre-ebook.com/) — My constant companion since 2007. Calibre has followed me through trans-Atlantic moves, countless devices, format wars, and nearly two decades of evolving reading habits. It taught me that a personal library could be truly mine — organized exactly how I wanted, converted to any format I needed, backed up and portable forever. The fact that such powerful software exists for free, maintained with such dedication for so many years, is a gift to readers everywhere. Liminal exists because Calibre showed me what was possible.
-- *Swan Song* (2021) — the interfaces and experiences enabled by technology in Ben Cleary's film are the embodiment of calm UX. It's one of my favorite movies and is a reminder that letting go to build something greater is the hardest and most necessary part of any process.
+- [Swan Song (2021)](https://www.imdb.com/title/tt13207508/) — the interfaces and experiences enabled by technology in Ben Cleary's film are the embodiment of calm UX..which is something I'm striving for with the app. It's one of my favorite movies and a beautiful take on the idea that letting go is the hardest and most necessary part of any process.
 
 **Built with:**
 - FastAPI, React, Tailwind CSS, SQLite
