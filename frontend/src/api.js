@@ -877,3 +877,7 @@ export async function smartPasteApply(collectionId, titleIds) {
     body: JSON.stringify({ title_ids: titleIds })
   })
 }
+
+export async function findDuplicates() {
+  return apiFetch('/titles/duplicates')
+}

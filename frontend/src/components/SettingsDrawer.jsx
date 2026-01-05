@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata } from '../api'
+import DuplicateFinderModal from './DuplicateFinderModal'
 
 function SettingsDrawer({ isOpen, onClose }) {
   const [settings, setSettings] = useState({})
@@ -29,6 +30,7 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [showTitleBelow, setShowTitleBelow] = useState(false)
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
+  const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -571,6 +573,17 @@ function SettingsDrawer({ isOpen, onClose }) {
                   {syncResult.message}
                 </p>
               )}
+              
+              {/* Find Duplicates */}
+              <button
+                onClick={() => setShowDuplicateFinder(true)}
+                className="w-full mt-3 px-4 py-2 rounded text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Find Duplicates
+              </button>
             </section>
 
             {/* Divider */}
@@ -673,6 +686,12 @@ function SettingsDrawer({ isOpen, onClose }) {
           </div>
         )}
       </div>
+      
+      {/* Duplicate Finder Modal */}
+      <DuplicateFinderModal
+        isOpen={showDuplicateFinder}
+        onClose={() => setShowDuplicateFinder(false)}
+      />
     </>
   )
 }

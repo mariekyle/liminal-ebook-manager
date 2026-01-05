@@ -2212,3 +2212,220 @@ async def merge_titles(
             "links": links_count
         }
     }
+
+
+# =============================================================================
+# DUPLICATE FINDER
+# =============================================================================
+
+def normalize_title(title: str) -> str:
+    """Normalize title for comparison: lowercase, remove articles, punctuation."""
+    if not title:
+        return ""
+    # Lowercase
+    normalized = title.lower().strip()
+    # Remove leading articles
+    for article in ["the ", "a ", "an "]:
+        if normalized.startswith(article):
+            normalized = normalized[len(article):]
+            break
+    # Remove punctuation and extra spaces
+    import re
+    normalized = re.sub(r'[^\w\s]', '', normalized)
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    return normalized
+
+
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """Calculate the Levenshtein (edit) distance between two strings."""
+    if len(s1) < len(s2):
+        s1, s2 = s2, s1
+    
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            # Cost is 0 if characters match, 1 otherwise
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
+
+
+def titles_are_similar(title1: str, title2: str, threshold: float = 0.75) -> bool:
+    """Check if two titles are similar using Levenshtein distance and substring matching."""
+    if not title1 or not title2:
+        return False
+    
+    norm1 = normalize_title(title1)
+    norm2 = normalize_title(title2)
+    
+    # Exact match after normalization
+    if norm1 == norm2:
+        return True
+    
+    if len(norm1) == 0 or len(norm2) == 0:
+        return False
+    
+    # Substring matching: if one title contains the other, likely a duplicate
+    # e.g., "Dune" vs "Dune: The Novel"
+    shorter = norm1 if len(norm1) <= len(norm2) else norm2
+    longer = norm2 if len(norm1) <= len(norm2) else norm1
+    
+    # If the shorter title is contained in the longer one, is at least 4 chars,
+    # and covers at least 40% of the longer title, consider them similar
+    if len(shorter) >= 4 and shorter in longer and len(shorter) >= len(longer) * 0.4:
+        return True
+    
+    # Check if shorter is a prefix of longer (common for subtitles)
+    # e.g., "Kingdom of Fear" vs "Kingdom of Fear: A Story"
+    if len(shorter) >= 4 and longer.startswith(shorter) and len(shorter) >= len(longer) * 0.4:
+        return True
+    
+    # Levenshtein similarity ratio
+    distance = levenshtein_distance(norm1, norm2)
+    max_len = max(len(norm1), len(norm2))
+    similarity = 1 - (distance / max_len)
+    
+    return similarity >= threshold
+
+
+@router.get("/titles/duplicates")
+async def find_duplicates(db = Depends(get_db)):
+    """Find potential duplicate titles in the library."""
+    
+    # Get all titles with basic info
+    cursor = await db.execute("""
+        SELECT 
+            t.id, 
+            t.title, 
+            t.authors,
+            t.category,
+            (SELECT COUNT(*) FROM editions WHERE title_id = t.id) as edition_count
+        FROM titles t
+        WHERE t.acquisition_status = 'owned'
+        ORDER BY t.title COLLATE NOCASE
+    """)
+    rows = await cursor.fetchall()
+    
+    titles_list = []
+    for row in rows:
+        # Parse authors JSON and format as string
+        authors_list = parse_json_field(row["authors"])
+        authors_display = ", ".join(authors_list) if authors_list else "Unknown Author"
+        # For normalization, use the first author (primary author)
+        primary_author = authors_list[0] if authors_list else ""
+        
+        # Generate cover gradient
+        cover_style = get_cover_style(row["title"] or "Untitled", primary_author or "Unknown", Theme.DARK)
+        
+        titles_list.append({
+            "id": row["id"],
+            "title": row["title"],
+            "authors": authors_display,
+            "category": row["category"],
+            "cover_gradient": cover_style.css_gradient,
+            "edition_count": row["edition_count"],
+            "normalized": normalize_title(row["title"]),
+            "author_normalized": normalize_title(primary_author)
+        })
+    
+    # Group by normalized title for exact matches
+    exact_groups = {}
+    for book in titles_list:
+        key = book["normalized"]
+        if key not in exact_groups:
+            exact_groups[key] = []
+        exact_groups[key].append(book)
+    
+    # Find duplicate groups
+    duplicate_groups = []
+    processed_ids = set()
+    
+    # First pass: exact matches (after normalization)
+    for key, books in exact_groups.items():
+        if len(books) > 1:
+            # Check if same author too
+            author_set = set(b["author_normalized"] for b in books)
+            same_author = len(author_set) == 1 and "" not in author_set
+            
+            duplicate_groups.append({
+                "match_type": "exact",
+                "same_author": same_author,
+                "books": [{
+                    "id": b["id"],
+                    "title": b["title"],
+                    "authors": b["authors"],
+                    "category": b["category"],
+                    "cover_gradient": b["cover_gradient"],
+                    "edition_count": b["edition_count"]
+                } for b in books]
+            })
+            for b in books:
+                processed_ids.add(b["id"])
+    
+    # Second pass: fuzzy matches (same author, similar title)
+    # Only check books not already in exact match groups
+    remaining_books = [b for b in titles_list if b["id"] not in processed_ids]
+    
+    # Group by author first for efficiency
+    # Use special key for books without authors so they can still be checked
+    by_author = {}
+    NO_AUTHOR_KEY = "__no_author__"
+    for book in remaining_books:
+        key = book["author_normalized"] if book["author_normalized"] else NO_AUTHOR_KEY
+        if key not in by_author:
+            by_author[key] = []
+        by_author[key].append(book)
+    
+    # Check for similar titles within same author (or same lack of author)
+    for author, author_books in by_author.items():
+        if len(author_books) < 2:
+            continue
+        
+        # Compare each pair
+        checked = set()
+        for i, book1 in enumerate(author_books):
+            if book1["id"] in checked:
+                continue
+            
+            similar_group = [book1]
+            for j, book2 in enumerate(author_books[i+1:], i+1):
+                if book2["id"] in checked:
+                    continue
+                
+                if titles_are_similar(book1["title"], book2["title"]):
+                    similar_group.append(book2)
+                    checked.add(book2["id"])
+            
+            if len(similar_group) > 1:
+                checked.add(book1["id"])
+                duplicate_groups.append({
+                    "match_type": "fuzzy",
+                    "same_author": author != NO_AUTHOR_KEY,  # False if no author
+                    "books": [{
+                        "id": b["id"],
+                        "title": b["title"],
+                        "authors": b["authors"],
+                        "category": b["category"],
+                        "cover_gradient": b["cover_gradient"],
+                        "edition_count": b["edition_count"]
+                    } for b in similar_group]
+                })
+    
+    # Sort groups: exact matches first, then by number of books
+    duplicate_groups.sort(key=lambda g: (0 if g["match_type"] == "exact" else 1, -len(g["books"])))
+    
+    # Count total duplicates
+    total_duplicates = sum(len(g["books"]) for g in duplicate_groups)
+    
+    return {
+        "groups": duplicate_groups,
+        "total_duplicates": total_duplicates
+    }
