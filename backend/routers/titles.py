@@ -416,6 +416,7 @@ async def list_titles(
     content_rating: Optional[str] = Query(None, description="Filter by content rating (comma-separated for multiple)"),
     completion_status: Optional[str] = Query(None, description="Filter by completion status (comma-separated for multiple)"),
     ship: Optional[str] = Query(None, description="Filter by ship/relationship (searches within JSON array)"),
+    format: Optional[str] = Query(None, description="Filter by format (comma-separated: ebook,physical,audiobook,web)"),
     db = Depends(get_db)
 ):
     """
@@ -495,6 +496,21 @@ async def list_titles(
         # Search within JSON array - ship name is in relationships field
         where_clauses.append("relationships LIKE ?")
         params.append(f'%"{ship}"%')
+    
+    # Format filter (requires join with editions)
+    # Note: Use 'titles.id' not 't.id' because count query doesn't use alias
+    if format:
+        format_list = [f.strip() for f in format.split(',') if f.strip()]
+        if format_list:
+            format_placeholders = ','.join(['?' for _ in format_list])
+            where_clauses.append(f"""
+                titles.id IN (
+                    SELECT DISTINCT e.title_id 
+                    FROM editions e 
+                    WHERE e.format IN ({format_placeholders})
+                )
+            """)
+            params.extend(format_list)
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
@@ -587,13 +603,14 @@ async def list_books(
     content_rating: Optional[str] = Query(None),
     completion_status: Optional[str] = Query(None),
     ship: Optional[str] = Query(None),
+    format: Optional[str] = Query(None),
     db = Depends(get_db)
 ):
     """Backward compatible endpoint - calls list_titles."""
     return await list_titles(
         category, status, series, tags, search, sort, sort_dir, 
         limit, offset, acquisition, fandom, content_rating, 
-        completion_status, ship, db
+        completion_status, ship, format, db
     )
 
 

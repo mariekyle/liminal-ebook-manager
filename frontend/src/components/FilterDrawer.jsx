@@ -40,6 +40,9 @@ function FilterDrawer({
   onCompletionStatusChange,
   selectedShip = '',
   onOpenShipModal,
+  // Format filter
+  selectedFormats = [],
+  onFormatsChange,
 }) {
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -115,6 +118,8 @@ function FilterDrawer({
             onCompletionStatusChange={onCompletionStatusChange}
             selectedShip={selectedShip}
             onOpenShipModal={onOpenShipModal}
+            selectedFormats={selectedFormats}
+            onFormatsChange={onFormatsChange}
           />
         </div>
       </div>
@@ -156,6 +161,8 @@ function FilterDrawer({
             onCompletionStatusChange={onCompletionStatusChange}
             selectedShip={selectedShip}
             onOpenShipModal={onOpenShipModal}
+            selectedFormats={selectedFormats}
+            onFormatsChange={onFormatsChange}
           />
         </div>
       </div>
@@ -187,6 +194,9 @@ function FilterContent({
   onCompletionStatusChange,
   selectedShip = '',
   onOpenShipModal,
+  // Format filter
+  selectedFormats = [],
+  onFormatsChange,
 }) {
   const { getLabel } = useStatusLabels()
   
@@ -412,6 +422,47 @@ function FilterContent({
                 </div>
               </div>
             </>
+          )}
+          
+          {/* Formats - show for all categories */}
+          {onFormatsChange && (
+            <div className="mb-6">
+              <p className="text-gray-400 text-sm mb-2">Formats</p>
+              <div className="space-y-2">
+                {[
+                  { value: 'ebook', label: 'Ebook' },
+                  { value: 'physical', label: 'Physical' },
+                  { value: 'audiobook', label: 'Audiobook' },
+                  { value: 'web', label: 'Web' }
+                ].map(({ value, label }) => (
+                  <label 
+                    key={value}
+                    className="flex items-center gap-3 cursor-pointer group"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (selectedFormats.includes(value)) {
+                        onFormatsChange(selectedFormats.filter(f => f !== value))
+                      } else {
+                        onFormatsChange([...selectedFormats, value])
+                      }
+                    }}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      selectedFormats.includes(value)
+                        ? 'bg-library-accent border-library-accent'
+                        : 'border-gray-500 group-hover:border-gray-400'
+                    }`}>
+                      {selectedFormats.includes(value) && (
+                        <span className="text-white text-xs">✓</span>
+                      )}
+                    </div>
+                    <span className="text-gray-300 text-sm group-hover:text-white">
+                      {label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
         </>
       )}

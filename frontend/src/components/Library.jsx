@@ -51,6 +51,9 @@ function Library() {
     searchParams.get('completionStatus') ? searchParams.get('completionStatus').split(',') : []
   )
   const [ship, setShip] = useState(searchParams.get('ship') || '')
+  const [selectedFormats, setSelectedFormats] = useState(
+    searchParams.get('format') ? searchParams.get('format').split(',') : []
+  )
   const [sortDir, setSortDir] = useState(searchParams.get('sortDir') || 'desc')
   
   // View state (tabs) - initialize from URL
@@ -71,14 +74,14 @@ function Library() {
   // Filters that apply to current view
   const hasActiveFilters = activeView === 'library'
     ? (category || status || selectedTags.length > 0 || search || readTimeFilter || 
-       fandom || contentRating.length > 0 || completionStatus.length > 0 || ship)
+       fandom || contentRating.length > 0 || completionStatus.length > 0 || ship || selectedFormats.length > 0)
     : (category || search) // Series view only has category and search
 
   // Count active filters for badge
   // Only count filters relevant to current view
   const activeFilterCount = activeView === 'library'
     ? [category, status, selectedTags.length > 0, readTimeFilter, search,
-       fandom, contentRating.length > 0, completionStatus.length > 0, ship].filter(Boolean).length
+       fandom, contentRating.length > 0, completionStatus.length > 0, ship, selectedFormats.length > 0].filter(Boolean).length
     : [category, search].filter(Boolean).length // Series view has category and search
 
   // Filter books by read time (client-side filtering since backend doesn't support it)
@@ -167,6 +170,7 @@ function Library() {
       content_rating: contentRating.length > 0 ? contentRating.join(',') : undefined,
       completion_status: completionStatus.length > 0 ? completionStatus.join(',') : undefined,
       ship: ship || undefined,
+      format: selectedFormats.length > 0 ? selectedFormats.join(',') : undefined,
       limit: 10000, // Load all books
     })
       .then(data => {
@@ -178,7 +182,7 @@ function Library() {
         setBooks([])
       })
       .finally(() => setLoading(false))
-  }, [category, status, selectedTags, search, sort, sortDir, acquisition, fandom, contentRating, completionStatus, ship])
+  }, [category, status, selectedTags, search, sort, sortDir, acquisition, fandom, contentRating, completionStatus, ship, selectedFormats])
 
   // Load series when Series tab is active and filters change
   useEffect(() => {
@@ -205,7 +209,7 @@ function Library() {
   // Regenerate phrase when filters change
   useEffect(() => {
     setPhraseKey(k => k + 1)
-  }, [category, status, selectedTags, search, activeView, readTimeFilter, acquisition, fandom, contentRating, completionStatus, ship])
+  }, [category, status, selectedTags, search, activeView, readTimeFilter, acquisition, fandom, contentRating, completionStatus, ship, selectedFormats])
 
   // Sync FROM URL params TO state (for browser back/forward navigation)
   // Only runs when searchParams changes (from browser navigation), not when state changes
@@ -223,6 +227,7 @@ function Library() {
     const urlContentRating = searchParams.get('contentRating') ? searchParams.get('contentRating').split(',') : []
     const urlCompletionStatus = searchParams.get('completionStatus') ? searchParams.get('completionStatus').split(',') : []
     const urlShip = searchParams.get('ship') || ''
+    const urlFormat = searchParams.get('format') ? searchParams.get('format').split(',') : []
     const urlSortDir = searchParams.get('sortDir') || 'desc'
     
     // Update state from URL values
@@ -239,6 +244,7 @@ function Library() {
     setContentRating(urlContentRating)
     setCompletionStatus(urlCompletionStatus)
     setShip(urlShip)
+    setSelectedFormats(urlFormat)
     setSortDir(urlSortDir)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -277,6 +283,7 @@ function Library() {
     setContentRating([])
     setCompletionStatus([])
     setShip('')
+    setSelectedFormats([])
     // Preserve current sort, direction, and acquisition (stay on current tab)
     const params = new URLSearchParams()
     if (sort !== 'added') {
@@ -595,6 +602,33 @@ function Library() {
                   >×</button>
                 </span>
               ))}
+              {/* Format pills */}
+              {activeView === 'library' && selectedFormats.map(format => {
+                const formatLabels = {
+                  ebook: 'Ebook',
+                  physical: 'Physical',
+                  audiobook: 'Audiobook',
+                  web: 'Web'
+                }
+                return (
+                  <span
+                    key={format}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-900/40 text-blue-300 rounded-full text-xs"
+                  >
+                    {formatLabels[format] || format}
+                    <button
+                      onClick={() => {
+                        const newFormats = selectedFormats.filter(f => f !== format)
+                        setSelectedFormats(newFormats)
+                        updateUrlParams({ format: newFormats.length > 0 ? newFormats.join(',') : '' })
+                      }}
+                      className="hover:text-white ml-0.5"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
               {search && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
                   "{search}"
@@ -754,6 +788,11 @@ function Library() {
         }}
         selectedShip={ship}
         onOpenShipModal={() => setShipModalOpen(true)}
+        selectedFormats={selectedFormats}
+        onFormatsChange={(formats) => {
+          setSelectedFormats(formats)
+          updateUrlParams({ format: formats.length > 0 ? formats.join(',') : '' })
+        }}
       />
 
       {/* Search Modal (mobile) */}

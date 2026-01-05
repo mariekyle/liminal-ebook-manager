@@ -1280,21 +1280,20 @@ function BookDetail() {
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
               {book.editions?.map((edition) => {
                 const formatConfig = {
-                  ebook: { icon: '📱', label: 'Digital', color: 'bg-blue-900/50 text-blue-300 border-blue-700' },
-                  physical: { icon: '📖', label: 'Physical', color: 'bg-amber-900/50 text-amber-300 border-amber-700' },
-                  audiobook: { icon: '🎧', label: 'Audiobook', color: 'bg-purple-900/50 text-purple-300 border-purple-700' },
-                  web: { icon: '🌐', label: 'Web', color: 'bg-emerald-900/50 text-emerald-300 border-emerald-700' }
+                  ebook: { label: 'Ebook', color: 'bg-blue-900/50 text-blue-300 border-blue-700' },
+                  physical: { label: 'Physical', color: 'bg-amber-900/50 text-amber-300 border-amber-700' },
+                  audiobook: { label: 'Audiobook', color: 'bg-purple-900/50 text-purple-300 border-purple-700' },
+                  web: { label: 'Web', color: 'bg-emerald-900/50 text-emerald-300 border-emerald-700' }
                 }
-                const config = formatConfig[edition.format] || { icon: '📄', label: edition.format, color: 'bg-gray-700 text-gray-300 border-gray-600' }
+                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-gray-700 text-gray-300 border-gray-600' }
                 
                 return (
                   <span
                     key={edition.id}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
                     title={edition.file_path || edition.folder_path || `${config.label} edition`}
                   >
-                    <span>{config.icon}</span>
-                    <span>{config.label}</span>
+                    {config.label}
                   </span>
                 )
               })}
@@ -1557,9 +1556,26 @@ function BookDetail() {
                           </svg>
                         </button>
 
-                        {/* Session number */}
-                        <div className="font-semibold text-white mb-1">
-                          Read #{session.session_number}
+                        {/* Session number and format */}
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-white">
+                            Read #{session.session_number}
+                          </span>
+                          {session.format && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              session.format === 'ebook' ? 'bg-blue-900/50 text-blue-300' :
+                              session.format === 'physical' ? 'bg-amber-900/50 text-amber-300' :
+                              session.format === 'audiobook' ? 'bg-purple-900/50 text-purple-300' :
+                              session.format === 'web' ? 'bg-emerald-900/50 text-emerald-300' :
+                              'bg-gray-700 text-gray-300'
+                            }`}>
+                              {session.format === 'ebook' ? 'Ebook' :
+                               session.format === 'physical' ? 'Physical' :
+                               session.format === 'audiobook' ? 'Audiobook' :
+                               session.format === 'web' ? 'Web' :
+                               session.format}
+                            </span>
+                          )}
                         </div>
 
                         {/* Date range */}
@@ -1877,10 +1893,10 @@ function BookDetail() {
                           session.format === 'web' ? 'bg-emerald-900/50 text-emerald-300' :
                           'bg-gray-700 text-gray-300'
                         }`}>
-                          {session.format === 'ebook' ? '📱 Digital' :
-                           session.format === 'physical' ? '📖 Physical' :
-                           session.format === 'audiobook' ? '🎧 Audiobook' :
-                           session.format === 'web' ? '🌐 Web' :
+                          {session.format === 'ebook' ? 'Ebook' :
+                           session.format === 'physical' ? 'Physical' :
+                           session.format === 'audiobook' ? 'Audiobook' :
+                           session.format === 'web' ? 'Web' :
                            session.format}
                         </span>
                       )}
@@ -2282,7 +2298,7 @@ function BookDetail() {
                   disabled={acquireLoading}
                   className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
-                  <div className="text-white font-medium">Physical book</div>
+                  <div className="text-white font-medium">Physical</div>
                   <div className="text-gray-400 text-sm">No files to upload</div>
                 </button>
                 <button
@@ -2401,10 +2417,10 @@ function BookDetail() {
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
                 >
                   <option value="">— Not specified</option>
-                  <option value="ebook">📱 Digital</option>
-                  <option value="physical">📖 Physical</option>
-                  <option value="audiobook">🎧 Audiobook</option>
-                  <option value="web">🌐 Web</option>
+                  <option value="ebook">Ebook</option>
+                  <option value="physical">Physical</option>
+                  <option value="audiobook">Audiobook</option>
+                  <option value="web">Web</option>
                 </select>
               </div>
 
@@ -2529,10 +2545,10 @@ function BookDetail() {
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
                 >
                   <option value="">Select format...</option>
-                  <option value="ebook">📱 Digital (ebook)</option>
-                  <option value="physical">📖 Physical</option>
-                  <option value="audiobook">🎧 Audiobook</option>
-                  <option value="web">🌐 Web</option>
+                  <option value="ebook">Ebook</option>
+                  <option value="physical">Physical</option>
+                  <option value="audiobook">Audiobook</option>
+                  <option value="web">Web</option>
                 </select>
               </div>
               

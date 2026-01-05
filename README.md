@@ -18,24 +18,22 @@ I've tried many excellent tools over the years — Calibre, Goodreads, LibraryTh
 
 And then there's fanfiction — a significant part of my reading life that most tools either ignore entirely or treat as an afterthought. I needed a system that could handle a 200,000-word enemies-to-lovers epic with the same care as a published novel, complete with fandom, ships, content ratings, and completion status.
 
-What I actually needed was something purpose-built for how I read: on my phone, across formats, with rich private notes, tracking re-reads, and metadata for literary work in various formats. 
+What I actually needed was something purpose-built for how I read: on my phone, across formats, with rich private notes, tracking re-reads, and metadata for literary work in various formats. One place. One screen. One source of truth.
 
-One place. One screen. One source of truth.
-
-So I built Liminal
+So I built Liminal.
 
 ---
 
 ## What Is Liminal?
 
-Liminal is a **self-hosted web app** for managing your personal ebook library. If you have ebooks in a folder, Liminal can instantly allow you begin making sense of your reading life in a visual way. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
+Liminal is a **self-hosted web app** for managing your personal ebook library. It runs on a NAS or any Docker-capable machine and provides a mobile-friendly interface for:
 
 - **Browsing** your library with beautiful gradient covers
 - **Taking notes** with wiki-style `[[linking]]` between books
 - **Tracking** reading status, ratings, and re-reads
-- **Wishlisting** books you want to acquire
+- **Infinite TBR** list of things you want to acquire/read
 - **Organizing** into curated collections
-- **Filtering** by dozens of criteria — including fanfiction-specific metadata
+- **Filtering** based on metadata
 
 The name comes from that transported mental state you enter when you're truly absorbed in a book — the *liminal space* between the real world and the world on the page. The app is designed to get out of your way so you can spend less time managing and more time *there*.
 
