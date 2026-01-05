@@ -881,3 +881,10 @@ export async function smartPasteApply(collectionId, titleIds) {
 export async function findDuplicates() {
   return apiFetch('/titles/duplicates')
 }
+
+// Phase 8.7g: Edition Deletion
+export async function deleteEdition(editionId) {
+  return apiFetch(`/editions/${editionId}`, {
+    method: 'DELETE'
+  })
+}

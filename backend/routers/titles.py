@@ -2068,6 +2068,73 @@ async def create_edition(
     )
 
 
+@router.delete("/editions/{edition_id}")
+async def delete_edition(
+    edition_id: int,
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """
+    Delete an edition from a title.
+    
+    Prevents deleting the last edition - a title must have at least one edition.
+    Uses atomic conditional delete to prevent race conditions.
+    """
+    # Get the edition info and count in one query
+    cursor = await db.execute("""
+        SELECT 
+            e.id, 
+            e.title_id, 
+            e.format, 
+            t.title,
+            (SELECT COUNT(*) FROM editions WHERE title_id = e.title_id) as edition_count
+        FROM editions e
+        JOIN titles t ON e.title_id = t.id
+        WHERE e.id = ?
+    """, (edition_id,))
+    edition = await cursor.fetchone()
+    
+    if not edition:
+        raise HTTPException(status_code=404, detail="Edition not found")
+    
+    title_id = edition[1]
+    edition_format = edition[2]
+    title_name = edition[3]
+    edition_count = edition[4]
+    
+    # Pre-check for better error message (non-atomic, just for UX)
+    if edition_count <= 1:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete the last edition. A title must have at least one edition."
+        )
+    
+    # Atomic conditional delete - only succeeds if there are 2+ editions
+    # This prevents race conditions where two concurrent deletes could leave 0 editions
+    cursor = await db.execute("""
+        DELETE FROM editions 
+        WHERE id = ? 
+        AND (SELECT COUNT(*) FROM editions WHERE title_id = ?) > 1
+    """, (edition_id, title_id))
+    await db.commit()
+    
+    # Check if deletion actually happened
+    if cursor.rowcount == 0:
+        # Either edition was already deleted, or it became the last one due to race
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete the last edition. A title must have at least one edition."
+        )
+    
+    return {
+        "success": True,
+        "deleted_edition_id": edition_id,
+        "format": edition_format,
+        "title_id": title_id,
+        "title": title_name,
+        "remaining_editions": edition_count - 1
+    }
+
+
 @router.post("/titles/{target_id}/merge")
 async def merge_titles(
     target_id: int,
