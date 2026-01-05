@@ -498,13 +498,12 @@ async def list_titles(
         params.append(f'%"{ship}"%')
     
     # Format filter (requires join with editions)
-    # Note: Use 'titles.id' not 't.id' because count query doesn't use alias
     if format:
         format_list = [f.strip() for f in format.split(',') if f.strip()]
         if format_list:
             format_placeholders = ','.join(['?' for _ in format_list])
             where_clauses.append(f"""
-                titles.id IN (
+                id IN (
                     SELECT DISTINCT e.title_id 
                     FROM editions e 
                     WHERE e.format IN ({format_placeholders})
