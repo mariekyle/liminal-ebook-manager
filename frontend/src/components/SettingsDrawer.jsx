@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata } from '../api'
+import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata, getBackupSettings, updateBackupSettings, testBackupPath, createManualBackup } from '../api'
 
 function SettingsDrawer({ isOpen, onClose }) {
   const navigate = useNavigate()
@@ -31,6 +31,16 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [showTitleBelow, setShowTitleBelow] = useState(false)
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
+  
+  // Phase 9A: Backup settings state
+  const [backupSettings, setBackupSettings] = useState(null)
+  const [backupStats, setBackupStats] = useState(null)
+  const [backupPath, setBackupPath] = useState('')
+  const [pathTest, setPathTest] = useState(null)
+  const [testingPath, setTestingPath] = useState(false)
+  const [creatingBackup, setCreatingBackup] = useState(false)
+  const [backupStatus, setBackupStatus] = useState(null)
+  const [savingBackupSettings, setSavingBackupSettings] = useState(false)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -68,6 +78,9 @@ function SettingsDrawer({ isOpen, onClose }) {
       
       // Load rescan preview
       loadRescanPreview()
+      
+      // Load backup settings
+      loadBackupSettings()
     }
   }, [isOpen])
   
@@ -78,6 +91,116 @@ function SettingsDrawer({ isOpen, onClose }) {
     } catch (err) {
       console.error('Failed to load rescan preview:', err)
     }
+  }
+
+  // Phase 9A: Backup settings handlers
+  const loadBackupSettings = async () => {
+    try {
+      const data = await getBackupSettings()
+      setBackupSettings(data.settings)
+      setBackupStats(data.stats)
+      setBackupPath(data.settings?.backup_path || '/app/data/backups')
+      setPathTest(null)
+      setBackupStatus(null)
+    } catch (err) {
+      console.error('Failed to load backup settings:', err)
+    }
+  }
+
+  const handleBackupSettingsChange = (key, value) => {
+    setBackupSettings(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleTestPath = async () => {
+    if (testingPath || !backupPath.trim()) return
+    
+    setTestingPath(true)
+    setPathTest(null)
+    
+    try {
+      const result = await testBackupPath(backupPath.trim())
+      setPathTest(result)
+    } catch (err) {
+      setPathTest({ valid: false, error: err.message })
+    } finally {
+      setTestingPath(false)
+    }
+  }
+
+  const handleManualBackup = async () => {
+    if (creatingBackup) return
+    
+    setCreatingBackup(true)
+    setBackupStatus(null)
+    
+    try {
+      const result = await createManualBackup()
+      if (result.success) {
+        setBackupStatus({ success: true, message: 'Backup created successfully!' })
+        // Reload stats
+        loadBackupSettings()
+      } else {
+        setBackupStatus({ success: false, message: result.error || 'Backup failed' })
+      }
+    } catch (err) {
+      setBackupStatus({ success: false, message: err.message })
+    } finally {
+      setCreatingBackup(false)
+    }
+  }
+
+  const handleSaveBackupSettings = async () => {
+    if (savingBackupSettings) return
+    
+    setSavingBackupSettings(true)
+    setBackupStatus(null)
+    
+    try {
+      const settingsToSave = {
+        backup_enabled: backupSettings?.backup_enabled,
+        backup_path: backupPath.trim(),
+        backup_schedule: backupSettings?.backup_schedule,
+        backup_time: backupSettings?.backup_time,
+        backup_daily_retention_days: backupSettings?.backup_daily_retention_days,
+        backup_weekly_retention_weeks: backupSettings?.backup_weekly_retention_weeks,
+        backup_monthly_retention_months: backupSettings?.backup_monthly_retention_months,
+      }
+      
+      await updateBackupSettings(settingsToSave)
+      setBackupStatus({ success: true, message: 'Backup settings saved!' })
+      // Reload to confirm
+      loadBackupSettings()
+    } catch (err) {
+      setBackupStatus({ success: false, message: err.message })
+    } finally {
+      setSavingBackupSettings(false)
+    }
+  }
+
+  // Utility: format bytes to human readable
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1)
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  // Utility: format timestamp to relative time
+  const formatTimeAgo = (timestamp) => {
+    if (!timestamp) return 'Never'
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+    
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    return date.toLocaleDateString()
   }
 
   const handleRescan = async () => {
@@ -684,6 +807,252 @@ function SettingsDrawer({ isOpen, onClose }) {
                 <div className="mt-3 bg-red-900/30 border border-red-800 rounded-lg p-3 text-xs text-red-400">
                   Error: {rescanResults.error}
                 </div>
+              )}
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Phase 9A: Automated Backups Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Automated Backups</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Automatic database backups with grandfather-father-son rotation.
+              </p>
+              
+              {backupSettings && (
+                <div className="space-y-4">
+                  {/* Enable Toggle */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300 text-sm">Enable automatic backups</span>
+                    <button
+                      onClick={() => handleBackupSettingsChange('backup_enabled', !backupSettings.backup_enabled)}
+                      className={`
+                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${backupSettings.backup_enabled ? 'bg-library-accent' : 'bg-gray-600'}
+                      `}
+                      role="switch"
+                      aria-checked={backupSettings.backup_enabled}
+                    >
+                      <span
+                        className={`
+                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${backupSettings.backup_enabled ? 'translate-x-6' : 'translate-x-1'}
+                        `}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Settings only shown when enabled */}
+                  {backupSettings.backup_enabled && (
+                    <>
+                      {/* Backup Path */}
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">Backup location</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={backupPath}
+                            onChange={(e) => {
+                              setBackupPath(e.target.value)
+                              setPathTest(null)
+                            }}
+                            placeholder="/app/data/backups"
+                            className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                          />
+                          <button
+                            onClick={handleTestPath}
+                            disabled={testingPath || !backupPath.trim()}
+                            className={`
+                              px-3 py-2 rounded text-sm font-medium
+                              ${testingPath ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-500'}
+                              text-white transition-colors
+                            `}
+                          >
+                            {testingPath ? '...' : 'Test'}
+                          </button>
+                        </div>
+                        
+                        {pathTest && (
+                          <p className={`text-xs mt-1 ${pathTest.valid ? 'text-green-400' : 'text-red-400'}`}>
+                            {pathTest.valid ? '✓ Path is writable' : `✗ ${pathTest.error}`}
+                          </p>
+                        )}
+                        
+                        <p className="text-gray-500 text-xs mt-2">
+                          Examples: /app/data/backups (default) • /volumeUSB1/liminal-backups (USB) • /volume1/network-backups (NAS share)
+                        </p>
+                      </div>
+
+                      {/* Schedule Selector */}
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">Backup schedule</label>
+                        <select
+                          value={backupSettings.backup_schedule || 'both'}
+                          onChange={(e) => handleBackupSettingsChange('backup_schedule', e.target.value)}
+                          className="w-full bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                        >
+                          <option value="before_sync">Before every sync only</option>
+                          <option value="daily">Daily at specified time</option>
+                          <option value="both">Both (before sync + daily)</option>
+                        </select>
+                      </div>
+
+                      {/* Time Picker - only show when daily or both */}
+                      {(backupSettings.backup_schedule === 'daily' || backupSettings.backup_schedule === 'both') && (
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-2">Daily backup time</label>
+                          <input
+                            type="time"
+                            value={backupSettings.backup_time || '03:00'}
+                            onChange={(e) => handleBackupSettingsChange('backup_time', e.target.value)}
+                            className="bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                          />
+                        </div>
+                      )}
+
+                      {/* Retention Policy */}
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-2">Retention policy</label>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400 text-sm w-32">Daily backups:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="30"
+                              value={backupSettings.backup_daily_retention_days || 7}
+                              onChange={(e) => handleBackupSettingsChange('backup_daily_retention_days', parseInt(e.target.value) || 7)}
+                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                            />
+                            <span className="text-gray-400 text-sm">days</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400 text-sm w-32">Weekly backups:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="12"
+                              value={backupSettings.backup_weekly_retention_weeks || 4}
+                              onChange={(e) => handleBackupSettingsChange('backup_weekly_retention_weeks', parseInt(e.target.value) || 4)}
+                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                            />
+                            <span className="text-gray-400 text-sm">weeks</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400 text-sm w-32">Monthly backups:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="24"
+                              value={backupSettings.backup_monthly_retention_months || 6}
+                              onChange={(e) => handleBackupSettingsChange('backup_monthly_retention_months', parseInt(e.target.value) || 6)}
+                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                            />
+                            <span className="text-gray-400 text-sm">months</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Stats Display */}
+                  {backupStats && (
+                    <div className="bg-zinc-800/50 rounded-lg p-3 text-xs">
+                      <div className="grid grid-cols-2 gap-2 text-gray-400">
+                        <span>Last backup:</span>
+                        <span className="text-gray-300">{formatTimeAgo(backupStats.last_backup_time)}</span>
+                        
+                        <span>Storage used:</span>
+                        <span className="text-gray-300">{formatBytes(backupStats.total_size)}</span>
+                        
+                        <span>Backup count:</span>
+                        <span className="text-gray-300">{backupStats.total_backups}</span>
+                      </div>
+                      
+                      {backupStats.total_backups > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-700 grid grid-cols-3 gap-1 text-center">
+                          <div>
+                            <div className="text-gray-300">{backupStats.backups_by_type?.daily?.count || 0}</div>
+                            <div className="text-gray-500">daily</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-300">{backupStats.backups_by_type?.weekly?.count || 0}</div>
+                            <div className="text-gray-500">weekly</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-300">{backupStats.backups_by_type?.monthly?.count || 0}</div>
+                            <div className="text-gray-500">monthly</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual Backup Button */}
+                  <button
+                    onClick={handleManualBackup}
+                    disabled={creatingBackup}
+                    className={`
+                      w-full px-4 py-2 rounded text-sm font-medium
+                      ${creatingBackup 
+                        ? 'bg-gray-600 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-500'
+                      }
+                      text-white transition-colors flex items-center justify-center gap-2
+                    `}
+                  >
+                    {creatingBackup ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Creating Backup...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Create Backup Now
+                      </>
+                    )}
+                  </button>
+
+                  {/* Save Settings Button */}
+                  <button
+                    onClick={handleSaveBackupSettings}
+                    disabled={savingBackupSettings}
+                    className={`
+                      w-full px-4 py-2 rounded text-sm font-medium
+                      ${savingBackupSettings 
+                        ? 'bg-gray-600 cursor-not-allowed' 
+                        : 'bg-green-600 hover:bg-green-500'
+                      }
+                      text-white transition-colors
+                    `}
+                  >
+                    {savingBackupSettings ? 'Saving...' : 'Save Backup Settings'}
+                  </button>
+
+                  {/* Status Messages */}
+                  {backupStatus && (
+                    <div className={`
+                      rounded-lg p-3 text-sm
+                      ${backupStatus.success 
+                        ? 'bg-green-900/30 border border-green-800 text-green-400' 
+                        : 'bg-red-900/30 border border-red-800 text-red-400'
+                      }
+                    `}>
+                      {backupStatus.message}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!backupSettings && (
+                <div className="text-gray-500 text-sm">Loading backup settings...</div>
               )}
             </section>
           </div>

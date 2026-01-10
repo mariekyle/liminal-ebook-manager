@@ -888,3 +888,62 @@ export async function deleteEdition(editionId) {
     method: 'DELETE'
   })
 }
+
+// =============================================================================
+// Phase 9A: Backup API Functions
+// =============================================================================
+
+/**
+ * Get backup settings and statistics
+ */
+export async function getBackupSettings() {
+  return apiFetch('/backups/settings')
+}
+
+/**
+ * Update backup settings
+ * @param {Object} settings - Settings to update
+ */
+export async function updateBackupSettings(settings) {
+  return apiFetch('/backups/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(settings)
+  })
+}
+
+/**
+ * Test if a backup path is writable
+ * @param {string} path - Path to test
+ */
+export async function testBackupPath(path) {
+  return apiFetch('/backups/test-path', {
+    method: 'POST',
+    body: JSON.stringify({ path })
+  })
+}
+
+/**
+ * Trigger immediate backup
+ */
+export async function createManualBackup() {
+  return apiFetch('/backups/manual', {
+    method: 'POST'
+  })
+}
+
+/**
+ * Get list of recent backups
+ */
+export async function getBackupHistory() {
+  return apiFetch('/backups/history')
+}
+
+/**
+ * Delete a specific backup
+ * @param {number} backupId - Backup ID to delete
+ */
+export async function deleteBackup(backupId) {
+  return apiFetch(`/backups/history/${backupId}`, {
+    method: 'DELETE'
+  })
+}
