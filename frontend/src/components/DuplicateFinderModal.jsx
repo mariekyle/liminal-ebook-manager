@@ -134,7 +134,7 @@ function DuplicateFinderModal({ isOpen, onClose }) {
                               <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden">
                                 <GradientCover
                                   title={book.title}
-                                  colors={book.cover_gradient ? JSON.parse(book.cover_gradient) : null}
+                                  author={book.authors}
                                 />
                               </div>
 

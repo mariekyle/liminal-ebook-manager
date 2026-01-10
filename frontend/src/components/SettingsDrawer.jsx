@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata } from '../api'
-import DuplicateFinderModal from './DuplicateFinderModal'
 
 function SettingsDrawer({ isOpen, onClose }) {
+  const navigate = useNavigate()
   const [settings, setSettings] = useState({})
   const [loading, setLoading] = useState(true)
   const [wpmInput, setWpmInput] = useState('')
@@ -30,7 +31,6 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [showTitleBelow, setShowTitleBelow] = useState(false)
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
-  const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -576,7 +576,10 @@ function SettingsDrawer({ isOpen, onClose }) {
               
               {/* Find Duplicates */}
               <button
-                onClick={() => setShowDuplicateFinder(true)}
+                onClick={() => {
+                  onClose()
+                  navigate('/duplicates')
+                }}
                 className="w-full mt-3 px-4 py-2 rounded text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -686,12 +689,6 @@ function SettingsDrawer({ isOpen, onClose }) {
           </div>
         )}
       </div>
-      
-      {/* Duplicate Finder Modal */}
-      <DuplicateFinderModal
-        isOpen={showDuplicateFinder}
-        onClose={() => setShowDuplicateFinder(false)}
-      />
     </>
   )
 }

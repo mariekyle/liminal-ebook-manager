@@ -9,6 +9,7 @@ import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
 import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
+import DuplicatesPage from './pages/DuplicatesPage'
 import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import { checkHealth } from './api'
@@ -76,6 +77,7 @@ function App() {
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/add" element={<AddPage />} />
+          <Route path="/duplicates" element={<DuplicatesPage />} />
           {/* Redirect old /upload URL to /add */}
           <Route path="/upload" element={<Navigate to="/add" replace />} />
         </Routes>

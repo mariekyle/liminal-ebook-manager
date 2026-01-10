@@ -2374,6 +2374,8 @@ async def find_duplicates(db = Depends(get_db)):
             t.title, 
             t.authors,
             t.category,
+            t.series,
+            t.series_number,
             (SELECT COUNT(*) FROM editions WHERE title_id = t.id) as edition_count
         FROM titles t
         WHERE t.acquisition_status = 'owned'
@@ -2389,15 +2391,13 @@ async def find_duplicates(db = Depends(get_db)):
         # For normalization, use the first author (primary author)
         primary_author = authors_list[0] if authors_list else ""
         
-        # Generate cover gradient
-        cover_style = get_cover_style(row["title"] or "Untitled", primary_author or "Unknown", Theme.DARK)
-        
         titles_list.append({
             "id": row["id"],
             "title": row["title"],
             "authors": authors_display,
             "category": row["category"],
-            "cover_gradient": cover_style.css_gradient,
+            "series": row["series"],
+            "series_number": row["series_number"],
             "edition_count": row["edition_count"],
             "normalized": normalize_title(row["title"]),
             "author_normalized": normalize_title(primary_author)
@@ -2430,7 +2430,8 @@ async def find_duplicates(db = Depends(get_db)):
                     "title": b["title"],
                     "authors": b["authors"],
                     "category": b["category"],
-                    "cover_gradient": b["cover_gradient"],
+                    "series": b["series"],
+                    "series_number": b["series_number"],
                     "edition_count": b["edition_count"]
                 } for b in books]
             })
@@ -2481,7 +2482,8 @@ async def find_duplicates(db = Depends(get_db)):
                         "title": b["title"],
                         "authors": b["authors"],
                         "category": b["category"],
-                        "cover_gradient": b["cover_gradient"],
+                        "series": b["series"],
+                        "series_number": b["series_number"],
                         "edition_count": b["edition_count"]
                     } for b in similar_group]
                 })
