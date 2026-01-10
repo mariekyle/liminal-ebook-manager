@@ -1,6 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 4, 2026 (v0.18.0)
+> **Last Updated:** January 10, 2026 (v0.19.0)  
+> **Major Milestone:** Phase 9A Complete - Automated Backup System Deployed
 
 ---
 
@@ -17,11 +18,12 @@ Liminal is a personal reading companion that eliminates the friction of managing
 3. **Reduce friction** — If it takes more than 2 taps, simplify it
 4. **Data integrity** — Never lose user's notes or reading history
 5. **Complete visibility** — Every book in storage should be visible in the app
-6. **Calm UX** — Interfaces should feel peaceful, not overwhelming *(Phase 10 focus)*
+6. **Calm UX** — Interfaces should feel peaceful, not overwhelming
+7. **Build complete, then migrate** — Finish features before framework changes
 
 ---
 
-## Current State (v0.18.0)
+## Current State (v0.19.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -36,365 +38,418 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
 | Book detail header | ✅ Redesigned |
-| Editions system | ✅ NEW — Add formats, merge duplicates |
+| Editions system | ✅ Add formats, merge duplicates |
+| **Automated backups** | ✅ **NEW — Grandfather-father-son rotation** |
 
 **Recent milestones:**
+- Phase 9A: Automated backup system — API + Settings UI (Jan 10, 2026) 🎉
 - Phase 8.7a-d: Editions consolidation — session format, add edition, merge tool (Jan 4, 2026)
 - Phase 8.3 + 8.4: Header redesign, cover toggles, format badges, rating labels (Jan 3, 2026)
 - Phase 8.1 + 8.6: Add book flow redesign & manual entry improvements (Jan 2, 2026)
-- Phase 7.2b: Collections system with smart paste (Jan 2, 2026)
+
+---
+
+## Strategic Pivot: Why Features Before React Native
+
+**Original plan:** Migrate to React Native Web immediately after Phase 8
+
+**New plan:** Complete all non-AI features first, THEN migrate to React Native Web
+
+**Reasoning:**
+1. **Clear migration scope** — Know exactly what needs to be ported
+2. **Proven patterns** — Discover UX patterns and edge cases before porting
+3. **Lower risk** — Migration won't be disrupted by new feature additions
+4. **Better learning** — Learn React Native properly without pressure of incomplete features
+5. **Only +1 week** — Total timeline barely changes, but outcomes much better
+6. **Daily use protection** — User actively uses Liminal; stability matters
 
 ---
 
 ## Roadmap Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  CURRENT  │  Phase 8: Quick Fixes & Polish                  │
-│           │  Bug fixes, UX improvements, editions system    │
-├───────────┼─────────────────────────────────────────────────┤
-│   NEXT    │  Phase 9: Feature Completion                    │
-│           │  Unprocessed files, collections enhancements    │
-├───────────┼─────────────────────────────────────────────────┤
-│   MAJOR   │  Phase 10: Design System Refactor               │
-│           │  Unified components, calm UX, consistency       │
-├───────────┼─────────────────────────────────────────────────┤
-│  FUTURE   │  Phase 11: AI Enhancements                      │
-│           │  Recommendations, auto-summaries, tagging       │
-└───────────┴─────────────────────────────────────────────────┘
+┌───────────┬──────────────────────────────────────────────────────┐
+│  CURRENT  │  Phase 9: Feature Completion                         │
+│           │  9A: ✅ Automated Backups (Jan 10)                   │
+│           │  9B-9K: Remaining features (2-4 weeks)              │
+├───────────┼──────────────────────────────────────────────────────┤
+│   PREP    │  Phase 10: Design System Refactor                   │
+│           │  Calm UX design system (1 week)                      │
+├───────────┼──────────────────────────────────────────────────────┤
+│   PREP    │  Phase 11: React Native Learning                    │
+│           │  1 week focused learning before migration            │
+├───────────┼──────────────────────────────────────────────────────┤
+│   MAJOR   │  Phase 12: React Native Web Migration               │
+│           │  Port complete app to RN, enable Android native      │
+├───────────┼──────────────────────────────────────────────────────┤
+│  FUTURE   │  Phase 13: AI Enhancements                          │
+│           │  Recommendations, auto-summaries, tagging            │
+└───────────┴──────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 8: Quick Fixes & Polish ← CURRENT
+## Phase 9: Feature Completion ← IN PROGRESS
 
-**Goal:** Address accumulated bugs and UX friction before major refactors.
+**Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-### 8.1 Add Book Flow Redesign ✅ COMPLETE
+**Status:** 10% complete (1 of 11 sub-phases done)
 
-Complete overhaul of the "Add" page user experience:
-
-- [x] **Language cleanup** — TBR → Wishlist terminology throughout
-- [x] **Step indicators** — Visual progress for multi-step flows
-- [x] **Unified AddToLibrary component** — Single screen for file selection
-- [x] **AnalyzingModal** — Full-screen overlay during file analysis
-- [x] **Success screens** — Step indicators, tappable results, "View Story" navigation
-- [x] **Streamlined flow** — Skip LibraryChoice, go directly to AddToLibrary
-- [x] **View Story button** — Navigate to book detail after successful upload
-- [x] **format_added fix** — "View Story" works when adding format to existing book
-
-### 8.2 Bug Fixes ✅ PARTIAL
-
-| Issue | Status |
-|-------|--------|
-| Obsidian backlinks broken | ✅ Fixed — Migration repopulates links table |
-| PDF duplicates not detected | ⏳ Pending |
-| Word count extraction fails | ⏳ Pending |
-| BISAC codes as genre | ⏳ Pending |
-
-### 8.3 Book Detail Header Redesign ✅ COMPLETE
-
-- [x] **Pill box metadata** — Status, Rating, Category as clickable pills
-- [x] **Read time pill** — Shows estimated time with microcopy
-- [x] **Mobile centering** — Title/author/series centered on mobile
-- [x] **Larger mobile cover** — w-28 → w-48 on mobile
-- [x] **Full source URL** — Not truncated below pills
-
-### 8.4 Settings & Display Options ✅ COMPLETE
-
-- [x] **Cover display toggles** — Show/hide title, author, series below covers
-- [x] **Editable rating labels** — Customize 1-5 star descriptions
-- [x] **Remove WPM helper text** — Cleaner settings UI
-- [x] **Fix DNF → Abandoned** — Default label and field label fixed
-
-### 8.5 Edition Format Display ✅ COMPLETE
-
-- [x] **Format badges** — Show Digital, Physical, Audiobook, Web badges
-- [x] **Color coding** — Each format has distinct color
-- [x] **File path tooltips** — Hover shows location
-
-### 8.6 Manual Entry Improvements ✅ COMPLETE
-
-- [x] **Title autocomplete** — Search existing titles
-- [x] **Auto-fill on selection** — Fill title, authors, series, category
-- [x] **View Story button** — Navigate to book after manual entry
-
-### 8.7 Editions Consolidation ⏳ IN PROGRESS
-
-> **Reference:** See `PHASE_8_7_EDITIONS.md` for detailed planning
-
-**Problem identified:** Adding a book via manual entry creates duplicate title records instead of adding an edition to existing title. The editions system needs consolidation.
-
-**Sub-phases:**
-- [x] **8.7a: Foundation** — Add format field to reading sessions ✅ COMPLETE
-- [x] **8.7b: Add Edition** — "+ Add Format" on BookDetail page ✅ COMPLETE
-- [x] **8.7d: Merge Tool** — Combine duplicate titles ✅ COMPLETE
-- [ ] **8.7c: Add Flow** — Prevent accidental duplicates, offer "add as edition" 🔜 NEXT
-- [ ] **8.7e: Format Filter** — Filter library by owned formats
-- [ ] **8.7f: Duplicate Finder** — Tool to find potential duplicates (identified, not yet planned)
-
-**Completed features:**
-- Session format tracking — Track which format (ebook, physical, audiobook, web) was read
-- Format dropdown in session modal with color-coded badges
-- "+ Add Format" button on BookDetail page
-- AddEditionModal for adding formats to existing titles
-- Wishlist → owned automatic conversion when adding edition
-- "Merge Into..." option in BookDetail menu
-- MergeTitleModal with title search and merge preview
-- Merge endpoint moves editions, sessions, notes, collections
-
-### 8.8 Minor UI Polish (Deferred)
-
-- [ ] Loading states and skeleton screens
-- [ ] Error handling improvements
-- [ ] Mobile notes editor scrollbar fix
+**Timeline:** 4-5 weeks remaining (started Jan 10, 2026)
 
 ---
 
-## Phase 9: Feature Completion
+### Phase 9A: Automated Backup System ✅ COMPLETE (Jan 10, 2026)
 
-**Goal:** Complete remaining planned features before design refactor.
+**Goal:** Protect user data with automated, configurable backups.
 
-### 9.1 Folder Structure Independence
+**Problem solved:** No backup solution existed. NAS failure would lose all reading history, notes, and settings.
 
-**Problem:** The current sync logic extracts title, author, and series data from folder names (a pattern inherited from the Obsidian NAS importer). This creates a dependency that won't work for other users who organize their libraries differently.
+**What was built:**
 
-**Goal:** Remove all reliance on folder naming conventions. Metadata should come entirely from:
-1. EPUB/PDF file metadata
-2. Manual user entry
-3. Future: spreadsheet import
+#### Backend (Days 1-2)
+- **Database schema** — Settings columns + backup_history table
+- **Backup service** (`backend/services/backup.py`)
+  - Grandfather-father-son rotation (7 daily / 4 weekly / 6 monthly)
+  - Automatic cleanup based on retention policy
+  - APScheduler integration for daily backups
+  - Pre-sync backup trigger
+- **REST API** (`backend/routers/backups.py`)
+  - GET `/api/backups/settings` — Config + stats
+  - PATCH `/api/backups/settings` — Update config
+  - POST `/api/backups/test-path` — Validate writability
+  - POST `/api/backups/manual` — Trigger backup now
+  - GET `/api/backups/history` — List backups
+  - DELETE `/api/backups/history/{id}` — Delete backup
+- **Integration** — Sync endpoint triggers pre-sync backups
+- **Scheduler** — Starts on app startup, stops cleanly on shutdown
 
-**Tasks:**
-- [ ] Audit current folder-parsing logic in sync.py
-- [ ] Document which fields currently depend on folder names
-- [ ] Create fallback behavior when folder parsing yields nothing
-- [ ] Update sync to prioritize file metadata over folder names
-- [ ] Test with various folder structures (flat, nested, random names)
-- [ ] Update documentation for new users
+#### Frontend (Day 3)
+- **Settings UI** — Complete backup configuration section
+  - Enable/disable toggle
+  - Path input with real-time validation
+  - Schedule selector (before sync / daily / both)
+  - Time picker (conditional on schedule)
+  - Retention policy controls
+  - Stats display (last backup, storage used, count breakdown)
+  - Manual "Create Backup Now" button
+  - Save settings with validation
+- **API integration** — 6 new API functions in `api.js`
 
-### 9.2 Unprocessed Files Detection
+#### Key Features
+- ✅ **Works out-of-box** — Defaults to `/app/data/backups` with sensible settings
+- ✅ **Path flexibility** — Changeable anytime (same volume → USB → network)
+- ✅ **Test button** — Validates paths before saving
+- ✅ **No Docker knowledge required** — All configuration via Settings UI
+- ✅ **Automatic rotation** — Monthly on 1st, weekly on Sundays, daily otherwise
+- ✅ **Retention enforcement** — Old backups auto-deleted per policy
 
-**Problem:** Some NAS folders contain only HTML files or have missing/corrupted ebook files. These books don't appear in Liminal library.
-
-**Database:**
-- [ ] `unprocessed_folders` table — folder_path, detected_files, status (new/dismissed/resolved)
-
-**Backend:**
-- [ ] Detect unsupported folders during sync (folders with files but no EPUB/PDF/MOBI/AZW)
-- [ ] GET /api/unprocessed — List unprocessed folders
-- [ ] POST /api/unprocessed/{id}/dismiss — Hide from list
-- [ ] POST /api/unprocessed/{id}/create-title — Manually create title entry
-
-**Frontend:**
-- [ ] Settings section with "Unprocessed Files" count badge
-- [ ] List view showing folder name, detected files, actions
-- [ ] "Add Manually" button opens form to create title
-- [ ] "Dismiss" button hides folder from list
-
-### 9.3 Collections Enhancements
-
-**List view option:**
-- [ ] Toggle view mode — Grid vs list for collections
-- [ ] List view with compact rows showing name, count, description preview
-
-**Reordering:**
-- [ ] Drag-drop collections in grid/list
-- [ ] Drag-drop books within collection
-- [ ] Position persistence to database
-
-**Picker improvements:**
-- [ ] Search input in CollectionPicker modal
-- [ ] Recent collections shown at top
-
-### 9.4 Cover Improvements
-
-- [ ] Extract actual covers from EPUB files
-- [ ] Upload custom covers for individual books
-- [ ] Series info displayed on cover
-- [ ] Theme-based cover generation (dark, light, colorful)
-
-### 9.5 Data Import & Export
-
-**Export:**
-- [ ] Export library as spreadsheet (CSV/JSON)
-- [ ] Full database backup/restore
-
-**Import:**
-- [ ] **Import from spreadsheet** — Populate library from CSV/Excel with title, author, series, category, status, rating
-- [ ] Column mapping UI for flexible import
-- [ ] Preview and validation before import
-- [ ] Duplicate detection during import
+**Deployed:** January 10, 2026  
+**Files changed:** 7 (3 backend, 2 frontend, 2 config)  
+**Lines of code:** ~1,500  
+**Data protected:** 1,796 books, 251 notes, all reading history 🛡️
 
 ---
 
-## Phase 10: Design System Refactor 🎨
+### Phase 9B: Folder Structure Independence (Week 1-2)
 
-**Goal:** Establish a unified component library with calm UX principles, improving consistency, maintainability, and user experience across all 29+ screens.
+**Goal:** Remove dependency on folder naming conventions inherited from Obsidian plugin.
 
-> **Reference:** See `DESIGN_SYSTEM_REFACTOR.md` for audit findings, component specs, and implementation details.
+**Status:** Not started
 
-### The Problem
+**Current problem:**
+- Sync relies on parsing folder names: `Author - [Series ##] Title/`
+- Breaks with unconventional folder structures
+- Limits flexibility and accessibility for new users
 
-Liminal grew organically from a simple scanner to a 29-screen application. UI components were built ad-hoc without a unified system, resulting in:
+**Planned solution:**
+- Prioritize EPUB/PDF metadata extraction over folder parsing
+- Use folder names only as last resort fallback
+- Implement hierarchy: File metadata → Folder name → Filename → "Unknown"
 
-- **7+ modal patterns** with different close button positions and footer layouts
-- **Inconsistent button colors** (green, blue, teal used interchangeably)
-- **Form variations** (chip inputs sometimes above, sometimes below)
-- **No reusable components** — similar patterns reimplemented differently
-
-### The Vision
-
-The design refactor isn't just about consistency — it's about creating a **calm, peaceful reading companion**. Every screen should feel like a quiet library, not a cluttered dashboard.
-
-**Calm UX Principles to Embed:**
-- Generous whitespace and breathing room
-- Muted, harmonious color palette
-- Subtle animations that don't demand attention
-- Microcopy that feels warm, not robotic
-- Progressive disclosure — show only what's needed
-- Forgiveness in interactions — easy undo, clear escape routes
-
-### 10A: Tokens & Primitives (2-3 days)
-
-- [ ] Design token files (colors, spacing, typography, radius)
-- [ ] `Button` component (primary, secondary, danger, ghost)
-- [ ] `TextInput`, `TextArea`, `Select` components
-- [ ] `Chip` component with semantic colors
-- [ ] Component preview page for testing
-
-### 10B: Modal System (2-3 days)
-
-**Critical fixes:**
-- × always on right side
-- Primary buttons consistently blue
-- Standard footer pattern: Cancel (text) + Action (button)
-
-**Components:**
-- [ ] Unified `Modal` with Header, Body, Footer
-- [ ] `Drawer` component (right slide-out)
-- [ ] Migrate all 7+ modal variants
-
-### 10C: Layout Components (1-2 days)
-
-- [ ] `SectionCard` — card with header and edit action
-- [ ] `PageHeader` — title, subtitle, meta, action
-- [ ] `SectionHeader` — all-caps label with optional action
-- [ ] `MetadataRow` — label/value display
-- [ ] Migrate all detail pages
-
-### 10D: Interactive Components (2-3 days)
-
-- [ ] `ToggleGroup` (Home/Browse/Wishlist tabs)
-- [ ] `SegmentedControl` (Reading/Done/DNF)
-- [ ] `ChipInput` (standardized: input above chips)
-- [ ] `SearchInput` with clear button
-- [ ] `StarRating` (display and interactive)
-
-### 10E: Cards & Flows (2-3 days)
-
-- [ ] Unified `CoverCard` with aspect variants
-- [ ] `ChoiceCard` for selection flows
-- [ ] `FileDropZone` for uploads
-- [ ] `SuccessState` for confirmations
-- [ ] `WarningBanner` for alerts
-
-### 10F: Cleanup & Documentation (1-2 days)
-
-- [ ] Remove all unused component files
-- [ ] Performance audit
-- [ ] Update ARCHITECTURE.md
-- [ ] Component usage guide
-
-### Expected Outcomes
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Modal patterns | 7+ variants | 2 (standard + full-screen) |
-| Button consistency | Mixed colors | Single primary color |
-| Reusable components | ~10 | ~30 |
-| User experience | Inconsistent | Calm, predictable |
+**Timeline:** 3-4 days
 
 ---
 
-## Phase 11: AI Enhancements (Future)
+### Phase 9C: Cover Improvements (Week 2)
 
-**Goal:** Let AI reduce manual work and enhance discovery.
+**Goal:** Better visual experience for books without covers.
 
-- [ ] Auto-generate "Hot Take" summaries
-- [ ] Auto-extract/suggest themes and tags
-- [ ] Reading recommendations based on library and ratings
-- [ ] Similar book suggestions ("If you liked X...")
-- [ ] Smart collections with AI-suggested groupings
+**Status:** Not started
 
----
+**Planned features:**
+- Embedded cover extraction from EPUBs
+- Cover image upload
+- Improved gradient cover generation
+- Cover placeholder redesign
 
-## Technical Debt
-
-### Deferred (Low Priority)
-
-| Issue | Notes |
-|-------|-------|
-| Merge characters into tags | Character data overlaps with tags |
-| Independent wishlist filters | Separate filter state per tab |
-| Folder name parsing | Too strict on dash separator |
-| Status filter on Series page | Not yet implemented |
-| Virtual scrolling | For very large libraries |
-
-### Not Planned
-
-- Calibre integration (beyond migration scripts)
-- Social features / sharing
-- In-app reading
-- Audiobook playback
-- Library lending tracking
+**Timeline:** 2-3 days
 
 ---
 
-## Version History
+### Phase 9D: Bug Fixes & UI Polish (Week 2)
 
-| Version | Date | Milestone |
-|---------|------|-----------|
-| v0.1.0 | Dec 14, 2025 | Initial release |
-| v0.2.0 | Dec 17, 2025 | Core tracking |
-| v0.3.0 | Dec 19, 2025 | Series system |
-| v0.4.0 | Dec 20, 2025 | Obsidian import |
-| v0.5.0 | Dec 22, 2025 | Book upload |
-| v0.6.0 | Dec 24, 2025 | Settings, author pages |
-| v0.7.0 | Dec 25, 2025 | Navigation redesign |
-| v0.8.0 | Dec 26, 2025 | Notes & linking |
-| v0.9.0 | Dec 28, 2025 | Wishlist system |
-| v0.10.0 | Dec 30, 2025 | Reading sessions |
-| v0.11.0 | Dec 30, 2025 | Home dashboard |
-| v0.12.0 | Dec 31, 2025 | Enhanced metadata |
-| v0.13.0 | Jan 1, 2026 | Metadata editing |
-| v0.14.0 | Jan 1, 2026 | Enhanced filtering |
-| v0.15.0 | Jan 2, 2026 | Collections |
-| v0.16.0 | Jan 2, 2026 | Add flow redesign |
-| v0.17.0 | Jan 3, 2026 | Header redesign, format badges |
-| v0.18.0 | Jan 4, 2026 | Editions consolidation ✨ |
+**Goal:** Address accumulated minor issues and UX papercuts.
 
-### Upcoming
+**Status:** Not started
 
-| Version | Phase | Focus |
-|---------|-------|-------|
-| v0.19.0 | 8.7c-f | Editions completion (add flow dedup, format filter) |
-| v0.20.0 | 9 | Feature completion |
-| v0.21.0 | 10 | Design system refactor |
-| v1.0.0 | 11 | AI enhancements |
+**Known issues to fix:**
+- Missing "No summary" notice on book detail page
+- Series page search behavior
+- Filter state edge cases
+- Mobile keyboard overlays
+
+**Timeline:** 2-3 days
 
 ---
 
-## Related Documentation
+### Phase 9E: Smart Collections System (Week 3)
 
-| Document | Description |
-|----------|-------------|
-| `ARCHITECTURE.md` | System design, data flow, file structure |
-| `DEVELOPMENT_WORKFLOW.md` | Dev environment, deployment process |
-| `CURSOR_PROMPT_GUIDE.md` | How to write effective Cursor prompts |
-| `CHANGELOG.md` | Detailed version history |
-| `DESIGN_SYSTEM_REFACTOR.md` | UI audit, component specs, migration plan |
-| `PHASE_8_7_EDITIONS.md` | Editions consolidation planning |
+**Goal:** Rule-based dynamic collections that auto-update.
+
+**Status:** Not started
+
+**Planned features:**
+- Rule builder UI (status, category, tags, date ranges, etc.)
+- AND/OR logic support
+- Auto-updating membership
+- Template collections (e.g., "Read This Year", "Unread Fiction")
+
+**Timeline:** 5-6 days
 
 ---
 
-*"A reader lives a thousand lives before he dies."*
+### Phase 9F: Book Detail Redesign (Week 4)
+
+**Goal:** Simplified, focused book detail page.
+
+**Status:** Not started
+
+**Planned changes:**
+- Cleaner layout with better information hierarchy
+- Improved mobile experience
+- Better reading history visualization
+- Enhanced format management UI
+
+**Timeline:** 3-4 days
+
+---
+
+### Phase 9G: Library/Home Improvements (Week 4)
+
+**Goal:** Better discovery and navigation on main screens.
+
+**Status:** Not started
+
+**Planned features:**
+- Improved filtering UX
+- Better sorting options
+- Enhanced search
+- Home page widgets
+
+**Timeline:** 2-3 days
+
+---
+
+### Phase 9H: Stats Page (Week 5)
+
+**Goal:** Reading analytics and insights.
+
+**Status:** Not started
+
+**Planned features:**
+- Calendar view of reading activity
+- Reading pace tracking
+- Category/format breakdowns
+- Yearly goals tracking
+
+**Timeline:** 3-4 days
+
+---
+
+### Phase 9I: Collections Polish (Week 5)
+
+**Goal:** Refinements to collections system.
+
+**Status:** Not started
+
+**Planned improvements:**
+- Bulk operations
+- Better reordering
+- Collection templates
+- Export/import
+
+**Timeline:** 1-2 days
+
+---
+
+### Phase 9J: Deduplication Tools (Week 5)
+
+**Goal:** Better tools for managing duplicate books.
+
+**Status:** Not started
+
+**Planned features:**
+- Duplicate detection algorithms
+- Merge suggestions
+- Batch operations
+- Preview before merge
+
+**Timeline:** 2-3 days
+
+---
+
+### Phase 9K: Unprocessed Files Detection (Week 5)
+
+**Goal:** Surface books in storage that aren't in Liminal database.
+
+**Status:** Not started
+
+**Planned features:**
+- Scan for untracked files
+- Show list of missing books
+- Quick import from list
+- Sync validation
+
+**Timeline:** 2-3 days
+
+---
+
+## Phase 10: Design System Refactor (1 week)
+
+**Goal:** Create reusable component library with calm UX principles.
+
+**Status:** Not started
+
+**Why:** 29 screens with ~50 distinct UI patterns need consolidation into ~30 reusable components.
+
+**Key deliverables:**
+- Component library documentation
+- Design tokens (colors, spacing, typography)
+- Consistent interaction patterns
+- Accessibility guidelines
+- Mobile-first patterns
+
+**Timeline:** 1 week (after Phase 9)
+
+---
+
+## Phase 11: React Native Learning (1 week)
+
+**Goal:** Learn React Native thoroughly before migration.
+
+**Status:** Not started
+
+**What to learn:**
+- React Native Web fundamentals
+- Platform-specific patterns (web vs. Android native)
+- Navigation systems
+- Gesture handling
+- Build & deployment
+
+**Timeline:** 1 week (after Phase 10)
+
+---
+
+## Phase 12: React Native Web Migration (4-6 weeks)
+
+**Goal:** Port complete app to React Native Web, enable Android native builds.
+
+**Status:** Not started
+
+**Why migrate:**
+- True Android native app (not just PWA)
+- Better mobile performance
+- Access to native APIs (file system, notifications, etc.)
+- Single codebase for web + Android
+
+**Approach:**
+1. Set up React Native Web infrastructure
+2. Port design system components
+3. Migrate pages one at a time
+4. Test thoroughly on both web and Android
+5. Deploy web version
+6. Build and test Android APK
+7. Distribute via personal deployment (not Play Store initially)
+
+**Timeline:** 4-6 weeks (after Phase 11)
+
+---
+
+## Phase 13: AI Enhancements (Future)
+
+**Goal:** Add AI-powered features for recommendations and content generation.
+
+**Status:** Not started
+
+**Potential features:**
+- Reading recommendations based on taste
+- Auto-generated summaries
+- Smart tagging
+- Series recommendations
+- Similar books discovery
+
+**Timeline:** TBD (after Android native is stable)
+
+---
+
+## What's NOT Planned
+
+### Spreadsheet Import
+**Why deferred:** Complex feature with edge cases. Manual entry and Smart Paste handle most needs.
+
+**Possible future:** Liminal Lite companion tool (separate project)
+
+### Social Features
+**Why not planned:** Liminal is a personal tool. Social features would fundamentally change the product.
+
+### In-App Reader
+**Why not now:** Moon+ Reader Pro works excellently. Native Android app might revisit this.
+
+---
+
+## Timeline Summary
+
+| Phase | Duration | Start | Status |
+|-------|----------|-------|--------|
+| Phase 9A | 3 days | Jan 10 | ✅ Complete |
+| Phase 9B-9K | 4 weeks | Jan 13 | Not started |
+| Phase 10 | 1 week | Feb 10 | Not started |
+| Phase 11 | 1 week | Feb 17 | Not started |
+| Phase 12 | 4-6 weeks | Feb 24 | Not started |
+| **Total to RN** | **~7 weeks** | | |
+
+**Target:** React Native Web deployed by late March 2026  
+**Target:** Android native build by April 2026
+
+---
+
+## Success Metrics
+
+### Phase 9 Success
+- ✅ All features work on mobile
+- ✅ No data loss scenarios
+- ✅ Complete folder structure flexibility
+- ✅ Better visual experience
+- ✅ Improved discovery and organization
+
+### Migration Success (Phase 12)
+- Zero feature regressions
+- Better mobile performance
+- Working Android native build
+- Happy with new codebase
+- Easy to maintain going forward
+
+---
+
+## Notes
+
+- **Backup system deployed:** Data is now protected with automated backups 🎉
+- **User is actively using Liminal:** Stability and reliability are paramount
+- **Mobile-first is non-negotiable:** Every feature must work well on Android
+- **Quality over speed:** Taking time to do it right
+- **Learning as we go:** React Native will be learned properly, not rushed
+
+---
+
+*Roadmap reflects actual progress as of January 10, 2026. All dates are estimates and subject to change based on complexity and discovery.*
