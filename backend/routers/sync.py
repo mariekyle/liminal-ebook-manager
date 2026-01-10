@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from database import get_db, get_db_path
 from services.metadata import extract_metadata
 from services.covers import generate_cover_colors
+from services.backup import get_backup_settings, create_backup
 
 router = APIRouter(tags=["sync"])
 
@@ -667,6 +668,17 @@ async def sync_library(
             status="already_running",
             message="A sync is already in progress"
         )
+    
+    # Phase 9A: Create pre-sync backup if enabled
+    try:
+        backup_settings = await get_backup_settings(db)
+        if backup_settings.get('backup_enabled') and backup_settings.get('backup_schedule') in ('before_sync', 'both'):
+            db_path = get_db_path()
+            await create_backup(db, backup_type='pre_sync', db_path=db_path)
+            print("Pre-sync backup created")
+    except Exception as e:
+        # Don't fail sync if backup fails - just log it
+        print(f"Pre-sync backup failed (continuing with sync): {e}")
     
     return await _do_sync(db, full)
 
