@@ -86,6 +86,48 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
     columns = await cursor.fetchall()
     existing_columns = {col[1] for col in columns}
     
+    # ==========================================================================
+    # Migration: Backup system (Phase 9A)
+    # ==========================================================================
+    
+    # Create backup_history table
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS backup_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            backup_type TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'success'
+        )
+    """)
+    
+    # Create index for backup_history
+    await db.execute("""
+        CREATE INDEX IF NOT EXISTS idx_backup_history_created 
+        ON backup_history(created_at)
+    """)
+    
+    # Insert default backup settings if not exists
+    default_backup_settings = [
+        ('backup_enabled', 'true'),
+        ('backup_path', '/app/data/backups'),
+        ('backup_schedule', 'both'),
+        ('backup_time', '03:00'),
+        ('backup_daily_retention_days', '7'),
+        ('backup_weekly_retention_weeks', '4'),
+        ('backup_monthly_retention_months', '6'),
+    ]
+    for key, value in default_backup_settings:
+        await db.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+    
+    # ==========================================================================
+    # End Backup system migration
+    # ==========================================================================
+    
     # Migration: Add completion_status column
     if 'completion_status' not in existing_columns:
         print("Migration: Adding 'completion_status' column to titles table...")

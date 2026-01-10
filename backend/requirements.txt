@@ -14,3 +14,6 @@ lxml==5.1.0           # For parsing EPUB XML
 python-multipart==0.0.6  # For file uploads (future)
 pydantic==2.5.3          # Data validation
 pydantic-settings==2.1.0 # Settings management
+
+# Scheduling
+apscheduler==3.10.4      # For automated backups (Phase 9A)
