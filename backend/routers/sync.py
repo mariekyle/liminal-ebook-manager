@@ -395,7 +395,36 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                 if book_file:
                     try:
                         file_metadata = await extract_metadata(book_file)
-                        # Merge: prefer extracted over parsed
+                        
+                        # =======================================================
+                        # PHASE 9B: File metadata is PRIMARY for title/authors
+                        # Folder name parsing is now just the FALLBACK
+                        # =======================================================
+                        
+                        # Title: Use file metadata if available and valid
+                        file_title = file_metadata.get("title", "").strip() if file_metadata.get("title") else ""
+                        if file_title and len(file_title) > 2:
+                            # Check it's not a placeholder/invalid title
+                            invalid_titles = ["unknown", "untitled", "no title", "title"]
+                            if file_title.lower() not in invalid_titles:
+                                parsed["title"] = file_title
+                        
+                        # Authors: Use file metadata if available and valid
+                        file_authors = file_metadata.get("authors", [])
+                        if file_authors:
+                            # Filter out empty strings and whitespace
+                            file_authors = [a.strip() for a in file_authors if a and a.strip()]
+                            # Check they're not placeholder authors
+                            invalid_authors = ["unknown", "unknown author", "author", "anonymous"]
+                            valid_authors = [a for a in file_authors if a.lower() not in invalid_authors]
+                            if valid_authors:
+                                parsed["authors"] = valid_authors
+                        
+                        # =======================================================
+                        # END PHASE 9B - Rest of metadata merge unchanged
+                        # =======================================================
+                        
+                        # Merge other fields: prefer extracted over parsed
                         if file_metadata.get("publication_year"):
                             parsed["publication_year"] = file_metadata["publication_year"]
                         if file_metadata.get("summary"):

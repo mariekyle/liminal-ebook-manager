@@ -1,10 +1,10 @@
 # Liminal - Ebook Library Manager
 
 ## Project Overview
-Self-hosted web app for managing an ebook library on Synology NAS.
+Self-hosted web app for managing an ebook library on a NAS.
 - **Backend**: Python FastAPI + SQLite
 - **Frontend**: React + Tailwind CSS
-- **Deployment**: Docker on Synology NAS
+- **Deployment**: Docker
 
 ## Golden Rules
 
@@ -33,24 +33,37 @@ Self-hosted web app for managing an ebook library on Synology NAS.
 - **Gradient cover generation** (`services/covers.py`, `GradientCover.jsx`)
 - **Metadata extraction** (`services/metadata.py`)
 - **Database schema** (`database.py`)
-- **Folder name parsing** (`routers/sync.py` - parse_folder_name function)
 
 ## Architecture Notes
 
 ### Data Flow
 ```
-Folder scan → Parse folder name (title/author/series)
-            → Extract EPUB metadata (year/summary/tags/words)
-            → Merge data (folder wins for title/author)
+Folder scan → Find book file (EPUB preferred, then PDF, etc.)
+            → Extract file metadata (title/author/year/summary/tags/words)
+            → Parse folder name as FALLBACK (if file metadata missing)
+            → Merge data (file wins for title/author when valid)
             → Save to SQLite
             → Display in React frontend
 ```
 
 ### Key Design Decisions
-- **Folder name is source of truth** for title, author, series
-- **EPUB metadata enriches** with year, summary, tags, word count
+- **File metadata is source of truth** for title, author (Phase 9B - Jan 2026)
+- **Folder name is fallback** when file metadata is missing or invalid
+- **Folder structure is one-folder-per-book** (folder groups multiple file formats as one title)
+- **EPUB metadata enriches** with year, summary, tags, word count, fanfiction fields
 - **Books are read-only** - app never modifies book files
 - **SQLite for simplicity** - single file database
+- **Category from parent folder** - Fiction/Non-Fiction/FanFiction detected from path
+
+### Metadata Priority (Phase 9B)
+```
+Title/Author:   EPUB/PDF file → Folder name → "Unknown"
+Series:         Calibre metadata in EPUB → Folder name brackets
+Year/Summary:   EPUB/PDF file only
+Tags:           EPUB/PDF file only
+Word Count:     EPUB/PDF file only
+Category:       Parent folder path (Fiction/Non-Fiction/FanFiction)
+```
 
 ## File Structure
 ```
@@ -59,10 +72,12 @@ backend/
   database.py       - SQLite schema and init
   routers/
     books.py        - List/search/filter books, notes CRUD
-    sync.py         - Folder scanning, metadata extraction
+    sync.py         - Folder scanning, metadata merge
+    backups.py      - Automated backup system (Phase 9A)
   services/
     metadata.py     - EPUB/PDF metadata extraction
     covers.py       - Gradient cover color generation
+    backup.py       - Backup service with rotation
 
 frontend/src/
   App.jsx           - Main app with routing
@@ -72,6 +87,7 @@ frontend/src/
     BookCard.jsx    - Individual book card
     BookDetail.jsx  - Book page with notes
     GradientCover.jsx - CSS gradient covers
+    SettingsDrawer.jsx - Settings including backup config
 ```
 
 ## Naming Conventions
