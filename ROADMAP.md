@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 10, 2026 (v0.19.0)  
-> **Major Milestone:** Phase 9A Complete - Automated Backup System Deployed
+> **Last Updated:** January 10, 2026 (v0.20.0)  
+> **Major Milestone:** Phase 9A + 9B Complete — Backups & Folder Independence
 
 ---
 
@@ -23,7 +23,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.19.0)
+## Current State (v0.20.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -39,9 +39,11 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Add book flow | ✅ Redesigned |
 | Book detail header | ✅ Redesigned |
 | Editions system | ✅ Add formats, merge duplicates |
-| **Automated backups** | ✅ **NEW — Grandfather-father-son rotation** |
+| Automated backups | ✅ Grandfather-father-son rotation |
+| **Folder structure independence** | ✅ **NEW — File metadata primary** |
 
 **Recent milestones:**
+- Phase 9B: Folder structure independence — file metadata now primary (Jan 10, 2026) 🎉
 - Phase 9A: Automated backup system — API + Settings UI (Jan 10, 2026) 🎉
 - Phase 8.7a-d: Editions consolidation — session format, add edition, merge tool (Jan 4, 2026)
 - Phase 8.3 + 8.4: Header redesign, cover toggles, format badges, rating labels (Jan 3, 2026)
@@ -71,7 +73,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ┌───────────┬──────────────────────────────────────────────────────┐
 │  CURRENT  │  Phase 9: Feature Completion                         │
 │           │  9A: ✅ Automated Backups (Jan 10)                   │
-│           │  9B-9K: Remaining features (2-4 weeks)              │
+│           │  9B: ✅ Folder Independence (Jan 10)                 │
+│           │  9C-9K: Remaining features (3-4 weeks)              │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
 │           │  Calm UX design system (1 week)                      │
@@ -93,9 +96,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** 10% complete (1 of 11 sub-phases done)
+**Status:** 18% complete (2 of 11 sub-phases done)
 
-**Timeline:** 4-5 weeks remaining (started Jan 10, 2026)
+**Timeline:** 3-4 weeks remaining (started Jan 10, 2026)
 
 ---
 
@@ -151,27 +154,52 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ---
 
-### Phase 9B: Folder Structure Independence (Week 1-2)
+### Phase 9B: Folder Structure Independence ✅ COMPLETE (Jan 10, 2026)
 
 **Goal:** Remove dependency on folder naming conventions inherited from Obsidian plugin.
 
-**Status:** Not started
+**Problem solved:** Folder naming errors like "tryslora- Fire Burning" (missing space) caused incorrect metadata despite EPUB containing correct data.
 
-**Current problem:**
-- Sync relies on parsing folder names: `Author - [Series ##] Title/`
-- Breaks with unconventional folder structures
-- Limits flexibility and accessibility for new users
+**What was built:**
 
-**Planned solution:**
-- Prioritize EPUB/PDF metadata extraction over folder parsing
-- Use folder names only as last resort fallback
-- Implement hierarchy: File metadata → Folder name → Filename → "Unknown"
+#### Backend Changes (`backend/routers/sync.py`)
+- **Metadata priority reversed** — File metadata now extracted and checked FIRST
+- **Title validation** — Filters placeholder titles before accepting:
+  - "unknown", "untitled", empty strings
+  - Titles that are just the filename
+- **Author validation** — Filters placeholder authors before accepting:
+  - "Unknown Author", "Anonymous", "Various Authors"
+  - Empty strings and whitespace-only values
+- **Fallback chain implemented:**
+  1. EPUB/PDF file metadata (highest priority)
+  2. Folder name parsing (fallback)
+  3. "Unknown" defaults (last resort)
 
-**Timeline:** 3-4 days
+#### Architecture Updates
+- **`.cursorrules` updated** — Documents new metadata priority system
+- **Data flow diagram** — Reflects file-first extraction approach
+
+#### Key Test Case: "Fire Burning"
+| Field | Before (v0.19.0) | After (v0.20.0) |
+|-------|------------------|-----------------|
+| Title | "tryslora- Fire Burning" | "Fire Burning" ✅ |
+| Author | "Unknown Author" | "tryslora" ✅ |
+
+#### User Impact
+- ✅ **Flexible folder naming** — Name folders however you want
+- ✅ **Better metadata** — EPUB data takes priority over folder parsing errors
+- ✅ **Backward compatible** — Existing properly-named folders still work
+- ✅ **Fix existing books** — Use "Rescan Metadata" to update incorrectly parsed books
+- ✅ **No database changes** — No migrations needed
+
+**Deployed:** January 10, 2026  
+**Files changed:** 2 (`sync.py`, `.cursorrules`)  
+**Lines of code:** ~25 lines added  
+**Risk level:** Low — additive change, no data modifications
 
 ---
 
-### Phase 9C: Cover Improvements (Week 2)
+### Phase 9C: Cover Improvements ← NEXT
 
 **Goal:** Better visual experience for books without covers.
 
@@ -413,10 +441,11 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Phase | Duration | Start | Status |
 |-------|----------|-------|--------|
 | Phase 9A | 3 days | Jan 10 | ✅ Complete |
-| Phase 9B-9K | 4 weeks | Jan 13 | Not started |
-| Phase 10 | 1 week | Feb 10 | Not started |
-| Phase 11 | 1 week | Feb 17 | Not started |
-| Phase 12 | 4-6 weeks | Feb 24 | Not started |
+| Phase 9B | Same day | Jan 10 | ✅ Complete |
+| Phase 9C-9K | 3-4 weeks | Jan 11 | Not started |
+| Phase 10 | 1 week | ~Feb 7 | Not started |
+| Phase 11 | 1 week | ~Feb 14 | Not started |
+| Phase 12 | 4-6 weeks | ~Feb 21 | Not started |
 | **Total to RN** | **~7 weeks** | | |
 
 **Target:** React Native Web deployed by late March 2026  
@@ -444,7 +473,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ## Notes
 
-- **Backup system deployed:** Data is now protected with automated backups 🎉
+- **Two phases completed same day:** 9A (backups) and 9B (folder independence) both shipped Jan 10
 - **User is actively using Liminal:** Stability and reliability are paramount
 - **Mobile-first is non-negotiable:** Every feature must work well on Android
 - **Quality over speed:** Taking time to do it right

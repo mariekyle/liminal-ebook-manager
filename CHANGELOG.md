@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9: Feature Completion (In Progress)
-- Phase 9B: Folder structure independence
 - Phase 9C: Cover improvements  
 - Phase 9D: Bug fixes & UI polish
 - Phase 9E: Smart Collections system
@@ -18,6 +17,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 9I: Collections polish
 - Phase 9J: Deduplication tools
 - Phase 9K: Unprocessed files detection
+
+---
+
+## [0.20.0] - 2026-01-10
+
+### Added
+
+#### Phase 9B: Folder Structure Independence 🎉
+File metadata now takes priority over folder names for title and author extraction, making folder naming conventions optional.
+
+**The Problem:**
+- Folder naming errors like "tryslora- Fire Burning" (missing space after author) caused wrong metadata
+- EPUB had correct data (title: "Fire Burning", author: "tryslora") but was ignored
+- Users had to follow strict `Author - [Series ##] Title` naming conventions for proper metadata
+- Sync relied on parsing folder names first, only using file metadata for supplementary fields
+
+**The Solution:**
+- EPUB/PDF metadata is now PRIMARY source for title and authors
+- Folder name parsing is FALLBACK when file metadata is missing or invalid
+- Validation filters out placeholder values before accepting metadata
+
+**Backend Changes (`backend/routers/sync.py`):**
+- **Metadata priority reversed** — File metadata now extracted and checked first
+- **Title validation** — Filters placeholder titles before accepting:
+  - "unknown", "untitled", empty strings
+  - Titles that are just the filename
+- **Author validation** — Filters placeholder authors before accepting:
+  - "Unknown Author", "Anonymous", "Various Authors"
+  - Empty strings and whitespace-only values
+- **Fallback chain implemented:**
+  1. EPUB/PDF file metadata (highest priority)
+  2. Folder name parsing (fallback)
+  3. "Unknown" defaults (last resort)
+
+**Architecture Updates:**
+- **`.cursorrules` updated** — Documents new metadata priority system
+- **Data flow diagram** — Reflects file-first extraction approach
+- **Protected systems updated** — Folder name parsing no longer "sacred" (now just a fallback)
+
+**Key Test Case: "Fire Burning"**
+| Field | Before (v0.19.0) | After (v0.20.0) |
+|-------|------------------|-----------------|
+| Title | "tryslora- Fire Burning" | "Fire Burning" ✅ |
+| Author | "Unknown Author" | "tryslora" ✅ |
+
+**User Impact:**
+- ✅ **Flexible folder naming** — Name folders however you want
+- ✅ **Better metadata** — EPUB data takes priority over folder parsing errors
+- ✅ **Backward compatible** — Existing properly-named folders still work
+- ✅ **Fix existing books** — Use "Rescan Metadata" to update incorrectly parsed books
+- ✅ **No database changes** — No migrations needed
+
+### Changed
+
+- **Sync metadata extraction** — File metadata now primary, folder name is fallback
+- **Title/author assignment** — Validation filters placeholder values before accepting
+
+### Technical
+
+#### Files Modified
+- `backend/routers/sync.py` — Metadata merge logic (~25 lines added)
+- `.cursorrules` — Architecture documentation updated
+
+#### No Database Changes
+- No migrations needed
+- No schema changes
+- Existing data unaffected
+
+### Development Stats
+
+- **Implementation time:** Same day as Phase 9A (Jan 10, 2026)
+- **Lines of code:** ~25 lines added to sync.py
+- **Files changed:** 2 (`sync.py`, `.cursorrules`)
+- **Backward compatible:** Yes — existing folders work, rescan to update
+- **Risk level:** Low — additive change, no data modifications
 
 ---
 
