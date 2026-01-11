@@ -9,23 +9,31 @@ import { getCoverUrl } from '../api'
  * - Graceful fallback to gradient on error
  * - Loading placeholder
  * - Multiple size variants
+ * - Optional text overlay for title/author (disabled by default)
  * - Backward compatibility with legacy props
+ * 
+ * Size behavior:
+ * - No size prop: Uses w-full with aspect-[2/3] (fills parent width, auto height)
+ * - size="fill": Uses w-full h-full (requires parent with explicit height)
+ * - size="xs/sm/default/md/lg/xl": Fixed pixel dimensions
  */
 
 const sizeClasses = {
-  xs: 'w-12 h-16',      // 48x64 - tiny thumbnails
-  sm: 'w-16 h-24',      // 64x96 - small cards
-  default: 'w-24 h-36', // 96x144 - standard cards
-  md: 'w-32 h-48',      // 128x192 - medium display
-  lg: 'w-48 h-72',      // 192x288 - detail page
-  xl: 'w-64 h-96',      // 256x384 - hero display
+  xs: 'w-12 h-16',        // 48x64 - tiny thumbnails
+  sm: 'w-16 h-24',        // 64x96 - small cards
+  default: 'w-24 h-36',   // 96x144 - standard cards
+  md: 'w-32 h-48',        // 128x192 - medium display
+  lg: 'w-48 h-72',        // 192x288 - detail page
+  xl: 'w-64 h-96',        // 256x384 - hero display
+  fill: 'w-full h-full',  // Fill parent container (parent must have explicit height)
 }
 
 export default function GradientCover({ 
   book: bookProp, 
-  size = 'default',
+  size,  // undefined = use aspect ratio, 'fill' = fill parent, others = fixed size
   className = '',
-  showTitle = false,
+  showTitle = false,  // OFF by default - callers typically show title separately
+  showAuthor = false, // OFF by default - callers typically show author separately
   // Legacy props for backward compatibility (used by BookCard, AuthorDetail, etc.)
   title,
   author,
@@ -34,11 +42,27 @@ export default function GradientCover({
   coverTextColor,
   id
 }) {
+  // Normalize author prop - handle both string and array inputs
+  const normalizeAuthor = (authorInput) => {
+    if (!authorInput) return ''
+    if (typeof authorInput === 'string') return authorInput
+    if (Array.isArray(authorInput)) {
+      // Handle nested arrays (e.g., [[author1, author2]])
+      const first = authorInput[0]
+      if (Array.isArray(first)) return first[0] || ''
+      return first || ''
+    }
+    return String(authorInput)
+  }
+  
+  const normalizedAuthor = normalizeAuthor(author)
+  
   // Build book object from legacy props if book prop not provided
   const book = bookProp || {
     id: id,
     title: title,
-    author: author,
+    author: normalizedAuthor,
+    authors: Array.isArray(author) ? author.flat() : (author ? [author] : []),
     cover_gradient: coverGradient,
     coverGradient: coverGradient,
     cover_color_1: coverBgColor,
@@ -55,6 +79,10 @@ export default function GradientCover({
   
   // Determine if book has a real cover
   const hasRealCover = book?.has_cover && book?.cover_path
+  
+  // Get display title and author (handle arrays properly)
+  const displayTitle = book?.title || title || ''
+  const displayAuthor = normalizeAuthor(book?.author) || normalizeAuthor(book?.authors) || normalizedAuthor
   
   // Lazy loading with IntersectionObserver
   useEffect(() => {
@@ -101,11 +129,40 @@ export default function GradientCover({
   // Support both old props (coverGradient) and new book object
   const gradient = book?.cover_gradient || book?.coverGradient
   
+  // Determine container classes based on size prop
+  // - undefined: Use aspect ratio (works in any parent)
+  // - 'fill': Fill parent (parent must have explicit height)
+  // - other: Fixed pixel dimensions
+  const sizeClass = size 
+    ? (sizeClasses[size] || sizeClasses.default)
+    : 'w-full aspect-[2/3]'  // Default: fill width, maintain 2:3 aspect ratio
+  
   const containerClasses = `
-    ${sizeClasses[size] || sizeClasses.default}
+    ${sizeClass}
     ${className}
     relative overflow-hidden rounded-lg
   `.trim()
+  
+  // Text overlay component - only rendered when showTitle or showAuthor is true
+  const TextOverlay = () => {
+    if (!showTitle && !showAuthor) return null
+    if (!displayTitle && !displayAuthor) return null
+    
+    return (
+      <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+        {showTitle && displayTitle && (
+          <p className="text-white text-xs font-medium leading-tight line-clamp-2 drop-shadow-md">
+            {displayTitle}
+          </p>
+        )}
+        {showAuthor && displayAuthor && (
+          <p className="text-gray-300 text-xs leading-tight truncate drop-shadow-md mt-0.5">
+            {displayAuthor}
+          </p>
+        )}
+      </div>
+    )
+  }
   
   // Show real cover if loaded successfully
   if (hasRealCover && imageState === 'loaded') {
@@ -113,15 +170,11 @@ export default function GradientCover({
       <div ref={containerRef} className={containerClasses}>
         <img
           src={getCoverUrl(book.id)}
-          alt={book.title || 'Book cover'}
+          alt={displayTitle || 'Book cover'}
           className="w-full h-full object-cover"
           loading="lazy"
         />
-        {showTitle && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-            <p className="text-white text-xs font-medium truncate">{book.title}</p>
-          </div>
-        )}
+        <TextOverlay />
       </div>
     )
   }
@@ -167,14 +220,8 @@ export default function GradientCover({
         }}
       />
       
-      {/* Title text (if enabled) */}
-      {showTitle && book?.title && (
-        <div className="absolute inset-0 flex items-center justify-center p-2">
-          <p className="text-white text-center text-sm font-medium line-clamp-3 drop-shadow-lg">
-            {book.title}
-          </p>
-        </div>
-      )}
+      {/* Text overlay - only if explicitly enabled */}
+      <TextOverlay />
       
       {/* Cover source indicator (only in development) */}
       {process.env.NODE_ENV === 'development' && imageState === 'error' && (

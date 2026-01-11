@@ -277,7 +277,7 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           ref={modalRef}
-          className="bg-library-dark rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          className="bg-library-card rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">

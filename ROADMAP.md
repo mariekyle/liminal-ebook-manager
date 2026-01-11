@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 10, 2026 (v0.20.0)  
-> **Major Milestone:** Phase 9A + 9B Complete — Backups & Folder Independence
+> **Last Updated:** January 11, 2026 (v0.21.0 pending)  
+> **Major Milestone:** Phase 9C Implemented — Cover Extraction (bugs pending)
 
 ---
 
@@ -23,7 +23,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.20.0)
+## Current State (v0.21.0 pending)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -40,14 +40,14 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Book detail header | ✅ Redesigned |
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
-| **Folder structure independence** | ✅ **NEW — File metadata primary** |
+| Folder structure independence | ✅ File metadata primary |
+| **Cover extraction & upload** | ⚠️ **IMPLEMENTED — BUGS PENDING** |
 
 **Recent milestones:**
+- Phase 9C: Cover extraction & upload — implemented, 5 bugs to fix (Jan 11, 2026) ⚠️
 - Phase 9B: Folder structure independence — file metadata now primary (Jan 10, 2026) 🎉
 - Phase 9A: Automated backup system — API + Settings UI (Jan 10, 2026) 🎉
 - Phase 8.7a-d: Editions consolidation — session format, add edition, merge tool (Jan 4, 2026)
-- Phase 8.3 + 8.4: Header redesign, cover toggles, format badges, rating labels (Jan 3, 2026)
-- Phase 8.1 + 8.6: Add book flow redesign & manual entry improvements (Jan 2, 2026)
 
 ---
 
@@ -74,7 +74,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │  CURRENT  │  Phase 9: Feature Completion                         │
 │           │  9A: ✅ Automated Backups (Jan 10)                   │
 │           │  9B: ✅ Folder Independence (Jan 10)                 │
-│           │  9C-9K: Remaining features (3-4 weeks)              │
+│           │  9C: ⚠️ Cover Extraction (Jan 11 - bugs pending)    │
+│           │  9D-9K: Remaining features (3 weeks)                 │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
 │           │  Calm UX design system (1 week)                      │
@@ -96,9 +97,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** 18% complete (2 of 11 sub-phases done)
+**Status:** 27% complete (3 of 11 sub-phases implemented, 9C has blocking bugs)
 
-**Timeline:** 3-4 weeks remaining (started Jan 10, 2026)
+**Timeline:** 3 weeks remaining (started Jan 10, 2026)
 
 ---
 
@@ -129,14 +130,6 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 #### Frontend (Day 3)
 - **Settings UI** — Complete backup configuration section
-  - Enable/disable toggle
-  - Path input with real-time validation
-  - Schedule selector (before sync / daily / both)
-  - Time picker (conditional on schedule)
-  - Retention policy controls
-  - Stats display (last backup, storage used, count breakdown)
-  - Manual "Create Backup Now" button
-  - Save settings with validation
 - **API integration** — 6 new API functions in `api.js`
 
 #### Key Features
@@ -164,33 +157,18 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 #### Backend Changes (`backend/routers/sync.py`)
 - **Metadata priority reversed** — File metadata now extracted and checked FIRST
-- **Title validation** — Filters placeholder titles before accepting:
-  - "unknown", "untitled", empty strings
-  - Titles that are just the filename
-- **Author validation** — Filters placeholder authors before accepting:
-  - "Unknown Author", "Anonymous", "Various Authors"
-  - Empty strings and whitespace-only values
+- **Title validation** — Filters placeholder titles before accepting
+- **Author validation** — Filters placeholder authors before accepting
 - **Fallback chain implemented:**
   1. EPUB/PDF file metadata (highest priority)
   2. Folder name parsing (fallback)
   3. "Unknown" defaults (last resort)
-
-#### Architecture Updates
-- **`.cursorrules` updated** — Documents new metadata priority system
-- **Data flow diagram** — Reflects file-first extraction approach
-
-#### Key Test Case: "Fire Burning"
-| Field | Before (v0.19.0) | After (v0.20.0) |
-|-------|------------------|-----------------|
-| Title | "tryslora- Fire Burning" | "Fire Burning" ✅ |
-| Author | "Unknown Author" | "tryslora" ✅ |
 
 #### User Impact
 - ✅ **Flexible folder naming** — Name folders however you want
 - ✅ **Better metadata** — EPUB data takes priority over folder parsing errors
 - ✅ **Backward compatible** — Existing properly-named folders still work
 - ✅ **Fix existing books** — Use "Rescan Metadata" to update incorrectly parsed books
-- ✅ **No database changes** — No migrations needed
 
 **Deployed:** January 10, 2026  
 **Files changed:** 2 (`sync.py`, `.cursorrules`)  
@@ -199,29 +177,74 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ---
 
-### Phase 9C: Cover Improvements ← NEXT
+### Phase 9C: Cover Extraction & Upload ⚠️ IMPLEMENTED - BUGS PENDING (Jan 11, 2026)
 
-**Goal:** Better visual experience for books without covers.
+**Goal:** Display real cover images from EPUBs, allow custom cover uploads.
 
-**Status:** Not started
+**Problem solved:** All books displayed gradient covers regardless of whether EPUB contained embedded cover images.
 
-**Planned features:**
-- Embedded cover extraction from EPUBs
-- Cover image upload
-- Improved gradient cover generation
-- Cover placeholder redesign
+**What was built:**
 
-**Timeline:** 2-3 days
+#### Backend
+- **Database schema** — 3 new columns on `titles` table: `cover_path`, `has_cover`, `cover_source`
+- **Cover extraction service** — Extract covers from EPUB files using OPF metadata
+- **Cover storage** — `/app/data/covers/` with `extracted/` and `custom/` subfolders
+- **REST API:**
+  - GET `/api/covers/{title_id}` — Serve cover image
+  - POST `/api/titles/{title_id}/cover` — Upload custom cover
+  - DELETE `/api/titles/{title_id}/cover` — Remove custom cover
+  - POST `/api/titles/{title_id}/extract-cover` — Force re-extraction
+- **Sync integration** — Automatic cover extraction during sync
+
+#### Frontend
+- **GradientCover rewrite** — Complete component redesign with lazy loading
+  - IntersectionObserver for performance
+  - Cover priority: Custom > Extracted > Gradient
+  - Size presets: xs, sm, md, lg, xl
+- **EditBookModal** — New cover section with upload/delete
+- **API functions** — `uploadCover()`, `deleteCover()`, `extractCover()`
+
+#### Key Features
+- ✅ **Automatic extraction** — Covers extracted from EPUBs during sync
+- ✅ **Custom upload** — Upload any image as book cover
+- ✅ **Priority system** — Custom > Extracted > Gradient fallback
+- ✅ **Lazy loading** — IntersectionObserver for performance
+- ✅ **Graceful fallback** — Gradient covers when no image available
+
+#### Blocking Bugs (Must Fix Before Deployment)
+
+**Bug 1: Gradient covers not filling containers**
+- All gradient covers appear cropped/small across every screen
+- Root cause: New GradientCover uses fixed sizes but callers expect `w-full h-full`
+
+**Bug 2: Missing titles/authors on gradient covers**
+- Text overlay completely missing from book covers
+
+**Bug 3: Edit Book Details modal has no background**
+- Modal is transparent instead of showing `bg-library-dark`
+
+**Bug 4: Cover operation handlers await non-promise**
+- Cover upload/delete handlers call `await onSave()` but it's not async
+
+**Bug 5: GradientCover signature incompatibility**
+- New component requires `book` object prop
+- Existing callers still pass old props: `title`, `author`, `coverGradient`, etc.
+
+**Status:** Implemented, NOT DEPLOYED  
+**Files changed:** 9 (6 backend, 3 frontend)  
+**Lines of code:** ~600 added/modified  
+**Next step:** Fix 5 blocking bugs, then deploy
 
 ---
 
-### Phase 9D: Bug Fixes & UI Polish (Week 2)
+### Phase 9D: Bug Fixes & UI Polish ← NEXT (after 9C bugs fixed)
 
 **Goal:** Address accumulated minor issues and UX papercuts.
 
 **Status:** Not started
 
 **Known issues to fix:**
+- Phase 9C bugs (5 items above)
 - Missing "No summary" notice on book detail page
 - Series page search behavior
 - Filter state edge cases
@@ -391,15 +414,6 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - Access to native APIs (file system, notifications, etc.)
 - Single codebase for web + Android
 
-**Approach:**
-1. Set up React Native Web infrastructure
-2. Port design system components
-3. Migrate pages one at a time
-4. Test thoroughly on both web and Android
-5. Deploy web version
-6. Build and test Android APK
-7. Distribute via personal deployment (not Play Store initially)
-
 **Timeline:** 4-6 weeks (after Phase 11)
 
 ---
@@ -426,8 +440,6 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ### Spreadsheet Import
 **Why deferred:** Complex feature with edge cases. Manual entry and Smart Paste handle most needs.
 
-**Possible future:** Liminal Lite companion tool (separate project)
-
 ### Social Features
 **Why not planned:** Liminal is a personal tool. Social features would fundamentally change the product.
 
@@ -442,14 +454,24 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 |-------|----------|-------|--------|
 | Phase 9A | 3 days | Jan 10 | ✅ Complete |
 | Phase 9B | Same day | Jan 10 | ✅ Complete |
-| Phase 9C-9K | 3-4 weeks | Jan 11 | Not started |
-| Phase 10 | 1 week | ~Feb 7 | Not started |
-| Phase 11 | 1 week | ~Feb 14 | Not started |
-| Phase 12 | 4-6 weeks | ~Feb 21 | Not started |
+| Phase 9C | 1 day | Jan 11 | ⚠️ Bugs pending |
+| Phase 9D-9K | 3 weeks | Jan 12 | Not started |
+| Phase 10 | 1 week | ~Feb 1 | Not started |
+| Phase 11 | 1 week | ~Feb 8 | Not started |
+| Phase 12 | 4-6 weeks | ~Feb 15 | Not started |
 | **Total to RN** | **~7 weeks** | | |
 
 **Target:** React Native Web deployed by late March 2026  
 **Target:** Android native build by April 2026
+
+---
+
+## Immediate Next Steps
+
+1. **Fix Phase 9C bugs** (5 items) — Required before deployment
+2. **Deploy v0.21.0** — Cover extraction working
+3. **Run full sync** — Extract covers from all EPUBs
+4. **Continue to Phase 9D** — Bug fixes & polish
 
 ---
 
@@ -459,7 +481,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - ✅ All features work on mobile
 - ✅ No data loss scenarios
 - ✅ Complete folder structure flexibility
-- ✅ Better visual experience
+- ✅ Better visual experience (real covers!)
 - ✅ Improved discovery and organization
 
 ### Migration Success (Phase 12)
@@ -473,12 +495,12 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ## Notes
 
-- **Two phases completed same day:** 9A (backups) and 9B (folder independence) both shipped Jan 10
+- **Phase 9C implemented but blocked:** 5 bugs identified during testing
+- **GradientCover rewrite was aggressive:** Changed prop interface, broke existing callers
 - **User is actively using Liminal:** Stability and reliability are paramount
 - **Mobile-first is non-negotiable:** Every feature must work well on Android
 - **Quality over speed:** Taking time to do it right
-- **Learning as we go:** React Native will be learned properly, not rushed
 
 ---
 
-*Roadmap reflects actual progress as of January 10, 2026. All dates are estimates and subject to change based on complexity and discovery.*
+*Roadmap reflects actual progress as of January 11, 2026. All dates are estimates and subject to change based on complexity and discovery.*
