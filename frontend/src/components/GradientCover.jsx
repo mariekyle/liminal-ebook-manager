@@ -8,32 +8,29 @@ import { getCoverUrl } from '../api'
  * - Lazy loading with IntersectionObserver
  * - Graceful fallback to gradient on error
  * - Loading placeholder
- * - Multiple size variants
- * - Optional text overlay for title/author (disabled by default)
+ * - Multiple size variants using aspect-ratio for proper book proportions
+ * - Text overlay for title/author
  * - Backward compatibility with legacy props
- * 
- * Size behavior:
- * - No size prop: Uses w-full with aspect-[2/3] (fills parent width, auto height)
- * - size="fill": Uses w-full h-full (requires parent with explicit height)
- * - size="xs/sm/default/md/lg/xl": Fixed pixel dimensions
  */
 
 const sizeClasses = {
-  xs: 'w-12 h-16',        // 48x64 - tiny thumbnails
-  sm: 'w-16 h-24',        // 64x96 - small cards
-  default: 'w-24 h-36',   // 96x144 - standard cards
-  md: 'w-32 h-48',        // 128x192 - medium display
-  lg: 'w-48 h-72',        // 192x288 - detail page
-  xl: 'w-64 h-96',        // 256x384 - hero display
-  fill: 'w-full h-full',  // Fill parent container (parent must have explicit height)
+  // 'fill' requires parent to have explicit dimensions
+  fill: 'w-full h-full',
+  // All other sizes use aspect-ratio for book cover proportions (2:3)
+  xs: 'w-12 aspect-[2/3]',        // 48px wide, height from aspect ratio
+  sm: 'w-16 aspect-[2/3]',        // 64px wide
+  default: 'w-full aspect-[2/3]', // Full width of parent, height from aspect ratio
+  md: 'w-32 aspect-[2/3]',        // 128px wide
+  lg: 'w-48 aspect-[2/3]',        // 192px wide
+  xl: 'w-64 aspect-[2/3]',        // 256px wide
 }
 
 export default function GradientCover({ 
   book: bookProp, 
-  size,  // undefined = use aspect ratio, 'fill' = fill parent, others = fixed size
+  size = 'default',  // FIXED: Changed from 'fill' to 'default' - uses aspect ratio
   className = '',
-  showTitle = false,  // OFF by default - callers typically show title separately
-  showAuthor = false, // OFF by default - callers typically show author separately
+  showTitle = true,  // Show title by default (restored original behavior)
+  showAuthor = true, // Show author by default (restored original behavior)
   // Legacy props for backward compatibility (used by BookCard, AuthorDetail, etc.)
   title,
   author,
@@ -42,27 +39,12 @@ export default function GradientCover({
   coverTextColor,
   id
 }) {
-  // Normalize author prop - handle both string and array inputs
-  const normalizeAuthor = (authorInput) => {
-    if (!authorInput) return ''
-    if (typeof authorInput === 'string') return authorInput
-    if (Array.isArray(authorInput)) {
-      // Handle nested arrays (e.g., [[author1, author2]])
-      const first = authorInput[0]
-      if (Array.isArray(first)) return first[0] || ''
-      return first || ''
-    }
-    return String(authorInput)
-  }
-  
-  const normalizedAuthor = normalizeAuthor(author)
-  
   // Build book object from legacy props if book prop not provided
   const book = bookProp || {
     id: id,
     title: title,
-    author: normalizedAuthor,
-    authors: Array.isArray(author) ? author.flat() : (author ? [author] : []),
+    author: author,
+    authors: author ? [author] : [],
     cover_gradient: coverGradient,
     coverGradient: coverGradient,
     cover_color_1: coverBgColor,
@@ -80,9 +62,9 @@ export default function GradientCover({
   // Determine if book has a real cover
   const hasRealCover = book?.has_cover && book?.cover_path
   
-  // Get display title and author (handle arrays properly)
+  // Get display title and author
   const displayTitle = book?.title || title || ''
-  const displayAuthor = normalizeAuthor(book?.author) || normalizeAuthor(book?.authors) || normalizedAuthor
+  const displayAuthor = book?.author || (book?.authors && book.authors.length > 0 ? book.authors[0] : '') || author || ''
   
   // Lazy loading with IntersectionObserver
   useEffect(() => {
@@ -129,36 +111,39 @@ export default function GradientCover({
   // Support both old props (coverGradient) and new book object
   const gradient = book?.cover_gradient || book?.coverGradient
   
-  // Determine container classes based on size prop
-  // - undefined: Use aspect ratio (works in any parent)
-  // - 'fill': Fill parent (parent must have explicit height)
-  // - other: Fixed pixel dimensions
-  const sizeClass = size 
-    ? (sizeClasses[size] || sizeClasses.default)
-    : 'w-full aspect-[2/3]'  // Default: fill width, maintain 2:3 aspect ratio
-  
   const containerClasses = `
-    ${sizeClass}
+    ${sizeClasses[size] || sizeClasses.default}
     ${className}
     relative overflow-hidden rounded-lg
   `.trim()
   
-  // Text overlay component - only rendered when showTitle or showAuthor is true
+  // Text overlay component - used for both real covers and gradients
+  // Layout: Title centered vertically, Author at bottom, both horizontally centered
   const TextOverlay = () => {
     if (!showTitle && !showAuthor) return null
     if (!displayTitle && !displayAuthor) return null
     
     return (
-      <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+      <div className="absolute inset-0 flex flex-col">
+        {/* Title - centered vertically and horizontally */}
         {showTitle && displayTitle && (
-          <p className="text-white text-xs font-medium leading-tight line-clamp-2 drop-shadow-md">
-            {displayTitle}
-          </p>
+          <div className="flex-1 flex items-center justify-center px-3">
+            <p 
+              className="text-white text-sm font-medium leading-tight text-center line-clamp-3 drop-shadow-lg"
+              style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
+            >
+              {displayTitle}
+            </p>
+          </div>
         )}
+        
+        {/* Author - at bottom, centered horizontally */}
         {showAuthor && displayAuthor && (
-          <p className="text-gray-300 text-xs leading-tight truncate drop-shadow-md mt-0.5">
-            {displayAuthor}
-          </p>
+          <div className="pb-3 px-3">
+            <p className="text-gray-300 text-xs leading-tight text-center truncate drop-shadow-lg">
+              {displayAuthor}
+            </p>
+          </div>
         )}
       </div>
     )
@@ -220,7 +205,7 @@ export default function GradientCover({
         }}
       />
       
-      {/* Text overlay - only if explicitly enabled */}
+      {/* Text overlay */}
       <TextOverlay />
       
       {/* Cover source indicator (only in development) */}
