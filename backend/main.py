@@ -26,6 +26,7 @@ from routers.sessions import router as sessions_router
 from routers.home import router as home_router
 from routers.collections import router as collections_router
 from routers.backups import router as backups_router
+from routers.covers import router as covers_router
 
 # Configuration from environment
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
@@ -96,11 +97,7 @@ app.include_router(sessions_router)
 app.include_router(home_router)
 app.include_router(collections_router, prefix="/api")
 app.include_router(backups_router, prefix="/api")
-
-# Serve cover images - create directory if needed
-COVERS_DIR = os.environ.get("COVERS_DIR", "/data/covers")
-os.makedirs(COVERS_DIR, exist_ok=True)
-app.mount("/api/covers", StaticFiles(directory=COVERS_DIR), name="covers")
+app.include_router(covers_router)  # Phase 9C: Cover serving with custom/extracted logic
 
 
 # Health check endpoint

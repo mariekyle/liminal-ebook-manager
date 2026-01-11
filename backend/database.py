@@ -300,6 +300,43 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             print("Migration: Created reading_sessions from existing title data")
             print("Migration: Fixed status for books incorrectly marked as Unread")
 
+    # ==========================================================================
+    # Phase 9C: Cover system columns
+    # ==========================================================================
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        await db.execute("ALTER TABLE titles ADD COLUMN cover_path TEXT")
+        logger.info("Added cover_path column")
+    except Exception:
+        pass  # Column already exists
+    
+    try:
+        await db.execute("ALTER TABLE titles ADD COLUMN has_cover BOOLEAN DEFAULT 0")
+        logger.info("Added has_cover column")
+    except Exception:
+        pass  # Column already exists
+    
+    try:
+        await db.execute("ALTER TABLE titles ADD COLUMN cover_source TEXT")
+        logger.info("Added cover_source column")
+    except Exception:
+        pass  # Column already exists
+    
+    # Index for cover queries
+    try:
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_titles_has_cover ON titles(has_cover)")
+        logger.info("Created has_cover index")
+    except Exception:
+        pass
+
+    # ==========================================================================
+    # End Phase 9C cover system migration
+    # ==========================================================================
+    
+    await db.commit()  # Commit Phase 9C changes
+
     # Migration: Add enhanced metadata fields (Phase 7.0)
     enhanced_metadata_columns = [
         ("fandom", "TEXT"),

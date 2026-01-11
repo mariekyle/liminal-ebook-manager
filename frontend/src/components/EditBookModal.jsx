@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { updateBookMetadata, listSeries } from '../api'
+import { updateBookMetadata, listSeries, uploadCover, deleteCover, extractCover } from '../api'
 import AuthorChips from './AuthorChips'
+import GradientCover from './GradientCover'
 
 function EditBookModal({ book, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -18,6 +19,10 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
   const [allSeries, setAllSeries] = useState([])
   const [seriesSuggestions, setSeriesSuggestions] = useState([])
   const [showSeriesSuggestions, setShowSeriesSuggestions] = useState(false)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [coverError, setCoverError] = useState('')
+  // Local book state for cover updates (so we can update the preview without closing modal)
+  const [localBook, setLocalBook] = useState(book)
   const modalRef = useRef(null)
 
   // Initialize form when book changes or modal opens
@@ -33,7 +38,9 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
         source_url: book.source_url || '',
         completion_status: book.completion_status || ''
       })
+      setLocalBook(book)
       setError(null)
+      setCoverError('')
       setShowSeriesSuggestions(false)
     }
   }, [book, isOpen])
@@ -137,8 +144,15 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
         completion_status: formData.completion_status || null
       }
 
-      const updatedBook = await updateBookMetadata(book.id, updateData)
-      onSave(updatedBook)
+      const updatedBook = await updateBookMetadata(localBook.id, updateData)
+      // Merge cover info from localBook (in case cover was updated during this session)
+      const mergedBook = {
+        ...updatedBook,
+        has_cover: localBook?.has_cover,
+        cover_path: localBook?.cover_path,
+        cover_source: localBook?.cover_source
+      }
+      onSave(mergedBook)
       onClose()
     } catch (err) {
       console.error('Failed to update book:', err)
@@ -148,47 +162,228 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
     }
   }
 
-  if (!isOpen) return null
+  // Cover upload handler
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setCoverError('Please upload a JPEG, PNG, WebP, or GIF image')
+      return
+    }
+    
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setCoverError('Image must be under 10MB')
+      return
+    }
+    
+    setCoverUploading(true)
+    setCoverError('')
+    
+    try {
+      const result = await uploadCover(localBook.id, file)
+      // Update local book state with new cover info
+      const updatedBook = {
+        ...localBook,
+        has_cover: true,
+        cover_path: result.cover_path,
+        cover_source: 'custom'
+      }
+      setLocalBook(updatedBook)
+      // Notify parent of the update
+      if (onSave) {
+        onSave(updatedBook)
+      }
+    } catch (err) {
+      setCoverError(err.message || 'Failed to upload cover')
+    } finally {
+      setCoverUploading(false)
+      // Clear file input
+      e.target.value = ''
+    }
+  }
+  
+  // Cover delete handler
+  const handleDeleteCover = async () => {
+    if (!confirm('Remove custom cover? Will revert to extracted cover or gradient.')) {
+      return
+    }
+    
+    setCoverUploading(true)
+    setCoverError('')
+    
+    try {
+      const result = await deleteCover(localBook.id)
+      // Update local book state with reverted cover info
+      const updatedBook = {
+        ...localBook,
+        has_cover: result.has_cover ?? false,
+        cover_path: result.cover_path ?? null,
+        cover_source: result.cover_source ?? null
+      }
+      setLocalBook(updatedBook)
+      // Notify parent of the update
+      if (onSave) {
+        onSave(updatedBook)
+      }
+    } catch (err) {
+      setCoverError(err.message || 'Failed to delete cover')
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+  
+  // Extract cover from EPUB handler
+  const handleExtractCover = async () => {
+    setCoverUploading(true)
+    setCoverError('')
+    
+    try {
+      const result = await extractCover(localBook.id)
+      if (result.extracted) {
+        // Update local book state with extracted cover info
+        const updatedBook = {
+          ...localBook,
+          has_cover: true,
+          cover_path: result.cover_path,
+          cover_source: 'extracted'
+        }
+        setLocalBook(updatedBook)
+        // Notify parent of the update
+        if (onSave) {
+          onSave(updatedBook)
+        }
+      } else {
+        setCoverError(result.message || 'No cover found in EPUB')
+      }
+    } catch (err) {
+      setCoverError(err.message || 'Failed to extract cover')
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+
+  if (!isOpen || !localBook) return null
 
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 z-40"
-        aria-hidden="true"
-      />
+      <div className="fixed inset-0 bg-black/70 z-40" />
       
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           ref={modalRef}
-          className="bg-library-bg border border-gray-700 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit book details"
+          className="bg-library-dark rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">Edit Book Details</h2>
+          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            <h2 className="text-xl font-semibold text-white">Edit Book Details</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white p-1"
-              aria-label="Close"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            {/* Error message */}
+          <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded text-sm">
+              <div className="bg-red-900/50 border border-red-600 text-red-200 px-3 py-2 rounded text-sm">
                 {error}
               </div>
             )}
+
+            {/* Cover Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                Cover Image
+              </label>
+              <div className="flex gap-4">
+                {/* Cover preview */}
+                <div className="flex-shrink-0">
+                  <GradientCover book={localBook} size="md" />
+                </div>
+                
+                {/* Cover controls */}
+                <div className="flex flex-col gap-2 justify-center">
+                  {/* Current cover source indicator */}
+                  {localBook.cover_source && (
+                    <span className={`text-xs px-2 py-0.5 rounded w-fit ${
+                      localBook.cover_source === 'custom' 
+                        ? 'bg-blue-600/30 text-blue-300' 
+                        : 'bg-green-600/30 text-green-300'
+                    }`}>
+                      {localBook.cover_source === 'custom' ? 'Custom cover' : 'Extracted from EPUB'}
+                    </span>
+                  )}
+                  {!localBook.has_cover && (
+                    <span className="text-xs px-2 py-0.5 rounded w-fit bg-gray-600/30 text-gray-400">
+                      Using gradient
+                    </span>
+                  )}
+                  
+                  {/* Upload input */}
+                  <div className="flex items-center gap-2">
+                    <label className={`
+                      px-3 py-1.5 rounded text-sm cursor-pointer
+                      ${coverUploading 
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'}
+                    `}>
+                      {coverUploading ? 'Uploading...' : 'Upload Cover'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleCoverUpload}
+                        disabled={coverUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Extract from EPUB button */}
+                    {!localBook.has_cover && (
+                      <button
+                        type="button"
+                        onClick={handleExtractCover}
+                        disabled={coverUploading}
+                        className="px-3 py-1.5 rounded text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 disabled:opacity-50"
+                      >
+                        Extract from EPUB
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Delete cover button */}
+                  {localBook.cover_source === 'custom' && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteCover}
+                      disabled={coverUploading}
+                      className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50 text-left"
+                    >
+                      Remove custom cover
+                    </button>
+                  )}
+                  
+                  {/* Error message */}
+                  {coverError && (
+                    <p className="text-sm text-red-400">{coverError}</p>
+                  )}
+                  
+                  {/* Help text */}
+                  <p className="text-xs text-gray-500">
+                    JPEG, PNG, WebP, or GIF. Max 10MB.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Title */}
             <div>
@@ -378,4 +573,3 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
 }
 
 export default EditBookModal
-

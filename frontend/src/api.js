@@ -889,6 +889,57 @@ export async function deleteEdition(editionId) {
   })
 }
 
+// ============================================
+// COVER MANAGEMENT (Phase 9C)
+// ============================================
+
+export async function uploadCover(titleId, file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const response = await fetch(`${API_BASE}/books/${titleId}/cover`, {
+    method: 'POST',
+    body: formData
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to upload cover')
+  }
+  
+  return response.json()
+}
+
+export async function deleteCover(titleId) {
+  const response = await fetch(`${API_BASE}/books/${titleId}/cover`, {
+    method: 'DELETE'
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to delete cover')
+  }
+  
+  return response.json()
+}
+
+export async function extractCover(titleId) {
+  const response = await fetch(`${API_BASE}/books/${titleId}/extract-cover`, {
+    method: 'POST'
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to extract cover')
+  }
+  
+  return response.json()
+}
+
+export function getCoverUrl(titleId) {
+  return `${API_BASE}/covers/${titleId}`
+}
+
 // =============================================================================
 // Phase 9A: Backup API Functions
 // =============================================================================

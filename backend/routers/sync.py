@@ -18,8 +18,11 @@ from pydantic import BaseModel
 
 from database import get_db, get_db_path
 from services.metadata import extract_metadata
-from services.covers import generate_cover_colors
+from services.covers import generate_cover_colors, extract_epub_cover
 from services.backup import get_backup_settings, create_backup
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["sync"])
 
@@ -561,6 +564,37 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             [existing["id"], str(book_file) if book_file else None, folder_str]
                         )
                     
+                    # Extract cover from EPUB if available (Phase 9C)
+                    # Only for titles without covers or without custom covers
+                    epub_path = str(book_file) if book_file and str(book_file).lower().endswith('.epub') else None
+                    if epub_path:
+                        try:
+                            # Check if title already has a cover
+                            cover_cursor = await db.execute(
+                                "SELECT has_cover, cover_source FROM titles WHERE id = ?",
+                                (existing["id"],)
+                            )
+                            cover_row = await cover_cursor.fetchone()
+                            
+                            # Only extract if no cover or no custom cover
+                            should_extract = (
+                                not cover_row or 
+                                not cover_row[0] or 
+                                cover_row[1] != 'custom'
+                            )
+                            
+                            if should_extract:
+                                cover_path = extract_epub_cover(epub_path, existing["id"])
+                                if cover_path:
+                                    await db.execute("""
+                                        UPDATE titles 
+                                        SET cover_path = ?, has_cover = 1, cover_source = 'extracted'
+                                        WHERE id = ?
+                                    """, (cover_path, existing["id"]))
+                        except Exception as e:
+                            logger.warning(f"Cover extraction failed for title {existing['id']}: {e}")
+                            # Don't fail sync if cover extraction fails
+                    
                     result.updated += 1
                 else:
                     # Insert new title with all enhanced metadata
@@ -601,6 +635,21 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                         VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
                         [title_id, str(book_file) if book_file else None, folder_str]
                     )
+                    
+                    # Extract cover from EPUB if available (Phase 9C)
+                    epub_path = str(book_file) if book_file and str(book_file).lower().endswith('.epub') else None
+                    if epub_path and title_id:
+                        try:
+                            cover_path = extract_epub_cover(epub_path, title_id)
+                            if cover_path:
+                                await db.execute("""
+                                    UPDATE titles 
+                                    SET cover_path = ?, has_cover = 1, cover_source = 'extracted'
+                                    WHERE id = ?
+                                """, (cover_path, title_id))
+                        except Exception as e:
+                            logger.warning(f"Cover extraction failed for title {title_id}: {e}")
+                            # Don't fail sync if cover extraction fails
                     
                     result.added += 1
                 

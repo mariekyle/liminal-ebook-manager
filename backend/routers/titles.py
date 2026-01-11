@@ -12,16 +12,25 @@ The API endpoints still use /books for backward compatibility with frontend,
 but internally query the 'titles' table.
 """
 
+import os
 import json
 import re
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File
 from pydantic import BaseModel
 import aiosqlite
 
 from database import get_db
 from services.covers import get_cover_style, Theme
+from services.covers import (
+    extract_epub_cover, 
+    get_cover_path, 
+    delete_cover_file,
+    ensure_cover_directories,
+    CUSTOM_COVERS_PATH,
+    EXTRACTED_COVERS_PATH
+)
 from services.metadata import extract_metadata
 from pathlib import Path
 
@@ -62,6 +71,10 @@ class TitleSummary(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    # Cover image fields (Phase 9C)
+    has_cover: bool = False
+    cover_path: Optional[str] = None
+    cover_source: Optional[str] = None  # 'extracted', 'custom', or None
     has_notes: bool = False
     created_at: Optional[str] = None
     acquisition_status: str = 'owned'  # 'owned' or 'wishlist'
@@ -89,6 +102,10 @@ class TitleDetail(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    # Cover image fields (Phase 9C)
+    has_cover: bool = False
+    cover_path: Optional[str] = None
+    cover_source: Optional[str] = None  # 'extracted', 'custom', or None
     created_at: Optional[str] = None
     is_tbr: bool = False  # KEEP for backward compatibility
     tbr_priority: Optional[str] = None
@@ -272,6 +289,10 @@ def row_to_title_summary(row) -> TitleSummary:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
+        # Cover image fields (Phase 9C)
+        has_cover=bool(row["has_cover"]) if "has_cover" in row.keys() else False,
+        cover_path=row["cover_path"] if "cover_path" in row.keys() else None,
+        cover_source=row["cover_source"] if "cover_source" in row.keys() else None,
         has_notes=row["note_count"] > 0 if "note_count" in row.keys() else False,
         created_at=row["created_at"] if "created_at" in row.keys() else None,
         acquisition_status=acquisition_status
@@ -338,6 +359,10 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
+        # Cover image fields (Phase 9C)
+        has_cover=bool(row["has_cover"]) if "has_cover" in row.keys() else False,
+        cover_path=row["cover_path"] if "cover_path" in row.keys() else None,
+        cover_source=row["cover_source"] if "cover_source" in row.keys() else None,
         created_at=row["created_at"] if "created_at" in row.keys() else None,
         is_tbr=bool(row["is_tbr"]) if "is_tbr" in row.keys() else False,
         tbr_priority=row["tbr_priority"] if "tbr_priority" in row.keys() else None,
@@ -1834,6 +1859,218 @@ async def rescan_book_metadata(book_id: int, db = Depends(get_db)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rescan failed: {str(e)}")
+
+
+# --------------------------------------------------------------------------
+# Cover Upload/Delete Endpoints (Phase 9C)
+# --------------------------------------------------------------------------
+
+@router.post("/books/{title_id}/cover")
+async def upload_custom_cover(
+    title_id: int,
+    file: UploadFile = File(...),
+    db = Depends(get_db)
+):
+    """
+    Upload a custom cover image for a book.
+    
+    Accepts JPEG, PNG, WebP, GIF formats. Max 10MB.
+    Custom covers take priority over extracted covers.
+    """
+    # Verify title exists
+    cursor = await db.execute(
+        "SELECT id FROM titles WHERE id = ?",
+        (title_id,)
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Title not found")
+    
+    # Validate file type
+    allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid file type. Allowed: JPEG, PNG, WebP, GIF"
+        )
+    
+    # Read file content
+    content = await file.read()
+    
+    # Check file size (10MB max)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Max 10MB")
+    
+    # Determine extension from content type
+    ext_map = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif'
+    }
+    extension = ext_map.get(file.content_type, 'jpg')
+    
+    # Ensure directories exist
+    ensure_cover_directories()
+    
+    # Determine new file path
+    save_path = f"{CUSTOM_COVERS_PATH}/{title_id}.{extension}"
+    
+    # Collect old cover files to delete AFTER successful write
+    old_covers_to_delete = []
+    for ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        old_path = f"{CUSTOM_COVERS_PATH}/{title_id}.{ext}"
+        # Don't mark the new path for deletion (same extension case)
+        if os.path.exists(old_path) and old_path != save_path:
+            old_covers_to_delete.append(old_path)
+    
+    # Write new cover file FIRST (if this fails, old covers preserved)
+    with open(save_path, 'wb') as f:
+        f.write(content)
+    
+    # Only delete old covers AFTER successful write
+    for old_path in old_covers_to_delete:
+        try:
+            os.remove(old_path)
+        except OSError:
+            pass  # Non-critical: old file cleanup failed
+    
+    # Update database
+    await db.execute("""
+        UPDATE titles 
+        SET cover_path = ?, has_cover = 1, cover_source = 'custom'
+        WHERE id = ?
+    """, (save_path, title_id))
+    await db.commit()
+    
+    return {
+        "success": True, 
+        "cover_path": save_path,
+        "has_cover": True,
+        "cover_source": "custom"
+    }
+
+
+@router.delete("/books/{title_id}/cover")
+async def delete_custom_cover(title_id: int, db = Depends(get_db)):
+    """
+    Delete custom cover, reverting to extracted cover or gradient.
+    
+    If an extracted cover exists, reverts to that.
+    Otherwise, reverts to gradient (has_cover = false).
+    
+    Returns full cover state so frontend can update UI correctly.
+    """
+    # Get current cover info
+    cursor = await db.execute(
+        "SELECT cover_path, cover_source FROM titles WHERE id = ?",
+        (title_id,)
+    )
+    row = await cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Title not found")
+    
+    cover_path, cover_source = row
+    
+    # Only delete if it's a custom cover
+    if cover_source == 'custom' and cover_path:
+        delete_cover_file(cover_path)
+        
+        # Check if extracted cover exists
+        extracted_cover = None
+        for ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            extracted_path = f"{EXTRACTED_COVERS_PATH}/{title_id}.{ext}"
+            if os.path.exists(extracted_path):
+                extracted_cover = extracted_path
+                break
+        
+        if extracted_cover:
+            # Revert to extracted cover
+            await db.execute("""
+                UPDATE titles 
+                SET cover_path = ?, cover_source = 'extracted'
+                WHERE id = ?
+            """, (extracted_cover, title_id))
+            await db.commit()
+            return {
+                "success": True, 
+                "reverted_to": "extracted",
+                "has_cover": True,
+                "cover_path": extracted_cover,
+                "cover_source": "extracted"
+            }
+        else:
+            # Revert to gradient (no cover)
+            await db.execute("""
+                UPDATE titles 
+                SET cover_path = NULL, has_cover = 0, cover_source = NULL
+                WHERE id = ?
+            """, (title_id,))
+            await db.commit()
+            return {
+                "success": True, 
+                "reverted_to": "gradient",
+                "has_cover": False,
+                "cover_path": None,
+                "cover_source": None
+            }
+    
+    # No custom cover to delete - return current state
+    cursor = await db.execute(
+        "SELECT has_cover, cover_path, cover_source FROM titles WHERE id = ?",
+        (title_id,)
+    )
+    current = await cursor.fetchone()
+    return {
+        "success": True, 
+        "message": "No custom cover to delete",
+        "has_cover": bool(current["has_cover"]) if current else False,
+        "cover_path": current["cover_path"] if current else None,
+        "cover_source": current["cover_source"] if current else None
+    }
+
+
+@router.post("/books/{title_id}/extract-cover")
+async def extract_cover_on_demand(title_id: int, db = Depends(get_db)):
+    """
+    Extract cover from EPUB on demand (used by "Rescan Metadata").
+    
+    Only extracts if no custom cover exists (won't overwrite custom).
+    """
+    # Get title info including file path
+    cursor = await db.execute("""
+        SELECT t.id, t.cover_source, e.file_path 
+        FROM titles t
+        LEFT JOIN editions e ON e.title_id = t.id
+        WHERE t.id = ?
+        ORDER BY e.id ASC
+        LIMIT 1
+    """, (title_id,))
+    row = await cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Title not found")
+    
+    title_id, cover_source, file_path = row
+    
+    # Don't overwrite custom covers
+    if cover_source == 'custom':
+        return {"success": True, "message": "Custom cover exists, skipping extraction"}
+    
+    # Try to extract from EPUB
+    if file_path and file_path.lower().endswith('.epub'):
+        cover_path = extract_epub_cover(file_path, title_id)
+        
+        if cover_path:
+            await db.execute("""
+                UPDATE titles 
+                SET cover_path = ?, has_cover = 1, cover_source = 'extracted'
+                WHERE id = ?
+            """, (cover_path, title_id))
+            await db.commit()
+            return {"success": True, "extracted": True, "cover_path": cover_path}
+    
+    return {"success": True, "extracted": False, "message": "No cover found in EPUB"}
 
 
 @router.patch("/books/{book_id}/enhanced-metadata")

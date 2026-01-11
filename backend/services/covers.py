@@ -10,12 +10,31 @@ Features:
 - Constrained HSL color space for cohesive library
 - Light/dark theme support
 - Vignette overlay for text readability
+- EPUB cover extraction (Phase 9C)
 """
 
+import os
 import math
+import logging
+from pathlib import Path
 from typing import Tuple, List, Optional, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
+
+# For EPUB cover extraction
+try:
+    import ebooklib
+    from ebooklib import epub
+    EBOOKLIB_AVAILABLE = True
+except ImportError:
+    EBOOKLIB_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
+# Cover storage paths
+COVERS_BASE_PATH = "/app/data/covers"
+EXTRACTED_COVERS_PATH = f"{COVERS_BASE_PATH}/extracted"
+CUSTOM_COVERS_PATH = f"{COVERS_BASE_PATH}/custom"
 
 
 # =============================================================================
@@ -514,6 +533,138 @@ def generate_cover_colors(title: str, author: str) -> Tuple[str, str]:
     color2 = hsl(hue, s - 4, l_range[0])
     
     return (color1, color2)
+
+
+# =============================================================================
+# COVER EXTRACTION (Phase 9C)
+# =============================================================================
+
+def ensure_cover_directories():
+    """Create cover storage directories if they don't exist."""
+    Path(EXTRACTED_COVERS_PATH).mkdir(parents=True, exist_ok=True)
+    Path(CUSTOM_COVERS_PATH).mkdir(parents=True, exist_ok=True)
+
+
+def extract_epub_cover(epub_path: str, title_id: int) -> str | None:
+    """
+    Extract cover image from EPUB file.
+    
+    Args:
+        epub_path: Full path to the EPUB file
+        title_id: Database ID for the title (used for filename)
+        
+    Returns:
+        Path to saved cover image, or None if extraction failed
+    """
+    if not EBOOKLIB_AVAILABLE:
+        logger.warning("ebooklib not installed, cannot extract EPUB covers")
+        return None
+        
+    if not epub_path or not os.path.exists(epub_path):
+        logger.debug(f"EPUB path invalid or doesn't exist: {epub_path}")
+        return None
+    
+    ensure_cover_directories()
+    
+    try:
+        book = epub.read_epub(epub_path, options={'ignore_ncx': True})
+        cover_data = None
+        cover_extension = 'jpg'
+        
+        # Method 1: Look for cover in spine/metadata
+        for item in book.get_items():
+            # Check for ITEM_COVER type
+            if item.get_type() == ebooklib.ITEM_COVER:
+                cover_data = item.get_content()
+                # Detect extension from media type
+                media_type = item.media_type or ''
+                if 'png' in media_type:
+                    cover_extension = 'png'
+                elif 'gif' in media_type:
+                    cover_extension = 'gif'
+                elif 'webp' in media_type:
+                    cover_extension = 'webp'
+                break
+        
+        # Method 2: Look for image file named "cover.*"
+        if not cover_data:
+            for item in book.get_items_of_type(ebooklib.ITEM_IMAGE):
+                item_name = item.get_name().lower()
+                if 'cover' in item_name:
+                    cover_data = item.get_content()
+                    # Detect extension
+                    if item_name.endswith('.png'):
+                        cover_extension = 'png'
+                    elif item_name.endswith('.gif'):
+                        cover_extension = 'gif'
+                    elif item_name.endswith('.webp'):
+                        cover_extension = 'webp'
+                    break
+        
+        # Method 3: Look for first image in manifest (often the cover)
+        if not cover_data:
+            for item in book.get_items_of_type(ebooklib.ITEM_IMAGE):
+                # Skip small images (likely icons/bullets)
+                content = item.get_content()
+                if len(content) > 10000:  # > 10KB likely a cover
+                    cover_data = content
+                    item_name = item.get_name().lower()
+                    if item_name.endswith('.png'):
+                        cover_extension = 'png'
+                    elif item_name.endswith('.gif'):
+                        cover_extension = 'gif'
+                    elif item_name.endswith('.webp'):
+                        cover_extension = 'webp'
+                    break
+        
+        if cover_data:
+            # Save cover image
+            save_path = f"{EXTRACTED_COVERS_PATH}/{title_id}.{cover_extension}"
+            with open(save_path, 'wb') as f:
+                f.write(cover_data)
+            logger.info(f"Extracted cover for title {title_id}: {save_path}")
+            return save_path
+        
+        logger.debug(f"No cover found in EPUB: {epub_path}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Cover extraction failed for {epub_path}: {e}")
+        return None
+
+
+def get_cover_path(title_id: int) -> str | None:
+    """
+    Get the cover path for a title, checking custom then extracted.
+    
+    Returns the path if a cover file exists, None otherwise.
+    """
+    # Check for custom cover first (higher priority)
+    for ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        custom_path = f"{CUSTOM_COVERS_PATH}/{title_id}.{ext}"
+        if os.path.exists(custom_path):
+            return custom_path
+    
+    # Check for extracted cover
+    for ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        extracted_path = f"{EXTRACTED_COVERS_PATH}/{title_id}.{ext}"
+        if os.path.exists(extracted_path):
+            return extracted_path
+    
+    return None
+
+
+def delete_cover_file(cover_path: str) -> bool:
+    """Delete a cover file from disk."""
+    try:
+        if cover_path and os.path.exists(cover_path):
+            os.remove(cover_path)
+            logger.info(f"Deleted cover file: {cover_path}")
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Failed to delete cover file {cover_path}: {e}")
+        return False
 
 
 # =============================================================================
