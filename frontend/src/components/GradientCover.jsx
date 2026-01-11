@@ -104,9 +104,9 @@ export default function GradientCover({
     }
   }, [isVisible, hasRealCover, book?.id])
   
-  // Get gradient colors with fallbacks
-  const color1 = book?.cover_color_1 || book?.coverBgColor || '#4a5568'
-  const color2 = book?.cover_color_2 || book?.coverTextColor || '#2d3748'
+  // Get gradient colors with fallbacks (check all possible field names)
+  const color1 = book?.cover_color_1 || book?.cover_bg_color || book?.coverBgColor || '#4a5568'
+  const color2 = book?.cover_color_2 || book?.cover_text_color || book?.coverTextColor || '#2d3748'
   
   // Support both old props (coverGradient) and new book object
   const gradient = book?.cover_gradient || book?.coverGradient
@@ -129,8 +129,13 @@ export default function GradientCover({
         {showTitle && displayTitle && (
           <div className="flex-1 flex items-center justify-center px-3">
             <p 
-              className="text-white text-sm font-medium leading-tight text-center line-clamp-3 drop-shadow-lg"
-              style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
+              className="text-white text-center line-clamp-3 drop-shadow-lg"
+              style={{ 
+                fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+                fontSize: '.875rem',
+                fontWeight: 700,
+                lineHeight: '.875rem'
+              }}
             >
               {displayTitle}
             </p>

@@ -19,13 +19,24 @@ function BookCard({ book, showActivityBar = false, showTitleBelow = false, showA
       className="group block"
     >
       <div className="relative">
-        {/* Cover - add dotted border for wishlist items */}
+        {/* Cover - pass book object with cover fields (Phase 9C fix) */}
         <GradientCover
-          title={book.title}
-          author={primaryAuthor}
-          coverGradient={book.cover_gradient}
-          coverBgColor={book.cover_bg_color}
-          coverTextColor={book.cover_text_color}
+          book={{
+            id: book.id,
+            title: book.title,
+            author: primaryAuthor,
+            // Cover image fields (Phase 9C)
+            has_cover: book.has_cover || false,
+            cover_path: book.cover_path || null,
+            cover_source: book.cover_source || null,
+            // Gradient fallback fields
+            cover_gradient: book.cover_gradient,
+            cover_bg_color: book.cover_bg_color,
+            cover_text_color: book.cover_text_color,
+          }}
+          size="fill"
+          showTitle={true}
+          showAuthor={true}
           className={isWishlist ? 'border-2 border-dashed border-gray-500' : ''}
         />
         
@@ -95,10 +106,10 @@ function BookCard({ book, showActivityBar = false, showTitleBelow = false, showA
             </p>
           )}
           {showSeriesBelow && seriesDisplay && (
-  <p className="text-gray-500 text-xs truncate">
-    {seriesDisplay}
-  </p>
-)}
+            <p className="text-gray-500 text-xs truncate">
+              {seriesDisplay}
+            </p>
+          )}
         </div>
       )}
     </Link>

@@ -1167,11 +1167,22 @@ function BookDetail() {
         {/* Cover - larger on desktop */}
         <div className="w-48 md:w-48 shrink-0 mx-auto md:mx-0">
           <GradientCover
-            title={book.title}
-            author={primaryAuthor}
-            coverGradient={book.cover_gradient}
-            coverBgColor={book.cover_bg_color}
-            coverTextColor={book.cover_text_color}
+            book={{
+              id: book.id,
+              title: book.title,
+              author: primaryAuthor,
+              // Cover image fields (Phase 9C)
+              has_cover: book.has_cover || false,
+              cover_path: book.cover_path || null,
+              cover_source: book.cover_source || null,
+              // Gradient fallback fields
+              cover_gradient: book.cover_gradient,
+              cover_bg_color: book.cover_bg_color,
+              cover_text_color: book.cover_text_color,
+            }}
+            size="lg"
+            showTitle={false}
+            showAuthor={false}
           />
         </div>
         
