@@ -38,6 +38,13 @@ class AuthorBookItem(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    # Gradient color support (for GradientCover component)
+    cover_color_1: Optional[str] = None
+    cover_color_2: Optional[str] = None
+    # Cover image fields (Phase 9C)
+    has_cover: bool = False
+    cover_path: Optional[str] = None
+    cover_source: Optional[str] = None  # 'extracted', 'custom', or None
 
 
 class AuthorSummary(BaseModel):
@@ -112,7 +119,8 @@ async def get_author(author_name: str, db=Depends(get_db)):
     escaped_name = author_name.replace('"', '\\"')
     cursor = await db.execute("""
         SELECT id, title, authors, series, series_number, category, status, rating,
-               publication_year
+               publication_year, cover_color_1, cover_color_2,
+               has_cover, cover_path, cover_source
         FROM titles 
         WHERE authors LIKE ? AND is_tbr = 0
         ORDER BY series, CAST(series_number AS FLOAT), title
@@ -148,7 +156,14 @@ async def get_author(author_name: str, db=Depends(get_db)):
                 publication_year=book['publication_year'],
                 cover_gradient=cover_style.css_gradient,
                 cover_bg_color=cover_style.background_color,
-                cover_text_color=cover_style.text_color
+                cover_text_color=cover_style.text_color,
+                # Gradient color support
+                cover_color_1=book.get('cover_color_1'),
+                cover_color_2=book.get('cover_color_2'),
+                # Cover image fields (Phase 9C)
+                has_cover=bool(book.get('has_cover')),
+                cover_path=book.get('cover_path'),
+                cover_source=book.get('cover_source')
             ))
     
     if not books and not notes:

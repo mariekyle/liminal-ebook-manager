@@ -335,6 +335,21 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
     # End Phase 9C cover system migration
     # ==========================================================================
     
+    # ==========================================================================
+    # Cover gradient color columns (ensure they exist for older databases)
+    # ==========================================================================
+    try:
+        await db.execute("ALTER TABLE titles ADD COLUMN cover_color_1 TEXT")
+        logger.info("Added cover_color_1 column")
+    except Exception:
+        pass  # Column already exists
+    
+    try:
+        await db.execute("ALTER TABLE titles ADD COLUMN cover_color_2 TEXT")
+        logger.info("Added cover_color_2 column")
+    except Exception:
+        pass  # Column already exists
+
     await db.commit()  # Commit Phase 9C changes
 
     # Migration: Add enhanced metadata fields (Phase 7.0)

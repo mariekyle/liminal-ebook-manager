@@ -71,6 +71,9 @@ class TitleSummary(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    # Gradient color support (for GradientCover component)
+    cover_color_1: Optional[str] = None
+    cover_color_2: Optional[str] = None
     # Cover image fields (Phase 9C)
     has_cover: bool = False
     cover_path: Optional[str] = None
@@ -102,6 +105,9 @@ class TitleDetail(BaseModel):
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
+    # Gradient color support (for GradientCover component)
+    cover_color_1: Optional[str] = None
+    cover_color_2: Optional[str] = None
     # Cover image fields (Phase 9C)
     has_cover: bool = False
     cover_path: Optional[str] = None
@@ -289,6 +295,9 @@ def row_to_title_summary(row) -> TitleSummary:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
+        # Gradient color support (from database)
+        cover_color_1=row["cover_color_1"] if "cover_color_1" in row.keys() else None,
+        cover_color_2=row["cover_color_2"] if "cover_color_2" in row.keys() else None,
         # Cover image fields (Phase 9C)
         has_cover=bool(row["has_cover"]) if "has_cover" in row.keys() else False,
         cover_path=row["cover_path"] if "cover_path" in row.keys() else None,
@@ -359,6 +368,9 @@ async def row_to_title_detail(row, db) -> TitleDetail:
         cover_gradient=cover_style.css_gradient,
         cover_bg_color=cover_style.background_color,
         cover_text_color=cover_style.text_color,
+        # Gradient color support (from database)
+        cover_color_1=row["cover_color_1"] if "cover_color_1" in row.keys() else None,
+        cover_color_2=row["cover_color_2"] if "cover_color_2" in row.keys() else None,
         # Cover image fields (Phase 9C)
         has_cover=bool(row["has_cover"]) if "has_cover" in row.keys() else False,
         cover_path=row["cover_path"] if "cover_path" in row.keys() else None,

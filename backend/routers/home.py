@@ -17,7 +17,7 @@ async def get_in_progress(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.acquisition_status
+            t.acquisition_status, t.has_cover, t.cover_path, t.cover_source
         FROM titles t
         WHERE t.status = 'In Progress' 
           AND t.acquisition_status = 'owned'
@@ -49,7 +49,10 @@ async def get_in_progress(db=Depends(get_db)):
             "cover_gradient": cover_style.css_gradient,
             "cover_bg_color": cover_style.background_color,
             "cover_text_color": cover_style.text_color,
-            "acquisition_status": row[9]
+            "acquisition_status": row[9],
+            "has_cover": row[10],
+            "cover_path": row[11],
+            "cover_source": row[12]
         })
     
     return {"books": books, "count": len(books)}
@@ -62,7 +65,7 @@ async def get_recently_added(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.acquisition_status, t.created_at
+            t.acquisition_status, t.created_at, t.has_cover, t.cover_path, t.cover_source
         FROM titles t
         WHERE t.acquisition_status = 'owned'
           AND (t.is_orphaned IS NULL OR t.is_orphaned = 0)
@@ -94,7 +97,10 @@ async def get_recently_added(db=Depends(get_db)):
             "cover_bg_color": cover_style.background_color,
             "cover_text_color": cover_style.text_color,
             "acquisition_status": row[9],
-            "created_at": row[10]
+            "created_at": row[10],
+            "has_cover": row[11],
+            "cover_path": row[12],
+            "cover_source": row[13]
         })
     
     return {"books": books, "count": len(books)}
@@ -124,7 +130,7 @@ async def get_discover(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.acquisition_status
+            t.acquisition_status, t.has_cover, t.cover_path, t.cover_source
         FROM titles t
         WHERE t.id IN ({placeholders})
     """, selected_ids)
@@ -152,7 +158,10 @@ async def get_discover(db=Depends(get_db)):
             "cover_gradient": cover_style.css_gradient,
             "cover_bg_color": cover_style.background_color,
             "cover_text_color": cover_style.text_color,
-            "acquisition_status": row[9]
+            "acquisition_status": row[9],
+            "has_cover": row[10],
+            "cover_path": row[11],
+            "cover_source": row[12]
         })
     
     # Shuffle to randomize display order
@@ -177,7 +186,7 @@ async def get_quick_reads(db=Depends(get_db)):
         SELECT 
             t.id, t.title, t.authors, t.series, t.series_number,
             t.category, t.word_count, t.status, t.rating,
-            t.acquisition_status
+            t.acquisition_status, t.has_cover, t.cover_path, t.cover_source
         FROM titles t
         WHERE t.status = 'Unread' 
           AND t.acquisition_status = 'owned'
@@ -213,7 +222,10 @@ async def get_quick_reads(db=Depends(get_db)):
             "cover_gradient": cover_style.css_gradient,
             "cover_bg_color": cover_style.background_color,
             "cover_text_color": cover_style.text_color,
-            "acquisition_status": row[9]
+            "acquisition_status": row[9],
+            "has_cover": row[10],
+            "cover_path": row[11],
+            "cover_source": row[12]
         })
     
     return {"books": books, "count": len(books), "max_hours": 3, "wpm": wpm}

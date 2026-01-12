@@ -11,6 +11,10 @@ import { getCoverUrl } from '../api'
  * - Multiple size variants using aspect-ratio for proper book proportions
  * - Text overlay for GRADIENT covers only (not real covers)
  * - Backward compatibility with legacy props
+ * 
+ * GRADIENT SYSTEM:
+ * - cover_gradient (HSL-based) is the PRIMARY gradient source - these are the calm colors
+ * - cover_color_1/cover_color_2 are FALLBACK only when cover_gradient is missing
  */
 
 const sizeClasses = {
@@ -106,11 +110,12 @@ export default function GradientCover({
     }
   }, [isVisible, hasRealCover, book?.id, book?.cover_source, book?.updated_at])
   
-  // Get gradient colors with fallbacks (check all possible field names)
+  // Get gradient colors - FALLBACK only (when cover_gradient doesn't exist)
   const color1 = book?.cover_color_1 || book?.cover_bg_color || book?.coverBgColor || '#4a5568'
   const color2 = book?.cover_color_2 || book?.cover_text_color || book?.coverTextColor || '#2d3748'
   
-  // Support both old props (coverGradient) and new book object
+  // PRIORITY: cover_gradient (HSL calm colors) is PRIMARY
+  // Only use cover_color_1/cover_color_2 as fallback when no gradient exists
   const gradient = book?.cover_gradient || book?.coverGradient
   
   const containerClasses = `

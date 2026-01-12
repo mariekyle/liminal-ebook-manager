@@ -1175,8 +1175,9 @@ function BookDetail() {
               has_cover: book.has_cover || false,
               cover_path: book.cover_path || null,
               cover_source: book.cover_source || null,
-              // Gradient fallback fields - use correct field names
-              cover_color_1: book.cover_color_1,
+              // Gradient fallback fields
+              cover_gradient: book.cover_gradient,  // PRIMARY: calm HSL gradients
+              cover_color_1: book.cover_color_1,    // FALLBACK only
               cover_color_2: book.cover_color_2,
             }}
             size="lg"
