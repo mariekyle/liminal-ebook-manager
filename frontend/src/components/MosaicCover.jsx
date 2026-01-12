@@ -7,14 +7,14 @@
  * 
  * Props:
  * - coverType: 'gradient' or 'custom'
- * - coverPath: Path to custom cover image
+ * - collectionId: Collection ID (required for custom covers)
  * - className: Additional CSS classes
  * - variant: 'card' (2:3 aspect), 'square' (1:1), or 'banner' (cropped header)
  */
 
 export default function CollectionCover({ 
   coverType = 'gradient',
-  coverPath = null,
+  collectionId = null,
   className = '',
   variant = 'card'
 }) {
@@ -31,11 +31,11 @@ export default function CollectionCover({
 
   // Square variant - for collection grid cards
   if (variant === 'square') {
-    if (coverType === 'custom' && coverPath) {
+    if (coverType === 'custom' && collectionId) {
       return (
         <div className={`aspect-square rounded-lg overflow-hidden ${className}`}>
           <img 
-            src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+            src={`/api/collections/${collectionId}/cover`}
             alt="Collection cover"
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -57,11 +57,11 @@ export default function CollectionCover({
 
   // Banner variant - cropped header style
   if (variant === 'banner') {
-    if (coverType === 'custom' && coverPath) {
+    if (coverType === 'custom' && collectionId) {
       return (
         <div className={`w-full h-48 md:h-56 rounded-lg overflow-hidden ${className}`}>
           <img 
-            src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+            src={`/api/collections/${collectionId}/cover`}
             alt="Collection cover"
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -82,11 +82,11 @@ export default function CollectionCover({
   }
 
   // Card variant (default) - 2:3 aspect ratio for grid
-  if (coverType === 'custom' && coverPath) {
+  if (coverType === 'custom' && collectionId) {
     return (
       <div className={`aspect-[2/3] rounded-lg overflow-hidden ${className}`}>
         <img 
-          src={`/api/covers/${encodeURIComponent(coverPath.split('/').pop())}`}
+          src={`/api/collections/${collectionId}/cover`}
           alt="Collection cover"
           className="w-full h-full object-cover"
           onError={(e) => {

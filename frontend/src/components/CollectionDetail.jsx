@@ -255,7 +255,7 @@ export default function CollectionDetail() {
       <div className="mb-4">
         <MosaicCover 
           coverType={collection.cover_type || 'gradient'}
-          coverPath={collection.custom_cover_path}
+          collectionId={collection.id}
           variant="banner"
         />
       </div>

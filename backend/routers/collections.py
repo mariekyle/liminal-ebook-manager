@@ -452,6 +452,39 @@ async def list_all_collections_simple(db=Depends(get_db)):
 
 COVERS_DIR = os.environ.get("COVERS_DIR", "/data/covers")
 
+
+@router.get("/collections/{id}/cover")
+async def get_collection_cover(id: int, db=Depends(get_db)):
+    """Serve collection cover image."""
+    from fastapi.responses import FileResponse
+    
+    cursor = await db.execute(
+        "SELECT custom_cover_path FROM collections WHERE id = ?", 
+        [id]
+    )
+    collection = await cursor.fetchone()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    cover_path = collection["custom_cover_path"]
+    if not cover_path or not os.path.exists(cover_path):
+        raise HTTPException(status_code=404, detail="Cover not found")
+    
+    # Determine media type from extension
+    ext = os.path.splitext(cover_path)[1].lower()
+    media_types = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg", 
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif"
+    }
+    media_type = media_types.get(ext, "image/jpeg")
+    
+    return FileResponse(cover_path, media_type=media_type)
+
+
 @router.post("/collections/{id}/cover")
 async def upload_collection_cover(
     id: int,

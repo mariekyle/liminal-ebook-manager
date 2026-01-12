@@ -21,7 +21,7 @@ export default function CollectionCard({ collection }) {
       <div className="relative rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
         <MosaicCover 
           coverType={collection.cover_type || 'gradient'}
-          coverPath={collection.custom_cover_path}
+          collectionId={collection.id}
           variant="square"
         />
       </div>
