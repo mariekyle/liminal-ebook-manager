@@ -923,6 +923,20 @@ export async function deleteCover(titleId) {
   return response.json()
 }
 
+// Revert any cover (custom or extracted) back to gradient
+export async function revertToGradient(titleId) {
+  const response = await fetch(`${API_BASE}/books/${titleId}/cover?revert_to_gradient=true`, {
+    method: 'DELETE'
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to revert to gradient')
+  }
+  
+  return response.json()
+}
+
 export async function extractCover(titleId) {
   const response = await fetch(`${API_BASE}/books/${titleId}/extract-cover`, {
     method: 'POST'
@@ -936,8 +950,11 @@ export async function extractCover(titleId) {
   return response.json()
 }
 
-export function getCoverUrl(titleId) {
-  return `${API_BASE}/covers/${titleId}`
+export function getCoverUrl(titleId, cacheKey) {
+  // cacheKey is used to bust browser cache when cover changes
+  // Pass book.cover_source or book.updated_at to force refresh
+  const cacheBuster = cacheKey ? `?v=${cacheKey}` : ''
+  return `${API_BASE}/covers/${titleId}${cacheBuster}`
 }
 
 // =============================================================================

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { updateBookMetadata, listSeries, uploadCover, deleteCover, extractCover } from '../api'
+import { updateBookMetadata, listSeries, uploadCover, deleteCover, extractCover, revertToGradient } from '../api'
 import AuthorChips from './AuthorChips'
 import GradientCover from './GradientCover'
 
@@ -236,6 +236,36 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
     }
   }
   
+  // Revert to gradient handler - removes ALL covers (custom + extracted)
+  const handleRevertToGradient = async () => {
+    if (!confirm('Use gradient cover? This will permanently remove the extracted/custom cover image.')) {
+      return
+    }
+    
+    setCoverUploading(true)
+    setCoverError('')
+    
+    try {
+      const result = await revertToGradient(localBook.id)
+      // Update local book state to gradient
+      const updatedBook = {
+        ...localBook,
+        has_cover: false,
+        cover_path: null,
+        cover_source: null
+      }
+      setLocalBook(updatedBook)
+      // Notify parent of the update
+      if (onSave) {
+        onSave(updatedBook)
+      }
+    } catch (err) {
+      setCoverError(err.message || 'Failed to revert to gradient')
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+  
   // Extract cover from EPUB handler
   const handleExtractCover = async () => {
     setCoverUploading(true)
@@ -329,7 +359,7 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
                     </span>
                   )}
                   
-                  {/* Upload input */}
+                  {/* Button row */}
                   <div className="flex items-center gap-2">
                     <label className={`
                       px-3 py-1.5 rounded text-sm cursor-pointer
@@ -347,7 +377,19 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
                       />
                     </label>
                     
-                    {/* Extract from EPUB button */}
+                    {/* Use Gradient Cover button - show when has any cover */}
+                    {localBook.has_cover && (
+                      <button
+                        type="button"
+                        onClick={handleRevertToGradient}
+                        disabled={coverUploading}
+                        className="px-3 py-1.5 rounded text-sm bg-gray-600 hover:bg-gray-500 text-gray-300 disabled:opacity-50"
+                      >
+                        Use Gradient Cover
+                      </button>
+                    )}
+                    
+                    {/* Extract from EPUB button - show when no cover */}
                     {!localBook.has_cover && (
                       <button
                         type="button"
@@ -360,7 +402,7 @@ function EditBookModal({ book, isOpen, onClose, onSave }) {
                     )}
                   </div>
                   
-                  {/* Delete cover button */}
+                  {/* Remove custom cover link - only for custom covers */}
                   {localBook.cover_source === 'custom' && (
                     <button
                       type="button"

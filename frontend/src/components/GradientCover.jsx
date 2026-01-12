@@ -9,7 +9,7 @@ import { getCoverUrl } from '../api'
  * - Graceful fallback to gradient on error
  * - Loading placeholder
  * - Multiple size variants using aspect-ratio for proper book proportions
- * - Text overlay for title/author
+ * - Text overlay for GRADIENT covers only (not real covers)
  * - Backward compatibility with legacy props
  */
 
@@ -29,8 +29,8 @@ export default function GradientCover({
   book: bookProp, 
   size = 'default',  // FIXED: Changed from 'fill' to 'default' - uses aspect ratio
   className = '',
-  showTitle = true,  // Show title by default (restored original behavior)
-  showAuthor = true, // Show author by default (restored original behavior)
+  showTitle = true,  // Show title by default for gradients only
+  showAuthor = true, // Show author by default for gradients only
   // Legacy props for backward compatibility (used by BookCard, AuthorDetail, etc.)
   title,
   author,
@@ -96,13 +96,15 @@ export default function GradientCover({
     const img = new Image()
     img.onload = () => setImageState('loaded')
     img.onerror = () => setImageState('error')
-    img.src = getCoverUrl(book.id)
+    // Use cover_source as cache key to bust cache when cover type changes
+    const cacheKey = book?.cover_source || book?.updated_at || ''
+    img.src = getCoverUrl(book.id, cacheKey)
     
     return () => {
       img.onload = null
       img.onerror = null
     }
-  }, [isVisible, hasRealCover, book?.id])
+  }, [isVisible, hasRealCover, book?.id, book?.cover_source, book?.updated_at])
   
   // Get gradient colors with fallbacks (check all possible field names)
   const color1 = book?.cover_color_1 || book?.cover_bg_color || book?.coverBgColor || '#4a5568'
@@ -117,7 +119,7 @@ export default function GradientCover({
     relative overflow-hidden rounded-lg
   `.trim()
   
-  // Text overlay component - used for both real covers and gradients
+  // Text overlay component - used for GRADIENT COVERS ONLY
   // Layout: Title centered vertically, Author at bottom, both horizontally centered
   const TextOverlay = () => {
     if (!showTitle && !showAuthor) return null
@@ -154,17 +156,18 @@ export default function GradientCover({
     )
   }
   
-  // Show real cover if loaded successfully
+  // Show real cover if loaded successfully - NO TEXT OVERLAY for real covers
   if (hasRealCover && imageState === 'loaded') {
+    const cacheKey = book?.cover_source || book?.updated_at || ''
     return (
       <div ref={containerRef} className={containerClasses}>
         <img
-          src={getCoverUrl(book.id)}
+          src={getCoverUrl(book.id, cacheKey)}
           alt={displayTitle || 'Book cover'}
           className="w-full h-full object-cover"
           loading="lazy"
         />
-        <TextOverlay />
+        {/* NO TextOverlay for real covers - they have their own imagery */}
       </div>
     )
   }
@@ -183,7 +186,7 @@ export default function GradientCover({
     )
   }
   
-  // Gradient fallback (no cover or error loading)
+  // Gradient fallback (no cover or error loading) - WITH TEXT OVERLAY
   return (
     <div ref={containerRef} className={containerClasses}>
       {/* Base gradient */}
@@ -210,7 +213,7 @@ export default function GradientCover({
         }}
       />
       
-      {/* Text overlay */}
+      {/* Text overlay - ONLY for gradient covers */}
       <TextOverlay />
       
       {/* Cover source indicator (only in development) */}

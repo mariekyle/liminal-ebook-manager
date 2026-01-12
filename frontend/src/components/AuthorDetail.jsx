@@ -162,14 +162,17 @@ function AuthorDetail() {
               to={`/book/${book.id}`}
               className="group"
             >
-              <div className="aspect-[2/3] mb-2 relative">
+              {/* FIX Phase 9C: Pass full book object to enable real cover display */}
+              <div className="mb-2 relative">
                 <GradientCover
-                  title={book.title}
-                  author={book.authors?.[0] || author.name}
-                  coverGradient={book.cover_gradient}
-                  coverBgColor={book.cover_bg_color}
-                  coverTextColor={book.cover_text_color}
-                  showFinished={book.status === 'Finished'}
+                  book={{
+                    ...book,
+                    // Ensure author fallback for display
+                    author: book.authors?.[0] || author.name,
+                    // Pass all gradient color fields for fallback chain
+                    cover_color_1: book.cover_color_1 || book.cover_bg_color,
+                    cover_color_2: book.cover_color_2 || book.cover_text_color,
+                  }}
                 />
                 {/* Finished checkmark badge */}
                 {book.status === 'Finished' && (

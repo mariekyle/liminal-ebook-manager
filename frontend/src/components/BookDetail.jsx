@@ -1175,14 +1175,11 @@ function BookDetail() {
               has_cover: book.has_cover || false,
               cover_path: book.cover_path || null,
               cover_source: book.cover_source || null,
-              // Gradient fallback fields
-              cover_gradient: book.cover_gradient,
-              cover_bg_color: book.cover_bg_color,
-              cover_text_color: book.cover_text_color,
+              // Gradient fallback fields - use correct field names
+              cover_color_1: book.cover_color_1,
+              cover_color_2: book.cover_color_2,
             }}
             size="lg"
-            showTitle={false}
-            showAuthor={false}
           />
         </div>
         

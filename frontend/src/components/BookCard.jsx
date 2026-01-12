@@ -20,6 +20,7 @@ function BookCard({ book, showActivityBar = false, showTitleBelow = false, showA
     >
       <div className="relative">
         {/* Cover - pass book object with cover fields (Phase 9C fix) */}
+        {/* FIXED: Removed size="fill" - default uses aspect-[2/3] which self-determines height */}
         <GradientCover
           book={{
             id: book.id,
@@ -29,12 +30,13 @@ function BookCard({ book, showActivityBar = false, showTitleBelow = false, showA
             has_cover: book.has_cover || false,
             cover_path: book.cover_path || null,
             cover_source: book.cover_source || null,
-            // Gradient fallback fields
+            // Gradient fallback fields - include all possible field names
             cover_gradient: book.cover_gradient,
+            cover_color_1: book.cover_color_1,
+            cover_color_2: book.cover_color_2,
             cover_bg_color: book.cover_bg_color,
             cover_text_color: book.cover_text_color,
           }}
-          size="fill"
           showTitle={true}
           showAuthor={true}
           className={isWishlist ? 'border-2 border-dashed border-gray-500' : ''}

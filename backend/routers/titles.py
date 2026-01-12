@@ -1951,12 +1951,20 @@ async def upload_custom_cover(
 
 
 @router.delete("/books/{title_id}/cover")
-async def delete_custom_cover(title_id: int, db = Depends(get_db)):
+async def delete_cover(
+    title_id: int, 
+    revert_to_gradient: bool = Query(False, description="If true, removes ALL covers (custom + extracted) and reverts to gradient"),
+    db = Depends(get_db)
+):
     """
-    Delete custom cover, reverting to extracted cover or gradient.
+    Delete cover with options for what to revert to.
     
-    If an extracted cover exists, reverts to that.
-    Otherwise, reverts to gradient (has_cover = false).
+    Default behavior (revert_to_gradient=false):
+    - If custom cover: delete it, revert to extracted if exists, else gradient
+    - If extracted cover: do nothing (use revert_to_gradient=true to remove)
+    
+    With revert_to_gradient=true:
+    - Delete ANY cover (custom or extracted) and revert to gradient
     
     Returns full cover state so frontend can update UI correctly.
     """
@@ -1972,7 +1980,34 @@ async def delete_custom_cover(title_id: int, db = Depends(get_db)):
     
     cover_path, cover_source = row
     
-    # Only delete if it's a custom cover
+    # Force revert to gradient - delete any cover type
+    if revert_to_gradient:
+        # Delete current cover file if it exists
+        if cover_path:
+            delete_cover_file(cover_path)
+        
+        # Also delete extracted cover if it exists (might be different from current)
+        for ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            extracted_path = f"{EXTRACTED_COVERS_PATH}/{title_id}.{ext}"
+            if os.path.exists(extracted_path):
+                delete_cover_file(extracted_path)
+        
+        # Revert to gradient
+        await db.execute("""
+            UPDATE titles 
+            SET cover_path = NULL, has_cover = 0, cover_source = NULL
+            WHERE id = ?
+        """, (title_id,))
+        await db.commit()
+        return {
+            "success": True, 
+            "reverted_to": "gradient",
+            "has_cover": False,
+            "cover_path": None,
+            "cover_source": None
+        }
+    
+    # Default behavior: only delete custom covers
     if cover_source == 'custom' and cover_path:
         delete_cover_file(cover_path)
         
