@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9: Feature Completion (In Progress)
-- Phase 9C: Cover improvements — ⚠️ Automatic extraction pending
 - Phase 9D: Bug fixes & UI polish
 - Phase 9E: Smart Collections system
 - Phase 9F: Book detail redesign
@@ -17,6 +16,134 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 9I: Collections polish
 - Phase 9J: Deduplication tools
 - Phase 9K: Unprocessed files detection
+
+### Technical Debt
+- **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
+
+---
+
+## [0.22.0] - 2026-01-13
+
+### Added
+
+#### Phase 9C Complete: Automatic Cover Extraction 🎉
+Full automatic cover extraction system with category-based filtering and bulk extraction tools.
+
+**New Features:**
+- **Auto-extraction during sync** — Covers extracted automatically when syncing Fiction/Non-Fiction books
+- **Bulk extraction tool** — New section in Settings to extract covers from existing library
+- **Category filtering** — FanFiction books skip extraction (gradient covers only, by design)
+- **Smart status handling** — Stale cover status cleared when re-extraction finds no cover
+
+---
+
+### Backend Implementation
+
+**Sync Integration (`backend/routers/sync.py`):**
+- Added category check before cover extraction (2 locations: existing titles + new titles)
+- FanFiction books now properly skip extraction
+- Stale cover status cleared when re-extraction returns None
+- Existing custom covers never overwritten
+
+**Bulk Extraction Endpoint (`backend/routers/titles.py`):**
+- **POST `/api/titles/covers/bulk-extract`** — Extract covers from multiple books
+  - Accepts `categories` array (Fiction, Non-Fiction)
+  - FanFiction filtered out even if requested
+  - GROUP BY fix prevents duplicate counting with multiple editions
+  - Non-EPUB files (PDF, MOBI) correctly skipped
+  - Returns detailed stats: extracted, skipped (custom/no_epub/no_cover/fanfiction), failed
+
+**Response format:**
+```json
+{
+  "extracted": 45,
+  "skipped_has_custom": 12,
+  "skipped_no_epub": 8,
+  "skipped_no_cover": 23,
+  "skipped_fanfiction": 156,
+  "failed": 2,
+  "total_processed": 246
+}
+```
+
+---
+
+### Frontend Implementation
+
+**Settings UI (`frontend/src/components/SettingsDrawer.jsx`):**
+- New "Bulk Cover Extraction" section
+- Category checkboxes (Fiction, Non-Fiction pre-selected)
+- FanFiction option disabled with explanation
+- Progress feedback during extraction
+- Detailed results display with all counters
+- Clear visual separation from other settings
+
+**API Functions (`frontend/src/api.js`):**
+- **`bulkExtractCovers(categories)`** — Trigger bulk extraction for selected categories
+
+---
+
+### Bug Fixes
+
+**✅ Bug 6: FanFiction not filtered from bulk extract**
+- **Problem:** API accepted FanFiction category despite documented exclusion
+- **Fix:** Filter out 'FanFiction' from category list before processing
+
+**✅ Bug 7: Misleading counter for "No Cover in EPUB"**
+- **Problem:** EPUBs without embedded covers counted as `skipped_no_epub`
+- **Fix:** Added `skipped_no_cover` counter for EPUBs that exist but have no cover
+
+**✅ Bug 8: Duplicate editions counted multiple times**
+- **Problem:** LEFT JOIN without GROUP BY caused duplicate rows for titles with multiple ebook editions
+- **Fix:** Added `GROUP BY t.id` and `MIN(e.file_path)` to query
+
+**✅ Bug 9: Non-EPUB files cause extraction failures**
+- **Problem:** Bulk extract called `extract_epub_cover()` on PDF/MOBI files
+- **Fix:** Added `.epub` extension check before extraction attempt
+
+**✅ Bug 10: Stale cover status after re-extraction fails**
+- **Problem:** If re-extraction found no cover, old `cover_source = 'extracted'` remained
+- **Fix:** Clear cover status when extraction returns None for previously extracted covers
+
+---
+
+### Key Features (Phase 9C Complete)
+
+- ✅ **Custom upload** — Upload any image as book cover
+- ✅ **Auto-extraction on sync** — Fiction/Non-Fiction books get covers automatically
+- ✅ **Bulk extraction tool** — Extract covers from existing library via Settings
+- ✅ **Category filtering** — FanFiction uses gradient covers only
+- ✅ **Priority system** — Custom > Extracted > Gradient
+- ✅ **Lazy loading** — IntersectionObserver for performance
+- ✅ **Graceful fallback** — Gradient covers when no image available
+- ✅ **Smart re-sync** — Stale status cleared, custom covers preserved
+
+---
+
+### Technical
+
+#### Files Modified
+**Backend:**
+- `backend/routers/sync.py` — Category filtering, stale status handling
+- `backend/routers/titles.py` — Bulk extract endpoint with all fixes
+
+**Frontend:**
+- `frontend/src/api.js` — `bulkExtractCovers()` function
+- `frontend/src/components/SettingsDrawer.jsx` — Bulk extraction UI
+
+#### Behavior Summary
+| Category | On Sync | Bulk Tool | Cover Type |
+|----------|---------|-----------|------------|
+| Fiction | ✅ Extract | ✅ Available | Real or Gradient |
+| Non-Fiction | ✅ Extract | ✅ Available | Real or Gradient |
+| FanFiction | ❌ Skip | ❌ Disabled | Gradient only |
+
+### Development Stats
+
+- **Implementation time:** Jan 13, 2026
+- **Lines of code:** ~200 added
+- **Bugs fixed:** 5 additional (10 total for Phase 9C)
+- **Status:** ✅ Phase 9C Complete
 
 ---
 
@@ -195,27 +322,6 @@ Over 4 debugging sessions, the following issues were resolved:
 
 ---
 
-### Key Features
-
-- ✅ **Custom upload** — Upload any image as book cover
-- ✅ **Priority system** — Custom > Extracted > Gradient
-- ✅ **Lazy loading** — IntersectionObserver for performance
-- ✅ **Graceful fallback** — Gradient covers when no image available
-- ✅ **Cache-busting** — Immediate visual feedback after changes
-- ✅ **Backward compatible** — Existing code works without changes
-- ⚠️ **Automatic extraction** — During sync (still in progress)
-
----
-
-### Remaining Work
-
-**Automatic Cover Extraction During Sync:**
-- Backend extraction code exists but sync integration incomplete
-- Will be addressed in next development session
-- Manual extraction via "Rescan Metadata" works
-
----
-
 ### Technical
 
 #### Database Changes
@@ -257,7 +363,6 @@ volumes:
 - **Files changed:** 10+ files (backend + frontend)
 - **New endpoints:** 4 (GET cover, POST upload, DELETE cover, POST extract)
 - **Bugs fixed:** 5 (all blocking issues resolved)
-- **Status:** ✅ Custom covers working, ⚠️ Auto-extraction pending
 
 ---
 

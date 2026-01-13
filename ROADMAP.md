@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 12, 2026 (v0.21.0)  
-> **Major Milestone:** Phase 9C Cover System — Custom uploads working, auto-extraction pending
+> **Last Updated:** January 13, 2026 (v0.22.0)  
+> **Major Milestone:** Phase 9C Complete — Full cover extraction system working 🎉
 
 ---
 
@@ -23,7 +23,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.21.0)
+## Current State (v0.22.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -41,12 +41,14 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Folder structure independence | ✅ File metadata primary |
-| **Custom cover upload** | ✅ **Working** |
+| **Custom cover upload** | ✅ **Complete** |
+| **Auto cover extraction** | ✅ **Complete** |
+| **Bulk cover extraction** | ✅ **Complete** |
 | **Gradient covers** | ✅ **Fixed (fill containers, text overlay)** |
-| **Auto cover extraction** | ⚠️ **In progress** |
 
 **Recent milestones:**
-- Phase 9C: Cover bug fixes — 5 bugs resolved (Jan 11-12, 2026) 🎉
+- Phase 9C: Auto-extraction & bulk tool complete (Jan 13, 2026) 🎉
+- Phase 9C: Cover bug fixes — 10 bugs resolved (Jan 11-13, 2026)
 - Phase 9C: Cover extraction & upload — implemented (Jan 11, 2026)
 - Phase 9B: Folder structure independence — file metadata now primary (Jan 10, 2026) 🎉
 - Phase 9A: Automated backup system — API + Settings UI (Jan 10, 2026) 🎉
@@ -77,7 +79,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │  CURRENT  │  Phase 9: Feature Completion                         │
 │           │  9A: ✅ Automated Backups (Jan 10)                   │
 │           │  9B: ✅ Folder Independence (Jan 10)                 │
-│           │  9C: ⚠️ Cover System (Jan 11-12) — auto-extract next │
+│           │  9C: ✅ Cover System (Jan 11-13) — COMPLETE          │
 │           │  9D-9K: Remaining features (3 weeks)                 │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
@@ -100,7 +102,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~30% complete (9A ✅, 9B ✅, 9C mostly done)
+**Status:** ~40% complete (9A ✅, 9B ✅, 9C ✅)
 
 **Timeline:** 3 weeks remaining (started Jan 10, 2026)
 
@@ -113,35 +115,11 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 **Problem solved:** No backup solution existed. NAS failure would lose all reading history, notes, and settings.
 
 **What was built:**
-
-#### Backend (Days 1-2)
-- **Database schema** — Settings columns + backup_history table
-- **Backup service** (`backend/services/backup.py`)
-  - Grandfather-father-son rotation (7 daily / 4 weekly / 6 monthly)
-  - Automatic cleanup based on retention policy
-  - APScheduler integration for daily backups
-  - Pre-sync backup trigger
-- **REST API** (`backend/routers/backups.py`)
-  - GET `/api/backups/settings` — Config + stats
-  - PATCH `/api/backups/settings` — Update config
-  - POST `/api/backups/test-path` — Validate writability
-  - POST `/api/backups/manual` — Trigger backup now
-  - GET `/api/backups/history` — List backups
-  - DELETE `/api/backups/history/{id}` — Delete backup
-- **Integration** — Sync endpoint triggers pre-sync backups
-- **Scheduler** — Starts on app startup, stops cleanly on shutdown
-
-#### Frontend (Day 3)
-- **Settings UI** — Complete backup configuration section
-- **API integration** — 6 new API functions in `api.js`
-
-#### Key Features
-- ✅ **Works out-of-box** — Defaults to `/app/data/backups` with sensible settings
-- ✅ **Path flexibility** — Changeable anytime (same volume → USB → network)
-- ✅ **Test button** — Validates paths before saving
-- ✅ **No Docker knowledge required** — All configuration via Settings UI
-- ✅ **Automatic rotation** — Monthly on 1st, weekly on Sundays, daily otherwise
-- ✅ **Retention enforcement** — Old backups auto-deleted per policy
+- Grandfather-father-son rotation (7 daily / 4 weekly / 6 monthly)
+- Settings UI for full configuration
+- Pre-sync backup trigger
+- Manual backup button
+- Path validation and flexibility
 
 **Deployed:** January 10, 2026  
 **Files changed:** 7 (3 backend, 2 frontend, 2 config)  
@@ -157,21 +135,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 **Problem solved:** Folder naming errors like "tryslora- Fire Burning" (missing space) caused incorrect metadata despite EPUB containing correct data.
 
 **What was built:**
-
-#### Backend Changes (`backend/routers/sync.py`)
-- **Metadata priority reversed** — File metadata now extracted and checked FIRST
-- **Title validation** — Filters placeholder titles before accepting
-- **Author validation** — Filters placeholder authors before accepting
-- **Fallback chain implemented:**
-  1. EPUB/PDF file metadata (highest priority)
-  2. Folder name parsing (fallback)
-  3. "Unknown" defaults (last resort)
-
-#### User Impact
-- ✅ **Flexible folder naming** — Name folders however you want
-- ✅ **Better metadata** — EPUB data takes priority over folder parsing errors
-- ✅ **Backward compatible** — Existing properly-named folders still work
-- ✅ **Fix existing books** — Use "Rescan Metadata" to update incorrectly parsed books
+- File metadata now PRIMARY source for title and authors
+- Folder name parsing is FALLBACK only
+- Validation filters placeholder values
 
 **Deployed:** January 10, 2026  
 **Files changed:** 2 (`sync.py`, `.cursorrules`)  
@@ -180,7 +146,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ---
 
-### Phase 9C: Cover Extraction & Upload ⚠️ MOSTLY COMPLETE (Jan 11-12, 2026)
+### Phase 9C: Cover Extraction & Upload ✅ COMPLETE (Jan 11-13, 2026)
 
 **Goal:** Display real cover images from EPUBs, allow custom cover uploads.
 
@@ -197,20 +163,24 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
   - POST `/api/titles/{title_id}/cover` — Upload custom cover
   - DELETE `/api/titles/{title_id}/cover` — Remove custom cover
   - POST `/api/titles/{title_id}/extract-cover` — Force re-extraction
+  - POST `/api/titles/covers/bulk-extract` — Bulk extraction by category
 
 #### Frontend ✅
-- **GradientCover rewrite** — Complete component redesign
-  - Backward compatible props (supports both old and new callers)
-  - Proper container fill when no size specified
-  - Title/author text overlay restored
-  - IntersectionObserver for lazy loading
-  - Cover priority: Custom > Extracted > Gradient
+- **GradientCover rewrite** — Complete component redesign with backward compatibility
 - **EditBookModal** — New cover section with upload/delete
 - **BookDetail** — Async handlers, cover refresh with cache-busting
-- **API functions** — `uploadCover()`, `deleteCover()`, `extractCover()`
+- **SettingsDrawer** — Bulk extraction tool with category selection
+- **API functions** — `uploadCover()`, `deleteCover()`, `extractCover()`, `bulkExtractCovers()`
 
-#### Bug Fixes (Jan 11-12, 2026) ✅
-All 5 blocking bugs resolved over 4 debugging sessions:
+#### Category Behavior ✅
+| Category | On Sync | Bulk Tool | Cover Type |
+|----------|---------|-----------|------------|
+| Fiction | ✅ Extract | ✅ Available | Real or Gradient |
+| Non-Fiction | ✅ Extract | ✅ Available | Real or Gradient |
+| FanFiction | ❌ Skip | ❌ Disabled | Gradient only |
+
+#### Bug Fixes (Jan 11-13, 2026) ✅
+All 10 bugs resolved over multiple debugging sessions:
 
 | Bug | Problem | Fix |
 |-----|---------|-----|
@@ -219,30 +189,30 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 | 3 | Edit modal no background | Restored modal styling |
 | 4 | Async handler issues | Made save handlers return promises |
 | 5 | Prop incompatibility | Made GradientCover backward compatible |
+| 6 | FanFiction not filtered | Filter out from bulk extract |
+| 7 | Misleading counter | Added skipped_no_cover counter |
+| 8 | Duplicate edition counting | Added GROUP BY t.id |
+| 9 | Non-EPUB extraction failures | Added .epub extension check |
+| 10 | Stale cover status | Clear when re-extraction fails |
 
-#### Key Features Working ✅
+#### Key Features Complete ✅
 - ✅ **Custom upload** — Upload any image as book cover
+- ✅ **Auto-extraction on sync** — Fiction/Non-Fiction books get covers automatically
+- ✅ **Bulk extraction tool** — Extract covers from existing library via Settings
+- ✅ **Category filtering** — FanFiction uses gradient covers only
 - ✅ **Priority system** — Custom > Extracted > Gradient
 - ✅ **Lazy loading** — IntersectionObserver for performance
 - ✅ **Graceful fallback** — Gradient covers when no image available
-- ✅ **Cache-busting** — Immediate visual feedback after changes
-- ✅ **Text overlay** — Title/author on gradient covers
-- ✅ **Container fill** — Covers properly fill their containers
+- ✅ **Smart re-sync** — Stale status cleared, custom covers preserved
 
-#### Remaining Work ⚠️
-- **Automatic extraction during sync** — Backend code exists but sync integration needs completion
-- Will be addressed in next development session
-- Manual extraction via "Rescan Metadata" button works
-
-**Status:** Custom covers deployed, auto-extraction pending  
-**Files changed:** 10+ (backend + frontend)  
-**Lines of code:** ~800 added/modified  
-**Bugs fixed:** 5/5  
-**Next step:** Complete sync integration for automatic extraction
+**Status:** ✅ Phase 9C COMPLETE  
+**Files changed:** 15+ (backend + frontend)  
+**Lines of code:** ~1,000 added/modified  
+**Bugs fixed:** 10/10  
 
 ---
 
-### Phase 9D: Bug Fixes & UI Polish ← NEXT (after 9C auto-extraction)
+### Phase 9D: Bug Fixes & UI Polish ← NEXT
 
 **Goal:** Address accumulated minor issues and UX papercuts.
 
@@ -370,6 +340,19 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 
 ---
 
+## Technical Debt
+
+### Known Issues for Future Resolution
+
+**Browser Cache Issues with Covers**
+- **Symptom:** After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding after many edits.
+- **Workaround:** Clear browser cache for the past hour and close/reopen browser tab
+- **Root cause:** Likely aggressive image caching or IntersectionObserver state management
+- **Priority:** Low (workaround exists, rare occurrence)
+- **To investigate:** Phase 10 or post-RN migration
+
+---
+
 ## Phase 10: Design System Refactor (1 week)
 
 **Goal:** Create reusable component library with calm UX principles.
@@ -458,8 +441,8 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 |-------|----------|-------|--------|
 | Phase 9A | 3 days | Jan 10 | ✅ Complete |
 | Phase 9B | Same day | Jan 10 | ✅ Complete |
-| Phase 9C | 2 days | Jan 11-12 | ⚠️ Auto-extract pending |
-| Phase 9D-9K | 3 weeks | Jan 13+ | Not started |
+| Phase 9C | 3 days | Jan 11-13 | ✅ Complete |
+| Phase 9D-9K | 3 weeks | Jan 14+ | Not started |
 | Phase 10 | 1 week | ~Feb 1 | Not started |
 | Phase 11 | 1 week | ~Feb 8 | Not started |
 | Phase 12 | 4-6 weeks | ~Feb 15 | Not started |
@@ -472,8 +455,8 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 
 ## Immediate Next Steps
 
-1. **Complete Phase 9C** — Automatic cover extraction during sync
-2. **Deploy v0.21.1** — With auto-extraction working
+1. ~~**Complete Phase 9C** — Automatic cover extraction during sync~~ ✅
+2. ~~**Deploy v0.22.0** — With auto-extraction working~~ ✅
 3. **Run full sync** — Extract covers from all EPUBs
 4. **Continue to Phase 9D** — Bug fixes & polish
 
@@ -486,7 +469,7 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 - ✅ No data loss scenarios
 - ✅ Complete folder structure flexibility
 - ✅ Better visual experience (real covers!)
-- ✅ Improved discovery and organization
+- ⬜ Improved discovery and organization (9D-9K)
 
 ### Migration Success (Phase 12)
 - Zero feature regressions
@@ -499,14 +482,15 @@ All 5 blocking bugs resolved over 4 debugging sessions:
 
 ## Notes
 
-- **Phase 9C cover bugs resolved:** All 5 blocking issues fixed over 4 debugging sessions
-- **GradientCover now backward compatible:** Supports both old and new prop interfaces
+- **Phase 9C complete:** All 10 bugs fixed, auto-extraction working, bulk tool available
+- **GradientCover backward compatible:** Supports both old and new prop interfaces
 - **Custom cover upload working:** Upload, delete, cache-busting all functional
-- **Auto-extraction next:** Sync integration is the remaining work
+- **Category filtering by design:** FanFiction uses gradients only (no embedded covers typically)
+- **Technical debt noted:** Browser cache issues with covers (workaround: clear cache)
 - **User is actively using Liminal:** Stability and reliability are paramount
 - **Mobile-first is non-negotiable:** Every feature must work well on Android
 - **Quality over speed:** Taking time to do it right
 
 ---
 
-*Roadmap reflects actual progress as of January 12, 2026. All dates are estimates and subject to change based on complexity and discovery.*
+*Roadmap reflects actual progress as of January 13, 2026. All dates are estimates and subject to change based on complexity and discovery.*
