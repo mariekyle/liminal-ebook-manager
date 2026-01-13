@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9: Feature Completion (In Progress)
-- Phase 9C: Cover improvements — ⚠️ IMPLEMENTED, BUGS PENDING
+- Phase 9C: Cover improvements — ⚠️ Automatic extraction pending
 - Phase 9D: Bug fixes & UI polish
 - Phase 9E: Smart Collections system
 - Phase 9F: Book detail redesign
@@ -20,12 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.21.0] - 2026-01-11 (PENDING BUG FIXES)
+## [0.21.0] - 2026-01-12
 
 ### Added
 
 #### Phase 9C: Cover Extraction & Upload System 🎉
-Complete cover management system with automatic extraction from EPUBs, custom upload support, and gradient fallback.
+Complete cover management system with custom upload support, gradient fallback, and automatic extraction (pending).
 
 **The Problem:**
 - All books displayed gradient covers regardless of whether EPUB contained embedded cover
@@ -33,10 +33,10 @@ Complete cover management system with automatic extraction from EPUBs, custom up
 - Books with real covers (especially traditionally published) looked generic
 
 **The Solution:**
-- Automatic cover extraction from EPUB files during sync
 - Custom cover upload via Edit Book modal
 - Priority system: Custom > Extracted > Gradient fallback
 - Lazy loading for performance with 1,700+ books
+- Automatic extraction from EPUBs during sync (still in progress)
 
 ---
 
@@ -75,6 +75,7 @@ covers/
 **REST API - Covers Router (`backend/routers/covers.py`):**
 - **GET `/api/covers/{title_id}`** — Serve cover image
   - Returns actual image file (not JSON)
+  - Cache-busting support via query parameter
   - Falls back to 404 if no cover exists
   - Sets appropriate Content-Type header
 
@@ -94,12 +95,6 @@ covers/
   - Extracts cover from EPUB regardless of current state
   - Useful for "Rescan Metadata" functionality
 
-**Sync Integration (`backend/routers/sync.py`):**
-- Cover extraction now runs automatically during sync
-- After creating/updating title record, attempts cover extraction
-- Non-blocking: sync continues even if extraction fails
-- Logs extraction success/failure to console
-
 **Router Registration (`backend/main.py`):**
 - Added `covers` router at `/api` prefix
 
@@ -118,10 +113,13 @@ covers/
   - Returns updated book data
 
 **GradientCover Component (`frontend/src/components/GradientCover.jsx`):**
-Complete rewrite with new architecture:
+Complete rewrite with backward-compatible prop interface:
 
-- **Props interface:**
-  - `book` (required) — Full book object with cover fields
+- **Props interface (backward compatible):**
+  - `book` (optional) — Full book object with cover fields
+  - `title` (optional) — Book title for text overlay (legacy)
+  - `author` (optional) — Author name for text overlay (legacy)
+  - `coverGradient` (optional) — Gradient string (legacy)
   - `size` (optional) — 'xs' | 'sm' | 'md' | 'lg' | 'xl' (default: 'md')
   - `showText` (optional) — Show title/author overlay (default: true)
   - `className` (optional) — Additional CSS classes
@@ -136,14 +134,20 @@ Complete rewrite with new architecture:
   1. Real cover image (`book.has_cover && book.cover_path`)
   2. Gradient fallback (using existing color system)
 
-- **Size presets:**
-  | Size | Dimensions | Use Case |
-  |------|------------|----------|
-  | xs | 48×72 | Compact lists |
-  | sm | 64×96 | Grid thumbnails |
-  | md | 96×144 | Default cards |
-  | lg | 128×192 | Detail page |
-  | xl | 160×240 | Hero display |
+- **Size presets with proper container fill:**
+  | Size | Behavior | Use Case |
+  |------|----------|----------|
+  | xs | 48×72 fixed | Compact lists |
+  | sm | 64×96 fixed | Grid thumbnails |
+  | md | 96×144 fixed | Default cards |
+  | lg | 128×192 fixed | Detail page |
+  | xl | 160×240 fixed | Hero display |
+  | (none) | w-full h-full | Container fill |
+
+- **Text overlay restored:**
+  - Title and author display on gradient covers
+  - Proper truncation for long titles
+  - Gradient overlay for readability
 
 **Edit Book Modal (`frontend/src/components/EditBookModal.jsx`):**
 New "Cover Image" section with:
@@ -152,47 +156,63 @@ New "Cover Image" section with:
 - File upload input (accepts image/*)
 - "Remove custom cover" button (when custom cover exists)
 - Visual feedback during upload/delete operations
+- Proper modal background styling
+
+**BookDetail Page (`frontend/src/components/BookDetail.jsx`):**
+- Cover upload/delete handlers properly async
+- Cover state refreshes after operations
+- Cache-busting for immediate visual feedback
+
+---
+
+### Bug Fixes (Jan 11-12, 2026)
+
+Over 4 debugging sessions, the following issues were resolved:
+
+**✅ Bug 1: Gradient covers not filling containers**
+- **Problem:** All gradient covers appeared cropped/small across every screen
+- **Root cause:** New GradientCover used fixed sizes but callers expected `w-full h-full`
+- **Fix:** When no size prop specified, component now fills parent container
+
+**✅ Bug 2: Missing titles/authors on gradient covers**
+- **Problem:** Text overlay completely missing from book covers
+- **Root cause:** GradientCover rewrite removed text rendering logic
+- **Fix:** Restored title/author overlay with proper styling and truncation
+
+**✅ Bug 3: Edit Book Details modal has no background**
+- **Problem:** Modal was transparent instead of showing `bg-library-dark`
+- **Fix:** Restored proper modal background and overlay styling
+
+**✅ Bug 4: Cover operation handlers await non-promise**
+- **Problem:** Cover upload/delete handlers called `await onSave()` expecting promise
+- **Root cause:** `handleMetadataSave` in BookDetail was not async
+- **Fix:** Made save handlers properly async, return promises
+
+**✅ Bug 5: GradientCover signature incompatibility**
+- **Problem:** New component required `book` object prop
+- **Root cause:** Existing callers passed old props: `title`, `author`, `coverGradient`
+- **Fix:** Made component backward compatible, accepting both old and new prop styles
 
 ---
 
 ### Key Features
 
-- ✅ **Automatic extraction** — Covers extracted from EPUBs during sync
 - ✅ **Custom upload** — Upload any image as book cover
 - ✅ **Priority system** — Custom > Extracted > Gradient
 - ✅ **Lazy loading** — IntersectionObserver for performance
 - ✅ **Graceful fallback** — Gradient covers when no image available
-- ✅ **Rescan support** — Re-extract covers via "Rescan Metadata"
-- ✅ **File management** — Old covers deleted when replaced
+- ✅ **Cache-busting** — Immediate visual feedback after changes
+- ✅ **Backward compatible** — Existing code works without changes
+- ⚠️ **Automatic extraction** — During sync (still in progress)
 
 ---
 
-### Known Issues (Blocking Deployment)
+### Remaining Work
 
-**Bug 1: Gradient covers not filling containers**
-- All gradient covers appear cropped/small across every screen
-- Root cause: New GradientCover uses fixed sizes but callers expect `w-full h-full`
-- Affects: Library grid, BookDetail, all screens displaying gradient covers
-
-**Bug 2: Missing titles/authors on gradient covers**
-- Text overlay completely missing from book covers
-- Related to GradientCover rewrite removing text rendering
-
-**Bug 3: Edit Book Details modal has no background**
-- Modal is transparent instead of showing `bg-library-dark`
-- Unrelated to cover changes but discovered during testing
-
-**Bug 4: Cover operation handlers await non-promise**
-- Cover upload/delete handlers call `await onSave()` expecting promise
-- `handleMetadataSave` in BookDetail is not async, returns undefined
-- Breaks cover refresh after operations
-
-**Bug 5: GradientCover signature incompatibility**
-- New component requires `book` object prop
-- Existing callers still pass old props: `title`, `author`, `coverGradient`, etc.
-- Breaks cover rendering across app
-
-**Status:** Implementation complete, bugs must be fixed before deployment
+**Automatic Cover Extraction During Sync:**
+- Backend extraction code exists but sync integration incomplete
+- Will be addressed in next development session
+- Manual extraction via "Rescan Metadata" works
 
 ---
 
@@ -207,18 +227,18 @@ New "Cover Image" section with:
 - `backend/routers/covers.py` — Cover serving endpoint
 - `/app/data/covers/` directory structure
 
-#### Modified Files (9 total)
+#### Modified Files
 **Backend:**
 - `backend/database.py` — Phase 9C migration
 - `backend/services/covers.py` — Extraction logic
 - `backend/routers/titles.py` — Upload/delete endpoints
-- `backend/routers/sync.py` — Auto-extraction integration
 - `backend/main.py` — Router registration
 
 **Frontend:**
 - `frontend/src/api.js` — 3 new API functions
-- `frontend/src/components/GradientCover.jsx` — Complete rewrite
-- `frontend/src/components/EditBookModal.jsx` — Cover section
+- `frontend/src/components/GradientCover.jsx` — Complete rewrite (backward compatible)
+- `frontend/src/components/EditBookModal.jsx` — Cover section + modal fixes
+- `frontend/src/components/BookDetail.jsx` — Async handlers, cover refresh
 
 #### Docker Volume
 Add to `docker-compose.yml`:
@@ -232,11 +252,12 @@ volumes:
 
 ### Development Stats
 
-- **Implementation time:** Jan 11, 2026 (3 Cursor prompts)
-- **Lines of code:** ~600 lines added/modified
-- **Files changed:** 9 files (6 backend, 3 frontend)
+- **Implementation time:** Jan 11-12, 2026 (4 debugging sessions)
+- **Lines of code:** ~800 lines added/modified
+- **Files changed:** 10+ files (backend + frontend)
 - **New endpoints:** 4 (GET cover, POST upload, DELETE cover, POST extract)
-- **Status:** ⚠️ Implemented but blocked by 5 bugs
+- **Bugs fixed:** 5 (all blocking issues resolved)
+- **Status:** ✅ Custom covers working, ⚠️ Auto-extraction pending
 
 ---
 

@@ -2120,6 +2120,108 @@ async def extract_cover_on_demand(title_id: int, db = Depends(get_db)):
     return {"success": True, "extracted": False, "message": "No cover found in EPUB"}
 
 
+@router.post("/covers/bulk-extract")
+async def bulk_extract_covers(
+    categories: str = Query(default="Fiction,Non-Fiction", description="Comma-separated categories to process"),
+    db = Depends(get_db)
+):
+    """
+    Bulk extract covers from EPUBs for specified categories.
+    Skips books with custom covers, existing extracted covers, or no EPUB file.
+    """
+    category_list = [c.strip() for c in categories.split(',') if c.strip()]
+    
+    # Filter out FanFiction - consistent with sync behavior (gradient only)
+    category_list = [c for c in category_list if c != 'FanFiction']
+    
+    if not category_list:
+        raise HTTPException(status_code=400, detail="At least one valid category required (FanFiction excluded)")
+    
+    # Build query for titles in specified categories
+    placeholders = ','.join(['?' for _ in category_list])
+    query = f"""
+        SELECT t.id, t.title, t.category, t.cover_source, t.has_cover,
+               MIN(e.file_path) as epub_path
+        FROM titles t
+        LEFT JOIN editions e ON t.id = e.title_id AND e.format = 'ebook'
+        WHERE t.category IN ({placeholders})
+        GROUP BY t.id, t.title, t.category, t.cover_source, t.has_cover
+        ORDER BY t.title
+    """
+    
+    cursor = await db.execute(query, category_list)
+    titles = await cursor.fetchall()
+    
+    results = {
+        'processed': 0,
+        'extracted': 0,
+        'skipped_custom': 0,
+        'skipped_has_cover': 0,
+        'skipped_no_epub': 0,
+        'skipped_no_cover': 0,  # EPUB exists but has no embedded cover
+        'failed': 0,
+        'details': []
+    }
+    
+    for title in titles:
+        results['processed'] += 1
+        title_id = title['id']
+        title_name = title['title']
+        cover_source = title['cover_source']
+        has_cover = title['has_cover']
+        epub_path = title['epub_path']
+        
+        # Skip if custom cover
+        if cover_source == 'custom':
+            results['skipped_custom'] += 1
+            continue
+        
+        # Skip if already has extracted cover
+        if has_cover and cover_source == 'extracted':
+            results['skipped_has_cover'] += 1
+            continue
+        
+        # Skip if no EPUB file (must exist and be .epub format)
+        if not epub_path or not os.path.exists(epub_path):
+            results['skipped_no_epub'] += 1
+            continue
+        
+        # Skip if not actually an EPUB (could be PDF, MOBI, etc.)
+        if not epub_path.lower().endswith('.epub'):
+            results['skipped_no_epub'] += 1
+            continue
+        
+        # Try to extract
+        try:
+            cover_path = extract_epub_cover(epub_path, title_id)
+            if cover_path:
+                # Update database
+                await db.execute("""
+                    UPDATE titles 
+                    SET cover_path = ?, has_cover = 1, cover_source = 'extracted'
+                    WHERE id = ?
+                """, (cover_path, title_id))
+                await db.commit()
+                results['extracted'] += 1
+                results['details'].append({
+                    'id': title_id,
+                    'title': title_name,
+                    'status': 'extracted'
+                })
+            else:
+                results['skipped_no_cover'] += 1  # EPUB exists but has no cover
+        except Exception as e:
+            results['failed'] += 1
+            results['details'].append({
+                'id': title_id,
+                'title': title_name,
+                'status': 'failed',
+                'error': str(e)
+            })
+    
+    return results
+
+
 @router.patch("/books/{book_id}/enhanced-metadata")
 async def update_enhanced_metadata(
     book_id: int, 

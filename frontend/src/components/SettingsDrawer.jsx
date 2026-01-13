@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata, getBackupSettings, updateBackupSettings, testBackupPath, createManualBackup } from '../api'
+import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata, getBackupSettings, updateBackupSettings, testBackupPath, createManualBackup, bulkExtractCovers } from '../api'
 
 function SettingsDrawer({ isOpen, onClose }) {
   const navigate = useNavigate()
@@ -41,6 +41,14 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [creatingBackup, setCreatingBackup] = useState(false)
   const [backupStatus, setBackupStatus] = useState(null)
   const [savingBackupSettings, setSavingBackupSettings] = useState(false)
+
+  // Phase 9C: Cover extraction state
+  const [extracting, setExtracting] = useState(false)
+  const [extractCategories, setExtractCategories] = useState({
+    Fiction: true,
+    'Non-Fiction': true
+  })
+  const [extractResults, setExtractResults] = useState(null)
 
   // Load settings when drawer opens
   useEffect(() => {
@@ -174,6 +182,32 @@ function SettingsDrawer({ isOpen, onClose }) {
       setBackupStatus({ success: false, message: err.message })
     } finally {
       setSavingBackupSettings(false)
+    }
+  }
+
+  // Phase 9C: Cover extraction handler
+  const handleBulkExtract = async () => {
+    if (extracting) return
+    
+    const selectedCategories = Object.entries(extractCategories)
+      .filter(([_, selected]) => selected)
+      .map(([category]) => category)
+    
+    if (selectedCategories.length === 0) {
+      setExtractResults({ error: 'Select at least one category' })
+      return
+    }
+    
+    setExtracting(true)
+    setExtractResults(null)
+    
+    try {
+      const results = await bulkExtractCovers(selectedCategories)
+      setExtractResults(results)
+    } catch (err) {
+      setExtractResults({ error: err.message })
+    } finally {
+      setExtracting(false)
     }
   }
 
@@ -1054,6 +1088,112 @@ function SettingsDrawer({ isOpen, onClose }) {
               {!backupSettings && (
                 <div className="text-gray-500 text-sm">Loading backup settings...</div>
               )}
+            </section>
+
+            {/* Divider */}
+            <hr className="border-gray-700" />
+
+            {/* Phase 9C: Cover Extraction Section */}
+            <section>
+              <h3 className="text-sm font-medium text-white mb-2">Cover Extraction</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Extract cover images from EPUB files for existing books.
+                FanFiction is excluded (uses gradient covers only).
+              </p>
+              
+              <div className="space-y-4">
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2">Categories to process</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={extractCategories.Fiction}
+                        onChange={(e) => setExtractCategories(prev => ({ ...prev, Fiction: e.target.checked }))}
+                        className="rounded border-gray-600 bg-library-card text-library-accent focus:ring-library-accent"
+                      />
+                      Fiction
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={extractCategories['Non-Fiction']}
+                        onChange={(e) => setExtractCategories(prev => ({ ...prev, 'Non-Fiction': e.target.checked }))}
+                        className="rounded border-gray-600 bg-library-card text-library-accent focus:ring-library-accent"
+                      />
+                      Non-Fiction
+                    </label>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Books with custom covers are always preserved.
+                  </p>
+                </div>
+
+                {/* Extract Button */}
+                <button
+                  onClick={handleBulkExtract}
+                  disabled={extracting}
+                  className={`
+                    w-full px-4 py-2 rounded text-sm font-medium
+                    ${extracting 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-purple-600 hover:bg-purple-500'
+                    }
+                    text-white transition-colors flex items-center justify-center gap-2
+                  `}
+                >
+                  {extracting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Extracting Covers...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Extract Covers from EPUBs
+                    </>
+                  )}
+                </button>
+
+                {/* Results Display */}
+                {extractResults && !extractResults.error && (
+                  <div className="bg-zinc-800/50 rounded-lg p-3 text-xs space-y-2">
+                    <div className="text-green-400 font-medium">
+                      ✓ Extracted {extractResults.extracted} covers
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-gray-400">
+                      <span>Processed:</span>
+                      <span className="text-gray-300">{extractResults.processed}</span>
+                      <span>Skipped (custom):</span>
+                      <span className="text-gray-300">{extractResults.skipped_custom}</span>
+                      <span>Skipped (has cover):</span>
+                      <span className="text-gray-300">{extractResults.skipped_has_cover}</span>
+                      <span>Skipped (no EPUB):</span>
+                      <span className="text-gray-300">{extractResults.skipped_no_epub}</span>
+                      <span>Skipped (no cover in file):</span>
+                      <span className="text-gray-300">{extractResults.skipped_no_cover || 0}</span>
+                      {extractResults.failed > 0 && (
+                        <>
+                          <span className="text-red-400">Failed:</span>
+                          <span className="text-red-400">{extractResults.failed}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {extractResults?.error && (
+                  <div className="bg-red-900/30 border border-red-800 rounded-lg p-3 text-xs text-red-400">
+                    Error: {extractResults.error}
+                  </div>
+                )}
+              </div>
             </section>
           </div>
         )}

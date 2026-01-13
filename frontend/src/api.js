@@ -950,6 +950,13 @@ export async function extractCover(titleId) {
   return response.json()
 }
 
+export async function bulkExtractCovers(categories = ['Fiction', 'Non-Fiction']) {
+  const categoryParam = categories.join(',')
+  return apiFetch(`/covers/bulk-extract?categories=${encodeURIComponent(categoryParam)}`, {
+    method: 'POST'
+  })
+}
+
 export function getCoverUrl(titleId, cacheKey) {
   // cacheKey is used to bust browser cache when cover changes
   // Pass book.cover_source or book.updated_at to force refresh

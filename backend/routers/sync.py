@@ -566,8 +566,9 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     
                     # Extract cover from EPUB if available (Phase 9C)
                     # Only for titles without covers or without custom covers
+                    # Skip FanFiction - they use gradient covers only
                     epub_path = str(book_file) if book_file and str(book_file).lower().endswith('.epub') else None
-                    if epub_path:
+                    if epub_path and category != 'FanFiction':
                         try:
                             # Check if title already has a cover
                             cover_cursor = await db.execute(
@@ -591,6 +592,13 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                                         SET cover_path = ?, has_cover = 1, cover_source = 'extracted'
                                         WHERE id = ?
                                     """, (cover_path, existing["id"]))
+                                elif cover_row and cover_row[1] == 'extracted':
+                                    # Clear stale extracted cover status if re-extraction found no cover
+                                    await db.execute("""
+                                        UPDATE titles 
+                                        SET cover_path = NULL, has_cover = 0, cover_source = NULL
+                                        WHERE id = ?
+                                    """, (existing["id"],))
                         except Exception as e:
                             logger.warning(f"Cover extraction failed for title {existing['id']}: {e}")
                             # Don't fail sync if cover extraction fails
@@ -637,8 +645,9 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     )
                     
                     # Extract cover from EPUB if available (Phase 9C)
+                    # Skip FanFiction - they use gradient covers only
                     epub_path = str(book_file) if book_file and str(book_file).lower().endswith('.epub') else None
-                    if epub_path and title_id:
+                    if epub_path and title_id and category != 'FanFiction':
                         try:
                             cover_path = extract_epub_cover(epub_path, title_id)
                             if cover_path:
