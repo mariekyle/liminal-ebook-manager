@@ -200,11 +200,21 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
     setSelectedExistingTitle(null)
   }
   
+  // FIXED: Mobile-friendly Enter key handling
   const handleAuthorKeyDown = (e) => {
-    if (e.key === 'Enter' && form.authorInput.trim()) {
+    // Check both e.key and e.keyCode for mobile compatibility
+    const isEnterKey = e.key === 'Enter' || e.keyCode === 13
+    const isBackspace = e.key === 'Backspace' || e.keyCode === 8
+    
+    if (isEnterKey) {
+      // ALWAYS prevent default first to stop form submission / field navigation
       e.preventDefault()
-      addAuthor(form.authorInput.trim())
-    } else if (e.key === 'Backspace' && !form.authorInput && form.authors.length > 0) {
+      e.stopPropagation()
+      
+      if (form.authorInput.trim()) {
+        addAuthor(form.authorInput.trim())
+      }
+    } else if (isBackspace && !form.authorInput && form.authors.length > 0) {
       // Remove last author if input is empty
       removeAuthor(form.authors[form.authors.length - 1])
     }
@@ -222,21 +232,28 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
         <div>
           <label className="block text-sm text-gray-400 mb-2">Format</label>
           <div className="flex gap-2">
-            {['physical', 'audiobook', 'web'].map(fmt => (
+            {[
+              { value: 'physical', label: 'Physical' },
+              { value: 'audiobook', label: 'Audiobook' },
+              { value: 'web', label: 'Web/URL' },
+            ].map(opt => (
               <button
-                key={fmt}
+                key={opt.value}
                 type="button"
-                onClick={() => updateForm('format', fmt)}
+                onClick={() => updateForm('format', opt.value)}
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  form.format === fmt
+                  form.format === opt.value
                     ? 'bg-library-accent text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                {fmt === 'physical' ? 'Physical' : fmt === 'audiobook' ? 'Audiobook' : 'Web/URL'}
+                {opt.label}
               </button>
             ))}
           </div>
+          {form.format === 'web' && (
+            <p className="text-gray-500 text-sm mt-2 italic">Choose this option for web-based works</p>
+          )}
         </div>
         
         {/* Title */}
@@ -247,12 +264,12 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
             value={form.title}
             onChange={(e) => {
               updateForm('title', e.target.value)
-              // Clear existing selection if user manually edits the title
-              if (selectedExistingTitle && e.target.value !== selectedExistingTitle.title) {
-                clearExistingSelection()
+              // Clear existing selection if user edits title
+              if (selectedExistingTitle) {
+                setSelectedExistingTitle(null)
               }
             }}
-            onFocus={() => titleSuggestions.length > 0 && setShowTitleDropdown(true)}
+            onFocus={() => form.title.trim().length >= 2 && setShowTitleDropdown(titleSuggestions.length > 0)}
             onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
             placeholder="What's it called?"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
@@ -291,7 +308,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-medium text-green-300 flex items-center gap-2 mb-1">
-                  <span>✓</span> Adding format to existing title
+                  <span>✔</span> Adding format to existing title
                 </div>
                 <p className="text-sm text-gray-400">
                   "{selectedExistingTitle.title}" is already in your library. 
@@ -344,6 +361,8 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
             onFocus={() => form.authorInput.trim() && setShowAuthorDropdown(filteredAuthors.length > 0)}
             onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
             placeholder={form.authors.length > 0 ? "Add another author..." : "Who wrote it?"}
+            enterKeyHint="done"
+            autoComplete="off"
             className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
               errors.author ? 'border-red-500' : 'border-gray-700'
             }`}

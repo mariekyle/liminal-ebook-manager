@@ -255,9 +255,16 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
     }))
   }
   
+  // FIXED: Mobile-friendly Enter key handling
   const handleAuthorKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    // Check both e.key and e.keyCode for mobile compatibility
+    const isEnterKey = e.key === 'Enter' || e.keyCode === 13
+    
+    if (isEnterKey) {
+      // ALWAYS prevent default first to stop form submission / field navigation
       e.preventDefault()
+      e.stopPropagation()
+      
       if (authorSuggestions.length > 0) {
         handleAddAuthor(authorSuggestions[0])
       } else if (authorInput.trim()) {
@@ -369,6 +376,8 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
               onFocus={() => setShowAuthorDropdown(true)}
               onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
               placeholder={form.authors.length === 0 ? "Who wrote it?" : "Add another author..."}
+              enterKeyHint="done"
+              autoComplete="off"
               className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
                 errors.authors ? 'border-red-500' : 'border-gray-700'
               }`}
@@ -553,4 +562,3 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
     </div>
   )
 }
-
