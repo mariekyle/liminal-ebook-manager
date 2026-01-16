@@ -78,6 +78,98 @@ async def get_table_names(db: aiosqlite.Connection) -> set:
     return {row[0] for row in rows}
 
 
+async def run_smart_collections_migration(db: aiosqlite.Connection) -> None:
+    """
+    Phase 9E: Smart Collections migration
+    - Add collection_type, auto_criteria, is_default to collections
+    - Add completed_at to collection_books
+    - Create default TBR and Reading History collections
+    """
+    
+    # Check collections table columns
+    cursor = await db.execute("PRAGMA table_info(collections)")
+    columns = await cursor.fetchall()
+    existing_columns = {col[1] for col in columns}
+    
+    # Add collection_type column
+    if 'collection_type' not in existing_columns:
+        print("Migration: Adding 'collection_type' column to collections...")
+        await db.execute("ALTER TABLE collections ADD COLUMN collection_type TEXT DEFAULT 'manual'")
+    
+    # Add auto_criteria column
+    if 'auto_criteria' not in existing_columns:
+        print("Migration: Adding 'auto_criteria' column to collections...")
+        await db.execute("ALTER TABLE collections ADD COLUMN auto_criteria TEXT")
+    
+    # Add is_default column
+    if 'is_default' not in existing_columns:
+        print("Migration: Adding 'is_default' column to collections...")
+        await db.execute("ALTER TABLE collections ADD COLUMN is_default INTEGER DEFAULT 0")
+    
+    # Check collection_books table columns
+    cursor = await db.execute("PRAGMA table_info(collection_books)")
+    cb_columns = await cursor.fetchall()
+    cb_existing = {col[1] for col in cb_columns}
+    
+    # Add completed_at column
+    if 'completed_at' not in cb_existing:
+        print("Migration: Adding 'completed_at' column to collection_books...")
+        await db.execute("ALTER TABLE collection_books ADD COLUMN completed_at TIMESTAMP")
+    
+    # Create default collections if they don't exist
+    await create_default_collections(db)
+    
+    await db.commit()
+
+
+async def create_default_collections(db: aiosqlite.Connection) -> None:
+    """Create TBR and Reading History default collections if they don't exist."""
+    
+    # Calculate base sort_order ONCE at the start (before any inserts)
+    cursor = await db.execute("SELECT MIN(sort_order) FROM collections")
+    row = await cursor.fetchone()
+    base_order = (row[0] or 0)
+    
+    # TBR gets lowest number (appears first)
+    tbr_sort_order = base_order - 2
+    # Reading History gets second lowest (appears second)  
+    history_sort_order = base_order - 1
+    
+    # Check if TBR exists
+    cursor = await db.execute(
+        "SELECT id FROM collections WHERE is_default = 1 AND collection_type = 'checklist'"
+    )
+    tbr_exists = await cursor.fetchone()
+    
+    if not tbr_exists:
+        print("Migration: Creating default TBR collection...")
+        
+        tbr_description = """This is your growing, teetering stack of books you fully intend to read — eventually. Someday. After this one. And plot twist - a good TBR is never finished. Like laundry. Or emails. It's the beautiful circle of literary life, and the slow, crumbling collapse of your self-control. So live a little, add a few more books 😜."""
+        
+        await db.execute("""
+            INSERT INTO collections (name, description, collection_type, is_default, sort_order)
+            VALUES (?, ?, 'checklist', 1, ?)
+        """, ('TBR', tbr_description, tbr_sort_order))
+    
+    # Check if Reading History exists
+    cursor = await db.execute(
+        "SELECT id FROM collections WHERE is_default = 1 AND collection_type = 'automatic'"
+    )
+    history_exists = await cursor.fetchone()
+    
+    if not history_exists:
+        print("Migration: Creating default Reading History collection...")
+        
+        history_description = """This is a list of every book you've ever read (cue "it feels good" by Tony! Toni! Toné! 🎉)."""
+        
+        auto_criteria = '{"status": "Finished", "sort": "finished_date_desc"}'
+        
+        await db.execute("""
+            INSERT INTO collections (name, description, collection_type, auto_criteria, is_default, sort_order)
+            VALUES (?, ?, 'automatic', ?, 1, ?)
+        """, ('Reading History', history_description, auto_criteria, history_sort_order))
+
+
 async def run_titles_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for the new titles/editions schema."""
     
@@ -426,6 +518,9 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
         await db.commit()
         print(f"Migration: Created {links_created} links from {len(notes_with_links)} notes")
 
+    # Phase 9E: Smart Collections migration
+    await run_smart_collections_migration(db)
+
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for old 'books' schema (pre-Phase 5)."""
@@ -676,7 +771,7 @@ CREATE TABLE IF NOT EXISTS author_notes (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Collections: user-defined book lists (Phase 7.2b)
+-- Collections: user-defined book lists (Phase 7.2b, updated Phase 9E)
 CREATE TABLE IF NOT EXISTS collections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -686,6 +781,10 @@ CREATE TABLE IF NOT EXISTS collections (
     cover_color_2 TEXT,
     custom_cover_path TEXT,
     sort_order INTEGER DEFAULT 0,
+    -- Phase 9E: Smart Collections
+    collection_type TEXT DEFAULT 'manual',  -- 'manual' | 'checklist' | 'automatic'
+    auto_criteria TEXT,                      -- JSON string for automatic collections
+    is_default INTEGER DEFAULT 0,            -- 1 = cannot be deleted (TBR, Reading History)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -697,6 +796,8 @@ CREATE TABLE IF NOT EXISTS collection_books (
     title_id INTEGER NOT NULL,
     position INTEGER DEFAULT 0,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Phase 9E: Checklist collections
+    completed_at TIMESTAMP,                  -- When book was marked done (checklist type)
     FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
     FOREIGN KEY (title_id) REFERENCES titles(id) ON DELETE CASCADE,
     UNIQUE(collection_id, title_id)

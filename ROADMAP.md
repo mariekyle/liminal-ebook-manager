@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 13, 2026 (v0.22.0)  
-> **Major Milestone:** Phase 9C Complete — Full cover extraction system working 🎉
+> **Last Updated:** January 15, 2026 (v0.22.1)  
+> **Major Milestone:** Phase 9E Planning Complete — Smart Collections spec finalized 🎉
 
 ---
 
@@ -23,7 +23,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.22.0)
+## Current State (v0.22.1)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -41,18 +41,20 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Folder structure independence | ✅ File metadata primary |
-| **Custom cover upload** | ✅ **Complete** |
-| **Auto cover extraction** | ✅ **Complete** |
-| **Bulk cover extraction** | ✅ **Complete** |
-| **Gradient covers** | ✅ **Fixed (fill containers, text overlay)** |
+| Custom cover upload | ✅ Complete |
+| Auto cover extraction | ✅ Complete |
+| Bulk cover extraction | ✅ Complete |
+| Gradient covers | ✅ Fixed (fill containers, text overlay) |
+| **Add page UX** | ✅ **Simplified (Jan 15)** |
+| **Mobile author input** | ✅ **Fixed Enter key handling (Jan 15)** |
 
 **Recent milestones:**
-- Phase 9C: Auto-extraction & bulk tool complete (Jan 13, 2026) 🎉
+- Phase 9D: Add page simplification + mobile fixes (Jan 15, 2026) ✅
+- Phase 9E: Smart Collections planning complete (Jan 15, 2026) 🎉
+- Phase 9C: Auto-extraction & bulk tool complete (Jan 13, 2026)
 - Phase 9C: Cover bug fixes — 10 bugs resolved (Jan 11-13, 2026)
-- Phase 9C: Cover extraction & upload — implemented (Jan 11, 2026)
-- Phase 9B: Folder structure independence — file metadata now primary (Jan 10, 2026) 🎉
-- Phase 9A: Automated backup system — API + Settings UI (Jan 10, 2026) 🎉
-- Phase 8.7a-d: Editions consolidation — session format, add edition, merge tool (Jan 4, 2026)
+- Phase 9B: Folder structure independence (Jan 10, 2026)
+- Phase 9A: Automated backup system (Jan 10, 2026)
 
 ---
 
@@ -79,8 +81,10 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │  CURRENT  │  Phase 9: Feature Completion                         │
 │           │  9A: ✅ Automated Backups (Jan 10)                   │
 │           │  9B: ✅ Folder Independence (Jan 10)                 │
-│           │  9C: ✅ Cover System (Jan 11-13) — COMPLETE          │
-│           │  9D-9K: Remaining features (3 weeks)                 │
+│           │  9C: ✅ Cover System (Jan 11-13)                     │
+│           │  9D: ✅ Bug Fixes & Polish (Jan 15)                  │
+│           │  9E: ⬅️ Smart Collections (NOW)                      │
+│           │  9F-9K: Remaining features (~2.5 weeks)              │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
 │           │  Calm UX design system (1 week)                      │
@@ -102,9 +106,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~40% complete (9A ✅, 9B ✅, 9C ✅)
+**Status:** ~50% complete (9A ✅, 9B ✅, 9C ✅, 9D ✅)
 
-**Timeline:** 3 weeks remaining (started Jan 10, 2026)
+**Timeline:** ~2.5 weeks remaining
 
 ---
 
@@ -158,52 +162,16 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - **Database schema** — 3 new columns on `titles` table: `cover_path`, `has_cover`, `cover_source`
 - **Cover extraction service** — Extract covers from EPUB files using OPF metadata
 - **Cover storage** — `/app/data/covers/` with `extracted/` and `custom/` subfolders
-- **REST API:**
-  - GET `/api/covers/{title_id}` — Serve cover image (with cache-busting)
-  - POST `/api/titles/{title_id}/cover` — Upload custom cover
-  - DELETE `/api/titles/{title_id}/cover` — Remove custom cover
-  - POST `/api/titles/{title_id}/extract-cover` — Force re-extraction
-  - POST `/api/titles/covers/bulk-extract` — Bulk extraction by category
+- **REST API:** GET, POST, DELETE cover endpoints + bulk extraction
 
 #### Frontend ✅
 - **GradientCover rewrite** — Complete component redesign with backward compatibility
 - **EditBookModal** — New cover section with upload/delete
 - **BookDetail** — Async handlers, cover refresh with cache-busting
 - **SettingsDrawer** — Bulk extraction tool with category selection
-- **API functions** — `uploadCover()`, `deleteCover()`, `extractCover()`, `bulkExtractCovers()`
 
-#### Category Behavior ✅
-| Category | On Sync | Bulk Tool | Cover Type |
-|----------|---------|-----------|------------|
-| Fiction | ✅ Extract | ✅ Available | Real or Gradient |
-| Non-Fiction | ✅ Extract | ✅ Available | Real or Gradient |
-| FanFiction | ❌ Skip | ❌ Disabled | Gradient only |
-
-#### Bug Fixes (Jan 11-13, 2026) ✅
-All 10 bugs resolved over multiple debugging sessions:
-
-| Bug | Problem | Fix |
-|-----|---------|-----|
-| 1 | Gradient covers not filling containers | When no size prop, fill parent |
-| 2 | Missing titles/authors on covers | Restored text overlay rendering |
-| 3 | Edit modal no background | Restored modal styling |
-| 4 | Async handler issues | Made save handlers return promises |
-| 5 | Prop incompatibility | Made GradientCover backward compatible |
-| 6 | FanFiction not filtered | Filter out from bulk extract |
-| 7 | Misleading counter | Added skipped_no_cover counter |
-| 8 | Duplicate edition counting | Added GROUP BY t.id |
-| 9 | Non-EPUB extraction failures | Added .epub extension check |
-| 10 | Stale cover status | Clear when re-extraction fails |
-
-#### Key Features Complete ✅
-- ✅ **Custom upload** — Upload any image as book cover
-- ✅ **Auto-extraction on sync** — Fiction/Non-Fiction books get covers automatically
-- ✅ **Bulk extraction tool** — Extract covers from existing library via Settings
-- ✅ **Category filtering** — FanFiction uses gradient covers only
-- ✅ **Priority system** — Custom > Extracted > Gradient
-- ✅ **Lazy loading** — IntersectionObserver for performance
-- ✅ **Graceful fallback** — Gradient covers when no image available
-- ✅ **Smart re-sync** — Stale status cleared, custom covers preserved
+#### Bug Fixes ✅
+All 10 bugs resolved over multiple debugging sessions.
 
 **Status:** ✅ Phase 9C COMPLETE  
 **Files changed:** 15+ (backend + frontend)  
@@ -212,35 +180,85 @@ All 10 bugs resolved over multiple debugging sessions:
 
 ---
 
-### Phase 9D: Bug Fixes & UI Polish ← NEXT
+### Phase 9D: Bug Fixes & UI Polish ✅ COMPLETE (Jan 15, 2026)
 
 **Goal:** Address accumulated minor issues and UX papercuts.
 
-**Status:** Not started
+**What was fixed:**
 
-**Known issues to fix:**
-- Missing "No summary" notice on book detail page
-- Series page search behavior
-- Filter state edge cases
-- Mobile keyboard overlays
+| Issue | Fix |
+|-------|-----|
+| Add page too complex | Simplified to two clear buttons: "Add to Library" / "Add to Wishlist" |
+| Mobile author input broken | Enter key now properly creates chips instead of navigating to next field |
+| Buttons not centered | Add page buttons now vertically centered |
 
-**Timeline:** 2-3 days
+**Deployed:** January 15, 2026  
+**Files changed:** 3 (`AddChoice.jsx`, `WishlistForm.jsx`, `ManualEntryForm.jsx`)
 
 ---
 
-### Phase 9E: Smart Collections System (Week 3)
+### Phase 9E: Smart Collections System ⬅️ NOW
 
-**Goal:** Rule-based dynamic collections that auto-update.
+**Goal:** Transform collections from simple manual lists to powerful organizational tools.
 
-**Status:** Not started
+**Status:** Planning Complete — Ready for Implementation
 
-**Planned features:**
-- Rule builder UI (status, category, tags, date ranges, etc.)
-- AND/OR logic support
-- Auto-updating membership
-- Template collections (e.g., "Read This Year", "Unread Fiction")
+**Timeline:** 5-7 days total (split into 9E Core + 9E.5 Polish)
 
-**Timeline:** 5-6 days
+#### Three Collection Types
+
+| Type | How Books Added | When Books Leave |
+|------|-----------------|------------------|
+| **Manual** | User adds manually | User removes |
+| **Checklist** | User adds manually | Auto-checked when Done (grayed, moved to bottom) |
+| **Automatic** | Criteria-based rules | When no longer matches criteria |
+
+#### Default Collections (Auto-Created, Cannot Delete)
+
+**TBR (Checklist type)**
+> "This is your growing, teetering stack of books you fully intend to read — eventually. Someday. After this one. And plot twist - a good TBR is never finished. Like laundry. Or emails. It's the beautiful circle of literary life, and the slow, crumbling collapse of your self-control. So live a little, add a few more books :)."
+
+**Reading History (Automatic type)**
+> "This is a list of every book you've ever read (cue "it feels good" by Tony! Toni! Toné! 🎉)"
+
+#### Automatic Criteria Options
+- Reading Status (Any, Done, Reading, Abandoned, Wishlist)
+- Category (Any, Fiction, Non-Fiction, FanFiction)
+- Minimum Rating (Any, 1+, 2+, 3+, 4+, 5 only)
+- Finished (Any time, This month, Last 30 days, This year, Last year)
+- Word Count (min/max)
+- Tags (searchable multi-select)
+
+All criteria AND'd together. Preview shows match count.
+
+#### Checklist "Done" Behavior
+When book marked Done:
+1. Grayed out (opacity 0.5)
+2. Checkmark ✓ appears
+3. Title NOT crossed out
+4. Moves to bottom under "── Completed · N ──" divider
+
+#### Additional Features (9E.5)
+- Collections landing: 3-dot menu replaces add button, drag reorder, grid/list toggle
+- Collection detail: Taller header image, filter drawer, grid/list toggle, drag reorder books
+- Gradients: Use book gradient system (varied, not all same), remove icon overlay
+- Cover preview: Show thumbnail after custom image selected
+- Duplicate collection: Copy collection with option to change type
+
+#### Implementation Plan
+
+**9E Core (3-4 days):**
+- Day 1: Database schema + backend endpoints
+- Day 2: Collection type UI + criteria builder
+- Day 3: Checklist behavior
+- Day 4: Testing + edge cases
+
+**9E.5 Polish (2-3 days):**
+- Day 1: Landing page (menu, reorder, view toggle)
+- Day 2: Detail page (taller image, filter, reorder books)
+- Day 3: Cover fixes + duplicate feature
+
+**Full spec:** See `PHASE_9E_SMART_COLLECTIONS_SPEC.md`
 
 ---
 
@@ -296,15 +314,9 @@ All 10 bugs resolved over multiple debugging sessions:
 
 **Goal:** Refinements to collections system.
 
-**Status:** Not started
+**Status:** Merged into 9E.5
 
-**Planned improvements:**
-- Bulk operations
-- Better reordering
-- Collection templates
-- Export/import
-
-**Timeline:** 1-2 days
+**Note:** Originally separate, now included in Phase 9E.5 scope.
 
 ---
 
@@ -439,10 +451,12 @@ All 10 bugs resolved over multiple debugging sessions:
 
 | Phase | Duration | Start | Status |
 |-------|----------|-------|--------|
-| Phase 9A | 3 days | Jan 10 | ✅ Complete |
+| Phase 9A | 1 day | Jan 10 | ✅ Complete |
 | Phase 9B | Same day | Jan 10 | ✅ Complete |
 | Phase 9C | 3 days | Jan 11-13 | ✅ Complete |
-| Phase 9D-9K | 3 weeks | Jan 14+ | Not started |
+| Phase 9D | 1 day | Jan 15 | ✅ Complete |
+| Phase 9E | 5-7 days | Jan 15+ | ⬅️ In Progress |
+| Phase 9F-9K | ~2 weeks | Late Jan | Not started |
 | Phase 10 | 1 week | ~Feb 1 | Not started |
 | Phase 11 | 1 week | ~Feb 8 | Not started |
 | Phase 12 | 4-6 weeks | ~Feb 15 | Not started |
@@ -455,10 +469,11 @@ All 10 bugs resolved over multiple debugging sessions:
 
 ## Immediate Next Steps
 
-1. ~~**Complete Phase 9C** — Automatic cover extraction during sync~~ ✅
-2. ~~**Deploy v0.22.0** — With auto-extraction working~~ ✅
-3. **Run full sync** — Extract covers from all EPUBs
-4. **Continue to Phase 9D** — Bug fixes & polish
+1. ~~**Complete Phase 9D** — Bug fixes & polish~~ ✅
+2. ~~**Phase 9E Planning** — Smart Collections spec~~ ✅
+3. **Start Phase 9E Core** — Database schema + backend
+4. **Build collection types** — Manual, Checklist, Automatic
+5. **Phase 9E.5** — Polish (reorder, view toggles, cover fixes)
 
 ---
 
@@ -469,7 +484,9 @@ All 10 bugs resolved over multiple debugging sessions:
 - ✅ No data loss scenarios
 - ✅ Complete folder structure flexibility
 - ✅ Better visual experience (real covers!)
-- ⬜ Improved discovery and organization (9D-9K)
+- ✅ Simplified Add page UX
+- ⬜ Powerful collections system (9E)
+- ⬜ Improved discovery and organization (9F-9K)
 
 ### Migration Success (Phase 12)
 - Zero feature regressions
@@ -482,15 +499,14 @@ All 10 bugs resolved over multiple debugging sessions:
 
 ## Notes
 
-- **Phase 9C complete:** All 10 bugs fixed, auto-extraction working, bulk tool available
-- **GradientCover backward compatible:** Supports both old and new prop interfaces
-- **Custom cover upload working:** Upload, delete, cache-busting all functional
-- **Category filtering by design:** FanFiction uses gradients only (no embedded covers typically)
-- **Technical debt noted:** Browser cache issues with covers (workaround: clear cache)
+- **Phase 9E has detailed spec:** See `PHASE_9E_SMART_COLLECTIONS_SPEC.md`
+- **Collection types renamed:** Manual, Checklist (was Smart Todo), Automatic (was Auto)
+- **No type conversion:** Use Duplicate Collection feature instead
+- **Default collections permanent:** TBR + Reading History cannot be deleted
 - **User is actively using Liminal:** Stability and reliability are paramount
 - **Mobile-first is non-negotiable:** Every feature must work well on Android
 - **Quality over speed:** Taking time to do it right
 
 ---
 
-*Roadmap reflects actual progress as of January 13, 2026. All dates are estimates and subject to change based on complexity and discovery.*
+*Roadmap reflects actual progress as of January 15, 2026. All dates are estimates and subject to change based on complexity and discovery.*
