@@ -227,9 +227,7 @@ async def get_collection(
             FROM collection_books cb
             JOIN titles t ON cb.title_id = t.id
             WHERE cb.collection_id = ?
-            ORDER BY 
-                CASE WHEN cb.completed_at IS NULL THEN 0 ELSE 1 END,
-                cb.position ASC
+            ORDER BY cb.position ASC
         ''', (collection_id,))
         books = await books_cursor.fetchall()
         
