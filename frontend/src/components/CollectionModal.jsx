@@ -1,9 +1,21 @@
 /**
  * CollectionModal - Create or edit a collection
+ * 
+ * Phase 9E Day 2: Added collection type selector and criteria builder
+ * 
+ * Collection Types:
+ * - manual: User adds/removes books manually (existing behavior)
+ * - checklist: User adds manually, books auto-complete when marked Done
+ * - automatic: Books auto-populate based on criteria rules
+ * 
+ * FIXES in this version:
+ * - Shows criteria builder when EDITING automatic collections (not just creating)
+ * - Uses form id to properly link external submit button
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createCollection, updateCollection, updateCollectionCoverType, uploadCollectionCover, deleteCollectionCover } from '../api'
+import CriteriaBuilder from './CriteriaBuilder'
 
 // X icon for close button
 const XIcon = () => (
@@ -20,6 +32,39 @@ const CameraIcon = () => (
   </svg>
 )
 
+// Info icon for tooltip
+const InfoIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </svg>
+)
+
+// Collection type definitions
+const COLLECTION_TYPES = [
+  {
+    id: 'manual',
+    name: 'Manual',
+    icon: '📚',
+    description: 'Add and remove books yourself',
+    example: 'Favorites, Beach Reads'
+  },
+  {
+    id: 'checklist',
+    name: 'Checklist',
+    icon: '✓',
+    description: 'Books get checked off when finished',
+    example: 'TBR, Reading Challenge'
+  },
+  {
+    id: 'automatic',
+    name: 'Automatic',
+    icon: '⚡',
+    description: 'Books appear based on rules',
+    example: '5-Star Books, Read This Year'
+  }
+]
+
 export default function CollectionModal({ collection = null, onClose, onSuccess }) {
   const isEditing = !!collection
   
@@ -29,6 +74,66 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
   const [uploadingCover, setUploadingCover] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Phase 9E: New state for collection type and criteria
+  const [collectionType, setCollectionType] = useState(collection?.collection_type || 'manual')
+  const [criteria, setCriteria] = useState(() => {
+    // Parse existing criteria if editing an automatic collection
+    if (collection?.auto_criteria) {
+      try {
+        return typeof collection.auto_criteria === 'string' 
+          ? JSON.parse(collection.auto_criteria) 
+          : collection.auto_criteria
+      } catch {
+        return {}
+      }
+    }
+    return {}
+  })
+  const [showTypeInfo, setShowTypeInfo] = useState(false)
+  const [previewCount, setPreviewCount] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  // Fetch preview count when criteria changes (for automatic type)
+  useEffect(() => {
+    if (collectionType !== 'automatic') {
+      setPreviewCount(null)
+      return
+    }
+
+    // Check if we have at least one criteria set
+    const hasAnyCriteria = Object.values(criteria).some(v => 
+      v !== null && v !== undefined && v !== '' && 
+      (Array.isArray(v) ? v.length > 0 : true)
+    )
+    
+    if (!hasAnyCriteria) {
+      setPreviewCount(null)
+      return
+    }
+
+    // Debounce the preview request
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true)
+      try {
+        const response = await fetch('/api/collections/preview-criteria', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(criteria)
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setPreviewCount(data.count)
+        }
+      } catch (err) {
+        console.error('Preview fetch failed:', err)
+      } finally {
+        setPreviewLoading(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [criteria, collectionType])
   
   const handleCoverTypeChange = async (type) => {
     if (!collection?.id) {
@@ -98,9 +203,20 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       }
       
       if (isEditing) {
+        // When editing, update name/description
+        // For automatic collections, also update criteria (if not a default collection)
+        if (collection.collection_type === 'automatic' && !collection.is_default) {
+          data.auto_criteria = criteria
+        }
         await updateCollection(collection.id, data)
       } else {
-        await createCollection({ ...data, cover_type: coverType })
+        // When creating, include type and criteria
+        await createCollection({ 
+          ...data, 
+          cover_type: coverType,
+          collection_type: collectionType,
+          auto_criteria: collectionType === 'automatic' ? criteria : null
+        })
       }
       
       onSuccess()
@@ -112,8 +228,21 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
     }
   }
   
+  // Check if this is a default collection (TBR or Reading History)
+  const isDefaultCollection = collection?.is_default === 1
+  
+  // Determine if we should show the criteria builder
+  // Show when: creating automatic collection OR editing non-default automatic collection
+  const showCriteriaBuilder = (
+    (!isEditing && collectionType === 'automatic') ||
+    (isEditing && collection?.collection_type === 'automatic' && !isDefaultCollection)
+  )
+  
+  // Determine if criteria is read-only (default automatic collections)
+  const criteriaReadOnly = isEditing && isDefaultCollection && collection?.collection_type === 'automatic'
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/70"
@@ -121,7 +250,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-library-card rounded-xl shadow-xl">
+      <div className="relative w-full sm:max-w-md max-h-[90vh] bg-library-card rounded-t-xl sm:rounded-xl shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-lg font-semibold text-gray-100">
@@ -135,8 +264,8 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
           </button>
         </div>
         
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {/* Form - Scrollable */}
+        <form id="collection-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Name field */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -166,6 +295,120 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
             />
             <p className="mt-1 text-xs text-gray-500">Supports markdown formatting</p>
           </div>
+          
+          {/* ===== Phase 9E: Collection Type Selector (only when creating) ===== */}
+          {!isEditing && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-300">
+                  Collection Type
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowTypeInfo(!showTypeInfo)}
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                >
+                  <InfoIcon />
+                  {showTypeInfo ? 'Hide' : 'Info'}
+                </button>
+              </div>
+
+              {/* Type info tooltip */}
+              {showTypeInfo && (
+                <div className="mb-3 p-3 bg-gray-800 border border-gray-700 rounded-lg space-y-2 text-sm">
+                  {COLLECTION_TYPES.map(type => (
+                    <div key={type.id}>
+                      <span className="font-medium text-gray-200">{type.icon} {type.name}:</span>
+                      <span className="text-gray-400 ml-1">{type.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Type selector buttons */}
+              <div className="grid grid-cols-3 gap-2">
+                {COLLECTION_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setCollectionType(type.id)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+                      collectionType === type.id
+                        ? 'bg-library-accent/20 border-library-accent text-white'
+                        : 'bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                  >
+                    <span className="text-lg mb-0.5">{type.icon}</span>
+                    <span className="text-xs font-medium">{type.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Example text for selected type */}
+              <p className="mt-1.5 text-xs text-gray-500">
+                e.g. {COLLECTION_TYPES.find(t => t.id === collectionType)?.example}
+              </p>
+            </div>
+          )}
+
+          {/* Show current type when editing (read-only badge) */}
+          {isEditing && collection?.collection_type && collection.collection_type !== 'manual' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Collection Type
+              </label>
+              <div className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 text-sm flex items-center gap-2">
+                <span>{COLLECTION_TYPES.find(t => t.id === collection.collection_type)?.icon}</span>
+                <span className="capitalize">{collection.collection_type}</span>
+                <span className="text-gray-500 text-xs ml-auto">(cannot be changed)</span>
+              </div>
+            </div>
+          )}
+
+          {/* ===== Phase 9E: Criteria Builder ===== */}
+          {/* Show for: new automatic collections OR editing non-default automatic collections */}
+          {showCriteriaBuilder && (
+            <div className="border-t border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-gray-300">
+                  Rules
+                </label>
+                {previewLoading ? (
+                  <span className="text-xs text-gray-500">Counting...</span>
+                ) : previewCount !== null ? (
+                  <span className="text-xs text-blue-400">
+                    ~{previewCount} book{previewCount !== 1 ? 's' : ''} match
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-500">Set rules to see matches</span>
+                )}
+              </div>
+
+              <CriteriaBuilder 
+                criteria={criteria}
+                onChange={setCriteria}
+              />
+            </div>
+          )}
+
+          {/* Show criteria as read-only for default automatic collections */}
+          {criteriaReadOnly && (
+            <div className="border-t border-gray-700 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-300">
+                  Rules
+                </label>
+                <span className="text-xs text-gray-500">(cannot be changed)</span>
+              </div>
+              <div className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 text-sm">
+                {Object.entries(criteria).map(([key, value]) => (
+                  <div key={key}>
+                    <span className="text-gray-500">{key}:</span> {JSON.stringify(value)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Cover Type - only show when editing existing collection */}
           {collection?.id && (
@@ -231,27 +474,27 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
           {error && (
             <p className="text-red-400 text-sm">{error}</p>
           )}
-          
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !name.trim()}
-              className="flex-1 px-4 py-2 bg-library-accent hover:opacity-90 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg font-medium transition-opacity"
-            >
-              {saving ? 'Saving...' : (isEditing ? 'Save' : 'Create')}
-            </button>
-          </div>
         </form>
+        
+        {/* Actions - Fixed at bottom */}
+        <div className="flex gap-3 p-4 border-t border-gray-700">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="collection-form"
+            disabled={saving || !name.trim()}
+            className="flex-1 px-4 py-2 bg-library-accent hover:opacity-90 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg font-medium transition-opacity"
+          >
+            {saving ? 'Saving...' : (isEditing ? 'Save' : 'Create')}
+          </button>
+        </div>
       </div>
     </div>
   )
 }
-

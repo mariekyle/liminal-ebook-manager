@@ -524,8 +524,13 @@ async def build_auto_criteria_query(criteria: dict) -> tuple:
     params = []
     
     if criteria.get('status'):
-        conditions.append("t.status = ?")
-        params.append(criteria['status'])
+        if criteria['status'] == 'Abandoned':
+            # Match both new 'Abandoned' and legacy 'DNF' values
+            conditions.append("(t.status = ? OR t.status = ?)")
+            params.extend(['Abandoned', 'DNF'])
+        else:
+            conditions.append("t.status = ?")
+            params.append(criteria['status'])
     
     if criteria.get('category'):
         conditions.append("t.category = ?")
@@ -639,6 +644,88 @@ async def preview_automatic_criteria(data: AutoCriteriaPreview, db=Depends(get_d
 # --------------------------------------------------------------------------
 # Smart Paste
 # --------------------------------------------------------------------------
+
+@router.post("/collections/smart-paste/preview")
+async def smart_paste_preview(data: SmartPasteRequest, db=Depends(get_db)):
+    """Parse markdown with [[links]] and match to library books (collection-agnostic preview)."""
+    
+    # Extract [[links]] from markdown
+    pattern = r'\[\[([^\]]+)\]\]'
+    found_links = re.findall(pattern, data.markdown)
+    
+    if not found_links:
+        return {
+            'matches': [],
+            'total_found': 0,
+            'total_matched': 0,
+            'total_unmatched': 0
+        }
+    
+    # Get all titles for matching
+    cursor = await db.execute('SELECT id, title FROM titles')
+    all_titles = await cursor.fetchall()
+    
+    # Create lookup map
+    title_map = {t['title'].lower(): (t['id'], t['title']) for t in all_titles}
+    
+    # Deduplicate while preserving order
+    seen = set()
+    unique_titles = []
+    for t in found_links:
+        t_lower = t.lower().strip()
+        if t_lower not in seen:
+            seen.add(t_lower)
+            unique_titles.append(t.strip())
+    
+    matches = []
+    for input_title in unique_titles:
+        input_lower = input_title.lower()
+        
+        # Try exact match first
+        if input_lower in title_map:
+            book_id, book_title = title_map[input_lower]
+            matches.append({
+                'input_title': input_title,
+                'matched_title_id': book_id,
+                'matched_title': book_title,
+                'confidence': 'exact'
+            })
+        else:
+            # Try fuzzy match
+            best_match = None
+            best_ratio = 0
+            
+            for book_title_lower, (book_id, book_title) in title_map.items():
+                ratio = SequenceMatcher(None, input_lower, book_title_lower).ratio()
+                if ratio > best_ratio and ratio >= 0.8:  # 80% similarity threshold
+                    best_ratio = ratio
+                    best_match = (book_id, book_title, ratio)
+            
+            if best_match:
+                matches.append({
+                    'input_title': input_title,
+                    'matched_title_id': best_match[0],
+                    'matched_title': best_match[1],
+                    'confidence': 'fuzzy',
+                    'similarity': round(best_match[2] * 100)
+                })
+            else:
+                matches.append({
+                    'input_title': input_title,
+                    'matched_title_id': None,
+                    'matched_title': None,
+                    'confidence': 'none'
+                })
+    
+    matched_count = sum(1 for m in matches if m['matched_title_id'] is not None)
+    
+    return {
+        'matches': matches,
+        'total_found': len(matches),
+        'total_matched': matched_count,
+        'total_unmatched': len(matches) - matched_count
+    }
+
 
 @router.post("/collections/{collection_id}/smart-paste")
 async def smart_paste_parse(collection_id: int, data: SmartPasteRequest, db=Depends(get_db)):

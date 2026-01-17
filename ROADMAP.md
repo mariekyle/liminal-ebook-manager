@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 15, 2026 (v0.22.1)  
-> **Major Milestone:** Phase 9E Planning Complete — Smart Collections spec finalized 🎉
+> **Last Updated:** January 15, 2026 (v0.23.0)  
+> **Major Milestone:** Phase 9E Day 1 Complete — Backend deployed, frontend next 🎉
 
 ---
 
@@ -23,7 +23,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.22.1)
+## Current State (v0.23.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -34,7 +34,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Reading status & session tracking | ✅ Stable |
 | Notes with wiki-style linking | ✅ Stable |
 | Wishlist management | ✅ Stable |
-| Collections system | ✅ Stable |
+| Collections system | ✅ Stable (Smart Collections backend deployed) |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
 | Book detail header | ✅ Redesigned |
@@ -45,12 +45,14 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Auto cover extraction | ✅ Complete |
 | Bulk cover extraction | ✅ Complete |
 | Gradient covers | ✅ Fixed (fill containers, text overlay) |
-| **Add page UX** | ✅ **Simplified (Jan 15)** |
-| **Mobile author input** | ✅ **Fixed Enter key handling (Jan 15)** |
+| Add page UX | ✅ Simplified (Jan 15) |
+| Mobile author input | ✅ Fixed Enter key handling (Jan 15) |
+| **Smart Collections backend** | ✅ **Deployed (Jan 15)** |
+| **Default TBR + Reading History** | ✅ **Auto-created (Jan 15)** |
 
 **Recent milestones:**
+- Phase 9E Day 1: Smart Collections backend deployed (Jan 15, 2026) ✅
 - Phase 9D: Add page simplification + mobile fixes (Jan 15, 2026) ✅
-- Phase 9E: Smart Collections planning complete (Jan 15, 2026) 🎉
 - Phase 9C: Auto-extraction & bulk tool complete (Jan 13, 2026)
 - Phase 9C: Cover bug fixes — 10 bugs resolved (Jan 11-13, 2026)
 - Phase 9B: Folder structure independence (Jan 10, 2026)
@@ -83,8 +85,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │           │  9B: ✅ Folder Independence (Jan 10)                 │
 │           │  9C: ✅ Cover System (Jan 11-13)                     │
 │           │  9D: ✅ Bug Fixes & Polish (Jan 15)                  │
-│           │  9E: ⬅️ Smart Collections (NOW)                      │
-│           │  9F-9K: Remaining features (~2.5 weeks)              │
+│           │  9E: ⬅️ Smart Collections (Day 1 ✅, Day 2 next)     │
+│           │  9F-9K: Remaining features (~2 weeks)                │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
 │           │  Calm UX design system (1 week)                      │
@@ -106,9 +108,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~50% complete (9A ✅, 9B ✅, 9C ✅, 9D ✅)
+**Status:** ~55% complete (9A ✅, 9B ✅, 9C ✅, 9D ✅, 9E Day 1 ✅)
 
-**Timeline:** ~2.5 weeks remaining
+**Timeline:** ~2 weeks remaining
 
 ---
 
@@ -197,13 +199,41 @@ All 10 bugs resolved over multiple debugging sessions.
 
 ---
 
-### Phase 9E: Smart Collections System ⬅️ NOW
+### Phase 9E: Smart Collections System ⬅️ IN PROGRESS
 
 **Goal:** Transform collections from simple manual lists to powerful organizational tools.
 
-**Status:** Planning Complete — Ready for Implementation
+**Status:** Day 1 Complete ✅ — Day 2 (Frontend) Next
 
 **Timeline:** 5-7 days total (split into 9E Core + 9E.5 Polish)
+
+#### Day 1 Complete ✅ (Jan 15, 2026)
+
+**Database Schema:**
+- `collection_type` column — 'manual' | 'checklist' | 'automatic'
+- `auto_criteria` column — JSON for automatic collection rules
+- `is_default` column — Protects TBR and Reading History
+- `completed_at` column — Tracks checklist completion
+
+**Default Collections Created:**
+- **TBR** (Checklist) — Appears first, books get checked off when finished
+- **Reading History** (Automatic) — Auto-populates with 345 finished books
+
+**New API Endpoints:**
+- Mark book complete in checklist
+- Preview criteria match count
+- Duplicate collection with type change
+
+**Bugs Fixed During Implementation:** 4
+
+#### Day 2 Pending — Frontend
+
+- Collection type selector in New Collection modal
+- Type info tooltip with explanations
+- Criteria builder for automatic collections
+- Tags multi-select with search
+- Preview count display
+- Scroll-to-load for automatic collections (currently limited to 100)
 
 #### Three Collection Types
 
@@ -212,24 +242,6 @@ All 10 bugs resolved over multiple debugging sessions.
 | **Manual** | User adds manually | User removes |
 | **Checklist** | User adds manually | Auto-checked when Done (grayed, moved to bottom) |
 | **Automatic** | Criteria-based rules | When no longer matches criteria |
-
-#### Default Collections (Auto-Created, Cannot Delete)
-
-**TBR (Checklist type)**
-> "This is your growing, teetering stack of books you fully intend to read — eventually. Someday. After this one. And plot twist - a good TBR is never finished. Like laundry. Or emails. It's the beautiful circle of literary life, and the slow, crumbling collapse of your self-control. So live a little, add a few more books :)."
-
-**Reading History (Automatic type)**
-> "This is a list of every book you've ever read (cue "it feels good" by Tony! Toni! Toné! 🎉)"
-
-#### Automatic Criteria Options
-- Reading Status (Any, Done, Reading, Abandoned, Wishlist)
-- Category (Any, Fiction, Non-Fiction, FanFiction)
-- Minimum Rating (Any, 1+, 2+, 3+, 4+, 5 only)
-- Finished (Any time, This month, Last 30 days, This year, Last year)
-- Word Count (min/max)
-- Tags (searchable multi-select)
-
-All criteria AND'd together. Preview shows match count.
 
 #### Checklist "Done" Behavior
 When book marked Done:
@@ -244,19 +256,6 @@ When book marked Done:
 - Gradients: Use book gradient system (varied, not all same), remove icon overlay
 - Cover preview: Show thumbnail after custom image selected
 - Duplicate collection: Copy collection with option to change type
-
-#### Implementation Plan
-
-**9E Core (3-4 days):**
-- Day 1: Database schema + backend endpoints
-- Day 2: Collection type UI + criteria builder
-- Day 3: Checklist behavior
-- Day 4: Testing + edge cases
-
-**9E.5 Polish (2-3 days):**
-- Day 1: Landing page (menu, reorder, view toggle)
-- Day 2: Detail page (taller image, filter, reorder books)
-- Day 3: Cover fixes + duplicate feature
 
 **Full spec:** See `PHASE_9E_SMART_COLLECTIONS_SPEC.md`
 
@@ -455,7 +454,7 @@ When book marked Done:
 | Phase 9B | Same day | Jan 10 | ✅ Complete |
 | Phase 9C | 3 days | Jan 11-13 | ✅ Complete |
 | Phase 9D | 1 day | Jan 15 | ✅ Complete |
-| Phase 9E | 5-7 days | Jan 15+ | ⬅️ In Progress |
+| Phase 9E | 5-7 days | Jan 15+ | ⬅️ Day 1 ✅, Day 2 next |
 | Phase 9F-9K | ~2 weeks | Late Jan | Not started |
 | Phase 10 | 1 week | ~Feb 1 | Not started |
 | Phase 11 | 1 week | ~Feb 8 | Not started |
@@ -471,9 +470,10 @@ When book marked Done:
 
 1. ~~**Complete Phase 9D** — Bug fixes & polish~~ ✅
 2. ~~**Phase 9E Planning** — Smart Collections spec~~ ✅
-3. **Start Phase 9E Core** — Database schema + backend
-4. **Build collection types** — Manual, Checklist, Automatic
-5. **Phase 9E.5** — Polish (reorder, view toggles, cover fixes)
+3. ~~**Phase 9E Day 1** — Database schema + backend~~ ✅
+4. **Phase 9E Day 2** — Frontend: type selector, criteria builder
+5. **Phase 9E Day 3** — Checklist behavior + completion UI
+6. **Phase 9E.5** — Polish (reorder, view toggles, cover fixes)
 
 ---
 
@@ -485,7 +485,7 @@ When book marked Done:
 - ✅ Complete folder structure flexibility
 - ✅ Better visual experience (real covers!)
 - ✅ Simplified Add page UX
-- ⬜ Powerful collections system (9E)
+- ⬅️ Powerful collections system (9E in progress)
 - ⬜ Improved discovery and organization (9F-9K)
 
 ### Migration Success (Phase 12)
@@ -500,9 +500,10 @@ When book marked Done:
 ## Notes
 
 - **Phase 9E has detailed spec:** See `PHASE_9E_SMART_COLLECTIONS_SPEC.md`
-- **Collection types renamed:** Manual, Checklist (was Smart Todo), Automatic (was Auto)
+- **Collection types:** Manual, Checklist, Automatic
 - **No type conversion:** Use Duplicate Collection feature instead
 - **Default collections permanent:** TBR + Reading History cannot be deleted
+- **Reading History pagination:** Currently shows first 100 books; scroll-to-load coming in Day 2
 - **User is actively using Liminal:** Stability and reliability are paramount
 - **Mobile-first is non-negotiable:** Every feature must work well on Android
 - **Quality over speed:** Taking time to do it right
