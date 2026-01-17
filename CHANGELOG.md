@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9: Feature Completion (In Progress)
-- Phase 9E: Smart Collections system (Day 1-2 complete, Day 3 checklist behavior pending)
+- Phase 9E.5: Smart Collections polish (scroll-to-load, reorder, view toggles)
 - Phase 9F: Book detail redesign
 - Phase 9G: Library/Home improvements
 - Phase 9H: Stats page
@@ -18,6 +18,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Debt
 - **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
+
+---
+
+## [0.25.0] - 2026-01-17
+
+### Added
+
+#### Phase 9E Day 3: Checklist Behavior 🎉
+Complete checklist functionality with visual styling, context menus, and status-based completion tracking.
+
+**The Design Decision:**
+Instead of maintaining separate "completed_at" tracking, checklist completion is determined by the book's actual reading status. A book is "complete" in a checklist when its status is Finished. This creates a single source of truth — marking a book finished anywhere in the app automatically completes it in all checklists.
+
+**Visual Styling:**
+- Completed books displayed in separate "Completed" section at bottom
+- Green checkmark icon on completed book cards
+- Reduced opacity (60%) for completed items
+- Completion count shown in section header (e.g., "Completed · 3")
+
+**Context Menus (Long-Press):**
+- **For incomplete books:** "Mark Finished" opens completion modal
+- **For completed books:** "Update Status" opens status change modal
+
+**Completion Modal (MarkFinishedModal):**
+- Date picker for finish date (defaults to today)
+- Optional rating selector (1-5 scale)
+- Clean header: "Mark as Finished"
+- Saves finish date and rating to book record
+
+**Status Change Modal (UpdateStatusModal):**
+- Shows custom status labels from settings
+- Gentle warning when selecting non-Finished status: "This will clear the finish date"
+- Title simplified to "Update Status"
+- Updates book status across entire library
+
+---
+
+### Bug Fixes
+
+**✅ Completion count showing incorrect number**
+- **Problem:** Count included all finished books, not just those in the collection
+- **Fix:** Filter to only books that exist in the current collection
+
+**✅ Long-press not triggering context menu**
+- **Problem:** Click events firing before long-press timer completed
+- **Fix:** Added proper timer cleanup and `e.preventDefault()` on touchend
+
+**✅ Event bubbling causing navigation**
+- **Problem:** Clicking context menu items also triggered book navigation
+- **Fix:** Added `e.stopPropagation()` to all interactive elements
+
+**✅ Custom status labels not showing**
+- **Problem:** Hardcoded status names instead of user's custom labels
+- **Fix:** Fetch settings and use `status_label_*` values
+
+---
+
+### Technical
+
+#### Files Added
+- `frontend/src/components/MarkFinishedModal.jsx` — Modal for marking books finished with date/rating
+- `frontend/src/components/UpdateStatusModal.jsx` — Modal for changing reading status
+
+#### Files Modified
+- `frontend/src/pages/CollectionDetail.jsx` — Checklist sections, completion logic, context menus
+- `frontend/src/components/BookCard.jsx` — Green checkmark overlay for completed items
+- `frontend/src/api.js` — `updateBookStatus()` function
+
+#### Completion Logic
+```javascript
+// A book is "complete" when its reading status is Finished
+const isComplete = book.status === 'Finished';
+
+// Completed books go to bottom section
+const incomplete = books.filter(b => b.status !== 'Finished');
+const completed = books.filter(b => b.status === 'Finished');
+```
+
+### Development Stats
+
+- **Implementation time:** January 17, 2026
+- **New components:** 2
+- **Files changed:** 5
+- **Bugs fixed:** 4
+- **Status:** Phase 9E Core Complete ✅
 
 ---
 

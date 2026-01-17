@@ -719,8 +719,28 @@ export async function createCollection(data) {
  * Get collection details with all books
  * @param {number} id - Collection ID
  */
-export async function getCollection(id) {
-  return apiFetch(`/collections/${id}`)
+export async function getCollection(collectionId, options = {}) {
+  const {
+    // For automatic/manual collections
+    limit = 50,
+    offset = 0,
+    // For checklist collections - separate pagination per section
+    incompleteLimit = 50,
+    incompleteOffset = 0,
+    completedLimit = 50,
+    completedOffset = 0
+  } = options
+  
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString(),
+    incomplete_limit: incompleteLimit.toString(),
+    incomplete_offset: incompleteOffset.toString(),
+    completed_limit: completedLimit.toString(),
+    completed_offset: completedOffset.toString()
+  })
+  
+  return apiFetch(`/collections/${collectionId}?${params}`)
 }
 
 /**

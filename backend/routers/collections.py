@@ -183,12 +183,22 @@ async def create_collection(data: CollectionCreate, db=Depends(get_db)):
 
 @router.get("/collections/{collection_id}")
 async def get_collection(
-    collection_id: int, 
-    limit: int = Query(100, ge=1, le=500),
+    collection_id: int,
+    # For automatic and manual collections
+    limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    # For checklist collections - separate pagination per section
+    incomplete_limit: int = Query(50, ge=1, le=500),
+    incomplete_offset: int = Query(0, ge=0),
+    completed_limit: int = Query(50, ge=1, le=500),
+    completed_offset: int = Query(0, ge=0),
     db=Depends(get_db)
 ):
-    """Get collection details with all books."""
+    """Get collection details with paginated books.
+    
+    For checklist collections, books are split into incomplete and completed
+    sections with separate pagination to avoid offset drift when books change status.
+    """
     
     cursor = await db.execute('SELECT * FROM collections WHERE id = ?', (collection_id,))
     collection = await cursor.fetchone()
@@ -217,18 +227,101 @@ async def get_collection(
         return {
             **coll,
             'book_count': total,
+            'total_books': total,
             'books': [process_book_for_response(b) for b in books],
             'has_more': offset + len(books) < total
         }
+    
+    elif coll.get('collection_type') == 'checklist':
+        # CHECKLIST: Separate pagination for incomplete vs completed
+        # This prevents pagination drift when books change status
+        
+        # Count incomplete books
+        incomplete_count_cursor = await db.execute('''
+            SELECT COUNT(*) FROM collection_books cb
+            JOIN titles t ON cb.title_id = t.id
+            WHERE cb.collection_id = ? AND t.status != 'Finished'
+        ''', (collection_id,))
+        incomplete_total = (await incomplete_count_cursor.fetchone())[0]
+        
+        # Count completed books
+        completed_count_cursor = await db.execute('''
+            SELECT COUNT(*) FROM collection_books cb
+            JOIN titles t ON cb.title_id = t.id
+            WHERE cb.collection_id = ? AND t.status = 'Finished'
+        ''', (collection_id,))
+        completed_total = (await completed_count_cursor.fetchone())[0]
+        
+        # Get incomplete books (sorted by position)
+        incomplete_cursor = await db.execute('''
+            SELECT t.*, cb.position, cb.added_at as collection_added_at, cb.completed_at
+            FROM collection_books cb
+            JOIN titles t ON cb.title_id = t.id
+            WHERE cb.collection_id = ? AND t.status != 'Finished'
+            ORDER BY cb.position ASC
+            LIMIT ? OFFSET ?
+        ''', (collection_id, incomplete_limit, incomplete_offset))
+        incomplete_books = await incomplete_cursor.fetchall()
+        
+        # Get completed books (sorted by position)
+        completed_cursor = await db.execute('''
+            SELECT t.*, cb.position, cb.added_at as collection_added_at, cb.completed_at
+            FROM collection_books cb
+            JOIN titles t ON cb.title_id = t.id
+            WHERE cb.collection_id = ? AND t.status = 'Finished'
+            ORDER BY cb.position ASC
+            LIMIT ? OFFSET ?
+        ''', (collection_id, completed_limit, completed_offset))
+        completed_books = await completed_cursor.fetchall()
+        
+        # Process books
+        processed_incomplete = []
+        for b in incomplete_books:
+            book = process_book_for_response(b)
+            book['completed_at'] = b['completed_at']
+            processed_incomplete.append(book)
+        
+        processed_completed = []
+        for b in completed_books:
+            book = process_book_for_response(b)
+            book['completed_at'] = b['completed_at']
+            processed_completed.append(book)
+        
+        total = incomplete_total + completed_total
+        
+        return {
+            **coll,
+            'book_count': total,
+            'total_books': total,
+            # Separate section data
+            'incomplete_books': processed_incomplete,
+            'incomplete_total': incomplete_total,
+            'incomplete_has_more': incomplete_offset + len(incomplete_books) < incomplete_total,
+            'completed_books': processed_completed,
+            'completed_total': completed_total,
+            'completed_has_more': completed_offset + len(completed_books) < completed_total,
+            # Legacy field for backward compatibility (combined list)
+            'books': processed_incomplete + processed_completed,
+            'has_more': (incomplete_offset + len(incomplete_books) < incomplete_total) or 
+                       (completed_offset + len(completed_books) < completed_total),
+            'completed_count': completed_total
+        }
+    
     else:
-        # Manual or Checklist: get from collection_books junction table
+        # MANUAL: Simple position-based pagination
+        count_cursor = await db.execute('''
+            SELECT COUNT(*) FROM collection_books WHERE collection_id = ?
+        ''', (collection_id,))
+        total = (await count_cursor.fetchone())[0]
+        
         books_cursor = await db.execute('''
             SELECT t.*, cb.position, cb.added_at as collection_added_at, cb.completed_at
             FROM collection_books cb
             JOIN titles t ON cb.title_id = t.id
             WHERE cb.collection_id = ?
             ORDER BY cb.position ASC
-        ''', (collection_id,))
+            LIMIT ? OFFSET ?
+        ''', (collection_id, limit, offset))
         books = await books_cursor.fetchall()
         
         processed_books = []
@@ -237,14 +330,12 @@ async def get_collection(
             book['completed_at'] = b['completed_at']
             processed_books.append(book)
         
-        # Count completed for checklist
-        completed_count = sum(1 for b in processed_books if b.get('completed_at'))
-        
         return {
             **coll,
-            'book_count': len(books),
-            'completed_count': completed_count,
-            'books': processed_books
+            'book_count': total,
+            'total_books': total,
+            'books': processed_books,
+            'has_more': offset + len(books) < total
         }
 
 

@@ -7,7 +7,7 @@
  * - Automatic: Read-only, books populated by criteria
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings, updateBookStatus, updateBookDates, updateBookRating } from '../api'
 import BookCard from './BookCard'
@@ -86,6 +86,32 @@ export default function CollectionDetail() {
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
   
+  // Pagination state
+  const BOOKS_PER_PAGE = 50
+  
+  // For automatic/manual collections
+  const [books, setBooks] = useState([])
+  const [totalBooks, setTotalBooks] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  
+  // For checklist collections - separate section state
+  const [incompleteBooks, setIncompleteBooks] = useState([])
+  const [completedBooks, setCompletedBooks] = useState([])
+  const [incompleteOffset, setIncompleteOffset] = useState(0)
+  const [completedOffset, setCompletedOffset] = useState(0)
+  const [incompleteHasMore, setIncompleteHasMore] = useState(true)
+  const [completedHasMore, setCompletedHasMore] = useState(true)
+  const [incompleteTotal, setIncompleteTotal] = useState(0)
+  const [completedTotal, setCompletedTotal] = useState(0)
+  
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadingSection, setLoadingSection] = useState(null) // 'incomplete' | 'completed' | null
+  
+  const incompleteLoaderRef = useRef(null)
+  const completedLoaderRef = useRef(null)
+  const loaderRef = useRef(null) // For non-checklist collections
+  
   // Phase 9E: Book context menu for checklist actions
   const [contextMenu, setContextMenu] = useState({ show: false, book: null, x: 0, y: 0 })
   
@@ -103,8 +129,36 @@ export default function CollectionDetail() {
   const fetchCollection = async () => {
     try {
       setLoading(true)
-      const data = await getCollection(id)
+      const data = await getCollection(id, {
+        limit: BOOKS_PER_PAGE,
+        offset: 0,
+        incompleteLimit: BOOKS_PER_PAGE,
+        incompleteOffset: 0,
+        completedLimit: BOOKS_PER_PAGE,
+        completedOffset: 0
+      })
+      
       setCollection(data)
+      setTotalBooks(data.total_books || 0)
+      
+      if (data.collection_type === 'checklist') {
+        // Checklist: use separate section data
+        setIncompleteBooks(data.incomplete_books || [])
+        setCompletedBooks(data.completed_books || [])
+        setIncompleteTotal(data.incomplete_total || 0)
+        setCompletedTotal(data.completed_total || 0)
+        setIncompleteHasMore(data.incomplete_has_more || false)
+        setCompletedHasMore(data.completed_has_more || false)
+        setIncompleteOffset(BOOKS_PER_PAGE)
+        setCompletedOffset(BOOKS_PER_PAGE)
+        // Also set combined books for backward compatibility
+        setBooks(data.books || [])
+      } else {
+        // Automatic/Manual: use combined books array
+        setBooks(data.books || [])
+        setHasMore(data.has_more || false)
+        setOffset(BOOKS_PER_PAGE)
+      }
       setError(null)
     } catch (err) {
       console.error('Failed to fetch collection:', err)
@@ -114,9 +168,130 @@ export default function CollectionDetail() {
     }
   }
   
+  // Load more for non-checklist collections
+  const loadMoreBooks = useCallback(async () => {
+    if (loadingMore || !hasMore) return
+    
+    setLoadingMore(true)
+    try {
+      const data = await getCollection(id, { limit: BOOKS_PER_PAGE, offset })
+      setBooks(prev => [...prev, ...data.books])
+      setHasMore(data.has_more)
+      setOffset(prev => prev + BOOKS_PER_PAGE)
+    } catch (err) {
+      console.error('Failed to load more books:', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [id, offset, hasMore, loadingMore])
+  
+  // Load more incomplete books (checklist)
+  const loadMoreIncomplete = useCallback(async () => {
+    if (loadingSection || !incompleteHasMore) return
+    
+    setLoadingSection('incomplete')
+    try {
+      const data = await getCollection(id, {
+        incompleteLimit: BOOKS_PER_PAGE,
+        incompleteOffset: incompleteOffset,
+        completedLimit: 0,
+        completedOffset: 0
+      })
+      setIncompleteBooks(prev => [...prev, ...(data.incomplete_books || [])])
+      setIncompleteHasMore(data.incomplete_has_more || false)
+      setIncompleteOffset(prev => prev + BOOKS_PER_PAGE)
+    } catch (err) {
+      console.error('Failed to load more incomplete books:', err)
+    } finally {
+      setLoadingSection(null)
+    }
+  }, [id, incompleteOffset, incompleteHasMore, loadingSection])
+  
+  // Load more completed books (checklist)
+  const loadMoreCompleted = useCallback(async () => {
+    if (loadingSection || !completedHasMore) return
+    
+    setLoadingSection('completed')
+    try {
+      const data = await getCollection(id, {
+        incompleteLimit: 0,
+        incompleteOffset: 0,
+        completedLimit: BOOKS_PER_PAGE,
+        completedOffset: completedOffset
+      })
+      setCompletedBooks(prev => [...prev, ...(data.completed_books || [])])
+      setCompletedHasMore(data.completed_has_more || false)
+      setCompletedOffset(prev => prev + BOOKS_PER_PAGE)
+    } catch (err) {
+      console.error('Failed to load more completed books:', err)
+    } finally {
+      setLoadingSection(null)
+    }
+  }, [id, completedOffset, completedHasMore, loadingSection])
+  
   useEffect(() => {
     fetchCollection()
   }, [id])
+  
+  // Observer for non-checklist collections
+  useEffect(() => {
+    if (collection?.collection_type === 'checklist') return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadMoreBooks()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current)
+    }
+    
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore, loading, loadMoreBooks, collection?.collection_type])
+  
+  // Observer for incomplete section
+  useEffect(() => {
+    if (collection?.collection_type !== 'checklist') return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && incompleteHasMore && !loadingSection && !loading) {
+          loadMoreIncomplete()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    
+    if (incompleteLoaderRef.current) {
+      observer.observe(incompleteLoaderRef.current)
+    }
+    
+    return () => observer.disconnect()
+  }, [incompleteHasMore, loadingSection, loading, loadMoreIncomplete, collection?.collection_type])
+  
+  // Observer for completed section
+  useEffect(() => {
+    if (collection?.collection_type !== 'checklist') return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && completedHasMore && !loadingSection && !loading) {
+          loadMoreCompleted()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    
+    if (completedLoaderRef.current) {
+      observer.observe(completedLoaderRef.current)
+    }
+    
+    return () => observer.disconnect()
+  }, [completedHasMore, loadingSection, loading, loadMoreCompleted, collection?.collection_type])
 
   // Load display settings and custom status labels
   useEffect(() => {
@@ -182,10 +357,25 @@ export default function CollectionDetail() {
   const handleRemoveBook = async (titleId) => {
     try {
       await removeBookFromCollection(id, titleId)
-      // Update local state
+      
+      // Update local state based on collection type
+      if (collection?.collection_type === 'checklist') {
+        // Check which section the book is in
+        const inIncomplete = incompleteBooks.some(b => b.id === titleId)
+        if (inIncomplete) {
+          setIncompleteBooks(prev => prev.filter(b => b.id !== titleId))
+          setIncompleteTotal(prev => prev - 1)
+        } else {
+          setCompletedBooks(prev => prev.filter(b => b.id !== titleId))
+          setCompletedTotal(prev => prev - 1)
+        }
+      } else {
+        setBooks(prev => prev.filter(b => b.id !== titleId))
+      }
+      
+      setTotalBooks(prev => prev - 1)
       setCollection(prev => ({
         ...prev,
-        books: prev.books.filter(b => b.id !== titleId),
         book_count: prev.book_count - 1
       }))
     } catch (err) {
@@ -196,7 +386,10 @@ export default function CollectionDetail() {
 
   // Phase 9E: Open appropriate modal based on book status
   const handleChecklistAction = (book) => {
-    const currentBook = collection?.books?.find(b => b.id === book.id)
+    // For checklist, look in both arrays
+    const currentBook = incompleteBooks?.find(b => b.id === book.id) || 
+                       completedBooks?.find(b => b.id === book.id) ||
+                       books?.find(b => b.id === book.id)
     if (!currentBook) {
       setContextMenu({ show: false, book: null, x: 0, y: 0 })
       return
@@ -225,15 +418,25 @@ export default function CollectionDetail() {
         await updateBookRating(selectedBook.id, rating)
       }
       
-      // Update local state
-      setCollection(prev => ({
-        ...prev,
-        books: prev.books.map(b => 
-          b.id === selectedBook.id 
-            ? { ...b, status: 'Finished', date_finished: dateFinished, rating: rating || b.rating }
-            : b
-        )
-      }))
+      const updatedBook = { 
+        ...selectedBook, 
+        status: 'Finished', 
+        date_finished: dateFinished, 
+        rating: rating || selectedBook.rating 
+      }
+      
+      // Update local state - move book between sections for checklist
+      if (collection?.collection_type === 'checklist') {
+        // Remove from incomplete, add to completed
+        setIncompleteBooks(prev => prev.filter(b => b.id !== selectedBook.id))
+        setCompletedBooks(prev => [...prev, updatedBook])
+        setIncompleteTotal(prev => prev - 1)
+        setCompletedTotal(prev => prev + 1)
+      } else {
+        setBooks(prev => prev.map(b => 
+          b.id === selectedBook.id ? updatedBook : b
+        ))
+      }
     } catch (err) {
       console.error('Failed to mark book as finished:', err)
       alert('Failed to update book')
@@ -252,15 +455,33 @@ export default function CollectionDetail() {
       // Clear date_finished when changing away from Finished
       await updateBookDates(selectedBook.id, selectedBook.date_started, null)
       
-      // Update local state
-      setCollection(prev => ({
-        ...prev,
-        books: prev.books.map(b => 
-          b.id === selectedBook.id 
-            ? { ...b, status: newStatus, date_finished: null }
-            : b
-        )
-      }))
+      const updatedBook = { ...selectedBook, status: newStatus, date_finished: null }
+      
+      // Update local state - move book between sections for checklist
+      if (collection?.collection_type === 'checklist') {
+        if (newStatus === 'Finished' && selectedBook.status !== 'Finished') {
+          // Moving to completed
+          setIncompleteBooks(prev => prev.filter(b => b.id !== selectedBook.id))
+          setCompletedBooks(prev => [...prev, updatedBook])
+          setIncompleteTotal(prev => prev - 1)
+          setCompletedTotal(prev => prev + 1)
+        } else if (newStatus !== 'Finished' && selectedBook.status === 'Finished') {
+          // Moving to incomplete
+          setCompletedBooks(prev => prev.filter(b => b.id !== selectedBook.id))
+          setIncompleteBooks(prev => [...prev, updatedBook])
+          setCompletedTotal(prev => prev - 1)
+          setIncompleteTotal(prev => prev + 1)
+        } else {
+          // Status changed but staying in same section
+          setIncompleteBooks(prev => prev.map(b => 
+            b.id === selectedBook.id ? updatedBook : b
+          ))
+        }
+      } else {
+        setBooks(prev => prev.map(b => 
+          b.id === selectedBook.id ? updatedBook : b
+        ))
+      }
     } catch (err) {
       console.error('Failed to change status:', err)
       alert('Failed to update book')
@@ -288,21 +509,8 @@ export default function CollectionDetail() {
     fetchCollection()
   }
 
-  // Phase 9E: Split books into active and completed for checklist collections
-  const getBookSections = () => {
-    if (!collection?.books) return { activeBooks: [], completedBooks: [] }
-    
-    if (collection.collection_type !== 'checklist') {
-      return { activeBooks: collection.books, completedBooks: [] }
-    }
-    
-    const activeBooks = collection.books.filter(b => b.status !== 'Finished')
-    const completedBooks = collection.books.filter(b => b.status === 'Finished')
-    
-    return { activeBooks, completedBooks }
-  }
-
-  const { activeBooks, completedBooks } = getBookSections()
+  // For non-checklist collections, use books array directly
+  // For checklist collections, use incompleteBooks and completedBooks arrays
   
   // Loading state
   if (loading) {
@@ -449,8 +657,8 @@ export default function CollectionDetail() {
         </div>
         <p className="text-gray-400 mb-2">
           {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
-          {isChecklist && completedBooks.length > 0 && (
-            <span className="text-emerald-400"> · {completedBooks.length} completed</span>
+          {isChecklist && completedTotal > 0 && (
+            <span className="text-emerald-400"> · {completedTotal} completed</span>
           )}
         </p>
         {collection.description && (
@@ -461,7 +669,7 @@ export default function CollectionDetail() {
       </div>
 
       {/* Checklist hint */}
-      {isChecklist && !removeMode && collection.books?.length > 0 && (
+      {isChecklist && !removeMode && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
         <div className="mb-4 px-4 py-3 bg-emerald-900/20 border border-emerald-800/50 rounded-lg">
           <p className="text-emerald-200 text-sm">
             💡 Long-press or right-click a book to mark it complete
@@ -492,33 +700,164 @@ export default function CollectionDetail() {
       )}
       
       {/* Books Grid */}
-      {collection.books && collection.books.length > 0 ? (
-        <>
-          {/* Active books section */}
-          {activeBooks.length > 0 && (
+      {isChecklist ? (
+        /* Checklist collections: separate incomplete and completed sections */
+        (incompleteBooks.length > 0 || completedBooks.length > 0) ? (
+          <>
+            {/* Incomplete books section */}
+            {incompleteBooks.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {incompleteBooks.map(book => (
+                  <div 
+                    key={book.id} 
+                    className="relative"
+                    onContextMenu={(e) => handleBookContextMenu(e, book)}
+                    onTouchStart={(e) => {
+                      const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
+                      e.currentTarget._longPressTimer = timer
+                    }}
+                    onTouchEnd={(e) => {
+                      if (e.currentTarget._longPressTimer) {
+                        clearTimeout(e.currentTarget._longPressTimer)
+                        e.currentTarget._longPressTimer = null
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      if (e.currentTarget._longPressTimer) {
+                        clearTimeout(e.currentTarget._longPressTimer)
+                        e.currentTarget._longPressTimer = null
+                      }
+                    }}
+                  >
+                    {removeMode ? (
+                      <button
+                        onClick={() => handleRemoveBook(book.id)}
+                        className="w-full text-left group"
+                      >
+                        <div className="relative">
+                          <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
+                          <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-red-600 rounded-full p-2">
+                              <XIcon />
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Incomplete section loader */}
+            {incompleteHasMore && (
+              <div ref={incompleteLoaderRef} className="w-full py-4 flex justify-center">
+                {loadingSection === 'incomplete' && (
+                  <span className="text-gray-400 text-sm">Loading more...</span>
+                )}
+              </div>
+            )}
+
+            {/* Completed section divider */}
+            {(completedBooks.length > 0 || completedHasMore) && (
+              <div className="flex items-center gap-4 my-8">
+                <div className="flex-1 h-px bg-gray-700" />
+                <span className="text-gray-500 text-sm font-medium">
+                  Completed · {completedTotal}
+                </span>
+                <div className="flex-1 h-px bg-gray-700" />
+              </div>
+            )}
+
+            {/* Completed books section */}
+            {completedBooks.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {completedBooks.map(book => (
+                  <div 
+                    key={book.id} 
+                    className="relative"
+                    onContextMenu={(e) => handleBookContextMenu(e, book)}
+                    onTouchStart={(e) => {
+                      const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
+                      e.currentTarget._longPressTimer = timer
+                    }}
+                    onTouchEnd={(e) => {
+                      if (e.currentTarget._longPressTimer) {
+                        clearTimeout(e.currentTarget._longPressTimer)
+                        e.currentTarget._longPressTimer = null
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      if (e.currentTarget._longPressTimer) {
+                        clearTimeout(e.currentTarget._longPressTimer)
+                        e.currentTarget._longPressTimer = null
+                      }
+                    }}
+                  >
+                    {removeMode ? (
+                      <button
+                        onClick={() => handleRemoveBook(book.id)}
+                        className="w-full text-left group"
+                      >
+                        <div className="relative">
+                          <BookCard 
+                            book={book} 
+                            showTitleBelow={showTitleBelow} 
+                            showAuthorBelow={showAuthorBelow} 
+                            showSeriesBelow={showSeriesBelow}
+                            isChecklistCompleted={true}
+                          />
+                          <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-red-600 rounded-full p-2">
+                              <XIcon />
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      <BookCard 
+                        book={book} 
+                        showTitleBelow={showTitleBelow} 
+                        showAuthorBelow={showAuthorBelow} 
+                        showSeriesBelow={showSeriesBelow}
+                        isChecklistCompleted={true}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Completed section loader */}
+            <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
+              {loadingSection === 'completed' && (
+                <span className="text-gray-400 text-sm">Loading more...</span>
+              )}
+              {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
+                <span className="text-gray-500 text-sm">
+                  All {totalBooks} books loaded
+                </span>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">📚</div>
+            <p className="text-gray-400 mb-2">This collection is empty</p>
+            <p className="text-gray-500 text-sm">Add books from the book detail page</p>
+          </div>
+        )
+      ) : (
+        /* Non-checklist collections: single books grid */
+        books.length > 0 ? (
+          <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeBooks.map(book => (
+              {books.map(book => (
                 <div 
                   key={book.id} 
                   className="relative"
-                  onContextMenu={(e) => handleBookContextMenu(e, book)}
-                  onTouchStart={(e) => {
-                    if (!isChecklist) return
-                    const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
-                    e.currentTarget._longPressTimer = timer
-                  }}
-                  onTouchEnd={(e) => {
-                    if (e.currentTarget._longPressTimer) {
-                      clearTimeout(e.currentTarget._longPressTimer)
-                      e.currentTarget._longPressTimer = null
-                    }
-                  }}
-                  onTouchMove={(e) => {
-                    if (e.currentTarget._longPressTimer) {
-                      clearTimeout(e.currentTarget._longPressTimer)
-                      e.currentTarget._longPressTimer = null
-                    }
-                  }}
                 >
                   {removeMode ? (
                     <button
@@ -527,7 +866,6 @@ export default function CollectionDetail() {
                     >
                       <div className="relative">
                         <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-                        {/* Remove overlay */}
                         <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <div className="bg-red-600 rounded-full p-2">
                             <XIcon />
@@ -541,90 +879,31 @@ export default function CollectionDetail() {
                 </div>
               ))}
             </div>
-          )}
 
-          {/* Completed section divider - only for checklist with completed books */}
-          {isChecklist && completedBooks.length > 0 && (
-            <div className="flex items-center gap-4 my-8">
-              <div className="flex-1 h-px bg-gray-700" />
-              <span className="text-gray-500 text-sm font-medium">
-                Completed · {completedBooks.length}
-              </span>
-              <div className="flex-1 h-px bg-gray-700" />
+            {/* Infinite scroll trigger */}
+            <div ref={loaderRef} className="w-full py-8 flex justify-center">
+              {loadingMore && (
+                <span className="text-gray-400 text-sm">Loading more...</span>
+              )}
+              {!hasMore && books.length > 0 && (
+                <span className="text-gray-500 text-sm">
+                  All {totalBooks} books loaded
+                </span>
+              )}
             </div>
-          )}
-
-          {/* Completed books section */}
-          {isChecklist && completedBooks.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {completedBooks.map(book => (
-                <div 
-                  key={book.id} 
-                  className="relative"
-                  onContextMenu={(e) => handleBookContextMenu(e, book)}
-                  onTouchStart={(e) => {
-                    const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
-                    e.currentTarget._longPressTimer = timer
-                  }}
-                  onTouchEnd={(e) => {
-                    if (e.currentTarget._longPressTimer) {
-                      clearTimeout(e.currentTarget._longPressTimer)
-                      e.currentTarget._longPressTimer = null
-                    }
-                  }}
-                  onTouchMove={(e) => {
-                    if (e.currentTarget._longPressTimer) {
-                      clearTimeout(e.currentTarget._longPressTimer)
-                      e.currentTarget._longPressTimer = null
-                    }
-                  }}
-                >
-                  {removeMode ? (
-                    <button
-                      onClick={() => handleRemoveBook(book.id)}
-                      className="w-full text-left group"
-                    >
-                      <div className="relative">
-                        <BookCard 
-                          book={book} 
-                          showTitleBelow={showTitleBelow} 
-                          showAuthorBelow={showAuthorBelow} 
-                          showSeriesBelow={showSeriesBelow}
-                          isChecklistCompleted={true}
-                        />
-                        {/* Remove overlay */}
-                        <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-red-600 rounded-full p-2">
-                            <XIcon />
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ) : (
-                    <BookCard 
-                      book={book} 
-                      showTitleBelow={showTitleBelow} 
-                      showAuthorBelow={showAuthorBelow} 
-                      showSeriesBelow={showSeriesBelow}
-                      isChecklistCompleted={true}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-400 mb-2">This collection is empty</p>
-          <p className="text-gray-500 text-sm">
-            {isAutomatic 
-              ? 'No books match the current criteria'
-              : 'Add books from the book detail page'
-            }
-          </p>
-        </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">📚</div>
+            <p className="text-gray-400 mb-2">This collection is empty</p>
+            <p className="text-gray-500 text-sm">
+              {isAutomatic 
+                ? 'No books match the current criteria'
+                : 'Add books from the book detail page'
+              }
+            </p>
+          </div>
+        )
       )}
 
       {/* Context menu for checklist actions */}
