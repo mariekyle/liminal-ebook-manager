@@ -173,7 +173,7 @@ async def create_collection(data: CollectionCreate, db=Depends(get_db)):
         INSERT INTO collections (name, description, cover_type, cover_color_1, cover_color_2, 
                                  collection_type, auto_criteria, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (data.name, data.description, data.cover_type, data.cover_color_1, data.cover_color_2,
+    ''', (data.name, data.description if data.description else None, data.cover_type, data.cover_color_1, data.cover_color_2,
           data.collection_type, auto_criteria_json, next_order))
     
     await db.commit()

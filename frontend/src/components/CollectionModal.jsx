@@ -199,7 +199,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       
       const data = {
         name: name.trim(),
-        description: description.trim() || null
+        description: description.trim()  // Send empty string, not null - backend converts to NULL
       }
       
       if (isEditing) {

@@ -123,7 +123,11 @@ async def run_smart_collections_migration(db: aiosqlite.Connection) -> None:
 
 
 async def create_default_collections(db: aiosqlite.Connection) -> None:
-    """Create TBR and Reading History default collections if they don't exist."""
+    """Create TBR and Reading History default collections if they don't exist.
+    
+    Phase 9E.5: TBR changed from 'checklist' to 'manual' type.
+    If old checklist TBR exists, delete and recreate as manual.
+    """
     
     # Calculate base sort_order ONCE at the start (before any inserts)
     cursor = await db.execute("SELECT MIN(sort_order) FROM collections")
@@ -135,21 +139,51 @@ async def create_default_collections(db: aiosqlite.Connection) -> None:
     # Reading History gets second lowest (appears second)  
     history_sort_order = base_order - 1
     
-    # Check if TBR exists
+    # -------------------------------------------------------------------------
+    # TBR Collection - Changed to 'manual' type in Phase 9E.5
+    # -------------------------------------------------------------------------
+    
+    # Remove is_default flag from ANY collection named "TBR" (regardless of type)
+    # This allows users to delete the old TBR and use the new "To Be Read" collection
     cursor = await db.execute(
-        "SELECT id FROM collections WHERE is_default = 1 AND collection_type = 'checklist'"
+        "SELECT id, name, collection_type FROM collections WHERE name = 'TBR' AND is_default = 1"
+    )
+    old_tbr = await cursor.fetchone()
+    
+    if old_tbr:
+        print(f"Migration: Found old '{old_tbr[1]}' collection (type: {old_tbr[2]}) - removing default flag so it can be deleted...")
+        await db.execute("UPDATE collections SET is_default = 0 WHERE id = ?", (old_tbr[0],))
+    
+    # Check if manual TBR already exists
+    cursor = await db.execute(
+        "SELECT id, description FROM collections WHERE name = 'To Be Read' AND is_default = 1 AND collection_type = 'manual'"
     )
     tbr_exists = await cursor.fetchone()
     
+    new_tbr_description = """A list that keeps growing — that's part of the beauty. This isn't a task list, it's a cabinet of curiosities. Keep collecting what calls to you. Your next read will find you when it's time"""
+    old_tbr_description = """This is your growing, teetering stack of books you fully intend to read — eventually. Someday. After this one. And plot twist - a good TBR is never finished. Like laundry. Or emails. It's the beautiful circle of literary life, and the slow, crumbling collapse of your self-control. So live a little, add a few more books 😜."""
+    
     if not tbr_exists:
-        print("Migration: Creating default TBR collection...")
-        
-        tbr_description = """This is your growing, teetering stack of books you fully intend to read — eventually. Someday. After this one. And plot twist - a good TBR is never finished. Like laundry. Or emails. It's the beautiful circle of literary life, and the slow, crumbling collapse of your self-control. So live a little, add a few more books 😜."""
+        print("Migration: Creating default TBR collection (manual type)...")
         
         await db.execute("""
             INSERT INTO collections (name, description, collection_type, is_default, sort_order)
-            VALUES (?, ?, 'checklist', 1, ?)
-        """, ('TBR', tbr_description, tbr_sort_order))
+            VALUES (?, ?, 'manual', 1, ?)
+        """, ('To Be Read', new_tbr_description, tbr_sort_order))
+    elif tbr_exists[1] == old_tbr_description:
+        # Only update description if it still has the old text (one-time migration)
+        print("Migration: Updating TBR collection description from old to new...")
+        
+        await db.execute("""
+            UPDATE collections 
+            SET description = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        """, (new_tbr_description, tbr_exists[0]))
+    # else: Collection exists with custom or already-updated description - leave it alone
+    
+    # -------------------------------------------------------------------------
+    # Reading History Collection - Unchanged (automatic type)
+    # -------------------------------------------------------------------------
     
     # Check if Reading History exists
     cursor = await db.execute(
