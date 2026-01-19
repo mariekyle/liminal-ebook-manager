@@ -5,6 +5,11 @@
  * - Manual: Standard add/remove
  * - Checklist: Books can be marked complete, show divided sections
  * - Automatic: Read-only, books populated by criteria
+ * 
+ * Phase 9E.5: Polish
+ * - Grid/List view toggle with localStorage persistence
+ * - Books per row from settings
+ * - Greyscale type badges and info banners
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -14,6 +19,10 @@ import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
 import SmartPasteModal from './SmartPasteModal'
+import GradientCover from './GradientCover'
+
+// LocalStorage key for view mode preference
+const VIEW_MODE_KEY = 'collection_detail_view_mode'
 
 // Icons
 const BackIcon = () => (
@@ -70,6 +79,85 @@ const UndoIcon = () => (
   </svg>
 )
 
+const GridIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+    <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
+  </svg>
+)
+
+const ListIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+  </svg>
+)
+
+// ============================================
+// BookListItem - List view for individual books
+// ============================================
+function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 }) {
+  // Format series info
+  const seriesInfo = book.series 
+    ? ` (${book.series}${book.series_number ? ` #${book.series_number}` : ''})`
+    : ''
+  
+  // Format author(s)
+  const authorDisplay = Array.isArray(book.authors) 
+    ? book.authors.join(', ')
+    : book.authors || 'Unknown Author'
+  
+  // Calculate estimated reading time
+  const getReadingTime = () => {
+    if (!book.word_count) return null
+    const minutes = Math.round(book.word_count / readingSpeed)
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.floor(minutes / 60)
+    const remainingMins = minutes % 60
+    if (remainingMins === 0) return `${hours}h`
+    return `${hours}h ${remainingMins}m`
+  }
+  
+  const readingTime = getReadingTime()
+  
+  return (
+    <div 
+      onClick={onClick}
+      className={`flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer ${
+        isChecklistCompleted ? 'opacity-60' : ''
+      }`}
+    >
+      {/* Book cover thumbnail - hide text overlay for gradient covers */}
+      <div className="flex-shrink-0 w-12 h-[72px] rounded overflow-hidden [&_span]:opacity-0 [&_p]:opacity-0 [&_h1]:opacity-0 [&_h2]:opacity-0 [&_h3]:opacity-0 [&_.truncate]:opacity-0">
+        <GradientCover book={book} size="sm" />
+      </div>
+      
+      {/* Book info */}
+      <div className="flex-1 min-w-0">
+        {/* Line 1: Title (Series #N) */}
+        <p className="text-gray-100 font-medium truncate">
+          {book.title}{seriesInfo}
+        </p>
+        
+        {/* Line 2: By Author • Year • Est. read time */}
+        <p className="text-sm text-gray-400 truncate">
+          By {authorDisplay}
+          {book.publication_year ? ` • ${book.publication_year}` : ''}
+          {readingTime ? ` • Est. read time ${readingTime}` : ''}
+        </p>
+      </div>
+      
+      {/* Checkmark for completed items */}
+      {isChecklistCompleted && (
+        <div className="flex-shrink-0 text-emerald-400">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <path d="M9 12l2 2 4-4" />
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CollectionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -85,6 +173,17 @@ export default function CollectionDetail() {
   const [showTitleBelow, setShowTitleBelow] = useState(false)
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
+  
+  // View mode: 'grid' or 'list'
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem(VIEW_MODE_KEY) || 'grid'
+  })
+  
+  // Grid columns from settings (default to 2 for mobile, matching original layout)
+  const [gridColumns, setGridColumns] = useState(2)
+  
+  // Reading speed from settings (for estimated read time)
+  const [readingSpeed, setReadingSpeed] = useState(180)
   
   // Pagination state
   const BOOKS_PER_PAGE = 50
@@ -306,6 +405,14 @@ export default function CollectionDetail() {
         if (settings.show_series_below !== undefined) {
           setShowSeriesBelow(settings.show_series_below === 'true')
         }
+        // Load grid columns setting
+        if (settings.grid_columns) {
+          setGridColumns(parseInt(settings.grid_columns, 10) || 3)
+        }
+        // Load reading speed
+        if (settings.reading_speed) {
+          setReadingSpeed(parseInt(settings.reading_speed, 10) || 180)
+        }
         // Load custom status labels
         setStatusLabels({
           unread: settings.status_label_unread || 'Unread',
@@ -329,11 +436,22 @@ export default function CollectionDetail() {
       if (event.detail.show_series_below !== undefined) {
         setShowSeriesBelow(event.detail.show_series_below)
       }
+      if (event.detail.grid_columns !== undefined) {
+        setGridColumns(parseInt(event.detail.grid_columns, 10) || 3)
+      }
+      if (event.detail.reading_speed !== undefined) {
+        setReadingSpeed(parseInt(event.detail.reading_speed, 10) || 180)
+      }
     }
     
     window.addEventListener('settingsChanged', handleSettingsChange)
     return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
+
+  // Persist view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode)
+  }, [viewMode])
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -509,6 +627,30 @@ export default function CollectionDetail() {
     fetchCollection()
   }
 
+  // Get grid classes based on settings
+  const getGridClasses = () => {
+    if (viewMode === 'list') {
+      return 'flex flex-col gap-2'
+    }
+    // Mobile uses gridColumns, desktop expands
+    const mobileColsMap = {
+      2: 'grid-cols-2',
+      3: 'grid-cols-3', 
+      4: 'grid-cols-4'
+    }
+    const mobileCols = mobileColsMap[gridColumns] || 'grid-cols-3'
+    return `grid ${mobileCols} sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4`
+  }
+
+  // Navigate to book detail
+  const handleBookClick = (book) => {
+    if (removeMode) {
+      handleRemoveBook(book.id)
+    } else {
+      navigate(`/book/${book.id}`)
+    }
+  }
+
   // For non-checklist collections, use books array directly
   // For checklist collections, use incompleteBooks and completedBooks arrays
   
@@ -540,6 +682,114 @@ export default function CollectionDetail() {
   const isChecklist = collection.collection_type === 'checklist'
   const isAutomatic = collection.collection_type === 'automatic'
   const isDefault = collection.is_default
+  
+  // Render a single book (grid or list)
+  const renderBook = (book, isChecklistCompleted = false) => {
+    if (viewMode === 'list') {
+      return (
+        <div 
+          key={book.id}
+          onContextMenu={(e) => handleBookContextMenu(e, book)}
+          onTouchStart={(e) => {
+            if (collection?.collection_type !== 'checklist') return
+            const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
+            e.currentTarget._longPressTimer = timer
+          }}
+          onTouchEnd={(e) => {
+            if (e.currentTarget._longPressTimer) {
+              clearTimeout(e.currentTarget._longPressTimer)
+              e.currentTarget._longPressTimer = null
+            }
+          }}
+          onTouchMove={(e) => {
+            if (e.currentTarget._longPressTimer) {
+              clearTimeout(e.currentTarget._longPressTimer)
+              e.currentTarget._longPressTimer = null
+            }
+          }}
+        >
+          {removeMode ? (
+            <div className="relative group">
+              <BookListItem 
+                book={book} 
+                onClick={() => handleRemoveBook(book.id)}
+                isChecklistCompleted={isChecklistCompleted}
+                readingSpeed={readingSpeed}
+              />
+              <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="bg-red-600 rounded-full p-2">
+                  <XIcon />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <BookListItem 
+              book={book} 
+              onClick={() => handleBookClick(book)}
+              isChecklistCompleted={isChecklistCompleted}
+              readingSpeed={readingSpeed}
+            />
+          )}
+        </div>
+      )
+    }
+    
+    // Grid view
+    return (
+      <div 
+        key={book.id} 
+        className="relative"
+        onContextMenu={(e) => handleBookContextMenu(e, book)}
+        onTouchStart={(e) => {
+          if (collection?.collection_type !== 'checklist') return
+          const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
+          e.currentTarget._longPressTimer = timer
+        }}
+        onTouchEnd={(e) => {
+          if (e.currentTarget._longPressTimer) {
+            clearTimeout(e.currentTarget._longPressTimer)
+            e.currentTarget._longPressTimer = null
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.currentTarget._longPressTimer) {
+            clearTimeout(e.currentTarget._longPressTimer)
+            e.currentTarget._longPressTimer = null
+          }
+        }}
+      >
+        {removeMode ? (
+          <button
+            onClick={() => handleRemoveBook(book.id)}
+            className="w-full text-left group"
+          >
+            <div className="relative">
+              <BookCard 
+                book={book} 
+                showTitleBelow={showTitleBelow} 
+                showAuthorBelow={showAuthorBelow} 
+                showSeriesBelow={showSeriesBelow}
+                isChecklistCompleted={isChecklistCompleted}
+              />
+              <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-red-600 rounded-full p-2">
+                  <XIcon />
+                </div>
+              </div>
+            </div>
+          </button>
+        ) : (
+          <BookCard 
+            book={book} 
+            showTitleBelow={showTitleBelow} 
+            showAuthorBelow={showAuthorBelow} 
+            showSeriesBelow={showSeriesBelow}
+            isChecklistCompleted={isChecklistCompleted}
+          />
+        )}
+      </div>
+    )
+  }
   
   return (
     <div className="max-w-4xl mx-auto px-4 pb-24">
@@ -609,6 +859,18 @@ export default function CollectionDetail() {
                   </button>
                 )}
                 
+                {/* View toggle */}
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
+                    setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                >
+                  {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
+                  View: {viewMode === 'grid' ? 'List' : 'Grid'}
+                </button>
+                
                 {/* Delete - not for default collections */}
                 {!isDefault && (
                   <button
@@ -633,6 +895,7 @@ export default function CollectionDetail() {
         <MosaicCover 
           coverType={collection.cover_type || 'gradient'}
           collectionId={collection.id}
+          collectionName={collection.name}
           variant="banner"
         />
       </div>
@@ -643,14 +906,14 @@ export default function CollectionDetail() {
           <h1 className="text-2xl font-bold text-white">
             {collection.name}
           </h1>
-          {/* Collection type badge */}
+          {/* Collection type badge - greyscale */}
           {isChecklist && (
-            <span className="text-xs px-2 py-0.5 bg-emerald-900/50 text-emerald-300 rounded">
+            <span className="text-xs px-2 py-0.5 bg-gray-600/30 text-gray-400 rounded">
               Checklist
             </span>
           )}
           {isAutomatic && (
-            <span className="text-xs px-2 py-0.5 bg-blue-900/50 text-blue-300 rounded">
+            <span className="text-xs px-2 py-0.5 bg-gray-600/30 text-gray-400 rounded">
               Auto
             </span>
           )}
@@ -668,11 +931,11 @@ export default function CollectionDetail() {
         )}
       </div>
 
-      {/* Checklist hint */}
+      {/* Checklist hint - greyscale */}
       {isChecklist && !removeMode && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
-        <div className="mb-4 px-4 py-3 bg-emerald-900/20 border border-emerald-800/50 rounded-lg">
-          <p className="text-emerald-200 text-sm">
-            💡 Long-press or right-click a book to mark it complete
+        <div className="mb-4 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <p className="text-gray-400 text-sm">
+            Long-press or right-click a book to mark it complete
           </p>
         </div>
       )}
@@ -690,64 +953,24 @@ export default function CollectionDetail() {
         </div>
       )}
 
-      {/* Automatic collection info */}
+      {/* Automatic collection info - greyscale */}
       {isAutomatic && (
-        <div className="mb-4 px-4 py-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
-          <p className="text-blue-200 text-sm">
-            📋 This collection updates automatically based on your reading activity
+        <div className="mb-4 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <p className="text-gray-400 text-sm">
+            This collection updates automatically based on your reading activity
           </p>
         </div>
       )}
       
-      {/* Books Grid */}
+      {/* Books Grid/List */}
       {isChecklist ? (
         /* Checklist collections: separate incomplete and completed sections */
         (incompleteBooks.length > 0 || completedBooks.length > 0) ? (
           <>
             {/* Incomplete books section */}
             {incompleteBooks.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {incompleteBooks.map(book => (
-                  <div 
-                    key={book.id} 
-                    className="relative"
-                    onContextMenu={(e) => handleBookContextMenu(e, book)}
-                    onTouchStart={(e) => {
-                      const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
-                      e.currentTarget._longPressTimer = timer
-                    }}
-                    onTouchEnd={(e) => {
-                      if (e.currentTarget._longPressTimer) {
-                        clearTimeout(e.currentTarget._longPressTimer)
-                        e.currentTarget._longPressTimer = null
-                      }
-                    }}
-                    onTouchMove={(e) => {
-                      if (e.currentTarget._longPressTimer) {
-                        clearTimeout(e.currentTarget._longPressTimer)
-                        e.currentTarget._longPressTimer = null
-                      }
-                    }}
-                  >
-                    {removeMode ? (
-                      <button
-                        onClick={() => handleRemoveBook(book.id)}
-                        className="w-full text-left group"
-                      >
-                        <div className="relative">
-                          <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-                          <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="bg-red-600 rounded-full p-2">
-                              <XIcon />
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ) : (
-                      <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-                    )}
-                  </div>
-                ))}
+              <div className={getGridClasses()}>
+                {incompleteBooks.map(book => renderBook(book, false))}
               </div>
             )}
             
@@ -779,60 +1002,8 @@ export default function CollectionDetail() {
 
             {/* Completed books section */}
             {completedBooks.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {completedBooks.map(book => (
-                  <div 
-                    key={book.id} 
-                    className="relative"
-                    onContextMenu={(e) => handleBookContextMenu(e, book)}
-                    onTouchStart={(e) => {
-                      const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
-                      e.currentTarget._longPressTimer = timer
-                    }}
-                    onTouchEnd={(e) => {
-                      if (e.currentTarget._longPressTimer) {
-                        clearTimeout(e.currentTarget._longPressTimer)
-                        e.currentTarget._longPressTimer = null
-                      }
-                    }}
-                    onTouchMove={(e) => {
-                      if (e.currentTarget._longPressTimer) {
-                        clearTimeout(e.currentTarget._longPressTimer)
-                        e.currentTarget._longPressTimer = null
-                      }
-                    }}
-                  >
-                    {removeMode ? (
-                      <button
-                        onClick={() => handleRemoveBook(book.id)}
-                        className="w-full text-left group"
-                      >
-                        <div className="relative">
-                          <BookCard 
-                            book={book} 
-                            showTitleBelow={showTitleBelow} 
-                            showAuthorBelow={showAuthorBelow} 
-                            showSeriesBelow={showSeriesBelow}
-                            isChecklistCompleted={true}
-                          />
-                          <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="bg-red-600 rounded-full p-2">
-                              <XIcon />
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ) : (
-                      <BookCard 
-                        book={book} 
-                        showTitleBelow={showTitleBelow} 
-                        showAuthorBelow={showAuthorBelow} 
-                        showSeriesBelow={showSeriesBelow}
-                        isChecklistCompleted={true}
-                      />
-                    )}
-                  </div>
-                ))}
+              <div className={getGridClasses()}>
+                {completedBooks.map(book => renderBook(book, true))}
               </div>
             )}
             
@@ -864,31 +1035,8 @@ export default function CollectionDetail() {
         /* Non-checklist collections: single books grid */
         books.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {books.map(book => (
-                <div 
-                  key={book.id} 
-                  className="relative"
-                >
-                  {removeMode ? (
-                    <button
-                      onClick={() => handleRemoveBook(book.id)}
-                      className="w-full text-left group"
-                    >
-                      <div className="relative">
-                        <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-                        <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-red-600 rounded-full p-2">
-                            <XIcon />
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ) : (
-                    <BookCard book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-                  )}
-                </div>
-              ))}
+            <div className={getGridClasses()}>
+              {books.map(book => renderBook(book, false))}
             </div>
 
             {/* Infinite scroll trigger */}
@@ -1004,19 +1152,19 @@ export default function CollectionDetail() {
         />
       )}
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/70"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative w-full max-w-sm bg-library-card rounded-xl shadow-xl p-6">
+          <div className="relative w-full max-w-sm bg-gray-800 rounded-xl shadow-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-2">
               Delete Collection?
             </h3>
             <p className="text-gray-400 mb-6">
-              This will delete "{collection.name}". Books will not be removed from your library.
+              Are you sure you want to delete "{collection.name}"? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
@@ -1044,7 +1192,10 @@ export default function CollectionDetail() {
 // ============================================
 function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
   const [dateFinished, setDateFinished] = useState(() => {
-    if (book.date_finished) return book.date_finished
+    // Use existing date if available, otherwise default to today
+    if (book.date_finished) {
+      return book.date_finished.split('T')[0]
+    }
     return new Date().toISOString().split('T')[0]
   })
   const [rating, setRating] = useState(book.rating || 0)
@@ -1237,8 +1388,8 @@ function ChangeStatusModal({ book, statusLabels, onConfirm, onClose }) {
 
         {/* Gentle reminder about date being cleared */}
         {book.date_finished && (
-          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
-            <p className="text-blue-200 text-sm">
+          <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <p className="text-gray-400 text-sm">
               ℹ️ Finish date will be cleared ({formatDate(book.date_finished)})
             </p>
           </div>
