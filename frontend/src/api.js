@@ -1042,3 +1042,14 @@ export async function deleteBackup(backupId) {
     method: 'DELETE'
   })
 }
+
+/**
+ * Reorder collections
+ * @param {number[]} collectionIds - Array of collection IDs in new order
+ */
+export async function reorderCollections(collectionIds) {
+  return apiFetch('/collections/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ collection_ids: collectionIds })
+  })
+}

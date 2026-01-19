@@ -8,16 +8,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9: Feature Completion (In Progress)
-- Phase 9E.5: Smart Collections polish (scroll-to-load, reorder, view toggles)
+- Phase 9E Core: ✅ Complete (Jan 15-17)
+- Phase 9E.5: 🔄 In Progress - Landing page polish, detail page polish, duplicate feature remaining
 - Phase 9F: Book detail redesign
 - Phase 9G: Library/Home improvements
 - Phase 9H: Stats page
-- Phase 9I: Collections polish
+- Phase 9I: Collections polish (merged into 9E.5)
 - Phase 9J: Deduplication tools
 - Phase 9K: Unprocessed files detection
 
 ### Technical Debt
 - **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
+
+---
+
+## [0.25.1] - 2026-01-17
+
+### Changed
+
+#### Phase 9E.5: TBR Collection Type Change 🎯
+Converted default TBR from Checklist to Manual type based on user feedback that checklist behavior felt wrong for a reading list.
+
+**Collection Changes:**
+- TBR renamed to "To Be Read" with new description
+- Type changed from Checklist to Manual (no completion tracking)
+- Description updated to calm, curiosity-focused language: "A list that keeps growing — that's part of the beauty. This isn't a task list, it's a cabinet of curiosities. Keep collecting what calls to you. Your next read will find you when it's time"
+- Old "TBR" collections can now be manually deleted (is_default flag removed)
+
+**Migration Behavior:**
+- Automatically removes `is_default` flag from old "TBR" collections
+- Creates new "To Be Read" manual collection if it doesn't exist
+- One-time description update from old to new text
+- Safe to run multiple times (preserves user customizations after first update)
+
+---
+
+### Added
+
+#### Pagination Loading Indicators
+Visual feedback when scrolling to load more books in collections.
+
+**Features:**
+- Animated spinner with "Loading more books..." text
+- Appears at bottom of book grid when fetching next page
+- Works across all collection types (Manual, Checklist, Automatic)
+- Separate indicators for incomplete/completed sections in Checklists
+- Prevents confusion about whether more books exist
+
+**User Impact:**
+- Clear feedback that content is loading
+- No more uncertainty when reaching end of visible books
+- Consistent UX across all collection types
+
+---
+
+### Fixed
+
+#### Empty Collection UX Improvements
+Better handling of empty collections and menu options.
+
+**"Remove Books" Menu:**
+- Now hidden when collection has 0 books
+- Only appears when collection contains books to remove
+- Applies to Manual and Checklist collections
+- Automatic collections never show this option (unchanged)
+
+**Empty State Message:**
+- Changed from "This collection is empty Add books from the book detail page"
+- To: "An empty collection, ready for whatever arrives"
+- More poetic and calm, matching design philosophy
+
+---
+
+#### Collection Description Handling
+Fixed multiple issues with collection description field.
+
+**Frontend Fix:**
+- CollectionModal now sends empty string instead of null
+- Allows clearing description to completely blank
+- No more reverting to previous text when trying to clear
+
+**Backend Fix:**
+- Both create and update endpoints now consistently convert empty descriptions to NULL
+- Previously, create stored empty string while update stored NULL
+- Database now has consistent NULL values for empty descriptions
+- Prevents data inconsistency between new and edited collections
+
+---
+
+### Technical
+
+#### Files Modified
+**Backend:**
+- `backend/database.py` — TBR migration, description update logic
+- `backend/routers/collections.py` — Empty description handling in create endpoint
+
+**Frontend:**
+- `frontend/src/pages/CollectionDetail.jsx` — Loading indicators, "Remove Books" conditional display
+- `frontend/src/components/CollectionModal.jsx` — Description field empty string handling
+
+#### Migration Details
+```python
+# Old TBR cleanup (handles any type)
+- Removes is_default from ANY collection named "TBR"
+- Allows manual deletion by user
+
+# New "To Be Read" creation
+- Only updates description if still matches old text
+- Preserves user customizations on subsequent restarts
+
+# Description consistency
+- Empty descriptions → NULL in database (both create/update)
+```
+
+### Development Stats
+
+- **Implementation time:** January 17, 2026
+- **Files changed:** 4
+- **Lines modified:** ~100
+- **Bugs fixed:** 3 (empty menu option, description clearing, backend consistency)
+- **Status:** Phase 9E.5 Partial Complete — Landing/detail page polish remaining
 
 ---
 
