@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Phase 9: Feature Completion (In Progress)
 - Phase 9E Core: ✅ Complete (Jan 15-17)
-- Phase 9E.5: ✅ Complete (Jan 18) - Collections landing page polish
+- Phase 9E.5: ✅ Complete (Jan 18-19) - Collections polish (landing + detail)
 - Phase 9F: ⬅️ Next - Book detail redesign
 - Phase 9G: Library/Home improvements
 - Phase 9H: Stats page
@@ -21,11 +21,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.26.1] - 2026-01-19
+
+### Added
+
+#### Phase 9E.5b: Collection Detail Polish 📚
+Drag-to-reorder books and visual improvements for collection detail pages.
+
+**Drag-to-Reorder Books:**
+- "Reorder Books" option in 3-dot menu for manual/checklist collections
+- Only available when all books loaded (pagination safety)
+- Reorder mode forces list view, restores user preference on exit
+- Drag handles (⋮⋮) on right side of each book row
+- Visual "Saving..." feedback during API call
+- Race condition protection prevents concurrent drags
+- For checklists: only incomplete section is reorderable
+- Completed books remain sorted by completion date
+
+**Taller Collection Banner:**
+- Banner height doubled: h-96 (384px) / md:h-[28rem] (448px)
+- More visual impact and breathing room
+- Works with both gradient and custom cover images
+
+**Technical Improvements:**
+- Memoized drag sensor options for better performance
+- Proper view mode restoration after exiting reorder mode
+- localStorage not updated during temporary reorder view switch
+
+---
+
+### Fixed
+
+**Reorder Mode Safeguards:**
+- Button hidden until all books loaded (prevents pagination corruption)
+- Button hidden for checklists with only completed books
+- View mode preference preserved after exiting reorder mode
+- Race condition fix: drags blocked while save in progress
+
+---
+
+### Technical
+
+#### Files Modified
+- `frontend/src/pages/CollectionDetail.jsx` — Drag-to-reorder, taller banner, view mode fixes
+- `frontend/src/components/MosaicCover.jsx` — Taller banner variant
+- `frontend/src/api.js` — Added reorderBooksInCollection()
+
+#### New Components/Functions
+- `SortableBookItem` — Wrapper component for drag-and-drop book items
+- `reorderBooksInCollection(collectionId, titleIds)` — API function for book reorder
+
+#### Reorder Algorithm
+```javascript
+// Only show reorder when safe
+const canReorder = isChecklist 
+  ? (!incompleteHasMore && incompleteBooks.length > 1)
+  : (!hasMore && totalBooks > 1)
+
+// Prevent race conditions
+if (isSavingReorder) return
+setIsSavingReorder(true)
+try {
+  await reorderBooksInCollection(id, newOrder.map(b => b.id))
+} finally {
+  setIsSavingReorder(false)
+}
+```
+
+---
+
+### Development Stats
+- **Date:** January 19, 2026
+- **Files changed:** 3
+- **New functions:** 2 (SortableBookItem, reorderBooksInCollection)
+- **Lines of code:** ~150 new/modified
+- **Features:** 2 major (drag-to-reorder, taller banner)
+- **Bugs fixed:** 4 (pagination, checklist, view mode, race condition)
+
+---
+
 ## [0.26.0] - 2026-01-18
 
 ### Added
 
-#### Phase 9E.5: Collections Landing Page Polish 🎨
+#### Phase 9E.5a: Collections Landing Page Polish 🎨
 Complete UX overhaul of collections landing page with professional interaction patterns and calm aesthetics.
 
 **3-Dot Menu:**
@@ -201,4 +280,4 @@ See git history for Phase 9A-9D and earlier.
 
 ---
 
-*Changelog current through v0.26.0 (January 18, 2026)*
+*Changelog current through v0.26.1 (January 19, 2026)*

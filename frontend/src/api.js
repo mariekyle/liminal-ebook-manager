@@ -728,7 +728,9 @@ export async function getCollection(collectionId, options = {}) {
     incompleteLimit = 50,
     incompleteOffset = 0,
     completedLimit = 50,
-    completedOffset = 0
+    completedOffset = 0,
+    // Sort option for automatic collections
+    sort = null
   } = options
   
   const params = new URLSearchParams({
@@ -739,6 +741,11 @@ export async function getCollection(collectionId, options = {}) {
     completed_limit: completedLimit.toString(),
     completed_offset: completedOffset.toString()
   })
+  
+  // Add sort param if provided
+  if (sort) {
+    params.append('sort', sort)
+  }
   
   return apiFetch(`/collections/${collectionId}?${params}`)
 }

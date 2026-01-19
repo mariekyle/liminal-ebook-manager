@@ -132,12 +132,12 @@ async def list_collections(db=Depends(get_db)):
     result = []
     for c in collections:
         coll = dict(c)
-        # Parse auto_criteria JSON if present
+        # Parse auto_criteria JSON if present - ensure it's always a dict
         if coll.get('auto_criteria'):
             try:
                 coll['auto_criteria'] = json.loads(coll['auto_criteria'])
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                coll['auto_criteria'] = {}  # Fallback to empty dict on parse failure
         
         # For automatic collections, get dynamic book count
         if coll.get('collection_type') == 'automatic' and coll.get('auto_criteria'):
@@ -192,6 +192,8 @@ async def get_collection(
     incomplete_offset: int = Query(0, ge=0),
     completed_limit: int = Query(50, ge=1, le=500),
     completed_offset: int = Query(0, ge=0),
+    # Sort option for automatic collections (overrides criteria default)
+    sort: Optional[str] = Query(None),
     db=Depends(get_db)
 ):
     """Get collection details with paginated books.
@@ -208,28 +210,31 @@ async def get_collection(
     
     coll = dict(collection)
     
-    # Parse auto_criteria
+    # Parse auto_criteria - ensure it's always a dict
     if coll.get('auto_criteria'):
         try:
             coll['auto_criteria'] = json.loads(coll['auto_criteria'])
-        except:
-            pass
+        except (json.JSONDecodeError, TypeError):
+            coll['auto_criteria'] = {}  # Fallback to empty dict on parse failure
     
     # Handle different collection types
     if coll.get('collection_type') == 'automatic':
         # Get books dynamically based on criteria
+        # Sort param overrides criteria default if provided
         books, total = await get_automatic_collection_books(
             coll.get('auto_criteria', {}), 
             limit, 
             offset, 
-            db
+            db,
+            sort_override=sort
         )
         return {
             **coll,
             'book_count': total,
             'total_books': total,
             'books': [process_book_for_response(b) for b in books],
-            'has_more': offset + len(books) < total
+            'has_more': offset + len(books) < total,
+            'current_sort': sort or coll.get('auto_criteria', {}).get('sort', 'title_asc')
         }
     
     elif coll.get('collection_type') == 'checklist':
@@ -681,22 +686,37 @@ async def get_automatic_collection_count(criteria: dict, db) -> int:
     return row[0] if row else 0
 
 
-async def get_automatic_collection_books(criteria: dict, limit: int, offset: int, db) -> tuple:
-    """Get books matching automatic collection criteria with pagination."""
+async def get_automatic_collection_books(criteria: dict, limit: int, offset: int, db, sort_override: str = None) -> tuple:
+    """Get books matching automatic collection criteria with pagination.
+    
+    Args:
+        criteria: Auto collection criteria dict
+        limit: Max books to return
+        offset: Pagination offset
+        db: Database connection
+        sort_override: Optional sort that overrides criteria default
+    """
     conditions, params = await build_auto_criteria_query(criteria)
     
     where_clause = " AND ".join(conditions) if conditions else "1=1"
     
-    # Determine sort order
-    sort = criteria.get('sort', 'title_asc')
+    # Determine sort order - override takes precedence over criteria
+    sort = sort_override or criteria.get('sort', 'title_asc')
+    
+    # IMPORTANT: Use COLLATE NOCASE for case-insensitive string sorting
+    # This ensures 'a' and 'A' sort together, not ASCII-order separated
+    # NOTE: authors field is JSON array, use json_extract to get first author for sorting
     order_clause = {
-        'title_asc': 'ORDER BY t.title ASC',
-        'title_desc': 'ORDER BY t.title DESC',
-        'finished_date_desc': 'ORDER BY t.date_finished DESC, t.title ASC',
-        'finished_date_asc': 'ORDER BY t.date_finished ASC, t.title ASC',
-        'rating_desc': 'ORDER BY t.rating DESC, t.title ASC',
-        'added_desc': 'ORDER BY t.created_at DESC',
-    }.get(sort, 'ORDER BY t.title ASC')
+        'title_asc': 'ORDER BY t.title COLLATE NOCASE ASC',
+        'title_desc': 'ORDER BY t.title COLLATE NOCASE DESC',
+        'author_asc': 'ORDER BY json_extract(t.authors, \'$[0]\') COLLATE NOCASE ASC, t.title COLLATE NOCASE ASC',
+        'author_desc': 'ORDER BY json_extract(t.authors, \'$[0]\') COLLATE NOCASE DESC, t.title COLLATE NOCASE ASC',
+        'finished_date_desc': 'ORDER BY t.date_finished DESC, t.title COLLATE NOCASE ASC',
+        'finished_date_asc': 'ORDER BY t.date_finished ASC, t.title COLLATE NOCASE ASC',
+        'rating_desc': 'ORDER BY t.rating DESC, t.title COLLATE NOCASE ASC',
+        'added_desc': 'ORDER BY t.created_at DESC, t.title COLLATE NOCASE ASC',
+        'added_asc': 'ORDER BY t.created_at ASC, t.title COLLATE NOCASE ASC',
+    }.get(sort, 'ORDER BY t.title COLLATE NOCASE ASC')
     
     # Get total count
     count_cursor = await db.execute(f'''

@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 18, 2026 (v0.26.0)  
-> **Major Milestone:** Phase 9E.5 Complete — Collections Landing Page Polish! 🎨
+> **Last Updated:** January 19, 2026 (v0.26.1)  
+> **Major Milestone:** Phase 9E.5 Complete — Collections Polish (Landing + Detail)! 🎨
 
 ---
 
@@ -11,7 +11,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.26.0)
+## Current State (v0.26.1)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -22,7 +22,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Reading status & session tracking | ✅ Stable |
 | Notes with wiki-style linking | ✅ Stable |
 | Wishlist management | ✅ Stable |
-| **Collections system** | ✅ **Smart Collections + Landing Page Polish Complete!** |
+| **Collections system** | ✅ **Smart Collections + Full Polish Complete!** |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
 | Book detail header | ✅ Redesigned |
@@ -35,7 +35,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Gradient covers | ✅ Fixed (fill containers, text overlay) |
 
 **Recent milestones:**
-- Phase 9E.5: Collections landing page polish complete (Jan 18, 2026) ✅
+- Phase 9E.5b: Collection detail polish complete (Jan 19, 2026) ✅
+- Phase 9E.5a: Collections landing page polish complete (Jan 18, 2026) ✅
 - Phase 9E Core: Smart Collections complete (Jan 15-17, 2026) ✅
 - Phase 9D: Add page simplification + mobile fixes (Jan 15, 2026) ✅
 - Phase 9C: Auto-extraction & bulk tool complete (Jan 13, 2026)
@@ -54,7 +55,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │           │  9C: ✅ Cover System (Jan 11-13)                     │
 │           │  9D: ✅ Bug Fixes & Polish (Jan 15)                  │
 │           │  9E: ✅ Smart Collections Core (Jan 15-17)           │
-│           │  9E.5: ✅ Collections Landing Polish (Jan 18)        │
+│           │  9E.5: ✅ Collections Polish (Jan 18-19)             │
 │           │  9F-9K: ⬅️ Remaining features (~2 weeks)             │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
@@ -77,19 +78,21 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~70% complete (9A-9E.5 ✅)
+**Status:** ~75% complete (9A-9E.5 ✅)
 
 **Timeline:** ~1.5 weeks remaining
 
 ---
 
-### Phase 9E.5: Collections Landing Page Polish ✅ COMPLETE (Jan 18, 2026)
+### Phase 9E.5: Collections Polish ✅ COMPLETE (Jan 18-19, 2026)
 
-**Goal:** Professional UX for collections landing page with calm aesthetics.
+**Goal:** Professional UX for collections throughout the app with calm aesthetics.
 
-**Problem solved:** Collections landing page was basic and lacked organization features. No way to reorder collections, switch views, or quickly edit/delete.
+**Problem solved:** Collections landing and detail pages were basic and lacked organization features. No way to reorder collections or books, switch views, or quickly edit/delete.
 
-**What was built:**
+---
+
+#### Phase 9E.5a: Collections Landing Page (Jan 18)
 
 **3-Dot Menu:**
 - Text-only options menu (⋮) in upper right
@@ -105,7 +108,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - View preference persists via localStorage
 - Smooth transitions between views
 
-**Reorder Mode:**
+**Reorder Collections:**
 - Visual banner with "Reorder Mode" + "Done" button
 - Auto-switches to list view when activated
 - Two labeled sections: "DEFAULT COLLECTIONS" and "MY COLLECTIONS"
@@ -130,13 +133,40 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - Confirmation dialog before deletion
 - Edit opens modal with existing data pre-filled
 
-**Deployed:** January 18, 2026  
-**Files changed:** 5  
-**New components:** 1 (CollectionGradient)  
+---
+
+#### Phase 9E.5b: Collection Detail Page (Jan 19)
+
+**Drag-to-Reorder Books:**
+- "Reorder Books" option in 3-dot menu for manual/checklist collections
+- Only available when all books loaded (pagination safety)
+- Reorder mode forces list view, restores user preference on exit
+- Drag handles (⋮⋮) on right side of each book row
+- Visual "Saving..." feedback during API call
+- Race condition protection prevents concurrent drags
+- For checklists: only incomplete section is reorderable
+- Completed books remain sorted by completion date
+
+**Taller Collection Banner:**
+- Banner height doubled: h-96 (384px) / md:h-[28rem] (448px)
+- More visual impact and breathing room
+- Works with both gradient and custom cover images
+
+**Technical Safeguards:**
+- Reorder button hidden until all books loaded
+- Reorder button hidden for checklists with only completed books
+- View mode preference preserved after exiting reorder
+- Memoized drag sensor options for performance
+
+---
+
+**Deployed:** January 18-19, 2026  
+**Files changed:** 8 total  
+**New components:** 2 (CollectionGradient, SortableBookItem)  
 **Dependencies:** @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities  
-**Lines of code:** ~800  
-**Features:** 5 major (menu, toggle, reorder, gradients, context menu)  
-**Bugs fixed:** 4
+**Lines of code:** ~950  
+**Features:** 7 major  
+**Bugs fixed:** 8
 
 ---
 
@@ -411,4 +441,4 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ---
 
-*Roadmap current through Phase 9E.5 (January 18, 2026)*
+*Roadmap current through Phase 9E.5 (January 19, 2026)*

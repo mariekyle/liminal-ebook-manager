@@ -264,6 +264,11 @@ export default function CollectionDetail() {
   // Reading speed from settings (for estimated read time)
   const [readingSpeed, setReadingSpeed] = useState(180)
   
+  // Sort state for automatic collections
+  // null = use collection's default sort from criteria
+  const [sortOption, setSortOption] = useState(null)
+  const [sortDir, setSortDir] = useState('desc')
+  
   // Reorder mode state
   const [isReorderMode, setIsReorderMode] = useState(false)
   const [preReorderViewMode, setPreReorderViewMode] = useState(null) // Track view mode before reorder
@@ -307,6 +312,9 @@ export default function CollectionDetail() {
   const completedLoaderRef = useRef(null)
   const loaderRef = useRef(null) // For non-checklist collections
   
+  // Track sort version to prevent stale pagination responses from corrupting the list
+  const sortVersionRef = useRef(0)
+  
   // Phase 9E: Book context menu for checklist actions
   const [contextMenu, setContextMenu] = useState({ show: false, book: null, x: 0, y: 0 })
   
@@ -321,20 +329,45 @@ export default function CollectionDetail() {
     dnf: 'DNF'
   })
   
-  const fetchCollection = async () => {
+  // sortOverride: undefined = use sortOption state, null = force backend default, string = use that sort
+  const fetchCollection = async (sortOverride = undefined) => {
+    // Capture version before async call to detect stale responses
+    const requestVersion = sortVersionRef.current
+    
     try {
       setLoading(true)
-      const data = await getCollection(id, {
+      // undefined means use state, null means force backend default, string means use that value
+      const effectiveSort = sortOverride !== undefined ? sortOverride : sortOption
+      const params = {
         limit: BOOKS_PER_PAGE,
         offset: 0,
         incompleteLimit: BOOKS_PER_PAGE,
         incompleteOffset: 0,
         completedLimit: BOOKS_PER_PAGE,
-        completedOffset: 0
-      })
+        completedOffset: 0,
+      }
+      // Only add sort param if we have an explicit sort preference
+      if (effectiveSort !== null) {
+        params.sort = effectiveSort
+      }
+      const data = await getCollection(id, params)
+      
+      // Only apply results if this request is still relevant
+      if (sortVersionRef.current !== requestVersion) {
+        // Sort/collection changed while request was in flight - discard stale response
+        return
+      }
       
       setCollection(data)
       setTotalBooks(data.total_books || 0)
+      
+      // Set sort from response on collection change (sortOverride === null)
+      // This sets the initial sort to the collection's configured default
+      if (data.current_sort && sortOverride === null) {
+        setSortOption(data.current_sort)
+        // Also sync the direction state
+        setSortDir(getSortDir(data.current_sort))
+      }
       
       if (data.collection_type === 'checklist') {
         // Checklist: use separate section data
@@ -356,29 +389,108 @@ export default function CollectionDetail() {
       }
       setError(null)
     } catch (err) {
-      console.error('Failed to fetch collection:', err)
-      setError('Collection not found')
+      // Only set error if this request is still relevant
+      if (sortVersionRef.current === requestVersion) {
+        console.error('Failed to fetch collection:', err)
+        setError('Collection not found')
+      }
     } finally {
-      setLoading(false)
+      // Only clear loading if this request is still relevant
+      if (sortVersionRef.current === requestVersion) {
+        setLoading(false)
+      }
     }
+  }
+  
+  // Helper: Build sort key from field + direction
+  const buildSortKey = (field, dir) => {
+    const sortKeys = {
+      'added': dir === 'desc' ? 'added_desc' : 'added_asc',
+      'title': dir === 'asc' ? 'title_asc' : 'title_desc',
+      'author': dir === 'asc' ? 'author_asc' : 'author_desc',
+      'finished': dir === 'desc' ? 'finished_date_desc' : 'finished_date_asc',
+    }
+    return sortKeys[field] || 'title_asc'
+  }
+  
+  // Helper: Extract field from full sort key
+  const getSortField = (sortKey) => {
+    if (!sortKey) return 'title'
+    if (sortKey.startsWith('added')) return 'added'
+    if (sortKey.startsWith('title')) return 'title'
+    if (sortKey.startsWith('author')) return 'author'
+    if (sortKey.startsWith('finished')) return 'finished'
+    return 'title'
+  }
+  
+  // Helper: Extract direction from full sort key
+  const getSortDir = (sortKey) => {
+    if (!sortKey) return 'asc'
+    return sortKey.endsWith('_desc') ? 'desc' : 'asc'
+  }
+  
+  // Handle sort field change for automatic collections
+  const handleSortChange = (newSortField) => {
+    // Increment version to invalidate any in-flight pagination requests
+    sortVersionRef.current += 1
+    
+    // Build the full sort key (field + direction)
+    const newSort = buildSortKey(newSortField, sortDir)
+    setSortOption(newSort)
+    
+    // Reset pagination and refetch
+    setOffset(0)
+    setBooks([])
+    fetchCollection(newSort)
+  }
+  
+  // Handle sort direction toggle
+  const handleSortDirChange = () => {
+    const newDir = sortDir === 'asc' ? 'desc' : 'asc'
+    setSortDir(newDir)
+    
+    // Increment version to invalidate any in-flight pagination requests
+    sortVersionRef.current += 1
+    
+    // Build the full sort key with new direction
+    const currentField = getSortField(sortOption)
+    const newSort = buildSortKey(currentField, newDir)
+    setSortOption(newSort)
+    
+    // Reset pagination and refetch
+    setOffset(0)
+    setBooks([])
+    fetchCollection(newSort)
   }
   
   // Load more for non-checklist collections
   const loadMoreBooks = useCallback(async () => {
     if (loadingMore || !hasMore) return
     
+    // Capture current sort version before async call
+    const requestSortVersion = sortVersionRef.current
+    
     setLoadingMore(true)
     try {
-      const data = await getCollection(id, { limit: BOOKS_PER_PAGE, offset })
-      setBooks(prev => [...prev, ...data.books])
-      setHasMore(data.has_more)
-      setOffset(prev => prev + BOOKS_PER_PAGE)
+      const params = { limit: BOOKS_PER_PAGE, offset }
+      if (sortOption !== null) {
+        params.sort = sortOption
+      }
+      const data = await getCollection(id, params)
+      
+      // Only apply results if sort hasn't changed during the request
+      if (sortVersionRef.current === requestSortVersion) {
+        setBooks(prev => [...prev, ...data.books])
+        setHasMore(data.has_more)
+        setOffset(prev => prev + BOOKS_PER_PAGE)
+      }
     } catch (err) {
       console.error('Failed to load more books:', err)
     } finally {
+      // Always clear loading flag - even if sort changed, we need to allow new requests
       setLoadingMore(false)
     }
-  }, [id, offset, hasMore, loadingMore])
+  }, [id, offset, hasMore, loadingMore, sortOption])
   
   // Load more incomplete books (checklist)
   const loadMoreIncomplete = useCallback(async () => {
@@ -425,7 +537,14 @@ export default function CollectionDetail() {
   }, [id, completedOffset, completedHasMore, loadingSection])
   
   useEffect(() => {
-    fetchCollection()
+    // Reset sort to null when navigating to a different collection
+    // This allows the new collection to use its own default sort from criteria
+    setSortOption(null)
+    // INCREMENT version to invalidate any in-flight requests from previous collection
+    // Don't reset to 0 - a previous request might have captured version 0
+    sortVersionRef.current += 1
+    // Pass null explicitly to force backend default (not stale sortOption state)
+    fetchCollection(null)
   }, [id])
   
   // Observer for non-checklist collections
@@ -1114,12 +1233,38 @@ export default function CollectionDetail() {
             </span>
           )}
         </div>
-        <p className="text-gray-400 mb-2">
-          {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
-          {isChecklist && completedTotal > 0 && (
-            <span className="text-emerald-400"> · {completedTotal} completed</span>
+        {/* Book count row with sort (for automatic collections) */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-gray-400">
+            {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
+            {isChecklist && completedTotal > 0 && (
+              <span className="text-emerald-400"> · {completedTotal} completed</span>
+            )}
+          </p>
+          
+          {/* Sort controls - automatic collections only */}
+          {isAutomatic && !loading && (
+            <div className="flex items-center gap-1">
+              <select
+                value={getSortField(sortOption)}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="appearance-none bg-transparent text-gray-500 text-xs pr-4 cursor-pointer hover:text-white focus:outline-none"
+              >
+                <option value="added">Recently Added</option>
+                <option value="title">Title</option>
+                <option value="author">Author</option>
+                <option value="finished">Recently Finished</option>
+              </select>
+              <button
+                onClick={handleSortDirChange}
+                className="text-gray-500 hover:text-white text-xs p-1 transition-colors"
+                title={sortDir === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
           )}
-        </p>
+        </div>
         {collection.description && (
           <p className="text-gray-300 text-sm whitespace-pre-wrap">
             {collection.description}
@@ -1186,7 +1331,7 @@ export default function CollectionDetail() {
           </p>
         </div>
       )}
-      
+
       {/* Books Grid/List */}
       {isChecklist ? (
         /* Checklist collections: separate incomplete and completed sections */
