@@ -10,11 +10,27 @@
  * - Grid/List view toggle with localStorage persistence
  * - Books per row from settings
  * - Greyscale type badges and info banners
+ * - Drag-to-reorder books (Manual/Checklist only)
+ * - Taller header banner
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings, updateBookStatus, updateBookDates, updateBookRating } from '../api'
+import { 
+  DndContext, 
+  closestCenter, 
+  PointerSensor, 
+  useSensor, 
+  useSensors 
+} from '@dnd-kit/core'
+import { 
+  SortableContext, 
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings, updateBookStatus, updateBookDates, updateBookRating, reorderBooksInCollection } from '../api'
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
@@ -91,6 +107,18 @@ const ListIcon = () => (
   </svg>
 )
 
+const DragHandleIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-gray-500">
+    <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
+  </svg>
+)
+
+const ReorderIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" />
+  </svg>
+)
+
 // ============================================
 // BookListItem - List view for individual books
 // ============================================
@@ -158,6 +186,57 @@ function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 
   )
 }
 
+// ============================================
+// SortableBookItem - Wrapper for drag-and-drop reordering
+// ============================================
+function SortableBookItem({ 
+  book, 
+  children,
+  isReorderMode,
+  disabled = false
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ 
+    id: book.id,
+    disabled: disabled
+  })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined
+  }
+  
+  if (!isReorderMode) {
+    return children
+  }
+  
+  // Build drag handle props conditionally
+  const dragHandleProps = disabled ? {} : { ...attributes, ...listeners }
+  
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      {children}
+      {/* Drag handle overlay */}
+      <div 
+        {...dragHandleProps}
+        className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 touch-none bg-gray-900/80 rounded-lg ${
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab active:cursor-grabbing'
+        }`}
+      >
+        <DragHandleIcon />
+      </div>
+    </div>
+  )
+}
+
 export default function CollectionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -184,6 +263,23 @@ export default function CollectionDetail() {
   
   // Reading speed from settings (for estimated read time)
   const [readingSpeed, setReadingSpeed] = useState(180)
+  
+  // Reorder mode state
+  const [isReorderMode, setIsReorderMode] = useState(false)
+  const [preReorderViewMode, setPreReorderViewMode] = useState(null) // Track view mode before reorder
+  const [isSavingReorder, setIsSavingReorder] = useState(false) // Prevent race conditions during save
+  
+  // Configure drag sensors with activation constraint
+  // Memoize the activation constraint to prevent recreation on each render
+  const pointerSensorOptions = useMemo(() => ({
+    activationConstraint: {
+      distance: 8 // Prevents accidental drags
+    }
+  }), [])
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, pointerSensorOptions)
+  )
   
   // Pagination state
   const BOOKS_PER_PAGE = 50
@@ -448,10 +544,12 @@ export default function CollectionDetail() {
     return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
-  // Persist view mode to localStorage
+  // Persist view mode to localStorage (but not during reorder mode)
   useEffect(() => {
-    localStorage.setItem(VIEW_MODE_KEY, viewMode)
-  }, [viewMode])
+    if (!isReorderMode) {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode)
+    }
+  }, [viewMode, isReorderMode])
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -621,6 +719,49 @@ export default function CollectionDetail() {
     
     setContextMenu({ show: true, book, x, y })
   }
+
+  // Handle drag end for reordering books
+  const handleDragEnd = async (event) => {
+    const { active, over } = event
+    
+    if (!over || active.id === over.id) return
+    
+    // Prevent concurrent drags to avoid race conditions
+    if (isSavingReorder) return
+    
+    // Determine which array we're working with
+    let booksArray, setBooksArray
+    if (collection?.collection_type === 'checklist') {
+      // For checklists, only reorder incomplete books (completed section stays sorted by completion)
+      booksArray = incompleteBooks
+      setBooksArray = setIncompleteBooks
+    } else {
+      booksArray = books
+      setBooksArray = setBooks
+    }
+    
+    const oldIndex = booksArray.findIndex(b => b.id === active.id)
+    const newIndex = booksArray.findIndex(b => b.id === over.id)
+    
+    if (oldIndex === -1 || newIndex === -1) return
+    
+    // Optimistically update UI
+    const newOrder = arrayMove(booksArray, oldIndex, newIndex)
+    setBooksArray(newOrder)
+    
+    // Persist to backend - send ALL book IDs in new order
+    setIsSavingReorder(true)
+    try {
+      const allBookIds = newOrder.map(b => b.id)
+      await reorderBooksInCollection(parseInt(id), allBookIds)
+    } catch (err) {
+      console.error('Failed to reorder books:', err)
+      // Revert on error - safe now since we blocked concurrent drags
+      setBooksArray(booksArray)
+    } finally {
+      setIsSavingReorder(false)
+    }
+  }
   
   const handleEditSuccess = () => {
     setShowEditModal(false)
@@ -684,7 +825,28 @@ export default function CollectionDetail() {
   const isDefault = collection.is_default
   
   // Render a single book (grid or list)
-  const renderBook = (book, isChecklistCompleted = false) => {
+  // Render a single book (grid or list)
+  // canSort: whether this book should be wrapped in SortableBookItem (only true for incomplete in reorder mode)
+  const renderBook = (book, isChecklistCompleted = false, canSort = true) => {
+    // In reorder mode (list view), use SortableBookItem wrapper - but ONLY if canSort is true
+    if (isReorderMode && canSort) {
+      return (
+        <SortableBookItem 
+          key={book.id} 
+          book={book} 
+          isReorderMode={true}
+          disabled={isSavingReorder}
+        >
+          <BookListItem 
+            book={book} 
+            onClick={() => {}} // Disable click during reorder
+            isChecklistCompleted={isChecklistCompleted}
+            readingSpeed={readingSpeed}
+          />
+        </SortableBookItem>
+      )
+    }
+    
     if (viewMode === 'list') {
       return (
         <div 
@@ -845,8 +1007,8 @@ export default function CollectionDetail() {
                   </button>
                 )}
                 
-                {/* Remove Books - only for manual/checklist with books */}
-                {!isAutomatic && totalBooks > 0 && (
+                {/* Remove Books - only for manual/checklist with books, not in reorder mode */}
+                {!isAutomatic && totalBooks > 0 && !isReorderMode && (
                   <button
                     onClick={() => {
                       setShowMenu(false)
@@ -859,17 +1021,51 @@ export default function CollectionDetail() {
                   </button>
                 )}
                 
-                {/* View toggle */}
-                <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
-                >
-                  {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
-                  View: {viewMode === 'grid' ? 'List' : 'Grid'}
-                </button>
+                {/* Reorder Books - only for manual/checklist with sortable books, not in remove mode, and ALL books loaded */}
+                {/* For checklists: need 2+ incomplete books. For manual: need 2+ total books */}
+                {!isAutomatic && !removeMode && 
+                 (isChecklist 
+                   ? (!incompleteHasMore && incompleteBooks.length > 1)
+                   : (!hasMore && totalBooks > 1)
+                 ) && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      if (isReorderMode) {
+                        // Restore original view mode when exiting reorder
+                        if (preReorderViewMode) {
+                          setViewMode(preReorderViewMode)
+                          localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
+                        }
+                        setPreReorderViewMode(null)
+                        setIsReorderMode(false)
+                      } else {
+                        // Save current view mode and switch to list for reordering
+                        setPreReorderViewMode(viewMode)
+                        setViewMode('list') // Force list view for reordering (don't save to localStorage)
+                        setIsReorderMode(true)
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                  >
+                    <ReorderIcon />
+                    {isReorderMode ? 'Done Reordering' : 'Reorder Books'}
+                  </button>
+                )}
+                
+                {/* View toggle - not in reorder mode */}
+                {!isReorderMode && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                  >
+                    {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
+                    View: {viewMode === 'grid' ? 'List' : 'Grid'}
+                  </button>
+                )}
                 
                 {/* Delete - not for default collections */}
                 {!isDefault && (
@@ -953,6 +1149,35 @@ export default function CollectionDetail() {
         </div>
       )}
 
+      {/* Reorder mode banner */}
+      {isReorderMode && (
+        <div className="mb-4 px-4 py-3 flex items-center justify-between bg-library-accent/20 border border-library-accent rounded-lg">
+          <span className="text-sm text-gray-200 font-medium">
+            {isSavingReorder ? 'Saving...' : 'Drag to reorder books'}
+          </span>
+          <button
+            onClick={() => {
+              if (isSavingReorder) return // Don't exit while saving
+              // Restore original view mode when exiting reorder
+              if (preReorderViewMode) {
+                setViewMode(preReorderViewMode)
+                localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
+              }
+              setPreReorderViewMode(null)
+              setIsReorderMode(false)
+            }}
+            disabled={isSavingReorder}
+            className={`px-3 py-1 text-sm font-medium rounded transition-opacity ${
+              isSavingReorder 
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                : 'bg-library-accent hover:opacity-90 text-white'
+            }`}
+          >
+            Done
+          </button>
+        </div>
+      )}
+
       {/* Automatic collection info - greyscale */}
       {isAutomatic && (
         <div className="mb-4 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg">
@@ -969,9 +1194,26 @@ export default function CollectionDetail() {
           <>
             {/* Incomplete books section */}
             {incompleteBooks.length > 0 && (
-              <div className={getGridClasses()}>
-                {incompleteBooks.map(book => renderBook(book, false))}
-              </div>
+              isReorderMode ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext 
+                    items={incompleteBooks.map(b => b.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className={getGridClasses()}>
+                      {incompleteBooks.map(book => renderBook(book, false))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className={getGridClasses()}>
+                  {incompleteBooks.map(book => renderBook(book, false))}
+                </div>
+              )
             )}
             
             {/* Incomplete section loader */}
@@ -1000,10 +1242,10 @@ export default function CollectionDetail() {
               </div>
             )}
 
-            {/* Completed books section */}
+            {/* Completed books section - canSort=false since completed section isn't sortable */}
             {completedBooks.length > 0 && (
               <div className={getGridClasses()}>
-                {completedBooks.map(book => renderBook(book, true))}
+                {completedBooks.map(book => renderBook(book, true, false))}
               </div>
             )}
             
@@ -1035,9 +1277,26 @@ export default function CollectionDetail() {
         /* Non-checklist collections: single books grid */
         books.length > 0 ? (
           <>
-            <div className={getGridClasses()}>
-              {books.map(book => renderBook(book, false))}
-            </div>
+            {isReorderMode ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext 
+                  items={books.map(b => b.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className={getGridClasses()}>
+                    {books.map(book => renderBook(book, false))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className={getGridClasses()}>
+                {books.map(book => renderBook(book, false))}
+              </div>
+            )}
 
             {/* Infinite scroll trigger */}
             <div ref={loaderRef} className="w-full py-8 flex justify-center">

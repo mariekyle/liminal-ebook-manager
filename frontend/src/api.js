@@ -559,7 +559,7 @@ export async function cancelUpload(sessionId) {
 }
 
 /**
- * Link uploaded files to an existing title (TBR → Library conversion)
+ * Link uploaded files to an existing title (TBR â†’ Library conversion)
  * @param {string} sessionId - Session ID from analyzeUploadedFiles
  * @param {number} titleId - ID of existing title to link files to
  */
@@ -1051,5 +1051,17 @@ export async function reorderCollections(collectionIds) {
   return apiFetch('/collections/reorder', {
     method: 'POST',
     body: JSON.stringify({ collection_ids: collectionIds })
+  })
+}
+
+/**
+ * Reorder books within a collection
+ * @param {number} collectionId - Collection ID
+ * @param {number[]} titleIds - Array of book IDs in new order
+ */
+export async function reorderBooksInCollection(collectionId, titleIds) {
+  return apiFetch(`/collections/${collectionId}/books/reorder`, {
+    method: 'POST',
+    body: JSON.stringify({ title_ids: titleIds })
   })
 }
