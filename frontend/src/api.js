@@ -1072,3 +1072,18 @@ export async function reorderBooksInCollection(collectionId, titleIds) {
     body: JSON.stringify({ title_ids: titleIds })
   })
 }
+
+/**
+ * Duplicate a collection, optionally with a different type
+ * @param {number} collectionId - Source collection ID
+ * @param {Object} data - Duplicate options
+ * @param {string} data.name - Name for the duplicate
+ * @param {string} data.collection_type - Type for duplicate: 'manual', 'checklist', 'automatic'
+ * @param {Object} [data.auto_criteria] - Required if type is 'automatic'
+ */
+export async function duplicateCollection(collectionId, data) {
+  return apiFetch(`/collections/${collectionId}/duplicate`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}

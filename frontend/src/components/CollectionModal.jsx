@@ -13,7 +13,7 @@
  * - Uses form id to properly link external submit button
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createCollection, updateCollection, updateCollectionCoverType, uploadCollectionCover, deleteCollectionCover } from '../api'
 import CriteriaBuilder from './CriteriaBuilder'
 
@@ -75,6 +75,13 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   
+  // State for cover preview (when editing collection with custom cover)
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState(null)
+  // Ref to track previous blob URL for cleanup (avoids closure issues)
+  const prevCoverUrlRef = useRef(null)
+  // Track if user uploaded a cover this session (for type switching)
+  const [uploadedThisSession, setUploadedThisSession] = useState(false)
+  
   // Phase 9E: New state for collection type and criteria
   const [collectionType, setCollectionType] = useState(collection?.collection_type || 'manual')
   const [criteria, setCriteria] = useState(() => {
@@ -134,6 +141,36 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
 
     return () => clearTimeout(timer)
   }, [criteria, collectionType])
+
+  // Load cover preview for existing collections with custom covers
+  useEffect(() => {
+    if (collection?.id && collection?.cover_type === 'custom') {
+      // Use the cover endpoint with cache buster
+      setCoverPreviewUrl(`/api/collections/${collection.id}/cover?t=${Date.now()}`)
+    }
+  }, [collection?.id, collection?.cover_type])
+
+  // Cleanup previous blob URL when coverPreviewUrl changes
+  useEffect(() => {
+    // Revoke the PREVIOUS blob URL (stored in ref)
+    const prevUrl = prevCoverUrlRef.current
+    if (prevUrl && prevUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(prevUrl)
+    }
+    
+    // Store current URL in ref for next cleanup
+    prevCoverUrlRef.current = coverPreviewUrl
+  }, [coverPreviewUrl])
+
+  // Cleanup on unmount (separate effect with empty deps)
+  useEffect(() => {
+    return () => {
+      // On unmount: revoke whatever blob URL is stored in ref
+      if (prevCoverUrlRef.current && prevCoverUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(prevCoverUrlRef.current)
+      }
+    }
+  }, [])
   
   const handleCoverTypeChange = async (type) => {
     if (!collection?.id) {
@@ -146,6 +183,16 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
     try {
       await updateCollectionCoverType(collection.id, type)
       setCoverType(type)
+      
+      // Manage cover preview URL based on new type
+      if (type === 'custom' && (collection?.custom_cover_path || uploadedThisSession)) {
+        // Switching TO custom: reload preview with fresh cache buster
+        // Works for both pre-existing covers and covers uploaded this session
+        setCoverPreviewUrl(`/api/collections/${collection.id}/cover?t=${Date.now()}`)
+      } else if (type !== 'custom') {
+        // Switching AWAY from custom: clear the preview
+        setCoverPreviewUrl(null)
+      }
     } catch (err) {
       console.error('Failed to update cover type:', err)
       alert('Failed to update cover type')
@@ -165,6 +212,9 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       setUploadingCover(true)
       await uploadCollectionCover(collection.id, file)
       setCoverType('custom')
+      setUploadedThisSession(true)  // Track that we uploaded this session
+      // Show preview of uploaded image (cleanup handled by useEffect)
+      setCoverPreviewUrl(URL.createObjectURL(file))
     } catch (err) {
       console.error('Failed to upload cover:', err)
       alert('Failed to upload cover')
@@ -179,6 +229,9 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
     try {
       await deleteCollectionCover(collection.id)
       setCoverType('gradient')
+      setUploadedThisSession(false)  // Reset since cover was deleted
+      // Clear preview (cleanup handled by useEffect)
+      setCoverPreviewUrl(null)
     } catch (err) {
       console.error('Failed to delete cover:', err)
       alert('Failed to remove cover')
@@ -439,14 +492,26 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                       : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
                   } ${uploadingCover ? 'opacity-50 pointer-events-none' : ''}`}
                 >
-                  <div className="w-6 h-6 rounded bg-gray-600 flex items-center justify-center">
+                  {/* Thumbnail preview or camera icon */}
+                  <div className="w-6 h-6 rounded bg-gray-600 flex items-center justify-center overflow-hidden">
                     {uploadingCover ? (
                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                    ) : coverPreviewUrl ? (
+                      <img 
+                        src={coverPreviewUrl} 
+                        alt="Cover preview" 
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <CameraIcon />
                     )}
                   </div>
-                  <span className="text-sm flex-1">Custom image</span>
+                  <span className="text-sm flex-1">
+                    {coverPreviewUrl ? 'Change image' : 'Custom image'}
+                  </span>
+                  {coverPreviewUrl && (
+                    <span className="text-xs text-gray-400">✓ Set</span>
+                  )}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif"

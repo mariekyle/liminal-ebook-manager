@@ -36,6 +36,7 @@ import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
 import SmartPasteModal from './SmartPasteModal'
 import GradientCover from './GradientCover'
+import DuplicateCollectionModal from './DuplicateCollectionModal'
 
 // LocalStorage key for view mode preference
 const VIEW_MODE_KEY = 'collection_detail_view_mode'
@@ -116,6 +117,13 @@ const DragHandleIcon = () => (
 const ReorderIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
     <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" />
+  </svg>
+)
+
+const CopyIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
   </svg>
 )
 
@@ -246,6 +254,7 @@ export default function CollectionDetail() {
   const [error, setError] = useState(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
   const [showSmartPaste, setShowSmartPaste] = useState(false)
@@ -311,6 +320,9 @@ export default function CollectionDetail() {
   const incompleteLoaderRef = useRef(null)
   const completedLoaderRef = useRef(null)
   const loaderRef = useRef(null) // For non-checklist collections
+  
+  // Ref to prevent concurrent pagination requests - avoids callback identity changes
+  const loadingSectionRef = useRef(null)
   
   // Track sort version to prevent stale pagination responses from corrupting the list
   const sortVersionRef = useRef(0)
@@ -493,10 +505,14 @@ export default function CollectionDetail() {
   }, [id, offset, hasMore, loadingMore, sortOption])
   
   // Load more incomplete books (checklist)
+  // Uses ref for loading guard to keep callback identity stable
   const loadMoreIncomplete = useCallback(async () => {
-    if (loadingSection || !incompleteHasMore) return
+    // Use ref for guard - prevents callback recreation when loadingSection changes
+    if (loadingSectionRef.current || !incompleteHasMore) return
     
+    loadingSectionRef.current = 'incomplete'
     setLoadingSection('incomplete')
+    
     try {
       const data = await getCollection(id, {
         incompleteLimit: BOOKS_PER_PAGE,
@@ -504,21 +520,32 @@ export default function CollectionDetail() {
         completedLimit: 0,
         completedOffset: 0
       })
-      setIncompleteBooks(prev => [...prev, ...(data.incomplete_books || [])])
-      setIncompleteHasMore(data.incomplete_has_more || false)
+      
+      const newBooks = data.incomplete_books || []
+      setIncompleteBooks(prev => [...prev, ...newBooks])
+      
+      // Safety: if we got no books, there are no more regardless of API response
+      const hasMore = newBooks.length > 0 && (data.incomplete_has_more ?? false)
+      setIncompleteHasMore(hasMore)
+      
       setIncompleteOffset(prev => prev + BOOKS_PER_PAGE)
     } catch (err) {
       console.error('Failed to load more incomplete books:', err)
     } finally {
+      loadingSectionRef.current = null
       setLoadingSection(null)
     }
-  }, [id, incompleteOffset, incompleteHasMore, loadingSection])
+  }, [id, incompleteOffset, incompleteHasMore]) // Removed loadingSection!
   
   // Load more completed books (checklist)
+  // Uses ref for loading guard to keep callback identity stable
   const loadMoreCompleted = useCallback(async () => {
-    if (loadingSection || !completedHasMore) return
+    // Use ref for guard - prevents callback recreation when loadingSection changes
+    if (loadingSectionRef.current || !completedHasMore) return
     
+    loadingSectionRef.current = 'completed'
     setLoadingSection('completed')
+    
     try {
       const data = await getCollection(id, {
         incompleteLimit: 0,
@@ -526,15 +553,22 @@ export default function CollectionDetail() {
         completedLimit: BOOKS_PER_PAGE,
         completedOffset: completedOffset
       })
-      setCompletedBooks(prev => [...prev, ...(data.completed_books || [])])
-      setCompletedHasMore(data.completed_has_more || false)
+      
+      const newBooks = data.completed_books || []
+      setCompletedBooks(prev => [...prev, ...newBooks])
+      
+      // Safety: if we got no books, there are no more regardless of API response
+      const hasMore = newBooks.length > 0 && (data.completed_has_more ?? false)
+      setCompletedHasMore(hasMore)
+      
       setCompletedOffset(prev => prev + BOOKS_PER_PAGE)
     } catch (err) {
       console.error('Failed to load more completed books:', err)
     } finally {
+      loadingSectionRef.current = null
       setLoadingSection(null)
     }
-  }, [id, completedOffset, completedHasMore, loadingSection])
+  }, [id, completedOffset, completedHasMore]) // Removed loadingSection!
   
   useEffect(() => {
     // Reset sort to null when navigating to a different collection
@@ -568,12 +602,15 @@ export default function CollectionDetail() {
   }, [hasMore, loadingMore, loading, loadMoreBooks, collection?.collection_type])
   
   // Observer for incomplete section
+  // Note: Guards removed from callback - loadMoreIncomplete handles all checks internally
+  // This prevents infinite loops from observer recreation when loadingSection changes
   useEffect(() => {
     if (collection?.collection_type !== 'checklist') return
+    if (!incompleteHasMore) return  // Don't even create observer if no more books
     
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && incompleteHasMore && !loadingSection && !loading) {
+        if (entries[0].isIntersecting) {
           loadMoreIncomplete()
         }
       },
@@ -585,15 +622,18 @@ export default function CollectionDetail() {
     }
     
     return () => observer.disconnect()
-  }, [incompleteHasMore, loadingSection, loading, loadMoreIncomplete, collection?.collection_type])
+  }, [incompleteHasMore, loadMoreIncomplete, collection?.collection_type])
   
   // Observer for completed section
+  // Note: Guards removed from callback - loadMoreCompleted handles all checks internally
+  // This prevents infinite loops from observer recreation when loadingSection changes
   useEffect(() => {
     if (collection?.collection_type !== 'checklist') return
+    if (!completedHasMore) return  // Don't even create observer if no more books
     
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && completedHasMore && !loadingSection && !loading) {
+        if (entries[0].isIntersecting) {
           loadMoreCompleted()
         }
       },
@@ -605,7 +645,7 @@ export default function CollectionDetail() {
     }
     
     return () => observer.disconnect()
-  }, [completedHasMore, loadingSection, loading, loadMoreCompleted, collection?.collection_type])
+  }, [completedHasMore, loadMoreCompleted, collection?.collection_type])
 
   // Load display settings and custom status labels
   useEffect(() => {
@@ -1112,6 +1152,18 @@ export default function CollectionDetail() {
                   Edit Collection
                 </button>
                 
+                {/* Duplicate - available for all collections */}
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
+                    setShowDuplicateModal(true)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                >
+                  <CopyIcon />
+                  Duplicate
+                </button>
+                
                 {/* Smart Paste - only for manual/checklist */}
                 {!isAutomatic && (
                   <button
@@ -1394,23 +1446,29 @@ export default function CollectionDetail() {
               </div>
             )}
             
-            {/* Completed section loader */}
-            <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
-              {loadingSection === 'completed' && (
-                <div className="inline-flex items-center gap-2 text-zinc-400">
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm">Loading more books...</span>
-                </div>
-              )}
-              {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
+            {/* Completed section loader - only render when there are more books to load */}
+            {completedHasMore && (
+              <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
+                {loadingSection === 'completed' && (
+                  <div className="inline-flex items-center gap-2 text-zinc-400">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm">Loading more books...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* "All books loaded" message - show when both sections are done */}
+            {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
+              <div className="w-full py-8 flex justify-center">
                 <span className="text-gray-500 text-sm">
                   All {totalBooks} books loaded
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-12">
@@ -1515,6 +1573,18 @@ export default function CollectionDetail() {
           collection={collection}
           onClose={() => setShowEditModal(false)}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Duplicate Collection Modal */}
+      {showDuplicateModal && (
+        <DuplicateCollectionModal
+          collection={collection}
+          onClose={() => setShowDuplicateModal(false)}
+          onSuccess={() => {
+            // Navigate to collections list to see the new collection
+            navigate('/collections')
+          }}
         />
       )}
 
