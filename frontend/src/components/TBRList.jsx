@@ -80,7 +80,7 @@ function TBRList() {
   
   // Sort state with localStorage persistence
   const { sortField, sortDirection, setSort } = useSort(
-    'liminal_sort_tbr',
+    'liminal_sort_wishlist',
     'added',
     'desc'
   )
