@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listTBR } from '../api'
 import GradientCover from './GradientCover'
+import SortDropdown from './SortDropdown'
+import { useSort } from '../hooks/useSort'
 
 // Priority badge component
 function PriorityBadge({ priority }) {
@@ -75,7 +77,13 @@ function TBRList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all') // 'all', 'high', 'normal'
-  const [sort, setSort] = useState('added') // 'added', 'title', 'author'
+  
+  // Sort state with localStorage persistence
+  const { sortField, sortDirection, setSort } = useSort(
+    'liminal_sort_tbr',
+    'added',
+    'desc'
+  )
 
   useEffect(() => {
     loadTBR()
@@ -104,18 +112,18 @@ function TBRList() {
 
   // Sort books
   const sortedBooks = [...filteredBooks].sort((a, b) => {
-    if (sort === 'added') {
-      return new Date(b.created_at) - new Date(a.created_at)
-    }
-    if (sort === 'title') {
-      return (a.title || '').localeCompare(b.title || '')
-    }
-    if (sort === 'author') {
+    let result = 0
+    if (sortField === 'added') {
+      result = new Date(a.created_at) - new Date(b.created_at)
+    } else if (sortField === 'title') {
+      result = (a.title || '').localeCompare(b.title || '')
+    } else if (sortField === 'author') {
       const authorA = a.authors?.[0] || ''
       const authorB = b.authors?.[0] || ''
-      return authorA.localeCompare(authorB)
+      result = authorA.localeCompare(authorB)
     }
-    return 0
+    // Reverse for descending
+    return sortDirection === 'desc' ? -result : result
   })
 
   // Count by priority
@@ -210,17 +218,13 @@ function TBRList() {
             </div>
 
             {/* Sort Dropdown */}
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-gray-500 text-sm">Sort:</span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="bg-library-card text-white text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-library-accent"
-              >
-                <option value="added">Recently Added</option>
-                <option value="title">Title</option>
-                <option value="author">Author</option>
-              </select>
+            <div className="ml-auto">
+              <SortDropdown
+                value={sortField}
+                direction={sortDirection}
+                onChange={setSort}
+                options={['added', 'title', 'author']}
+              />
             </div>
           </div>
 

@@ -37,6 +37,7 @@ import MosaicCover from './MosaicCover'
 import SmartPasteModal from './SmartPasteModal'
 import GradientCover from './GradientCover'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
+import SortDropdown from './SortDropdown'
 
 // LocalStorage key for view mode preference
 const VIEW_MODE_KEY = 'collection_detail_view_mode'
@@ -1296,25 +1297,21 @@ export default function CollectionDetail() {
           
           {/* Sort controls - automatic collections only */}
           {isAutomatic && !loading && (
-            <div className="flex items-center gap-1">
-              <select
-                value={getSortField(sortOption)}
-                onChange={(e) => handleSortChange(e.target.value)}
-                className="appearance-none bg-transparent text-gray-500 text-xs pr-4 cursor-pointer hover:text-white focus:outline-none"
-              >
-                <option value="added">Recently Added</option>
-                <option value="title">Title</option>
-                <option value="author">Author</option>
-                <option value="finished">Recently Finished</option>
-              </select>
-              <button
-                onClick={handleSortDirChange}
-                className="text-gray-500 hover:text-white text-xs p-1 transition-colors"
-                title={sortDir === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
-              >
-                {sortDir === 'asc' ? '↑' : '↓'}
-              </button>
-            </div>
+            <SortDropdown
+              value={getSortField(sortOption)}
+              direction={sortDir}
+              onChange={(field, dir) => {
+                // Build the full sort key and update
+                const newSort = buildSortKey(field, dir)
+                setSortOption(newSort)
+                setSortDir(dir)
+                sortVersionRef.current += 1
+                setOffset(0)
+                setBooks([])
+                fetchCollection(newSort)
+              }}
+              options={['added', 'title', 'author', 'finished']}
+            />
           )}
         </div>
         {collection.description && (

@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 19, 2026 (v0.26.1)  
-> **Major Milestone:** Phase 9E.5 Complete — Collections Polish (Landing + Detail)! 🎨
+> **Last Updated:** January 19, 2026 (v0.26.2)  
+> **Major Milestone:** Phase 9E.5 Complete — Collections Polish (Landing + Detail + Final)! 🎨
 
 ---
 
@@ -11,7 +11,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.26.1)
+## Current State (v0.26.2)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,6 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Gradient covers | ✅ Fixed (fill containers, text overlay) |
 
 **Recent milestones:**
+- Phase 9E.5c: Collections final polish complete (Jan 19, 2026) ✅
 - Phase 9E.5b: Collection detail polish complete (Jan 19, 2026) ✅
 - Phase 9E.5a: Collections landing page polish complete (Jan 18, 2026) ✅
 - Phase 9E Core: Smart Collections complete (Jan 15-17, 2026) ✅
@@ -78,9 +79,30 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~75% complete (9A-9E.5 ✅)
+**Status:** ~80% complete (9A-9E.5 ✅)
 
 **Timeline:** ~1.5 weeks remaining
+
+---
+
+## Technical Debt
+
+Items to address when time permits:
+
+### Checklist Collection Pagination Infinite Loop ⚠️
+**Location:** `frontend/src/pages/CollectionDetail.jsx`  
+**Symptom:** When viewing a checklist collection with many books (50+), scrolling to the bottom of the incomplete section causes the "Loading more books..." spinner to flicker infinitely.  
+**Root cause:** Complex interaction between IntersectionObserver recreation, React useCallback identity changes, and async state updates.  
+**Attempted fixes:** Conditional loader rendering, removing loadingSection from effect dependencies, using refs to stabilize callback identity.  
+**Possible solutions:** Debouncing observer callback, scroll position detection instead of IntersectionObserver, backend investigation (is `incomplete_has_more` incorrectly true?).  
+**Workaround:** Issue only affects checklist collections; users can still use the collection with visual noise.  
+**Priority:** Medium (cosmetic/UX issue, not data loss)
+
+### Browser Cache Issues with Covers
+**Symptom:** After editing many book covers, changes may not reflect immediately. "Use gradient" button may stop responding.  
+**Workaround:** Clear browser cache for the past hour and close/reopen tab.  
+**Root cause:** Likely aggressive image caching or IntersectionObserver state management.  
+**Priority:** Low (infrequent, has workaround)
 
 ---
 
@@ -88,7 +110,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Professional UX for collections throughout the app with calm aesthetics.
 
-**Problem solved:** Collections landing and detail pages were basic and lacked organization features. No way to reorder collections or books, switch views, or quickly edit/delete.
+**Problem solved:** Collections landing and detail pages were basic and lacked organization features. No way to reorder collections or books, switch views, duplicate, or quickly edit/delete.
 
 ---
 
@@ -160,13 +182,47 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ---
 
+#### Phase 9E.5c: Final Polish (Jan 19)
+
+**Duplicate Collection Feature:**
+- "Duplicate" option in 3-dot menu on collection detail page
+- Modal with pre-filled name ("[Original Name] Copy")
+- Can change collection type during duplication
+- Manual/Checklist → preserves book list
+- Automatic → preserves criteria (type locked)
+
+**Automatic Collection Sorting:**
+- Sort dropdown for automatic collections (non-default)
+- Options: Recently Added, Title, Author, Recently Finished
+- Sort direction toggle (↑/↓) matching Library UI
+- Case-insensitive sorting with COLLATE NOCASE
+- Author sorting uses json_extract() for JSON arrays
+- Race condition protection with sortVersionRef
+
+**Cover Preview Improvements:**
+- Thumbnail preview in cover type selector when editing
+- Shows existing custom cover instead of camera icon
+- Preview updates immediately after upload
+- Proper state management for Gradient/Custom switching
+
+**Memory Leak Fixes:**
+- Blob URLs from cover uploads properly revoked
+- useRef tracks previous URLs for cleanup
+- Cleanup runs on unmount and URL changes
+
+**Documentation:**
+- Created CODE_PATTERNS.md with battle-tested solutions
+
+---
+
 **Deployed:** January 18-19, 2026  
-**Files changed:** 8 total  
-**New components:** 2 (CollectionGradient, SortableBookItem)  
+**Files changed:** 10 total  
+**New components:** 3 (CollectionGradient, SortableBookItem, DuplicateCollectionModal)  
 **Dependencies:** @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities  
-**Lines of code:** ~950  
-**Features:** 7 major  
-**Bugs fixed:** 8
+**Lines of code:** ~1,100  
+**Features:** 10 major  
+**Bugs fixed:** 14  
+**Documentation:** CODE_PATTERNS.md
 
 ---
 

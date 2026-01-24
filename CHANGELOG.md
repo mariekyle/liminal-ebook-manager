@@ -19,6 +19,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Debt
 - **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
 
+- **Checklist collection pagination infinite loop** — When viewing a checklist collection with many books (50+), scrolling to the bottom of the incomplete section causes the "Loading more books..." spinner to flicker infinitely. The IntersectionObserver keeps firing repeatedly. Attempted fixes: conditional loader rendering, removing loadingSection from effect dependencies, using refs to stabilize callback identity. Root cause is complex interaction between IntersectionObserver recreation, React useCallback identity, and async state updates. May need debouncing, scroll position detection instead of IntersectionObserver, or backend investigation (is `incomplete_has_more` incorrectly true?). **Workaround:** Issue only affects checklist collections; users can still use the collection with visual noise. **Priority:** Medium (cosmetic/UX).
+
+---
+
+## [0.26.2] - 2026-01-19
+
+### Added
+
+#### Phase 9E.5c: Collections Final Polish 🎨
+Additional features and fixes to complete the collections system.
+
+**Duplicate Collection Feature:**
+- "Duplicate" option in 3-dot menu on collection detail page
+- Opens modal with pre-filled name ("[Original Name] Copy")
+- Can change collection type during duplication
+- Manual → Manual/Checklist (preserves book list)
+- Checklist → Manual/Checklist (preserves book list)
+- Automatic → Automatic only (preserves criteria)
+- Creates new collection with copied books/criteria
+
+**Automatic Collection Sorting:**
+- Sort dropdown for automatic collections (non-default only)
+- Options: Recently Added, Title, Author, Recently Finished
+- Separate sort direction toggle (↑/↓) matching Library UI
+- Respects collection's default sort from criteria on initial load
+- Case-insensitive sorting with COLLATE NOCASE in SQLite
+- Author sorting uses json_extract() for JSON array field
+
+**Cover Preview Improvements:**
+- Thumbnail preview in cover type selector when editing collections
+- Shows existing custom cover instead of camera icon
+- Preview updates immediately after upload
+- Proper state management when switching between Gradient/Custom
+
+---
+
+### Fixed
+
+**Memory Leak Fixes:**
+- Blob URLs from cover uploads now properly revoked
+- useRef tracks previous URLs for correct cleanup timing
+- Cleanup runs on unmount and when URLs change
+
+**Race Condition Fixes:**
+- sortVersionRef prevents stale pagination responses from corrupting state
+- Guards on fetchCollection and loadMoreBooks for out-of-order responses
+- Version incremented on collection change (not reset to 0)
+- loadingMore flag always cleared to prevent pagination blocking
+
+**Cover Preview State:**
+- Fixed stale preview when switching cover types in modal
+- Added uploadedThisSession flag to track local upload status
+- Preview correctly shows after upload → switch to gradient → switch back
+
+---
+
+### Technical
+
+#### Files Modified
+- `frontend/src/pages/CollectionDetail.jsx` — Duplicate option, sort dropdown, race condition fixes
+- `frontend/src/components/CollectionModal.jsx` — Cover preview thumbnails, memory leak fixes
+- `frontend/src/components/DuplicateCollectionModal.jsx` — New component
+- `frontend/src/api.js` — Added duplicateCollection()
+- `backend/routers/collections.py` — Sort options, COLLATE NOCASE, duplicate endpoint
+
+#### New Components/Functions
+- `DuplicateCollectionModal` — Modal for duplicating collections with type selection
+- `duplicateCollection(id, name, type)` — API function for collection duplication
+
+#### Documentation Added
+- `CODE_PATTERNS.md` — Battle-tested solutions for common problems:
+  - Case-insensitive sorting (COLLATE NOCASE)
+  - Loading states and race condition guards
+  - API error handling patterns
+  - localStorage with fallback
+  - Debounced search
+  - Version refs for stale response protection
+
+---
+
+### Development Stats
+- **Date:** January 19, 2026
+- **Files changed:** 5
+- **New components:** 1 (DuplicateCollectionModal)
+- **New functions:** 2 (duplicateCollection, sort helpers)
+- **Features:** 3 major (duplicate, sorting, cover preview)
+- **Bugs fixed:** 6 (memory leaks, race conditions, state management)
+- **Documentation:** 1 new file (CODE_PATTERNS.md)
+
 ---
 
 ## [0.26.1] - 2026-01-19
@@ -280,4 +369,4 @@ See git history for Phase 9A-9D and earlier.
 
 ---
 
-*Changelog current through v0.26.1 (January 19, 2026)*
+*Changelog current through v0.26.2 (January 19, 2026)*

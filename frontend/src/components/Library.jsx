@@ -12,6 +12,7 @@ import HomeTab from './HomeTab'
 import SearchModal from './SearchModal'
 import FandomModal from './FandomModal'
 import ShipModal from './ShipModal'
+import SortDropdown from './SortDropdown'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -454,38 +455,16 @@ function Library() {
             
             {/* Sort dropdown + direction toggle */}
             {activeView === 'library' && (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <div className="relative flex items-center">
-                  <select
-                    value={sort}
-                    onChange={(e) => {
-                      const newSort = e.target.value
-                      // Set logical default direction based on sort field
-                      const newDir = (newSort === 'title' || newSort === 'author') ? 'asc' : 'desc'
-                      setSort(newSort)
-                      setSortDir(newDir)
-                      updateUrlParams({ sort: newSort, sortDir: newDir })
-                    }}
-                    className="appearance-none bg-transparent text-gray-500 text-xs pr-4 cursor-pointer hover:text-white focus:outline-none"
-                  >
-                    <option value="added">Recently Added</option>
-                    <option value="title">Title</option>
-                    <option value="author">Author</option>
-                    <option value="published">Recently Published</option>
-                  </select>
-                </div>
-                <button
-                  onClick={() => {
-                    const newDir = sortDir === 'asc' ? 'desc' : 'asc'
-                    setSortDir(newDir)
-                    updateUrlParams({ sortDir: newDir })
-                  }}
-                  className="text-gray-500 hover:text-white text-xs p-1 transition-colors"
-                  title={sortDir === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
-                >
-                  {sortDir === 'asc' ? '↑' : '↓'}
-                </button>
-              </div>
+              <SortDropdown
+                value={sort}
+                direction={sortDir}
+                onChange={(field, dir) => {
+                  setSort(field)
+                  setSortDir(dir)
+                  updateUrlParams({ sort: field, sortDir: dir })
+                }}
+                options={['added', 'title', 'author', 'published']}
+              />
             )}
           </div>
           
