@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
+import CollapsibleSection from './CollapsibleSection'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import CollectionPicker from './CollectionPicker'
@@ -1676,16 +1677,17 @@ function BookDetail() {
         )}
       </div>
 
-      {/* About This Book Card - Always show for non-wishlist, allows editing even for physical/audiobooks */}
+      {/* Book Details Sections - Collapsible */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && (
-        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-gray-400">About This Book</h2>
+        <div className={`bg-library-card rounded-lg mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          {/* Header with Edit Button */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <h2 className="text-sm font-medium text-gray-400">Book Details</h2>
             <button
               onClick={() => setShowEnhancedModal(true)}
               className="text-gray-400 hover:text-white p-1"
-              aria-label="Edit about"
+              aria-label="Edit details"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1693,173 +1695,171 @@ function BookDetail() {
             </button>
           </div>
           
-          {/* Show content if any exists, or show placeholder */}
-          {(book.summary || (book.tags && book.tags.length > 0) || book.word_count ||
-            book.fandom || book.content_rating || book.relationships?.length > 0 ||
-            book.characters?.length > 0 || book.ao3_category?.length > 0 || book.ao3_warnings?.length > 0 ||
-            book.isbn || book.publisher || book.chapter_count != null) ? (
-            <>
-              {/* Summary */}
-              {book.summary && (
-                <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  {decodeHtmlEntities(book.summary)}
-                </p>
-              )}
-              
-              {/* Enhanced Metadata Display (Phase 7.0) */}
-              {book.category === 'FanFiction' ? (
-            // FanFiction: Structured display
-            <div className="space-y-2 mb-4">
-              {/* Fandom */}
-              <MetadataRow label="Fandom" show={!!book.fandom}>
-                <TagChip variant="fandom">{book.fandom}</TagChip>
-              </MetadataRow>
-              
-              {/* Content Rating */}
-              <MetadataRow label="Rating" show={!!book.content_rating}>
-                <TagChip variant="rating">{book.content_rating}</TagChip>
-              </MetadataRow>
-              
-              {/* Ships/Relationships */}
-              <MetadataRow label="Ships" show={book.relationships && book.relationships.length > 0}>
-                <div className="flex flex-wrap gap-1.5">
-                  {book.relationships?.slice(0, 5)?.map((ship, i) => (
-                    <TagChip key={i} variant="ship">{ship}</TagChip>
-                  ))}
-                  {book.relationships?.length > 5 && (
-                    <span className="text-zinc-500 text-xs self-center">
-                      +{book.relationships.length - 5} more
-                    </span>
-                  )}
-                </div>
-              </MetadataRow>
-              
-              {/* Pairing Type (ao3_category) */}
-              <MetadataRow label="Pairing Type" show={book.ao3_category && book.ao3_category.length > 0}>
-                <div className="flex flex-wrap gap-1.5">
-                  {book.ao3_category?.map((cat, i) => (
-                    <TagChip key={i} variant="ship">{cat}</TagChip>
-                  ))}
-                </div>
-              </MetadataRow>
-              
-              {/* Characters */}
-              <MetadataRow label="Characters" show={book.characters && book.characters.length > 0}>
-                <div className="flex flex-wrap gap-1.5">
-                  {book.characters?.slice(0, 8)?.map((char, i) => (
-                    <span key={i} className="text-zinc-400 text-xs">
-                      {char}{i < Math.min(book.characters.length, 8) - 1 ? ',' : ''}
-                    </span>
-                  ))}
-                  {book.characters?.length > 8 && (
-                    <span className="text-zinc-500 text-xs">
-                      +{book.characters.length - 8} more
-                    </span>
-                  )}
-                </div>
-              </MetadataRow>
-              
-              {/* Warnings */}
-              <MetadataRow label="Warnings" show={book.ao3_warnings && book.ao3_warnings.length > 0}>
-                <div className="flex flex-wrap gap-1.5">
-                  {book.ao3_warnings?.map((warning, i) => (
-                    <TagChip key={i} variant="warning">{warning}</TagChip>
-                  ))}
-                </div>
-              </MetadataRow>
-              
-              {/* Source URL */}
-              <MetadataRow label="Source" show={!!book.source_url}>
-                <a 
-                  href={book.source_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-teal-400 hover:text-teal-300 text-xs truncate max-w-[250px] inline-block"
-                >
-                  {book.source_url?.replace(/^https?:\/\//, '')?.split('/')?.slice(0, 2)?.join('/')}
-                </a>
-              </MetadataRow>
-              
-              {/* Completion status */}
-              <MetadataRow label="Status" show={!!book.completion_status}>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  book.completion_status === 'Complete' ? 'bg-green-900/40 text-green-300' :
-                  book.completion_status === 'WIP' ? 'bg-yellow-900/40 text-yellow-300' :
-                  book.completion_status === 'Abandoned' ? 'bg-red-900/40 text-red-300' :
-                  'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {book.completion_status}
-                </span>
-              </MetadataRow>
-              
-              {/* Chapters */}
-              <MetadataRow label="Chapters" show={book.chapter_count != null}>
-                {book.chapter_count} chapters
-              </MetadataRow>
-              
-              {/* Tags (freeform tags) */}
-              {book.tags && book.tags.length > 0 && (
-                <div className="pt-2 border-t border-zinc-800">
-                  <span className="text-zinc-500 text-xs block mb-2">Tags</span>
+          {/* Calculate content flags for sections and empty state */}
+          {(() => {
+            // Combine all tags for display
+            const allTags = [
+              ...(book.tags || []),
+              ...(book.characters || []),
+              ...(book.additional_tags || [])
+            ]
+            
+            // Build metadata entries - only include non-empty values
+            const metadataEntries = []
+            
+            // FanFiction-only fields
+            if (book.category === 'FanFiction') {
+              if (book.fandom) metadataEntries.push({ 
+                label: 'Fandom', 
+                value: <TagChip variant="fandom">{book.fandom}</TagChip>
+              })
+              if (book.content_rating) metadataEntries.push({ 
+                label: 'Rating', 
+                value: <TagChip variant="rating">{book.content_rating}</TagChip>
+              })
+              if (book.relationships && book.relationships.length > 0) metadataEntries.push({ 
+                label: 'Ships', 
+                value: (
                   <div className="flex flex-wrap gap-1.5">
-                    {book.tags.map((tag, i) => (
-                      <TagChip key={i}>{tag}</TagChip>
+                    {book.relationships.map((ship, i) => (
+                      <TagChip key={i} variant="ship">{ship}</TagChip>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            // Fiction/Non-Fiction: Genre display
-            <div className="space-y-2 mb-4">
-              {/* Publisher */}
-              <MetadataRow label="Publisher" show={!!book.publisher}>
-                {book.publisher}
-              </MetadataRow>
-              
-              {/* ISBN */}
-              <MetadataRow label="ISBN" show={!!book.isbn}>
-                <span className="font-mono text-xs">{book.isbn}</span>
-              </MetadataRow>
-              
-              {/* Chapters */}
-              <MetadataRow label="Chapters" show={book.chapter_count != null}>
-                {book.chapter_count} chapters
-              </MetadataRow>
-              
-              {/* Genre (tags displayed as genre for published books) */}
-              {book.tags && book.tags.length > 0 && (
-                <div>
-                  <span className="text-zinc-500 text-xs block mb-2">Genre</span>
+                )
+              })
+              if (book.ao3_category && book.ao3_category.length > 0) metadataEntries.push({ 
+                label: 'Pairing Type', 
+                value: (
                   <div className="flex flex-wrap gap-1.5">
-                    {book.tags.map((tag, i) => (
-                      <TagChip key={i}>{tag}</TagChip>
+                    {book.ao3_category.map((cat, i) => (
+                      <TagChip key={i} variant="ship">{cat}</TagChip>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Book Details Footer */}
-          {(book.word_count || book.created_at) && (
-            <div className="text-gray-500 text-xs pt-2 border-t border-gray-700 flex justify-between">
-              {book.word_count && (
-                <span>{book.word_count.toLocaleString()} words</span>
-              )}
-              {book.created_at && (
-                <span>Added {new Date(book.created_at).toLocaleDateString()}</span>
-              )}
-            </div>
-          )}
-            </>
-          ) : (
-            <p className="text-gray-500 text-sm italic">No details yet. Click the edit button to add information about this book.</p>
-          )}
+                )
+              })
+              if (book.ao3_warnings && book.ao3_warnings.length > 0) metadataEntries.push({ 
+                label: 'Warnings', 
+                value: (
+                  <div className="flex flex-wrap gap-1.5">
+                    {book.ao3_warnings.map((warning, i) => (
+                      <TagChip key={i} variant="warning">{warning}</TagChip>
+                    ))}
+                  </div>
+                )
+              })
+              if (book.completion_status) metadataEntries.push({ 
+                label: 'Status', 
+                value: (
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    book.completion_status === 'Complete' ? 'bg-green-900/40 text-green-300' :
+                    book.completion_status === 'WIP' ? 'bg-yellow-900/40 text-yellow-300' :
+                    book.completion_status === 'Abandoned' ? 'bg-red-900/40 text-red-300' :
+                    'bg-zinc-800 text-zinc-400'
+                  }`}>
+                    {book.completion_status}
+                  </span>
+                )
+              })
+              if (book.source_url) metadataEntries.push({ 
+                label: 'Source', 
+                value: (
+                  <a 
+                    href={book.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-teal-400 hover:text-teal-300 text-xs truncate max-w-[250px] inline-block"
+                  >
+                    {book.source_url?.replace(/^https?:\/\//, '')?.split('/')?.slice(0, 2)?.join('/')}
+                  </a>
+                )
+              })
+            } else {
+              // Fiction/Non-Fiction fields
+              if (book.publisher) metadataEntries.push({ label: 'Publisher', value: book.publisher })
+              if (book.isbn) metadataEntries.push({ 
+                label: 'ISBN', 
+                value: <span className="font-mono text-xs">{book.isbn}</span>
+              })
+            }
+            
+            // Common fields for all categories
+            if (book.chapter_count != null) metadataEntries.push({ 
+              label: 'Chapters', 
+              value: `${book.chapter_count} chapters`
+            })
+            if (book.word_count) metadataEntries.push({ 
+              label: 'Words', 
+              value: book.word_count.toLocaleString()
+            })
+            if (book.created_at) metadataEntries.push({ 
+              label: 'Added', 
+              value: new Date(book.created_at).toLocaleDateString()
+            })
+            
+            // Calculate if ANY content exists
+            const hasSummary = !!book.summary
+            const hasTags = allTags.length > 0
+            const hasMetadata = metadataEntries.length > 0
+            const hasAnyContent = hasSummary || hasTags || hasMetadata
+            
+            return (
+              <>
+                {/* About This Book - Summary (collapsible) */}
+                {hasSummary && (
+                  <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {decodeHtmlEntities(book.summary)}
+                    </p>
+                  </CollapsibleSection>
+                )}
+                
+                {/* Tags Section (collapsible) */}
+                {hasTags && (
+                  <CollapsibleSection 
+                    title="Tags" 
+                    variant="tags" 
+                    count={allTags.length}
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {allTags.map((tag, idx) => (
+                        <span 
+                          key={idx}
+                          className="px-2.5 py-1 bg-gray-800 rounded-md text-sm text-gray-300"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+                
+                {/* Metadata Section (collapsible) */}
+                {hasMetadata && (
+                  <CollapsibleSection title="Metadata" variant="grid">
+                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                      {metadataEntries.map((entry, idx) => (
+                        <Fragment key={idx}>
+                          <span className="text-gray-500">{entry.label}</span>
+                          <div className="text-gray-300">{entry.value}</div>
+                        </Fragment>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+                
+                {/* Empty state - only shows when ALL sections are empty */}
+                {!hasAnyContent && (
+                  <div className="px-4 py-4">
+                    <p className="text-gray-500 text-sm italic">No details yet. Click the edit button to add information about this book.</p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
           
           {/* Rescan Metadata Button - only show for ebook editions */}
           {book.folder_path && (
-            <div className="mt-4 pt-4 border-t border-gray-700">
+            <div className="px-4 py-4 border-t border-white/5">
               <button
                 onClick={handleRescanMetadata}
                 disabled={rescanning}
