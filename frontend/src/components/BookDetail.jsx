@@ -1170,11 +1170,11 @@ function BookDetail() {
       const startYear = startDate?.slice(0, 4)
       const endYear = endDate?.slice(0, 4)
       if (startYear === endYear) {
-        // Same year: "Dec 20 – Dec 24, 2025"
+        // Same year: "Read Dec 20 – Dec 24, 2025"
         const startShort = new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        return `${startShort} – ${end}`
+        return `Read ${startShort} – ${end}`
       }
-      return `${start} – ${end}`
+      return `Read ${start} – ${end}`
     }
     if (start) return `Started ${start}`
     if (end) return `Finished ${end}`
@@ -1193,6 +1193,58 @@ function BookDetail() {
     }
     return <span className="text-lg">{stars}</span>
   }
+
+  // Compact session row for Reading History
+  const CompactSessionRow = ({ session, onEdit }) => (
+    <div className="bg-zinc-800/60 rounded-lg px-4 py-3 flex justify-between items-center gap-3">
+      {/* Session info */}
+      <div className="flex-1 min-w-0">
+        {/* Date line - primary element */}
+        {formatSessionDateRange(session.date_started, session.date_finished) && (
+          <div className="text-zinc-100 text-sm mb-1">
+            {formatSessionDateRange(session.date_started, session.date_finished)}
+          </div>
+        )}
+        
+        {/* Status badge + rating inline */}
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+            session.session_status === 'finished' 
+              ? 'bg-green-500/20 text-green-400' 
+              : session.session_status === 'dnf'
+              ? 'bg-pink-500/20 text-pink-400'
+              : 'bg-indigo-500/20 text-indigo-400'
+          }`}>
+            {session.session_status === 'finished' ? (
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            ) : session.session_status === 'in_progress' ? (
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+              </svg>
+            ) : null}
+            {getLabel(session.session_status)}
+          </span>
+          {session.rating && (
+            <span className="text-yellow-400 text-sm">
+              {'★'.repeat(session.rating)}
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {/* Edit button */}
+      <button
+        className="text-zinc-500 hover:text-zinc-300 p-1 flex-shrink-0"
+        onClick={() => onEdit(session)}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      </button>
+    </div>
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8">
@@ -1649,63 +1701,13 @@ function BookDetail() {
                 ) : sessions.length === 0 ? (
                   <div className="text-gray-500 text-sm">No reading sessions recorded</div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="bg-gray-800/50 rounded-lg p-4 relative"
-                      >
-                        {/* Edit button */}
-                        <button
-                          className="absolute top-3 right-3 text-gray-500 hover:text-gray-300"
-                          onClick={() => openEditSession(session)}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-
-                        {/* Session number and format */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-white">
-                            Read #{session.session_number}
-                          </span>
-                          {session.format && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              session.format === 'ebook' ? 'bg-blue-900/50 text-blue-300' :
-                              session.format === 'physical' ? 'bg-amber-900/50 text-amber-300' :
-                              session.format === 'audiobook' ? 'bg-purple-900/50 text-purple-300' :
-                              session.format === 'web' ? 'bg-emerald-900/50 text-emerald-300' :
-                              'bg-gray-700 text-gray-300'
-                            }`}>
-                              {session.format === 'ebook' ? 'Ebook' :
-                               session.format === 'physical' ? 'Physical' :
-                               session.format === 'audiobook' ? 'Audiobook' :
-                               session.format === 'web' ? 'Web' :
-                               session.format}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Date range */}
-                        {formatSessionDateRange(session.date_started, session.date_finished) && (
-                          <div className="text-gray-400 text-sm mb-2">
-                            {formatSessionDateRange(session.date_started, session.date_finished)}
-                          </div>
-                        )}
-
-                        {/* Status and rating */}
-                        <div className="flex items-center gap-3">
-                          <span className={`text-sm font-medium ${
-                            session.session_status === 'finished' ? 'text-green-400' :
-                            session.session_status === 'dnf' ? 'text-pink-400' :
-                            'text-gray-400'
-                          }`}>
-                            {getLabel(session.session_status)}
-                          </span>
-                          {session.rating && renderStars(session.rating)}
-                        </div>
-                      </div>
+                      <CompactSessionRow 
+                        key={session.id} 
+                        session={session} 
+                        onEdit={openEditSession} 
+                      />
                     ))}
                   </div>
                 )}
@@ -1992,63 +1994,13 @@ function BookDetail() {
             ) : sessions.length === 0 ? (
               <div className="text-gray-500 text-sm">No reading sessions recorded</div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="bg-gray-800/50 rounded-lg p-4 relative"
-                  >
-                    {/* Edit button */}
-                    <button
-                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-300"
-                      onClick={() => openEditSession(session)}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-
-                    {/* Session number and format */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-white">
-                        Read #{session.session_number}
-                      </span>
-                      {session.format && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          session.format === 'ebook' ? 'bg-blue-900/50 text-blue-300' :
-                          session.format === 'physical' ? 'bg-amber-900/50 text-amber-300' :
-                          session.format === 'audiobook' ? 'bg-purple-900/50 text-purple-300' :
-                          session.format === 'web' ? 'bg-emerald-900/50 text-emerald-300' :
-                          'bg-gray-700 text-gray-300'
-                        }`}>
-                          {session.format === 'ebook' ? 'Ebook' :
-                           session.format === 'physical' ? 'Physical' :
-                           session.format === 'audiobook' ? 'Audiobook' :
-                           session.format === 'web' ? 'Web' :
-                           session.format}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Date range */}
-                    {formatSessionDateRange(session.date_started, session.date_finished) && (
-                      <div className="text-gray-400 text-sm mb-2">
-                        {formatSessionDateRange(session.date_started, session.date_finished)}
-                      </div>
-                    )}
-
-                    {/* Status and rating */}
-                    <div className="flex items-center gap-3">
-                      <span className={`text-sm font-medium ${
-                        session.session_status === 'finished' ? 'text-green-400' :
-                        session.session_status === 'dnf' ? 'text-pink-400' :
-                        'text-gray-400'
-                      }`}>
-                        {getLabel(session.session_status)}
-                      </span>
-                      {session.rating && renderStars(session.rating)}
-                    </div>
-                  </div>
+                  <CompactSessionRow 
+                    key={session.id} 
+                    session={session} 
+                    onEdit={openEditSession} 
+                  />
                 ))}
               </div>
             )}
