@@ -1300,6 +1300,17 @@ function BookDetail() {
         <div className="flex-1 min-w-0">
           {/* Edit and Merge buttons - positioned at top right */}
           <div className="flex justify-end gap-1 mb-2">
+            {/* Enhanced metadata edit (summary, tags, etc.) */}
+            <button
+              onClick={() => setShowEnhancedModal(true)}
+              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
+              aria-label="Edit metadata"
+              title="Edit metadata"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </button>
             <button
               onClick={openMergeModal}
               className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
@@ -1526,13 +1537,13 @@ function BookDetail() {
         </div>
       )}
 
-      {/* TBR Card (Wishlist) OR Reading History Card (Mobile only for Library books) */}
+      {/* TBR Card (Wishlist) OR Reading History (Mobile only for Library books) */}
       {/* On mobile: show in Details tab OR History tab. On desktop: only show for Wishlist */}
-      <div className={`bg-library-card rounded-lg p-4 mb-6 ${
+      <div className={`${
   isWishlist 
-    ? '' 
+    ? 'bg-library-card rounded-lg p-4 mb-6' 
     : (activeTab === 'details' || activeTab === 'history') 
-      ? 'md:hidden'
+      ? 'border-t border-zinc-800 pt-4 mt-4 md:hidden'
       : 'hidden'
 }`}>
         {isWishlist ? (
@@ -1761,25 +1772,10 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Book Details Sections - Collapsible */}
+      {/* Book Details Sections - Collapsible (Flattened) */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && (
-        <div className={`bg-library-card rounded-lg mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          {/* Header with Edit Button */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <h2 className="text-sm font-medium text-gray-400">Book Details</h2>
-            <button
-              onClick={() => setShowEnhancedModal(true)}
-              className="text-gray-400 hover:text-white p-1"
-              aria-label="Edit details"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Calculate content flags for sections and empty state */}
+        <div className={`${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           {(() => {
             // Combine all tags for display
             const allTags = [
@@ -1884,99 +1880,98 @@ function BookDetail() {
             const hasSummary = !!book.summary
             const hasTags = allTags.length > 0
             const hasMetadata = metadataEntries.length > 0
-            const hasAnyContent = hasSummary || hasTags || hasMetadata
             
             return (
               <>
                 {/* About This Book - Summary (collapsible) */}
                 {hasSummary && (
-                  <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      {decodeHtmlEntities(book.summary)}
-                    </p>
-                  </CollapsibleSection>
+                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                    <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
+                      <p className="text-zinc-300 text-sm leading-relaxed">
+                        {decodeHtmlEntities(book.summary)}
+                      </p>
+                    </CollapsibleSection>
+                  </div>
                 )}
                 
                 {/* Tags Section (collapsible) */}
                 {hasTags && (
-                  <CollapsibleSection 
-                    title="Tags" 
-                    variant="tags" 
-                    count={allTags.length}
-                  >
-                    <div className="flex flex-wrap gap-2">
-                      {allTags.map((tag, idx) => (
-                        <span 
-                          key={idx}
-                          className="px-2.5 py-1 bg-gray-800 rounded-md text-sm text-gray-300"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </CollapsibleSection>
+                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                    <CollapsibleSection 
+                      title="Tags" 
+                      variant="tags" 
+                      count={allTags.length}
+                      className="border-t-0"
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        {allTags.map((tag, idx) => (
+                          <span 
+                            key={idx}
+                            className="px-2.5 py-1 bg-zinc-800 rounded-md text-sm text-zinc-300"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </CollapsibleSection>
+                  </div>
                 )}
                 
                 {/* Metadata Section (collapsible) */}
                 {hasMetadata && (
-                  <CollapsibleSection title="Metadata" variant="grid">
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-                      {metadataEntries.map((entry, idx) => (
-                        <Fragment key={idx}>
-                          <span className="text-gray-500">{entry.label}</span>
-                          <div className="text-gray-300">{entry.value}</div>
-                        </Fragment>
-                      ))}
-                    </div>
-                  </CollapsibleSection>
-                )}
-                
-                {/* Empty state - only shows when ALL sections are empty */}
-                {!hasAnyContent && (
-                  <div className="px-4 py-4">
-                    <p className="text-gray-500 text-sm italic">No details yet. Click the edit button to add information about this book.</p>
+                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                    <CollapsibleSection title="Metadata" variant="grid" className="border-t-0">
+                      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                        {metadataEntries.map((entry, idx) => (
+                          <Fragment key={idx}>
+                            <span className="text-zinc-500">{entry.label}</span>
+                            <div className="text-zinc-300">{entry.value}</div>
+                          </Fragment>
+                        ))}
+                      </div>
+                    </CollapsibleSection>
                   </div>
                 )}
               </>
             )
           })()}
+        </div>
+      )}
+
+      {/* Rescan Metadata - Separate section */}
+      {!isWishlist && book.folder_path && (
+        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          <button
+            onClick={handleRescanMetadata}
+            disabled={rescanning}
+            className={`
+              text-sm px-3 py-1.5 rounded transition-colors
+              ${rescanning 
+                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'}
+            `}
+          >
+            {rescanning ? (
+              <>
+                <span className="inline-block animate-spin mr-2">↻</span>
+                Rescanning...
+              </>
+            ) : (
+              '↻ Rescan Metadata'
+            )}
+          </button>
           
-          {/* Rescan Metadata Button - only show for ebook editions */}
-          {book.folder_path && (
-            <div className="px-4 py-4 border-t border-white/5">
-              <button
-                onClick={handleRescanMetadata}
-                disabled={rescanning}
-                className={`
-                  text-sm px-3 py-1.5 rounded transition-colors
-                  ${rescanning 
-                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'}
-                `}
-              >
-                {rescanning ? (
-                  <>
-                    <span className="inline-block animate-spin mr-2">↻</span>
-                    Rescanning...
-                  </>
-                ) : (
-                  '↻ Rescan Metadata'
-                )}
-              </button>
-              
-              {rescanResult && (
-                <p className={`text-sm mt-2 ${rescanResult.success ? 'text-green-400' : 'text-red-400'}`}>
-                  {rescanResult.message}
-                </p>
-              )}
-            </div>
+          {rescanResult && (
+            <p className={`text-sm mt-2 ${rescanResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              {rescanResult.message}
+            </p>
           )}
         </div>
       )}
 
       {/* Reading History Section - Desktop only (appears after About This Book) */}
       {!isWishlist && (
-        <div className="hidden md:block bg-library-card rounded-lg p-4 mb-6">
+        <div className="hidden md:block border-t border-zinc-800 pt-4 mt-4">
           <div className="space-y-4">
             {/* Header with Add button */}
             <div className="flex justify-between items-center">
@@ -2034,12 +2029,12 @@ function BookDetail() {
 
       {/* Collections Section - show for owned books */}
       {!isWishlist && (
-        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-gray-400">Collections</h2>
+            <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Collections</h2>
             <button
               onClick={() => setShowCollectionPicker(true)}
-              className="text-gray-400 hover:text-white p-1 flex items-center gap-1 text-sm"
+              className="text-zinc-400 hover:text-white p-1 flex items-center gap-1 text-sm"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -2057,7 +2052,7 @@ function BookDetail() {
                 <a
                   key={collection.id}
                   href={`/collections/${collection.id}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-full text-sm text-gray-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-sm text-zinc-200 transition-colors"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
                     <line x1="8" y1="6" x2="21" y2="6" />
@@ -2072,16 +2067,16 @@ function BookDetail() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">Not in any collections</p>
+            <p className="text-zinc-500 text-sm">Not in any collections</p>
           )}
         </div>
       )}
 
       {/* Notes Section */}
       {/* On mobile: only show in Notes tab (or always for wishlist). On desktop: always show */}
-      <div className={`bg-library-card rounded-lg p-4 mb-6 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
+      <div className={`border-t border-zinc-800 pt-4 mt-4 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-gray-400">Notes</h2>
+          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Notes</h2>
           
           <div className="flex items-center gap-2">
             {saveStatus === 'saved' && (
@@ -2232,9 +2227,9 @@ function BookDetail() {
       {/* Backlinks Section (hide for wishlist items) */}
       {/* On mobile: only show in Notes tab. On desktop: always show */}
       {!isWishlist && (backlinks.length > 0 || backlinksLoading) && (
-        <div className={`bg-library-card rounded-lg p-4 mb-6 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
-          <h2 className="text-sm font-medium text-gray-400 mb-3">
-            Referenced by {!backlinksLoading && <span className="text-gray-500">({backlinks.length})</span>}
+        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
+          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
+            Referenced by {!backlinksLoading && <span className="text-zinc-500">({backlinks.length})</span>}
           </h2>
           
           {backlinksLoading ? (
