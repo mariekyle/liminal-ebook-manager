@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
 import CollapsibleSection from './CollapsibleSection'
+import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
 import CollectionPicker from './CollectionPicker'
@@ -317,6 +318,64 @@ function BookDetail() {
     setSessionModalOpen(false)
     setEditingSession(null)
     setSessionError(null)
+  }
+
+  // Get the most recent reading session for status card subtitle
+  const getMostRecentSession = () => {
+    if (!sessions || sessions.length === 0) return null
+    
+    // Sort by date_finished or date_started descending
+    const sorted = [...sessions].sort((a, b) => {
+      const dateA = new Date(a.date_finished || a.date_started || 0)
+      const dateB = new Date(b.date_finished || b.date_started || 0)
+      return dateB - dateA
+    })
+    
+    return sorted[0]
+  }
+
+  const getStatusSubtitle = () => {
+    const session = getMostRecentSession()
+    if (!session) return null
+    
+    const formatDate = (dateStr) => {
+      if (!dateStr) return null
+      // Parse as local date to avoid timezone shift
+      // Input format: "YYYY-MM-DD"
+      const [year, month, day] = dateStr.split('-').map(Number)
+      const date = new Date(year, month - 1, day) // month is 0-indexed
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+    
+    const start = formatDate(session.date_started)
+    const end = formatDate(session.date_finished)
+    
+    if (start && end) {
+      // Check if same year to avoid repetition
+      // Parse as local dates to avoid timezone shift
+      const [startYear] = session.date_started.split('-').map(Number)
+      const [endYear] = session.date_finished.split('-').map(Number)
+      if (startYear === endYear) {
+        const [y, m, d] = session.date_started.split('-').map(Number)
+        const startShort = new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        return `${startShort} – ${end}`
+      }
+      return `${start} – ${end}`
+    }
+    if (end) return end
+    if (start) return `Started ${start}`
+    return null
+  }
+
+  // Normalize status from backend (may be capitalized) to lowercase for component
+  const normalizeStatus = (status) => {
+    if (!status) return 'unread'
+    // Convert to lowercase and replace spaces with underscores
+    const normalized = status.toLowerCase().replace(/\s+/g, '_')
+    // Map any variations
+    if (normalized === 'not_prioritized') return 'unread'
+    // Handle "in progress" → "in_progress"
+    return normalized
   }
   
   const handleSaveSession = async () => {
@@ -1676,6 +1735,26 @@ function BookDetail() {
           </>
         )}
       </div>
+
+      {/* Reading Status Card - Only for owned books */}
+      {!isWishlist && (
+        <div className={`px-4 py-3 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          <ReadingStatusCard
+            status={normalizeStatus(book.status)}
+            subtitle={['finished', 'dnf'].includes(normalizeStatus(book.status)) ? getStatusSubtitle() : null}
+            fileUrl={null}
+            hasFile={false}
+            onEditSession={() => {
+              const session = getMostRecentSession()
+              if (session) {
+                openEditSession(session)
+              } else {
+                openAddSession()
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* Book Details Sections - Collapsible */}
       {/* On mobile: only show in Details tab. On desktop: always show */}

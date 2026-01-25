@@ -118,7 +118,7 @@ export default function SortDropdown({
 
   // Desktop Dropdown
   const DesktopDropdown = (
-    <div className="absolute top-full left-0 mt-1 py-1 min-w-[220px] bg-gray-800 rounded-xl shadow-xl border border-gray-700 z-50">
+    <div className="absolute top-full right-0 mt-1 py-1 min-w-[220px] bg-gray-800 rounded-xl shadow-xl border border-gray-700 z-50">
       {availableOptions.map((field) => {
         const opt = SORT_OPTIONS[field]
         if (!opt) return null
