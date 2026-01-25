@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Phase 9: Feature Completion (In Progress)
 - Phase 9E Core: ✅ Complete (Jan 15-17)
 - Phase 9E.5: ✅ Complete (Jan 18-19) - Collections polish (landing + detail)
-- Phase 9F: ⬅️ Next - Book detail redesign
-- Phase 9G: Library/Home improvements
+- Phase 9F: ✅ Complete (Jan 25) - Book detail page overhaul
+- Phase 9G: ⬅️ Next - Library/Home improvements
 - Phase 9H: Stats page
 - Phase 9J: Deduplication tools
 - Phase 9K: Unprocessed files detection
@@ -19,7 +19,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Debt
 - **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
 
-- **Checklist collection pagination infinite loop** — When viewing a checklist collection with many books (50+), scrolling to the bottom of the incomplete section causes the "Loading more books..." spinner to flicker infinitely. The IntersectionObserver keeps firing repeatedly. Attempted fixes: conditional loader rendering, removing loadingSection from effect dependencies, using refs to stabilize callback identity. Root cause is complex interaction between IntersectionObserver recreation, React useCallback identity, and async state updates. May need debouncing, scroll position detection instead of IntersectionObserver, or backend investigation (is `incomplete_has_more` incorrectly true?). **Workaround:** Issue only affects checklist collections; users can still use the collection with visual noise. **Priority:** Medium (cosmetic/UX).
+- **Checklist collection pagination infinite loop** — When viewing a checklist collection with many books (50+), scrolling to the bottom of the incomplete section causes the "Loading more books..." spinner to flicker infinitely. The IntersectionObserver keeps firing repeatedly. Attempted fixes: conditional loader rendering, removing loadingSection from effect dependencies, using refs to stabilize callback identity. Root cause is complex interaction between IntersectionObserver recreation, React useCallback identity changes, and async state updates. May need debouncing, scroll position detection instead of IntersectionObserver, or backend investigation (is `incomplete_has_more` incorrectly true?). **Workaround:** Issue only affects checklist collections; users can still use the collection with visual noise. **Priority:** Medium (cosmetic/UX).
+
+- **TBRList → Wishlist Rename** — Storage key fixed to `liminal_sort_wishlist`, but component/file still named TBRList. Full rename deferred to React Native migration.
+
+---
+
+## [0.27.0] - 2026-01-25
+
+### Added
+
+#### Phase 9F: Book Detail Page Overhaul 📖
+Complete redesign of book detail page with flattened structure, new components, and consistent styling.
+
+**New Components:**
+
+**SortDropdown:**
+- Reusable sort component with localStorage persistence
+- Desktop: Inline dropdown with current selection displayed
+- Mobile: Bottom sheet modal for touch-friendly selection
+- Per-entity storage keys (library, wishlist, collections)
+- Integrated into Library.jsx and TBRList.jsx
+
+**CollapsibleSection:**
+- Reusable component for expandable content areas
+- Gradient fade effect on collapsed content
+- Three variants: text (line clamp), tags (height clamp), grid (height clamp)
+- "View more" / "View less" toggle
+- Smooth expand/collapse transitions
+
+**ReadingStatusCard:**
+- Status-aware display card with icon and subtitle
+- Blue theme (indigo) for Not Started / Currently Reading
+- Green theme for Finished / Abandoned
+- Edit icon for finished books to access session modal
+- Shows date range subtitle for completed reads
+
+**CompactSessionRow:**
+- Condensed reading session display (single row per session)
+- Date line as primary element with smart formatting
+- Status badge with icon (checkmark/book) and color coding
+- Inline star ratings (filled stars only)
+- Edit button on right side
+
+**Reading History Compact Format:**
+- Replaced verbose multi-line session cards
+- New date format: "Read [start] – [end]" for completed reads
+- "Started [date]" for in-progress reads
+- "Finished [date]" for end-date only
+- Removed "Read #N" session numbering from display
+- Removed format badges from compact view
+
+**Series Section Polish:**
+- Series line above title now clickable (links to series page)
+- Hover state with teal color transition
+- Series list numbers with leading zeros (01, 02, 03)
+- Finished books show green checkmark SVG icon
+- "You are here" indicator for current book
+
+**Page Structure Overhaul:**
+- Removed "Book Details" card wrapper and header
+- Flattened About/Tags/Metadata sections with border-t separators
+- Flattened Reading History (mobile + desktop)
+- Flattened Collections section
+- Flattened Notes section
+- Flattened Backlinks/Referenced by section
+- Series section retains card background (related content treatment)
+- Wishlist TBR card retains background (distinct UI element)
+- Unified background color for gradient blending
+- Updated gray-* colors to zinc-* for consistency
+
+**Enhanced Metadata Access:**
+- Tag icon button near title for ALL book categories
+- Previously only available for FanFiction books
+- Opens EnhancedMetadataModal for editing summary, tags, etc.
+
+---
+
+### Fixed
+
+**Bug Fixes:**
+- Storage key: `liminal_sort_tbr` → `liminal_sort_wishlist`
+- Status normalization: spaces → underscores (`"In Progress"` → `"in_progress"`)
+- Timezone fix: Manual date parsing to avoid off-by-one errors
+- Dropdown alignment: `left-0` → `right-0` for proper positioning
+- HTML nesting: `<span>` → `<div>` for metadata values
+- Empty state logic: Check all content sources before showing "No details"
+- Duplicate borders: Added `border-t-0` to CollapsibleSections
+
+---
+
+### Technical
+
+#### Files Modified
+- `frontend/src/pages/BookDetail.jsx` — Major refactor (page structure, components, styling)
+- `frontend/src/pages/Library.jsx` — SortDropdown integration
+- `frontend/src/pages/TBRList.jsx` — SortDropdown integration
+
+#### Files Added
+- `frontend/src/components/SortDropdown.jsx` — Sort UI component
+- `frontend/src/components/CollapsibleSection.jsx` — Expandable sections
+- `frontend/src/components/ReadingStatusCard.jsx` — Status display card
+- `frontend/src/hooks/useSort.js` — Sort state management hook
+
+#### New Components
+- `SortDropdown` — Desktop dropdown + mobile bottom sheet
+- `CollapsibleSection` — Gradient fade expandable sections
+- `ReadingStatusCard` — Status-aware card with themes
+- `CompactSessionRow` — Inline session display
+
+---
+
+### Development Stats
+- **Date:** January 25, 2026
+- **Files changed:** 6
+- **New components:** 4 (SortDropdown, CollapsibleSection, ReadingStatusCard, CompactSessionRow)
+- **New hooks:** 1 (useSort)
+- **Features:** 6 major (sort, collapsible, status card, compact history, series polish, page overhaul)
+- **Bugs fixed:** 7
 
 ---
 
@@ -369,4 +486,4 @@ See git history for Phase 9A-9D and earlier.
 
 ---
 
-*Changelog current through v0.26.2 (January 19, 2026)*
+*Changelog current through v0.27.0 (January 25, 2026)*

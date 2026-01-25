@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 19, 2026 (v0.26.2)  
-> **Major Milestone:** Phase 9E.5 Complete — Collections Polish (Landing + Detail + Final)! 🎨
+> **Last Updated:** January 25, 2026 (v0.27.0)  
+> **Major Milestone:** Phase 9F Complete — Book Detail Page Overhaul! 📖
 
 ---
 
@@ -11,7 +11,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.26.2)
+## Current State (v0.27.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -22,10 +22,10 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Reading status & session tracking | ✅ Stable |
 | Notes with wiki-style linking | ✅ Stable |
 | Wishlist management | ✅ Stable |
-| **Collections system** | ✅ **Smart Collections + Full Polish Complete!** |
+| Collections system | ✅ Smart Collections + Full Polish Complete! |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
-| Book detail header | ✅ Redesigned |
+| **Book detail page** | ✅ **Overhauled with flattened structure!** |
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Folder structure independence | ✅ File metadata primary |
@@ -35,6 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Gradient covers | ✅ Fixed (fill containers, text overlay) |
 
 **Recent milestones:**
+- Phase 9F: Book detail page overhaul complete (Jan 25, 2026) ✅
 - Phase 9E.5c: Collections final polish complete (Jan 19, 2026) ✅
 - Phase 9E.5b: Collection detail polish complete (Jan 19, 2026) ✅
 - Phase 9E.5a: Collections landing page polish complete (Jan 18, 2026) ✅
@@ -57,7 +58,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │           │  9D: ✅ Bug Fixes & Polish (Jan 15)                  │
 │           │  9E: ✅ Smart Collections Core (Jan 15-17)           │
 │           │  9E.5: ✅ Collections Polish (Jan 18-19)             │
-│           │  9F-9K: ⬅️ Remaining features (~2 weeks)             │
+│           │  9F: ✅ Book Detail Overhaul (Jan 25)                │
+│           │  9G-9K: ⬅️ Remaining features (~1-2 weeks)           │
 ├───────────┼──────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor                   │
 │           │  Calm UX design system (1 week)                      │
@@ -79,9 +81,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 **Goal:** Complete all non-AI features in current React/Tailwind stack before React Native migration.
 
-**Status:** ~80% complete (9A-9E.5 ✅)
+**Status:** ~85% complete (9A-9F ✅)
 
-**Timeline:** ~1.5 weeks remaining
+**Timeline:** ~1 week remaining
 
 ---
 
@@ -104,7 +106,192 @@ Items to address when time permits:
 **Root cause:** Likely aggressive image caching or IntersectionObserver state management.  
 **Priority:** Low (infrequent, has workaround)
 
+### TBRList → Wishlist Rename
+**Location:** `frontend/src/pages/TBRList.jsx`  
+**Issue:** Component and file still named TBRList, but represents Wishlist functionality.  
+**Status:** Storage key fixed to `liminal_sort_wishlist`. Full rename deferred to React Native migration.  
+**Priority:** Low (cosmetic, works correctly)
+
 ---
+
+### Phase 9F: Book Detail Page Overhaul ✅ COMPLETE (Jan 25, 2026)
+
+**Goal:** Modern book information display with flattened structure and consistent styling.
+
+**Problem solved:** Book detail page had nested card containers, inconsistent section styling, verbose reading history display, and enhanced metadata only accessible for FanFiction books.
+
+---
+
+#### New Components Created
+
+**SortDropdown:**
+- Reusable sort component with localStorage persistence
+- Desktop: Inline dropdown with current selection
+- Mobile: Bottom sheet modal for touch-friendly selection
+- Per-entity storage keys (library, wishlist, collections)
+
+**CollapsibleSection:**
+- Expandable content areas with gradient fade effect
+- Three variants: text (line clamp), tags (height clamp), grid
+- "View more" / "View less" toggle
+- Used for About, Tags, Metadata sections
+
+**ReadingStatusCard:**
+- Status-aware display with icon and subtitle
+- Blue theme for Not Started / Currently Reading
+- Green theme for Finished / Abandoned
+- Edit icon for finished books
+
+**CompactSessionRow:**
+- Single-row reading session display
+- Date line as primary element
+- Status badge with icon + color coding
+- Inline star ratings
+
+---
+
+#### Reading History Compact Format
+
+| Scenario | Old Format | New Format |
+|----------|------------|------------|
+| Both dates | Multi-line card with "Read #1" header | "Read Jan 15 – Jan 22, 2026" |
+| Start only | Multi-line card | "Started Jan 20, 2026" |
+| End only | Multi-line card | "Finished Jan 22, 2026" |
+| No dates | Multi-line card | Hide date line |
+
+- Removed "Read #N" session numbering
+- Removed format badges from compact view
+- Status badge with icon (checkmark/book)
+- Edit button vertically centered on right
+
+---
+
+#### Series Section Polish
+
+- Series line above title now clickable (links to series page)
+- Hover state with teal color transition
+- Series list numbers with leading zeros (01, 02, 03)
+- Finished books show green checkmark SVG icon
+- "You are here" indicator for current book
+
+---
+
+#### Page Structure Overhaul
+
+**Sections Flattened (border-t separators, no card backgrounds):**
+- About This Book
+- Tags
+- Metadata
+- Reading History (mobile + desktop)
+- Collections
+- Notes
+- Backlinks / Referenced by
+
+**Sections Retaining Card Backgrounds:**
+- Series section (related content, distinct treatment)
+- Wishlist TBR card (distinct UI element)
+
+**Other Changes:**
+- Removed "Book Details" wrapper card and header
+- Enhanced metadata button now available for ALL book categories
+- Unified background color for gradient blending
+- Updated gray-* colors to zinc-* for consistency
+
+---
+
+#### Bug Fixes
+
+- Storage key: `liminal_sort_tbr` → `liminal_sort_wishlist`
+- Status normalization: spaces → underscores
+- Timezone fix: Manual date parsing for dates
+- Dropdown alignment: right-aligned
+- HTML nesting: `<span>` → `<div>` for metadata
+- Empty state logic improvements
+- Duplicate borders: Added `border-t-0` to CollapsibleSections
+
+---
+
+**Deployed:** January 25, 2026  
+**Files changed:** 6  
+**New components:** 4 (SortDropdown, CollapsibleSection, ReadingStatusCard, CompactSessionRow)  
+**New hooks:** 1 (useSort)  
+**Features:** 6 major  
+**Bugs fixed:** 7
+
+---
+
+### Phase 9G: Library/Home Improvements ⬅️ NEXT
+
+**Goal:** Improve browsing and discovery experience.
+
+**Status:** Not started
+
+**Planned features:**
+- Advanced filtering UI
+- Sort options improvements
+- Recently added section
+- Continue reading section
+- Search improvements
+- Performance optimizations
+
+**Timeline:** 2-3 days
+
+---
+
+### Phase 9H: Stats Page
+
+**Goal:** Reading analytics and visualizations.
+
+**Status:** Not started
+
+**Planned features:**
+- Books read this year/month
+- Reading streaks
+- Genre breakdown
+- Authors most read
+- Average rating
+- Word count totals
+- Charts and visualizations
+
+**Timeline:** 2-3 days
+
+---
+
+### Phase 9J: Deduplication Tools
+
+**Goal:** Help identify and merge duplicate books.
+
+**Status:** Not started
+
+**Planned features:**
+- Duplicate detection algorithm
+- Side-by-side comparison UI
+- Merge workflow
+- Smart conflict resolution
+- Bulk duplicate management
+
+**Timeline:** 2-3 days
+
+---
+
+### Phase 9K: Unprocessed Files Detection
+
+**Goal:** Surface books that exist in storage but aren't in database.
+
+**Status:** Not started
+
+**Planned features:**
+- Scan storage folders for all files
+- Compare with database entries
+- List unprocessed files
+- Quick add workflow
+- Bulk import option
+
+**Timeline:** 1-2 days
+
+---
+
+## Completed Phases
 
 ### Phase 9E.5: Collections Polish ✅ COMPLETE (Jan 18-19, 2026)
 
@@ -225,97 +412,6 @@ Items to address when time permits:
 **Documentation:** CODE_PATTERNS.md
 
 ---
-
-### Phase 9F: Book Detail Redesign ⬅️ NEXT
-
-**Goal:** Modern, comprehensive book information display.
-
-**Status:** Not started
-
-**Planned features:**
-- Redesigned header with better hierarchy
-- Edition switcher (if multiple formats exist)
-- Metadata display improvements
-- Reading session history
-- Related books section
-- Better mobile layout
-
-**Timeline:** 2-3 days
-
----
-
-### Phase 9G: Library/Home Improvements
-
-**Goal:** Enhance main library browsing experience.
-
-**Status:** Not started
-
-**Planned features:**
-- Advanced filtering UI
-- Sort options improvements
-- Recently added section
-- Continue reading section
-- Search improvements
-- Performance optimizations
-
-**Timeline:** 2-3 days
-
----
-
-### Phase 9H: Stats Page
-
-**Goal:** Reading analytics and visualizations.
-
-**Status:** Not started
-
-**Planned features:**
-- Books read this year/month
-- Reading streaks
-- Genre breakdown
-- Authors most read
-- Average rating
-- Word count totals
-- Charts and visualizations
-
-**Timeline:** 2-3 days
-
----
-
-### Phase 9J: Deduplication Tools
-
-**Goal:** Help identify and merge duplicate books.
-
-**Status:** Not started
-
-**Planned features:**
-- Duplicate detection algorithm
-- Side-by-side comparison UI
-- Merge workflow
-- Smart conflict resolution
-- Bulk duplicate management
-
-**Timeline:** 2-3 days
-
----
-
-### Phase 9K: Unprocessed Files Detection
-
-**Goal:** Surface books that exist in storage but aren't in database.
-
-**Status:** Not started
-
-**Planned features:**
-- Scan storage folders for all files
-- Compare with database entries
-- List unprocessed files
-- Quick add workflow
-- Bulk import option
-
-**Timeline:** 1-2 days
-
----
-
-## Completed Phases
 
 ### Phase 9E: Smart Collections System ✅ COMPLETE (Jan 15-17, 2026)
 
@@ -497,4 +593,4 @@ Items to address when time permits:
 
 ---
 
-*Roadmap current through Phase 9E.5 (January 19, 2026)*
+*Roadmap current through Phase 9F (January 25, 2026)*
