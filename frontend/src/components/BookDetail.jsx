@@ -87,6 +87,162 @@ const NOTE_TEMPLATES = {
   }
 }
 
+// Toast Notification Component (moved outside for stability)
+const Toast = ({ toast }) => {
+  if (!toast) return null
+  
+  const bgColor = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    loading: 'bg-zinc-700'
+  }[toast.type] || 'bg-zinc-700'
+  
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-200">
+      <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[200px] max-w-[90vw]`}>
+        {toast.type === 'loading' && (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        )}
+        {toast.type === 'success' && (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+        {toast.type === 'error' && (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )}
+        <span className="text-sm font-medium">{toast.message}</span>
+      </div>
+    </div>
+  )
+}
+
+// 3-Dot Menu Component (moved outside for stability)
+const ThreeDotMenu = ({ 
+  menuOpen, 
+  setMenuOpen, 
+  menuItems 
+}) => {
+  const menuRef = useRef(null)
+  
+  // Close menu when clicking outside (desktop)
+  useEffect(() => {
+    if (!menuOpen) return
+    
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen, setMenuOpen])
+  
+  // Close menu on escape
+  useEffect(() => {
+    if (!menuOpen) return
+    
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [menuOpen, setMenuOpen])
+  
+  // Filter out items that shouldn't show
+  const visibleItems = menuItems.filter(item => item.show !== false)
+  
+  return (
+    <div className="relative" ref={menuRef}>
+      {/* 3-dot button */}
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
+        aria-label="More actions"
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="5" r="2" />
+          <circle cx="12" cy="12" r="2" />
+          <circle cx="12" cy="19" r="2" />
+        </svg>
+      </button>
+      
+      {/* Desktop Dropdown */}
+      {menuOpen && (
+        <>
+          {/* Desktop dropdown - hidden on mobile */}
+          <div className="hidden md:block absolute right-0 top-full mt-1 w-56 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+            {visibleItems.map((item, idx) => (
+              item.type === 'divider' ? (
+                <div key={idx} className="border-t border-zinc-700 my-1" />
+              ) : (
+                <button
+                  key={idx}
+                  onClick={item.onClick}
+                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+                >
+                  {item.label}
+                </button>
+              )
+            ))}
+          </div>
+          
+          {/* Mobile Bottom Sheet */}
+          <div className="md:hidden fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/60"
+              onClick={() => setMenuOpen(false)}
+            />
+            
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-zinc-900 rounded-t-2xl overflow-hidden">
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+              </div>
+              
+              {/* Menu Items */}
+              <div className="px-2 pb-2">
+                {visibleItems.map((item, idx) => (
+                  item.type === 'divider' ? (
+                    <div key={idx} className="border-t border-zinc-800 my-1 mx-2" />
+                  ) : (
+                    <button
+                      key={idx}
+                      onClick={item.onClick}
+                      className="w-full text-left px-4 py-3.5 text-base text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+                    >
+                      {item.label}
+                    </button>
+                  )
+                ))}
+              </div>
+              
+              {/* Cancel Button */}
+              <div className="px-2 pb-6 pt-2 border-t border-zinc-800">
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="w-full py-3.5 text-base font-medium text-zinc-400 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function BookDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -140,7 +296,6 @@ function BookDetail() {
   
   // Rescan metadata state
   const [rescanning, setRescanning] = useState(false)
-  const [rescanResult, setRescanResult] = useState(null)
   
   // Enhanced metadata modal state
   const [showEnhancedModal, setShowEnhancedModal] = useState(false)
@@ -156,6 +311,13 @@ function BookDetail() {
   
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false)
+  
+  // 3-dot menu state
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Toast notification state
+  const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' | 'loading' }
+  const toastTimeoutRef = useRef(null)
   
   // Popup state for status and rating
   const [statusPopupOpen, setStatusPopupOpen] = useState(false)
@@ -235,6 +397,15 @@ function BookDetail() {
         }
       })
       .catch(err => console.error('Failed to load settings:', err))
+  }, [])
+
+  // Cleanup toast timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current)
+      }
+    }
   }, [])
 
   // Load collections this book belongs to
@@ -1008,26 +1179,43 @@ function BookDetail() {
     setSelectedCategory(updatedBook.category || '')
   }
 
+  // Toast notification helper
+  const showToast = (message, type = 'success', duration = 3000) => {
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = null
+    }
+    
+    setToast({ message, type })
+    
+    if (type !== 'loading') {
+      toastTimeoutRef.current = setTimeout(() => {
+        setToast(null)
+        toastTimeoutRef.current = null
+      }, duration)
+    }
+  }
+
   const handleRescanMetadata = async () => {
-    if (!book?.id) return
+    if (rescanning || !book?.id) return
     
     setRescanning(true)
-    setRescanResult(null)
+    showToast('Rescanning metadata...', 'loading')
     
     try {
       const result = await rescanBookMetadata(book.id)
-      setRescanResult({ success: true, message: result.message })
       
-      // Refresh book data - separate try/catch so rescan success isn't hidden
-      try {
-        const updatedBook = await getBook(book.id)
+      // Refresh book data to get updated metadata
+      const updatedBook = await getBook(book.id)
+      if (updatedBook) {
         setBook(updatedBook)
-      } catch (refreshErr) {
-        console.error('Failed to refresh book data:', refreshErr)
-        // Keep success message, user can manually refresh
       }
+      
+      showToast(result.message || 'Metadata updated', 'success')
     } catch (err) {
-      setRescanResult({ success: false, message: err.message })
+      console.error('Rescan failed:', err)
+      showToast(err.message || 'Failed to rescan metadata', 'error')
     } finally {
       setRescanning(false)
     }
@@ -1246,6 +1434,20 @@ function BookDetail() {
     </div>
   )
 
+  // Menu items for 3-dot menu
+  const menuItems = [
+    { label: 'Edit Details...', onClick: () => { setEditModalOpen(true); setMenuOpen(false) } },
+    { label: 'Edit About & Tags...', onClick: () => { setShowEnhancedModal(true); setMenuOpen(false) } },
+    { label: 'Change Cover...', onClick: () => { setEditModalOpen(true); setMenuOpen(false) } },
+    { type: 'divider' },
+    { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
+    { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
+    { label: 'Add Format', onClick: () => { openAddEdition(); setMenuOpen(false) }, show: !isWishlist },
+    { type: 'divider', show: !isWishlist },
+    { label: 'Merge', onClick: () => { openMergeModal(); setMenuOpen(false) } },
+    { label: 'Rescan Metadata', onClick: () => { handleRescanMetadata(); setMenuOpen(false) }, show: !isWishlist && !!book?.folder_path },
+  ]
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8">
       {/* Back link */}
@@ -1298,38 +1500,13 @@ function BookDetail() {
         
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-          {/* Edit and Merge buttons - positioned at top right */}
-          <div className="flex justify-end gap-1 mb-2">
-            {/* Enhanced metadata edit (summary, tags, etc.) */}
-            <button
-              onClick={() => setShowEnhancedModal(true)}
-              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
-              aria-label="Edit metadata"
-              title="Edit metadata"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </button>
-            <button
-              onClick={openMergeModal}
-              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
-              aria-label="Merge with another book"
-              title="Merge with another book"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setEditModalOpen(true)}
-              className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
-              aria-label="Edit book details"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
+          {/* 3-Dot Menu - positioned at top right */}
+          <div className="flex justify-end mb-2">
+            <ThreeDotMenu 
+              menuOpen={menuOpen}
+              setMenuOpen={setMenuOpen}
+              menuItems={menuItems}
+            />
           </div>
           
           {/* Series line - clickable link to series page */}
@@ -1472,16 +1649,6 @@ function BookDetail() {
                   </span>
                 )
               })}
-              
-              {/* Add Format Button */}
-              <button
-                onClick={openAddEdition}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300 transition-colors"
-                title="Add another format"
-              >
-                <span>+</span>
-                <span>Add Format</span>
-              </button>
             </div>
           )}
           
@@ -1696,17 +1863,11 @@ function BookDetail() {
             {/* Reading History Section */}
             <div className={`mt-4 pt-4 border-t border-gray-700 ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
               <div className="space-y-4">
-                {/* Header with Add button */}
-                <div className="flex justify-between items-center">
+                {/* Header */}
+                <div className="mb-3">
                   <h3 id="reading-history" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
                     Reading History
                   </h3>
-                  <button
-                    className="text-violet-400 hover:text-violet-300 text-sm font-medium"
-                    onClick={openAddSession}
-                  >
-                    + Add Session
-                  </button>
                 </div>
 
                 {/* Sessions List */}
@@ -1938,52 +2099,16 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Rescan Metadata - Separate section */}
-      {!isWishlist && book.folder_path && (
-        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <button
-            onClick={handleRescanMetadata}
-            disabled={rescanning}
-            className={`
-              text-sm px-3 py-1.5 rounded transition-colors
-              ${rescanning 
-                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
-                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'}
-            `}
-          >
-            {rescanning ? (
-              <>
-                <span className="inline-block animate-spin mr-2">↻</span>
-                Rescanning...
-              </>
-            ) : (
-              '↻ Rescan Metadata'
-            )}
-          </button>
-          
-          {rescanResult && (
-            <p className={`text-sm mt-2 ${rescanResult.success ? 'text-green-400' : 'text-red-400'}`}>
-              {rescanResult.message}
-            </p>
-          )}
-        </div>
-      )}
 
       {/* Reading History Section - Desktop only (appears after About This Book) */}
       {!isWishlist && (
         <div className="hidden md:block border-t border-zinc-800 pt-4 mt-4">
           <div className="space-y-4">
-            {/* Header with Add button */}
-            <div className="flex justify-between items-center">
+            {/* Header */}
+            <div className="mb-3">
               <h3 id="reading-history-desktop" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
                 Reading History
               </h3>
-              <button
-                className="text-violet-400 hover:text-violet-300 text-sm font-medium"
-                onClick={openAddSession}
-              >
-                + Add Session
-              </button>
             </div>
 
             {/* Sessions List */}
@@ -2030,18 +2155,8 @@ function BookDetail() {
       {/* Collections Section - show for owned books */}
       {!isWishlist && (
         <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3">
             <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Collections</h2>
-            <button
-              onClick={() => setShowCollectionPicker(true)}
-              className="text-zinc-400 hover:text-white p-1 flex items-center gap-1 text-sm"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Add
-            </button>
           </div>
           
           {collectionsLoading ? (
@@ -2901,6 +3016,9 @@ function BookDetail() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      <Toast toast={toast} />
     </div>
   )
 }
