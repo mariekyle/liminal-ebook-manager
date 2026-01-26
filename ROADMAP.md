@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 25, 2026 (v0.27.0)  
+> **Last Updated:** January 25, 2026 (v0.28.0)  
 > **Current Focus:** Phase 9.5 — Pre-Migration Completion  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -12,7 +12,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.27.0)
+## Current State (v0.28.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -26,7 +26,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Collections system | ✅ Smart Collections complete |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
-| Book detail page | ⚠️ Foundation complete, finishing touches needed |
+| Book detail page | 🔄 3-dot menu complete, unified edit modal next |
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Folder structure independence | ✅ File metadata primary |
@@ -41,7 +41,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ```
 ┌───────────┬──────────────────────────────────────────────────────────┐
 │  CURRENT  │  Phase 9.5: Pre-Migration Completion                     │
-│           │  10 work groups, ~64 items (~3-4 weeks)                  │
+│           │  10 work groups, ~72 items (~3-4 weeks)                  │
 │           │  Complete each area fully before moving on               │
 ├───────────┼──────────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor (1 week)               │
@@ -68,23 +68,62 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ### Work Group 1: Book Detail Page Completion
 
-**Status:** ⬜ Not Started  
+**Status:** 🔄 In Progress (Session A complete)  
 **Files:** `BookDetail.jsx`, related modals, `CollectionPicker.jsx`
 
-- [ ] 1.1 **Unified Edit Modal** — Combine Edit Book, Edit About, Edit Metadata into single tabbed modal
-- [ ] 1.2 **Remove Scattered Edit Icons** — Remove individual ✎ icons; keep only Edit Notes and Edit Reading History
-- [ ] 1.3 **Update 3-Dot Menu** — Add: Rescan Metadata, Add Format, Add Reading Session, Add to Collection
-- [ ] 1.4 **Move Add Format to Menu** — Remove standalone button, add to 3-dot menu
-- [ ] 1.5 **Enhanced Add to Collection Modal** — Add "Create new collection" option within picker
-- [ ] 1.6 **Collection Picker Search** — Add search within "Add to Collection" modal
-- [ ] 1.7 **Collection Picker Quick Create** — "Create new" option if search has no matches
-- [ ] 1.8 **Collection Picker Recent** — Show recently-used collections at top
-- [ ] 1.9 **EPUB Download Button** — Enable downloading book file from detail page
-- [ ] 1.10 **Full-Screen Cover Viewer** — Tap cover → full-screen with swipe dismiss
-- [ ] 1.11 **Move Location to Metadata** — Move location field from bottom of page into Metadata section
+**Session A — Menu & Icon Consolidation: ✅ Complete**
+- [x] 1.2 **Remove Scattered Edit Icons** — Removed tag/merge/pencil icons from header area
+- [x] 1.3 **Add 3-Dot Menu** — Desktop dropdown + mobile bottom sheet with all actions
+- [x] 1.4 **Move Add Format to Menu** — Removed standalone button
+- [x] 1.A1 **Move Rescan Metadata to Menu** — Removed standalone section
+- [x] 1.A2 **Move Add Reading Session to Menu** — Removed inline "+ Add Session" links
+- [x] 1.A3 **Move Add to Collection to Menu** — Removed inline "+ Add" link
+- [x] 1.A4 **Toast Notification System** — Added for rescan feedback (loading/success/error)
+- [x] 1.A5 **Wishlist Menu Filtering** — Menu items filtered appropriately (library vs wishlist)
+- [x] 1.A6 **Component Stability** — Extracted Toast/ThreeDotMenu outside BookDetail to prevent remounts
+- [x] 1.A7 **Memory Leak Prevention** — Toast timeout cleanup on unmount via useRef
+
+**Session B — Unified Edit Modal: ⬅️ Next**
+- [ ] 1.1 **Unified Edit Modal** — Combine EditBookModal + EnhancedMetadataModal into single 3-tab modal
+  - Details tab: Title, Authors, Series/Number, Category, Year
+  - About tab: Summary, Tags
+  - Source tab: Source URL, Completion Status, FanFic fields (Fandom, Ships, Characters, Rating, Warnings)
+
+**Session B+ — Change Cover Modal:**
+- [ ] 1.B1 **Change Cover Modal** — Extract cover management from EditBookModal into dedicated modal
+  - Larger preview (280×420)
+  - Upload Image / Extract from EPUB / Use Gradient / Remove custom cover
+
+**Session C — Collection Picker Enhancements:**
+- [ ] 1.5 **Quick Create** — "Create new collection" option within picker
+- [ ] 1.6 **Search** — Filter collections as you type
+- [ ] 1.7 **Contextual Quick Create** — "Create [search term]" when no matches
+- [ ] 1.8 **Recent Collections** — Show top 5 most recently used (API-based: `last_book_added_at`)
+
+**Session D — Download & Cover Viewer:**
+- [ ] 1.9 **EPUB Download Button** — Wire up download icon on ReadingStatusCard
+- [ ] 1.10 **Full-Screen Cover Viewer** — Tap cover → fullscreen, dismiss via backdrop OR X button
+
+**Session E — Cleanup:**
+- [ ] 1.11 **Move Location to Metadata** — Move location field into Metadata section
+
 - [ ] **GROUP 1 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** All actions consolidated in 3-dot menu. Single unified edit modal. Collection picker has search, quick create, and recent collections. Location field in Metadata section.
+**Definition of Done:** All actions consolidated in 3-dot menu. Single unified edit modal with 3 tabs. Dedicated cover modal. Collection picker has search, quick create, and recent collections. Location field in Metadata section.
+
+**Current Menu Structure:**
+```
+Edit Details...           → EditBookModal (until Session B)
+Edit About & Tags...      → EnhancedMetadataModal (until Session B)
+Change Cover...           → EditBookModal (until Session B+)
+─────────────────────────
+Add Reading Session       → Session modal
+Add to Collection         → Collection picker
+Add Format                → Edition modal
+─────────────────────────
+Merge                     → Merge modal
+Rescan Metadata           → Toast feedback (library books with folder only)
+```
 
 ---
 
@@ -226,7 +265,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ### Work Group 10: Data Quality Tools
 
 **Status:** ⬜ Not Started  
-**Files:** New components, `SettingsDrawer.jsx`
+**Files:** New components, `SettingsDrawer.jsx`, backend routers
 
 - [ ] 10.1 **Duplicate Scanner Algorithm** — Find exact + fuzzy matches
 - [ ] 10.2 **Duplicate Review Interface** — UI to review groups
@@ -236,9 +275,12 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - [ ] 10.6 **Unprocessed Files Detection** — Find folders not in library
 - [ ] 10.7 **Manual Add from Unprocessed** — Add discovered files
 - [ ] 10.8 **Dismiss Unprocessed** — Mark as "ignore"
+- [ ] 10.9 **Delete Book Backend** — `DELETE /api/books/{id}` removes record AND deletes folder/files from NAS
+- [ ] 10.10 **Delete Confirmation Modal** — Type-to-confirm field ("DELETE"), warning checkbox, shows folder path and file count
+- [ ] 10.11 **Delete Philosophy Documentation** — Update ARCHITECTURE.md to document destructive operations policy
 - [ ] **GROUP 10 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** Can scan for duplicates, review and merge them. Can find unprocessed files and handle them.
+**Definition of Done:** Can scan for duplicates, review and merge them. Can find unprocessed files and handle them. Can permanently delete books with robust confirmation safeguards.
 
 ---
 
@@ -246,7 +288,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 | Group | Name | Items | Status |
 |-------|------|-------|--------|
-| 1 | Book Detail Completion | 11 | ⬜ |
+| 1 | Book Detail Completion | 17 | 🔄 (10/17) |
 | 2 | Wishlist Detail Unification | 4 | ⬜ |
 | 3 | Series Detail Overhaul | 6 | ⬜ |
 | 4 | Author Detail Overhaul | 8 | ⬜ |
@@ -255,8 +297,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | 7 | Library Home Improvements | 3 | ⬜ |
 | 8 | Forms & Settings Polish | 4 | ⬜ |
 | 9 | Stats Page | 6 | ⬜ |
-| 10 | Data Quality Tools | 8 | ⬜ |
-| | **Total** | **66** | |
+| 10 | Data Quality Tools | 11 | ⬜ |
+| | **Total** | **75** | |
 
 ---
 

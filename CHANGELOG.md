@@ -7,14 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 9: Feature Completion (In Progress)
-- Phase 9E Core: ✅ Complete (Jan 15-17)
-- Phase 9E.5: ✅ Complete (Jan 18-19) - Collections polish (landing + detail)
-- Phase 9F: ✅ Complete (Jan 25) - Book detail page overhaul
-- Phase 9G: ⬅️ Next - Library/Home improvements
-- Phase 9H: Stats page
-- Phase 9J: Deduplication tools
-- Phase 9K: Unprocessed files detection
+### Phase 9.5: Pre-Migration Completion (In Progress)
+- Work Group 1: 🔄 In Progress (Session A complete)
+- Work Group 2-10: ⬜ Not Started
 
 ### Technical Debt
 - **Browser cache issues with covers** — After editing many book covers, changes may not reflect immediately when navigating between pages. "Use gradient" button may stop responding. Workaround: Clear browser cache for the past hour and close/reopen tab. Root cause likely related to aggressive image caching or IntersectionObserver state management. To investigate in future.
@@ -22,6 +17,140 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Checklist collection pagination infinite loop** — When viewing a checklist collection with many books (50+), scrolling to the bottom of the incomplete section causes the "Loading more books..." spinner to flicker infinitely. The IntersectionObserver keeps firing repeatedly. Attempted fixes: conditional loader rendering, removing loadingSection from effect dependencies, using refs to stabilize callback identity. Root cause is complex interaction between IntersectionObserver recreation, React useCallback identity changes, and async state updates. May need debouncing, scroll position detection instead of IntersectionObserver, or backend investigation (is `incomplete_has_more` incorrectly true?). **Workaround:** Issue only affects checklist collections; users can still use the collection with visual noise. **Priority:** Medium (cosmetic/UX).
 
 - **TBRList → Wishlist Rename** — Storage key fixed to `liminal_sort_wishlist`, but component/file still named TBRList. Full rename deferred to React Native migration.
+
+---
+
+## [0.28.0] - 2026-01-25
+
+### Added
+
+#### Phase 9.5 Work Group 1 Session A: 3-Dot Menu Consolidation 📱
+Complete action consolidation into a single 3-dot menu with responsive design and toast notifications.
+
+**3-Dot Menu System:**
+- New 3-dot menu (⋮) at top-right of book detail content area
+- Desktop: Dropdown menu aligned to right edge
+- Mobile: Bottom sheet with drag handle and Cancel button
+- Keyboard support: Escape key closes menu
+- Click-outside dismissal on desktop
+- Backdrop tap dismissal on mobile
+
+**Menu Structure:**
+```
+Edit Details...           → Opens EditBookModal
+Edit About & Tags...      → Opens EnhancedMetadataModal  
+Change Cover...           → Opens EditBookModal (temporary)
+─────────────────────────
+Add Reading Session       → Opens session modal
+Add to Collection         → Opens collection picker
+Add Format                → Opens edition modal
+─────────────────────────
+Merge                     → Opens merge modal
+Rescan Metadata           → Triggers rescan with toast feedback
+```
+
+**Wishlist Filtering:**
+- Library books: All 9 menu items visible
+- Wishlist books: Only Edit Details, Edit About & Tags, Change Cover, and Merge visible
+- Items appropriately hidden: Add Reading Session, Add to Collection, Add Format, Rescan Metadata
+
+**Toast Notification System:**
+- New toast component for feedback messages
+- Three states: loading (spinner), success (checkmark), error (X icon)
+- Positioned at bottom center of screen
+- Auto-dismiss after 3 seconds (except loading state)
+- Used for Rescan Metadata feedback (replaces inline messages)
+
+**Component Architecture Improvements:**
+- Extracted `Toast` component outside BookDetail (prevents remount on parent re-render)
+- Extracted `ThreeDotMenu` component outside BookDetail (stable event listeners)
+- Props-based design for both components
+- `toastTimeoutRef` for proper cleanup on unmount (prevents memory leaks)
+
+---
+
+### Removed
+
+**Consolidated Into Menu:**
+- Tag icon button (opened EnhancedMetadataModal) — now "Edit About & Tags..."
+- Merge icon button — now "Merge" menu item
+- Pencil icon button (opened EditBookModal) — now "Edit Details..."
+- "+ Add Format" standalone button after edition badges — now "Add Format" menu item
+- "+ Add Session" link in Reading History (mobile) — now "Add Reading Session" menu item
+- "+ Add Session" link in Reading History (desktop) — now "Add Reading Session" menu item
+- "+ Add" link in Collections section — now "Add to Collection" menu item
+- "Rescan Metadata" standalone section/button — now menu item with toast feedback
+
+**Removed State:**
+- `rescanResult` state variable (replaced by toast system)
+
+---
+
+### Fixed
+
+**Component Stability:**
+- Fixed nested component definition causing menu to unmount on parent re-render
+- Event listeners now stable across parent state changes
+- Menu no longer closes unexpectedly during loading states
+
+**Memory Leak Prevention:**
+- Toast timeout now tracked via `useRef`
+- Timeout properly cleared on component unmount
+- No "state update on unmounted component" warnings
+
+**Null Safety:**
+- Added `!book?.id` guard to `handleRescanMetadata` function
+- Prevents API calls with invalid book ID during loading/race conditions
+
+**Dead Code Removal:**
+- Removed unreachable `if (result.book)` branch in handleRescanMetadata
+- Now properly fetches updated book via `getBook()` after rescan
+
+---
+
+### Technical
+
+#### Files Modified
+- `frontend/src/pages/BookDetail.jsx` — Major refactor (menu, toast, component extraction)
+
+#### New Components (Extracted)
+- `Toast` — Notification component with loading/success/error states
+- `ThreeDotMenu` — Responsive menu with dropdown (desktop) and bottom sheet (mobile)
+
+#### Component Props
+```jsx
+// Toast
+<Toast toast={toast} />
+// toast: { message: string, type: 'success' | 'error' | 'loading' } | null
+
+// ThreeDotMenu  
+<ThreeDotMenu 
+  menuOpen={menuOpen}
+  setMenuOpen={setMenuOpen}
+  menuItems={menuItems}
+/>
+// menuItems: Array<{ label, onClick, show?, type? }>
+```
+
+#### Menu Item Schema
+```javascript
+const menuItems = [
+  { label: 'Edit Details...', onClick: () => { ... } },
+  { type: 'divider' },
+  { label: 'Rescan Metadata', onClick: () => { ... }, show: !isWishlist && !!book?.folder_path },
+]
+```
+
+---
+
+### Development Stats
+- **Date:** January 25, 2026
+- **Session:** Phase 9.5 Work Group 1, Session A
+- **Files changed:** 1 (BookDetail.jsx)
+- **New components:** 2 (Toast, ThreeDotMenu)
+- **Items removed:** 8 (scattered icons and buttons)
+- **Items consolidated:** 9 menu items
+- **Bugs fixed:** 4 (stability, memory leak, null safety, dead code)
 
 ---
 
@@ -220,10 +349,9 @@ Additional features and fixes to complete the collections system.
 - **Date:** January 19, 2026
 - **Files changed:** 5
 - **New components:** 1 (DuplicateCollectionModal)
-- **New functions:** 2 (duplicateCollection, sort helpers)
-- **Features:** 3 major (duplicate, sorting, cover preview)
-- **Bugs fixed:** 6 (memory leaks, race conditions, state management)
-- **Documentation:** 1 new file (CODE_PATTERNS.md)
+- **Lines of code:** ~200 new/modified
+- **Features:** 3 major (duplicate, sort, preview)
+- **Bugs fixed:** 5
 
 ---
 
@@ -231,38 +359,31 @@ Additional features and fixes to complete the collections system.
 
 ### Added
 
-#### Phase 9E.5b: Collection Detail Polish 📚
-Drag-to-reorder books and visual improvements for collection detail pages.
+#### Phase 9E.5b: Collection Detail Polish 🎨
+Drag-to-reorder and visual improvements for collection detail pages.
 
 **Drag-to-Reorder Books:**
-- "Reorder Books" option in 3-dot menu for manual/checklist collections
-- Only available when all books loaded (pagination safety)
-- Reorder mode forces list view, restores user preference on exit
-- Drag handles (⋮⋮) on right side of each book row
-- Visual "Saving..." feedback during API call
-- Race condition protection prevents concurrent drags
-- For checklists: only incomplete section is reorderable
-- Completed books remain sorted by completion date
+- Reorder mode toggle in 3-dot menu for Manual/Checklist collections
+- Drag handles appear only in reorder mode
+- @dnd-kit integration for smooth drag-and-drop
+- Race condition guards prevent concurrent save operations
+- Only available when all books loaded (no pagination active)
 
-**Taller Collection Banner:**
-- Banner height doubled: h-96 (384px) / md:h-[28rem] (448px)
-- More visual impact and breathing room
-- Works with both gradient and custom cover images
-
-**Technical Improvements:**
-- Memoized drag sensor options for better performance
-- Proper view mode restoration after exiting reorder mode
-- localStorage not updated during temporary reorder view switch
+**Taller Banner Variant:**
+- MosaicCover supports `banner` size (320px height)
+- Used on collection detail pages for hero effect
+- Proper gradient overlay maintained
 
 ---
 
 ### Fixed
 
-**Reorder Mode Safeguards:**
-- Button hidden until all books loaded (prevents pagination corruption)
-- Button hidden for checklists with only completed books
-- View mode preference preserved after exiting reorder mode
-- Race condition fix: drags blocked while save in progress
+**Pagination Issues:**
+- Fixed checklist collection showing wrong books after reorder
+- loadingMore properly cleared on all code paths
+
+**View Mode:**
+- View toggle properly hidden for default collections
 
 ---
 
@@ -276,23 +397,6 @@ Drag-to-reorder books and visual improvements for collection detail pages.
 #### New Components/Functions
 - `SortableBookItem` — Wrapper component for drag-and-drop book items
 - `reorderBooksInCollection(collectionId, titleIds)` — API function for book reorder
-
-#### Reorder Algorithm
-```javascript
-// Only show reorder when safe
-const canReorder = isChecklist 
-  ? (!incompleteHasMore && incompleteBooks.length > 1)
-  : (!hasMore && totalBooks > 1)
-
-// Prevent race conditions
-if (isSavingReorder) return
-setIsSavingReorder(true)
-try {
-  await reorderBooksInCollection(id, newOrder.map(b => b.id))
-} finally {
-  setIsSavingReorder(false)
-}
-```
 
 ---
 
@@ -399,16 +503,6 @@ Complete UX overhaul of collections landing page with professional interaction p
 - `@dnd-kit/sortable@^10.0.0` — Sortable list support
 - `@dnd-kit/utilities@^3.2.2` — Transform utilities for smooth animations
 
-#### Gradient Algorithm
-```javascript
-seed = hashString(`${collectionName}-${collectionId}`)
-styleIndex = seed % 3  // 0-2 (3 styles)
-numColors = 2 + (seed % 2)  // 2 or 3 colors
-rotation = seed % 360  // Angle in degrees
-```
-
-Soft blending uses color-mix() for intermediate stops at 25%, 50%, 75%.
-
 ---
 
 ### Development Stats
@@ -486,4 +580,4 @@ See git history for Phase 9A-9D and earlier.
 
 ---
 
-*Changelog current through v0.27.0 (January 25, 2026)*
+*Changelog current through v0.28.0 (January 25, 2026)*
