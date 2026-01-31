@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **TBRList → Wishlist Rename** — Storage key fixed to `liminal_sort_wishlist`, but component/file still named TBRList. Full rename deferred to React Native migration.
 
+### Changed
+
+#### Notes Templates
+- Renamed "Reading Notes" template to "Notes While Reading" with simplified content (single `## Notes While Reading` header)
+- Added new "Thoughts After Reading" template with `## Thoughts After Reading` header
+- Template dropdown now shows 3 options: Structured Review, Notes While Reading, Thoughts After Reading
+
 ---
 
 ## [0.28.0] - 2026-01-25

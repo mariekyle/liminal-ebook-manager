@@ -238,10 +238,11 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 - [ ] 8.1 **Series Field Searchable** — Add autocomplete to series field in add/edit forms
 - [ ] 8.2 **Fix Library/Wishlist Search** — Address search functionality issues
 - [ ] 8.3 **Settings Modal Redesign** — Update settings drawer UI
-- [ ] 8.4 **Photo Scan to Wishlist** — Camera-based quick add (Large — consider deferring)
+- [ ] 8.4 **Custom Note Templates** — Edit/add/remove note templates from Settings
+- [ ] 8.5 **Photo Scan to Wishlist** — Camera-based quick add (Large — consider deferring)
 - [ ] **GROUP 8 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** Forms have better autocomplete, search works correctly, settings look polished.
+**Definition of Done:** Forms have better autocomplete, search works correctly, settings look polished, note templates are customizable.
 
 ---
 

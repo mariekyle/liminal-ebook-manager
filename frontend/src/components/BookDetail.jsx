@@ -77,11 +77,14 @@ const NOTE_TEMPLATES = {
 `
   },
   reading: {
-    label: 'Reading Notes',
-    content: `## Thoughts While Reading
+    label: 'Notes While Reading',
+    content: `## Notes While Reading
 
-
-## Reactions After Finishing
+`
+  },
+  thoughts: {
+    label: 'Thoughts After Reading',
+    content: `## Thoughts After Reading
 
 `
   }
@@ -2309,7 +2312,8 @@ function BookDetail() {
             >
               <option value="" disabled>+ Template</option>
               <option value="structured">Structured Review</option>
-              <option value="reading">Reading Notes</option>
+              <option value="reading">Notes While Reading</option>
+              <option value="thoughts">Thoughts After Reading</option>
             </select>
             
             {saveStatus === 'error' && (
