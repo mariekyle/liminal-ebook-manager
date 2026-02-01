@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
-import EnhancedMetadataModal from './EnhancedMetadataModal'
 import CollapsibleSection from './CollapsibleSection'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
-import EditBookModal from './EditBookModal'
 import UnifiedEditModal from './UnifiedEditModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
@@ -301,9 +299,6 @@ function BookDetail() {
   // Rescan metadata state
   const [rescanning, setRescanning] = useState(false)
   
-  // Enhanced metadata modal state
-  const [showEnhancedModal, setShowEnhancedModal] = useState(false)
-  
   // Unified edit modal state
   const [showUnifiedEditModal, setShowUnifiedEditModal] = useState(false)
 
@@ -315,9 +310,6 @@ function BookDetail() {
   // Series data (for books in a series)
   const [seriesBooks, setSeriesBooks] = useState([])
   const [seriesLoading, setSeriesLoading] = useState(false)
-  
-  // Edit modal state
-  const [editModalOpen, setEditModalOpen] = useState(false)
   
   // 3-dot menu state
   const [menuOpen, setMenuOpen] = useState(false)
@@ -1180,12 +1172,6 @@ function BookDetail() {
     }
   }
 
-  const handleMetadataSave = (updatedBook) => {
-    setBook(updatedBook)
-    // Update local state that might be affected
-    setSelectedCategory(updatedBook.category || '')
-  }
-
   // Toast notification helper
   const showToast = (message, type = 'success', duration = 3000) => {
     // Clear any existing timeout
@@ -1226,13 +1212,6 @@ function BookDetail() {
     } finally {
       setRescanning(false)
     }
-  }
-
-  const handleSaveEnhancedMetadata = async (metadata) => {
-    await updateEnhancedMetadata(book.id, metadata)
-    // Refresh book data
-    const updatedBook = await getBook(book.id)
-    setBook(updatedBook)
   }
 
   const handleTemplateSelect = (templateKey) => {
@@ -2451,14 +2430,6 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Edit Metadata Modal */}
-      <EditBookModal
-        book={book}
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        onSave={handleMetadataSave}
-      />
-      
       {/* Acquire Book Modal (TBR → Library) */}
       {showAcquireModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -2969,15 +2940,6 @@ function BookDetail() {
         />
       )}
 
-      {/* Enhanced Metadata Modal */}
-      {showEnhancedModal && (
-        <EnhancedMetadataModal
-          book={book}
-          onClose={() => setShowEnhancedModal(false)}
-          onSave={handleSaveEnhancedMetadata}
-        />
-      )}
-
       {/* Unified Edit Modal */}
       <UnifiedEditModal
         isOpen={showUnifiedEditModal}
@@ -2994,8 +2956,12 @@ function BookDetail() {
               series_number: updates.series_number,
               category: updates.category,
               publication_year: updates.publication_year,
-              source_url: updates.source_url,
-              completion_status: updates.completion_status
+              source_url: updates.source_url
+            }
+            
+            // Only include completion_status for FanFiction library books
+            if (updates.completion_status !== undefined) {
+              metadataFields.completion_status = updates.completion_status
             }
             
             const enhancedFields = {
