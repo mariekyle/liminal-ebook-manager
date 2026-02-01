@@ -5,6 +5,7 @@ import CollapsibleSection from './CollapsibleSection'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import UnifiedEditModal from './UnifiedEditModal'
+import ChangeCoverModal from './ChangeCoverModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
@@ -301,6 +302,9 @@ function BookDetail() {
   
   // Unified edit modal state
   const [showUnifiedEditModal, setShowUnifiedEditModal] = useState(false)
+  
+  // Change cover modal state
+  const [showCoverModal, setShowCoverModal] = useState(false)
 
   // Collections state
   const [bookCollections, setBookCollections] = useState([])
@@ -1422,7 +1426,8 @@ function BookDetail() {
 
   // Menu items for 3-dot menu
   const menuItems = [
-    { label: 'Edit...', onClick: () => { setShowUnifiedEditModal(true); setMenuOpen(false) } },
+    { label: 'Edit', onClick: () => { setShowUnifiedEditModal(true); setMenuOpen(false) } },
+    { label: 'Change Cover', onClick: () => { setShowCoverModal(true); setMenuOpen(false) } },
     { type: 'divider' },
     { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
     { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
@@ -2990,6 +2995,19 @@ function BookDetail() {
             console.error('Failed to update book:', error)
             showToast('Failed to update book', 'error')
           }
+        }}
+      />
+
+      {/* Change Cover Modal */}
+      <ChangeCoverModal
+        book={book}
+        isOpen={showCoverModal}
+        onClose={() => setShowCoverModal(false)}
+        onSuccess={async (message) => {
+          showToast(message, 'success')
+          // Refresh book data to show new cover
+          const updatedBook = await getBook(book.id)
+          setBook(updatedBook)
         }}
       />
 

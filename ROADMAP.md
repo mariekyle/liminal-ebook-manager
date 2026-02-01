@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** January 25, 2026 (v0.28.0)  
+> **Last Updated:** February 1, 2026 (v0.30.0)  
 > **Current Focus:** Phase 9.5 — Pre-Migration Completion  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -12,7 +12,7 @@ Liminal is a personal reading companion that eliminates the friction of managing
 
 ---
 
-## Current State (v0.28.0)
+## Current State (v0.30.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -26,12 +26,12 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Collections system | ✅ Smart Collections complete |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
-| Book detail page | 🔄 3-dot menu complete, unified edit modal next |
+| Book detail page | 🔄 Sessions A, B, B+ complete — Session C next |
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Folder structure independence | ✅ File metadata primary |
-| Custom cover upload | ✅ Complete |
-| Auto cover extraction | ✅ Complete |
+| Custom cover upload | ✅ Restored (Session B+) |
+| Auto cover extraction | ✅ Restored (Session B+) |
 | Gradient covers | ✅ Fixed |
 
 ---
@@ -68,8 +68,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ### Work Group 1: Book Detail Page Completion
 
-**Status:** 🔄 In Progress (Session A complete)  
-**Files:** `BookDetail.jsx`, related modals, `CollectionPicker.jsx`
+**Status:** 🔄 In Progress (Sessions A, B, B+ complete)  
+**Files:** `BookDetail.jsx`, `UnifiedEditModal.jsx`, `ChangeCoverModal.jsx`, `CollectionPicker.jsx`
 
 **Session A — Menu & Icon Consolidation: ✅ Complete**
 - [x] 1.2 **Remove Scattered Edit Icons** — Removed tag/merge/pencil icons from header area
@@ -83,18 +83,27 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 - [x] 1.A6 **Component Stability** — Extracted Toast/ThreeDotMenu outside BookDetail to prevent remounts
 - [x] 1.A7 **Memory Leak Prevention** — Toast timeout cleanup on unmount via useRef
 
-**Session B — Unified Edit Modal: ⬅️ Next**
-- [ ] 1.1 **Unified Edit Modal** — Combine EditBookModal + EnhancedMetadataModal into single 3-tab modal
-  - Details tab: Title, Authors, Series/Number, Category, Year
-  - About tab: Summary, Tags
-  - Source tab: Source URL, Completion Status, FanFic fields (Fandom, Ships, Characters, Rating, Warnings)
+**Session B — Unified Edit Modal: ✅ Complete**
+- [x] 1.1 **Unified Edit Modal** — Combined EditBookModal + EnhancedMetadataModal into single tabbed modal
+  - Segmented control tab navigation (iOS-style)
+  - Dynamic tabs: 2 tabs (Details, About) or 3 tabs (+Metadata for FanFiction)
+  - Details tab: Title, Authors, Series/Number, Category, Year, Source URL
+  - About tab: Summary (or "Why this one?" for wishlist), Tags, Pairing Type (Fiction/FanFic only)
+  - Metadata tab: Completion Status, Fandom, Ships, Content Rating, Warnings (FanFic library only)
+  - Characters field removed from UI (merged into Tags)
+  - Single "Save" button for all tabs
+- [x] 1.B2 **Delete Legacy Modals** — Removed EditBookModal.jsx and EnhancedMetadataModal.jsx
+- [x] 1.B3 **Menu Consolidation** — "Edit Details...", "Edit About & Tags...", "Change Cover..." → single "Edit..."
 
-**Session B+ — Change Cover Modal:**
-- [ ] 1.B1 **Change Cover Modal** — Extract cover management from EditBookModal into dedicated modal
-  - Larger preview (280×420)
-  - Upload Image / Extract from EPUB / Use Gradient / Remove custom cover
+**Session B+ — Change Cover Modal: ✅ Complete**
+- [x] 1.B1 **Change Cover Modal** — Dedicated modal for cover management
+  - Cover preview (200×300px) with source badge
+  - Upload Image / Extract from EPUB / Use Gradient Instead
+  - Added "Change Cover" to 3-dot menu (after Edit, before divider)
+  - Fixed EPUB detection (editions not formats)
+  - Fixed pairing_type → ao3_category field mapping
 
-**Session C — Collection Picker Enhancements:**
+**Session C — Collection Picker Enhancements: ⬅️ Next**
 - [ ] 1.5 **Quick Create** — "Create new collection" option within picker
 - [ ] 1.6 **Search** — Filter collections as you type
 - [ ] 1.7 **Contextual Quick Create** — "Create [search term]" when no matches
@@ -109,13 +118,12 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 - [ ] **GROUP 1 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** All actions consolidated in 3-dot menu. Single unified edit modal with 3 tabs. Dedicated cover modal. Collection picker has search, quick create, and recent collections. Location field in Metadata section.
+**Definition of Done:** All actions consolidated in 3-dot menu. Single unified edit modal with dynamic tabs. Dedicated cover modal. Collection picker has search, quick create, and recent collections. Location field in Metadata section.
 
 **Current Menu Structure:**
 ```
-Edit Details...           → EditBookModal (until Session B)
-Edit About & Tags...      → EnhancedMetadataModal (until Session B)
-Change Cover...           → EditBookModal (until Session B+)
+Edit                      → UnifiedEditModal (tabbed)
+Change Cover              → ChangeCoverModal
 ─────────────────────────
 Add Reading Session       → Session modal
 Add to Collection         → Collection picker
@@ -184,49 +192,49 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 **Files:** `CollectionDetail.jsx`
 
 - [ ] 5.1 **Move Instruction Banner** — Show only on type chip tap, not always visible
-- [ ] 5.2 **Ensure 3-Dot Menu Position** — Same line as title, consistent with other pages
-- [ ] 5.3 **View Toggle Visibility** — Always visible above book list (not in menu)
-- [ ] 5.4 **Add Manual Collection Chip** — Add type chip for Manual collections (matching Auto/Checklist)
+- [ ] 5.2 **Checklist Pagination Fix** — Resolve infinite loop issue (see Technical Debt)
+- [ ] 5.3 **Empty State Improvements** — Better messaging when collection is empty
+- [ ] 5.4 **Drag Handle Visibility** — Only show reorder handles in edit mode
 - [ ] **GROUP 5 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** Collection Detail matches other detail pages in header structure and menu placement. All collection types show type chip.
+**Definition of Done:** Collection Detail has cleaner UI with hidden instruction banner and fixed pagination.
 
 ---
 
 ### Work Group 6: Landing Pages & Navigation
 
 **Status:** ⬜ Not Started  
-**Files:** `Library.jsx`, `AuthorsTab.jsx`, `SeriesTab.jsx`, `CollectionsTab.jsx`
+**Files:** Various landing pages
 
-- [ ] 6.1 **Library Browse: Add View Toggle** — Grid/list toggle
-- [ ] 6.2 **Library Browse: Right-Align Search** — Search/filter right-aligned on desktop
-- [ ] 6.3 **Library Browse: Gradient Text Lines** — Increase from 3 to 6 lines
-- [ ] 6.4 **Library Browse: Center Loading** — Center loading message
-- [ ] 6.5 **Library Wishlist: Remove Dotted Outline** — Bookmark icon is sufficient
-- [ ] 6.6 **Library Wishlist: Add View Toggle** — Grid/list toggle
-- [ ] 6.7 **Library Home: Increase Section Items** — From 5-6 to 20 items
-- [ ] 6.8 **Library Home: Add Search Icon** — Search icon right of tabs
-- [ ] 6.9 **Authors Landing: A-Z Jump Nav** — Alphabetical navigation
-- [ ] 6.10 **Series Landing: Fix Search** — Search series names, not book titles
-- [ ] 6.11 **Series Landing: Add View Toggle** — Grid/list toggle
-- [ ] 6.12 **Global: Fix Scroll Restoration** — Fix React Router scroll position bug
+- [ ] 6.1 **Authors Landing Page** — Grid of author cards with book counts
+- [ ] 6.2 **Series Landing Page** — Grid of series cards with mosaic covers
+- [ ] 6.3 **Tags Landing Page** — Tag cloud or grid with usage counts
+- [ ] 6.4 **Fandoms Landing Page** — Grid for FanFiction fandoms
+- [ ] 6.5 **Ships Landing Page** — Grid for FanFiction ships
+- [ ] 6.6 **Navigation Menu Update** — Add links to new landing pages
+- [ ] 6.7 **Breadcrumb Navigation** — Consistent back navigation across pages
+- [ ] 6.8 **Recently Added Section** — Show newest books on home
+- [ ] 6.9 **Continue Reading Section** — Show in-progress books on home
+- [ ] 6.10 **Random Pick Feature** — "What should I read?" button
+- [ ] 6.11 **Search Improvements** — Search across all entity types
+- [ ] 6.12 **Filter Persistence** — Remember filter state across navigation
 - [ ] **GROUP 6 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** All landing pages have consistent view toggles, search behavior is correct, A-Z nav on Authors, scroll restoration works.
+**Definition of Done:** All entity types have landing pages. Navigation is consistent and discoverable.
 
 ---
 
 ### Work Group 7: Library Home Improvements
 
 **Status:** ⬜ Not Started  
-**Files:** `HomeTab.jsx`, `SettingsDrawer.jsx`
+**Files:** `Library.jsx`
 
-- [ ] 7.1 **Search Icon Shortcut** — Add search icon to upper left of Library page
-- [ ] 7.2 **Time Filter Changes** — Update "Your Reading" dropdown: This month, Last month, Past 12 months
-- [ ] 7.3 **Show/Hide Home Sections** — Settings toggles for: Currently Reading, Recently Added, Discover, Quick Reads
+- [ ] 7.1 **Category Tabs** — Quick filter tabs for Fiction/Non-Fiction/FanFiction
+- [ ] 7.2 **Sort Persistence** — Remember sort preference per category
+- [ ] 7.3 **View Mode Toggle** — Grid/List view toggle
 - [ ] **GROUP 7 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** Home tab has search shortcut, better time filters, and customizable sections.
+**Definition of Done:** Library home has category tabs, persistent sort, and view toggle.
 
 ---
 
@@ -235,14 +243,13 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 **Status:** ⬜ Not Started  
 **Files:** Various form components, `SettingsDrawer.jsx`
 
-- [ ] 8.1 **Series Field Searchable** — Add autocomplete to series field in add/edit forms
-- [ ] 8.2 **Fix Library/Wishlist Search** — Address search functionality issues
-- [ ] 8.3 **Settings Modal Redesign** — Update settings drawer UI
-- [ ] 8.4 **Custom Note Templates** — Edit/add/remove note templates from Settings
-- [ ] 8.5 **Photo Scan to Wishlist** — Camera-based quick add (Large — consider deferring)
+- [ ] 8.1 **Form Validation** — Consistent validation patterns across all forms
+- [ ] 8.2 **Error Handling** — User-friendly error messages
+- [ ] 8.3 **Settings Organization** — Group related settings logically
+- [ ] 8.4 **Backup/Restore UI** — Clearer backup management interface
 - [ ] **GROUP 8 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** Forms have better autocomplete, search works correctly, settings look polished, note templates are customizable.
+**Definition of Done:** Forms have consistent validation and error handling. Settings are well-organized.
 
 ---
 
@@ -251,8 +258,8 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 **Status:** ⬜ Not Started  
 **Files:** New `Stats.jsx` page
 
-- [ ] 9.1 **Calendar View Component** — Moon+ Reader-inspired calendar grid
-- [ ] 9.2 **Books on Dates** — Show book covers on completion dates
+- [ ] 9.1 **Reading Calendar** — GitHub-style contribution graph for reading activity
+- [ ] 9.2 **Monthly/Yearly Views** — Toggle between time periods
 - [ ] 9.3 **Multiple Books Per Day** — Handle and display multiple completions
 - [ ] 9.4 **Summary Stats** — Total books, total words for selected year
 - [ ] 9.5 **Year Navigation** — Navigate between years
@@ -289,7 +296,7 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 
 | Group | Name | Items | Status |
 |-------|------|-------|--------|
-| 1 | Book Detail Completion | 17 | 🔄 (10/17) |
+| 1 | Book Detail Completion | 17 | 🔄 (12/17) |
 | 2 | Wishlist Detail Unification | 4 | ⬜ |
 | 3 | Series Detail Overhaul | 6 | ⬜ |
 | 4 | Author Detail Overhaul | 8 | ⬜ |
@@ -432,10 +439,12 @@ These documents contain historical context and design decisions. The roadmap che
 | `PHASE_9F_DESIGN_SUMMARY.md` | Design decisions from mockup phase |
 | `book-detail-mockup-v2.html` | Visual reference for Book Detail |
 | `phase9f-mockups-v3.html` | Visual reference for all detail pages |
+| `unified-edit-modal-mockup-v2.html` | Visual reference for Session B modal |
+| `change-cover-modal-mockup.html` | Visual reference for Session B+ modal |
 | `CODE_PATTERNS.md` | Battle-tested code solutions |
 
 ---
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: January 25, 2026*
+*Last updated: February 1, 2026*

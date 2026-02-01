@@ -266,7 +266,7 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
     // About
     summary: '',
     tags: [],
-    pairing_type: 'None',
+    ao3_category: 'None',
     
     // Metadata (FanFiction only)
     completion_status: 'Unknown',
@@ -292,7 +292,7 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
         // About
         summary: book.summary || '',
         tags: Array.isArray(book.tags) ? book.tags : [],
-        pairing_type: book.pairing_type || (Array.isArray(book.ao3_category) && book.ao3_category.length > 0 ? book.ao3_category[0] : 'None'),
+        ao3_category: Array.isArray(book.ao3_category) && book.ao3_category.length > 0 ? book.ao3_category[0] : 'None',
         
         // Metadata (FanFiction only)
         completion_status: book.completion_status || 'Unknown',
@@ -357,11 +357,9 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
         tags: formData.tags,
       }
       
-      // Add pairing_type only for Fiction/FanFiction
+      // Add ao3_category only for Fiction/FanFiction
       if (formData.category === 'Fiction' || formData.category === 'FanFiction') {
-        updates.pairing_type = formData.pairing_type
-        // Also set as ao3_category array for backwards compatibility
-        updates.ao3_category = formData.pairing_type !== 'None' ? [formData.pairing_type] : []
+        updates.ao3_category = formData.ao3_category !== 'None' ? [formData.ao3_category] : []
       }
       
       // Add metadata fields only for FanFiction library books
@@ -566,8 +564,8 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">Pairing Type</label>
                     <select
-                      value={formData.pairing_type}
-                      onChange={(e) => handleInputChange('pairing_type', e.target.value)}
+                      value={formData.ao3_category}
+                      onChange={(e) => handleInputChange('ao3_category', e.target.value)}
                       className="w-full p-3 bg-[#1a1f2e] border border-white/15 rounded-lg text-white focus:border-teal-500 focus:outline-none cursor-pointer"
                     >
                       {PAIRING_TYPES.map(type => (
