@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, getCollectionsForBook } from '../api'
+import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import EnhancedMetadataModal from './EnhancedMetadataModal'
 import CollapsibleSection from './CollapsibleSection'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import EditBookModal from './EditBookModal'
+import UnifiedEditModal from './UnifiedEditModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
 import { getReadTimeData } from '../utils/readTime'
@@ -302,6 +303,9 @@ function BookDetail() {
   
   // Enhanced metadata modal state
   const [showEnhancedModal, setShowEnhancedModal] = useState(false)
+  
+  // Unified edit modal state
+  const [showUnifiedEditModal, setShowUnifiedEditModal] = useState(false)
 
   // Collections state
   const [bookCollections, setBookCollections] = useState([])
@@ -1439,9 +1443,7 @@ function BookDetail() {
 
   // Menu items for 3-dot menu
   const menuItems = [
-    { label: 'Edit Details...', onClick: () => { setEditModalOpen(true); setMenuOpen(false) } },
-    { label: 'Edit About & Tags...', onClick: () => { setShowEnhancedModal(true); setMenuOpen(false) } },
-    { label: 'Change Cover...', onClick: () => { setEditModalOpen(true); setMenuOpen(false) } },
+    { label: 'Edit...', onClick: () => { setShowUnifiedEditModal(true); setMenuOpen(false) } },
     { type: 'divider' },
     { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
     { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
@@ -2975,6 +2977,55 @@ function BookDetail() {
           onSave={handleSaveEnhancedMetadata}
         />
       )}
+
+      {/* Unified Edit Modal */}
+      <UnifiedEditModal
+        isOpen={showUnifiedEditModal}
+        onClose={() => setShowUnifiedEditModal(false)}
+        book={book}
+        isWishlist={book?.acquisition_status === 'wishlist'}
+        onSave={async (updates) => {
+          try {
+            // Split updates into metadata and enhanced metadata
+            const metadataFields = {
+              title: updates.title,
+              authors: updates.authors,
+              series: updates.series,
+              series_number: updates.series_number,
+              category: updates.category,
+              publication_year: updates.publication_year,
+              source_url: updates.source_url,
+              completion_status: updates.completion_status
+            }
+            
+            const enhancedFields = {
+              summary: updates.summary,
+              tags: updates.tags,
+              fandom: updates.fandom,
+              relationships: updates.relationships,
+              content_rating: updates.content_rating,
+              ao3_warnings: updates.ao3_warnings,
+              ao3_category: updates.ao3_category
+            }
+            
+            // Update basic metadata
+            await updateBookMetadata(book.id, metadataFields)
+            
+            // Update enhanced metadata
+            await updateEnhancedMetadata(book.id, enhancedFields)
+            
+            // Refresh book data
+            const updatedBook = await getBook(book.id)
+            setBook(updatedBook)
+            setSelectedCategory(updatedBook.category || '')
+            
+            showToast('Book updated', 'success')
+          } catch (error) {
+            console.error('Failed to update book:', error)
+            showToast('Failed to update book', 'error')
+          }
+        }}
+      />
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       {editionToDelete && (
