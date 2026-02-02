@@ -16,6 +16,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, createEdition, getBook, linkFilesToTitle } from '../api'
+import UnifiedNavBar from '../components/UnifiedNavBar'
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'
@@ -54,13 +55,6 @@ const SCREENS = {
   // Shared
   SUCCESS: 'success',
 }
-
-// Arrow left icon
-const ArrowLeft = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-    <path d="M19 12H5M12 19l-7-7 7-7" />
-  </svg>
-)
 
 export default function AddPage() {
   const navigate = useNavigate()
@@ -466,28 +460,20 @@ export default function AddPage() {
 
   // ========== RENDER ==========
 
-  // Don't show header bar when there's nothing to show
-  const showHeader = headerConfig.showBack || headerConfig.title
+  // Show nav bar for screens that have back navigation
+  const showNavBar = headerConfig.showBack
 
   return (
     <div className="text-[#e0e0e0]">
-      {/* Page Header - only show when there's content */}
-      {showHeader && (
-        <div className="px-4 md:px-8 py-4 border-b border-gray-700">
-          <div className="flex items-center max-w-2xl mx-auto">
-            {headerConfig.showBack && (
-              <button
-                onClick={handleBack}
-                className="text-library-accent mr-2 p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
-              >
-                <ArrowLeft />
-                <span className="ml-1">Back</span>
-              </button>
-            )}
-            <h1 className="flex-1 text-lg font-semibold text-white">
-              {headerConfig.title}
-            </h1>
-          </div>
+      {/* Page Header - sticky nav with multi-step back */}
+      {showNavBar && (
+        <UnifiedNavBar backLabel="Back" onBack={handleBack} />
+      )}
+
+      {/* Screen title - shown below nav bar when there's a title */}
+      {headerConfig.title && (
+        <div className="max-w-2xl mx-auto px-4 pt-4">
+          <h1 className="text-lg font-semibold text-white">{headerConfig.title}</h1>
         </div>
       )}
 

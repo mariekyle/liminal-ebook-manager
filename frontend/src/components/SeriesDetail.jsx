@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getSeriesDetail } from '../api'
+import UnifiedNavBar from './UnifiedNavBar'
 
 function SeriesDetail() {
   const { name } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Current URL to pass as returnUrl when navigating to books
+  const currentUrl = location.pathname + location.search
   const [series, setSeries] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -46,19 +52,10 @@ function SeriesDetail() {
   if (!series) return null
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-8">
-      {/* Back link */}
-      <Link 
-        to="/"
-        onClick={(e) => {
-          e.preventDefault()
-          window.history.back()
-        }}
-        className="text-gray-400 hover:text-white mb-6 inline-block"
-      >
-        ← Back
-      </Link>
+    <div className="max-w-3xl mx-auto">
+      <UnifiedNavBar backLabel="Series" onBack={() => navigate(-1)} />
 
+      <div className="px-4 md:px-8">
       {/* Series Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
@@ -82,6 +79,7 @@ function SeriesDetail() {
             <li key={book.id}>
               <Link
                 to={`/book/${book.id}`}
+                state={{ returnUrl: currentUrl }}
                 className="flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-colors"
               >
                 {/* Series number */}
@@ -115,6 +113,7 @@ function SeriesDetail() {
             </li>
           ))}
         </ul>
+      </div>
       </div>
     </div>
   )

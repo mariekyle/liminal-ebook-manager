@@ -8,6 +8,7 @@ import UnifiedEditModal from './UnifiedEditModal'
 import ChangeCoverModal from './ChangeCoverModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
+import UnifiedNavBar from './UnifiedNavBar'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 import { useStatusLabels } from '../hooks/useStatusLabels'
@@ -1232,6 +1233,18 @@ function BookDetail() {
     })
   }
 
+  // Get returnUrl from state, default to Library (defined early for use in error state)
+  const returnUrl = location.state?.returnUrl || '/'
+
+  // Determine back label based on returnUrl
+  const getBackLabel = () => {
+    if (returnUrl.startsWith('/collections')) return 'Collections'
+    if (returnUrl.startsWith('/series')) return 'Series'
+    if (returnUrl.includes('view=series')) return 'Series'
+    if (returnUrl.startsWith('/author')) return 'Authors'
+    return 'Library'
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -1247,17 +1260,10 @@ function BookDetail() {
         <div className="text-4xl mb-4">⚠️</div>
         <p className="text-red-400">{error || 'Book not found'}</p>
         <button 
-          onClick={() => {
-            const returnUrl = location.state?.returnUrl
-            if (returnUrl) {
-              navigate(returnUrl)
-            } else {
-              navigate('/')
-            }
-          }} 
+          onClick={() => navigate(returnUrl)} 
           className="text-library-accent mt-4 inline-block"
         >
-          ← Back
+          ← {getBackLabel()}
         </button>
       </div>
     )
@@ -1438,22 +1444,17 @@ function BookDetail() {
   ]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-8">
-      {/* Back link */}
-      <button 
-        onClick={() => {
-          const returnUrl = location.state?.returnUrl
-          if (returnUrl) {
-            navigate(returnUrl)
-          } else {
-            navigate('/')
-          }
-        }} 
-        className="text-gray-400 hover:text-white mb-6 inline-flex items-center gap-2"
-      >
-        ← Back
-      </button>
+    <div className="max-w-4xl mx-auto">
+      {/* Sticky nav bar */}
+      <UnifiedNavBar backLabel={getBackLabel()} backTo={returnUrl}>
+        <ThreeDotMenu 
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          menuItems={menuItems}
+        />
+      </UnifiedNavBar>
 
+      <div className="px-4 md:px-8">
       {/* Wishlist Banner */}
       {isWishlist && (
         <div className="bg-gray-700/50 border border-gray-600 border-dashed rounded-lg px-4 py-2 mb-6 flex items-center gap-2">
@@ -1489,15 +1490,6 @@ function BookDetail() {
         
         {/* Content Area */}
         <div className="flex-1 min-w-0">
-          {/* 3-Dot Menu - positioned at top right */}
-          <div className="flex justify-end mb-2">
-            <ThreeDotMenu 
-              menuOpen={menuOpen}
-              setMenuOpen={setMenuOpen}
-              menuItems={menuItems}
-            />
-          </div>
-          
           {/* Series line - clickable link to series page */}
           {book.series && (
             <Link 
@@ -3055,6 +3047,8 @@ function BookDetail() {
           </div>
         </div>
       )}
+
+      </div>
 
       {/* Toast Notification */}
       <Toast toast={toast} />

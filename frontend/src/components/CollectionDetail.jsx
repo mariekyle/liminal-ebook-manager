@@ -38,6 +38,7 @@ import SmartPasteModal from './SmartPasteModal'
 import GradientCover from './GradientCover'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
+import UnifiedNavBar from './UnifiedNavBar'
 
 // LocalStorage key for view mode preference
 const VIEW_MODE_KEY = 'collection_detail_view_mode'
@@ -1114,17 +1115,9 @@ export default function CollectionDetail() {
   }
   
   return (
-    <div className="max-w-4xl mx-auto px-4 pb-24">
+    <div className="max-w-4xl mx-auto pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between py-4">
-        <button
-          onClick={() => navigate('/collections')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-        >
-          <BackIcon />
-          <span>Collections</span>
-        </button>
-        
+      <UnifiedNavBar backLabel="Collections" backTo="/collections">
         {/* Menu button */}
         <div className="relative">
           <button
@@ -1256,8 +1249,9 @@ export default function CollectionDetail() {
             </>
           )}
         </div>
-      </div>
+      </UnifiedNavBar>
       
+      <div className="px-4">
       {/* Banner Cover */}
       <div className="mb-4">
         <MosaicCover 
@@ -1654,6 +1648,7 @@ export default function CollectionDetail() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

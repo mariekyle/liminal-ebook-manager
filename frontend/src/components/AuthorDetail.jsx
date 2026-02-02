@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getAuthor, getSettings } from '../api'
 import GradientCover from './GradientCover'
 import EditAuthorModal from './EditAuthorModal'
+import UnifiedNavBar from './UnifiedNavBar'
 
 function AuthorDetail() {
   const { name } = useParams()
@@ -104,15 +105,10 @@ function AuthorDetail() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-8">
-      {/* Back link */}
-      <button 
-        onClick={() => navigate(-1)}
-        className="text-gray-400 hover:text-white mb-6 inline-flex items-center gap-2"
-      >
-        ← Back
-      </button>
+    <div className="max-w-4xl mx-auto">
+      <UnifiedNavBar backLabel="Authors" onBack={() => navigate(-1)} />
 
+      <div className="px-4 md:px-8">
       {/* Author Header */}
       <div className="flex items-start justify-between gap-4 mb-2">
         <h1 className="text-3xl font-bold text-white">
@@ -196,6 +192,7 @@ function AuthorDetail() {
             </Link>
           ))}
         </div>
+      </div>
       </div>
 
       {/* Edit Author Modal */}
