@@ -10,6 +10,7 @@ import AuthorsList from './pages/AuthorsList'
 import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
 import DuplicatesPage from './pages/DuplicatesPage'
+import Settings from './pages/Settings'
 import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import { checkHealth } from './api'
@@ -73,6 +74,7 @@ function App() {
           <Route path="/author/:name" element={<AuthorDetail />} />
           <Route path="/collections" element={<CollectionsTab />} />
           <Route path="/collections/:id" element={<CollectionDetail />} />
+          <Route path="/settings" element={<Settings />} />
           {/* Redirect /tbr to library with wishlist filter */}
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />

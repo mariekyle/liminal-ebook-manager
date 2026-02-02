@@ -41,7 +41,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ```
 ┌───────────┬──────────────────────────────────────────────────────────┐
 │  CURRENT  │  Phase 9.5: Pre-Migration Completion                     │
-│           │  10 work groups, ~72 items (~3-4 weeks)                  │
+│           │  10 work groups, ~80 items (~3-4 weeks)                  │
 │           │  Complete each area fully before moving on               │
 ├───────────┼──────────────────────────────────────────────────────────┤
 │   PREP    │  Phase 10: Design System Refactor (1 week)               │
@@ -69,7 +69,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ### Work Group 1: Book Detail Page Completion
 
 **Status:** 🔄 In Progress (Sessions A, B, B+ complete)  
-**Files:** `BookDetail.jsx`, `UnifiedEditModal.jsx`, `ChangeCoverModal.jsx`, `CollectionPicker.jsx`
+**Files:** `BookDetail.jsx`, `UnifiedEditModal.jsx`, `ChangeCoverModal.jsx`, `CollectionPicker.jsx`, `Library.jsx`, `BottomNav.jsx`
 
 **Session A — Menu & Icon Consolidation: ✅ Complete**
 - [x] 1.2 **Remove Scattered Edit Icons** — Removed tag/merge/pencil icons from header area
@@ -103,22 +103,64 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
   - Fixed EPUB detection (editions not formats)
   - Fixed pairing_type → ao3_category field mapping
 
-**Session C — Collection Picker Enhancements: ⬅️ Next**
-- [ ] 1.5 **Quick Create** — "Create new collection" option within picker
-- [ ] 1.6 **Search** — Filter collections as you type
-- [ ] 1.7 **Contextual Quick Create** — "Create [search term]" when no matches
-- [ ] 1.8 **Recent Collections** — Show top 5 most recently used (API-based: `last_book_added_at`)
+**Session C — Navigation & Layout Overhaul: ⬅️ CURRENT**
 
-**Session D — Download & Cover Viewer:**
-- [ ] 1.9 **EPUB Download Button** — Wire up download icon on ReadingStatusCard
-- [ ] 1.10 **Full-Screen Cover Viewer** — Tap cover → fullscreen, dismiss via backdrop OR X button
+This is a major session that addresses navigation chrome and Book Detail layout to match mockups.
 
-**Session E — Cleanup:**
-- [ ] 1.11 **Move Location to Metadata** — Move location field into Metadata section
+**C1: Bottom Nav Redesign**
+- [ ] 1.C1 **Script "L" for Library** — Replace book icon with italic script "L" (Libre Baskerville)
+- [ ] 1.C2 **Settings Replaces Add** — Remove Add from bottom nav, add Settings (gear icon)
+- [ ] 1.C3 **Update Active States** — Ensure script L displays correctly in active/inactive states
+
+**C2: Remove Brand Header**
+- [ ] 1.C4 **Remove Brand Bar from Library** — Delete "Liminal" + gear header entirely
+- [ ] 1.C5 **Tabs Start at Top** — Library tabs (Home/Browse/Wishlist) become top element
+- [ ] 1.C6 **Tab Bar Actions** — Add icons to right side of tab bar:
+  - Home tab: `[+]` `[🔍]`
+  - Browse tab: `[+]` `[🔍]` `[🔽]`
+  - Wishlist tab: `[+]` `[🔍]` `[🔽]`
+- [ ] 1.C7 **Wire Up Actions** — + opens Add screen, 🔍 opens search modal → results on Browse, 🔽 opens filter
+
+**C3: Detail Page Contextual Nav**
+- [ ] 1.C8 **Build UnifiedNavBar Component** — Sticky nav with back link + optional 3-dot menu
+- [ ] 1.C9 **Apply to Book Detail** — `← Library` (or origin page) + `•••` menu
+- [ ] 1.C10 **Apply to All Detail Pages** — Series, Author, Collection details use same pattern
+- [ ] 1.C11 **Settings Page Header** — Title only ("Settings"), no back link needed
+
+**C4: Book Detail Single Scroll**
+- [ ] 1.C12 **Remove Details/Notes/History Tabs** — Delete tab navigation entirely
+- [ ] 1.C13 **Single Scroll Layout** — All content in one scrollable page per mockup
+- [ ] 1.C14 **Section Order** — Cover → Series Line → Title/Author/Pills → Reading Status Card → About (collapsible) → Tags (collapsible) → Metadata → Notes → Reading History → Collections → Series
+- [ ] 1.C15 **Hide Empty Sections** — Sections with no content don't render at all
+- [ ] 1.C16 **Simplify Info Pills** — Remove sub-labels, keep just: read time, year, category
+- [ ] 1.C17 **Move Ebook Badge** — Into metadata section or remove
+
+**C5: Loading State**
+- [ ] 1.C18 **Branded Loading** — Replace book icon with script "L" (large, teal, pulse animation)
+- [ ] 1.C19 **Update Loading Text** — "Liminal is loading" instead of "Loading"
+
+**C6: Verification**
+- [ ] 1.C20 **Test All Navigation Paths** — Verify back links work correctly from all detail pages
+- [ ] 1.C21 **Test Bottom Nav** — All 5 items work, active states correct
+- [ ] 1.C22 **Test Tab Actions** — +, search, filter all work on all tabs
+- [ ] 1.C23 **Mobile Testing** — Verify touch targets, scroll behavior, sticky nav
+
+**Session D — Collection Picker Enhancements:**
+- [ ] 1.D1 **Quick Create** — "Create new collection" option within picker
+- [ ] 1.D2 **Search** — Filter collections as you type
+- [ ] 1.D3 **Contextual Quick Create** — "Create [search term]" when no matches
+- [ ] 1.D4 **Recent Collections** — Show top 5 most recently used (API-based: `last_book_added_at`)
+
+**Session E — Download & Cover Viewer:**
+- [ ] 1.E1 **EPUB Download Button** — Wire up download icon on ReadingStatusCard
+- [ ] 1.E2 **Full-Screen Cover Viewer** — Tap cover → fullscreen, dismiss via backdrop OR X button
+
+**Session F — Cleanup:**
+- [ ] 1.F1 **Move Location to Metadata** — Move location field into Metadata section
 
 - [ ] **GROUP 1 COMPLETE** — Update CHANGELOG, commit
 
-**Definition of Done:** All actions consolidated in 3-dot menu. Single unified edit modal with dynamic tabs. Dedicated cover modal. Collection picker has search, quick create, and recent collections. Location field in Metadata section.
+**Definition of Done:** Navigation redesigned (script L, no brand header, contextual nav). Book Detail is single scroll with no tabs. All actions consolidated in 3-dot menu. Collection picker has search and quick create.
 
 **Current Menu Structure:**
 ```
@@ -132,6 +174,16 @@ Add Format                → Edition modal
 Merge                     → Merge modal
 Rescan Metadata           → Toast feedback (library books with folder only)
 ```
+
+**Header by Screen Type (Session C):**
+| Screen | Top Left | Top Right |
+|--------|----------|-----------|
+| Library (all tabs) | Home \| Browse \| Wishlist | + 🔍 (Home) or + 🔍 🔽 (Browse/Wishlist) |
+| Book Detail | ← Library | ••• |
+| Series Detail | ← Series | ••• |
+| Author Detail | ← Authors | ••• |
+| Collection Detail | ← Collections | ••• |
+| Settings | Settings | (none) |
 
 ---
 
@@ -296,7 +348,7 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 
 | Group | Name | Items | Status |
 |-------|------|-------|--------|
-| 1 | Book Detail Completion | 17 | 🔄 (12/17) |
+| 1 | Book Detail Completion | 30 | 🔄 (12/30) |
 | 2 | Wishlist Detail Unification | 4 | ⬜ |
 | 3 | Series Detail Overhaul | 6 | ⬜ |
 | 4 | Author Detail Overhaul | 8 | ⬜ |
@@ -306,7 +358,7 @@ Rescan Metadata           → Toast feedback (library books with folder only)
 | 8 | Forms & Settings Polish | 4 | ⬜ |
 | 9 | Stats Page | 6 | ⬜ |
 | 10 | Data Quality Tools | 11 | ⬜ |
-| | **Total** | **75** | |
+| | **Total** | **88** | |
 
 ---
 
@@ -439,6 +491,7 @@ These documents contain historical context and design decisions. The roadmap che
 | `PHASE_9F_DESIGN_SUMMARY.md` | Design decisions from mockup phase |
 | `book-detail-mockup-v2.html` | Visual reference for Book Detail |
 | `phase9f-mockups-v3.html` | Visual reference for all detail pages |
+| `nav-redesign-mockup-v2.html` | Visual reference for Session C navigation |
 | `unified-edit-modal-mockup-v2.html` | Visual reference for Session B modal |
 | `change-cover-modal-mockup.html` | Visual reference for Session B+ modal |
 | `CODE_PATTERNS.md` | Battle-tested code solutions |

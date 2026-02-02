@@ -1,11 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom'
 
 // Icons
-const BookIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
+const ScriptL = () => (
+  <span 
+    className="text-2xl leading-none"
+    style={{ 
+      fontFamily: "'Libre Baskerville', Georgia, serif",
+      fontStyle: 'italic',
+      fontWeight: 400
+    }}
+  >
+    L
+  </span>
 )
 
 const StackIcon = () => (
@@ -23,10 +29,10 @@ const UserIcon = () => (
   </svg>
 )
 
-const PlusIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
+const SettingsIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
   </svg>
 )
 
@@ -42,11 +48,11 @@ const ListIcon = () => (
 )
 
 const navItems = [
-  { to: '/', label: 'Library', icon: BookIcon, match: 'library' },
+  { to: '/', label: 'Library', icon: ScriptL, match: 'library' },
   { to: '/?view=series', label: 'Series', icon: StackIcon, match: 'series' },
   { to: '/collections', label: 'Collections', icon: ListIcon, match: 'collections' },
   { to: '/authors', label: 'Authors', icon: UserIcon, match: 'authors' },
-  { to: '/add', label: 'Add', icon: PlusIcon, match: 'add' },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon, match: 'settings' },
 ]
 
 function BottomNav() {
@@ -65,8 +71,8 @@ function BottomNav() {
     if (item.match === 'collections') {
       return location.pathname === '/collections' || location.pathname.startsWith('/collections/')
     }
-    if (item.match === 'add') {
-      return location.pathname === '/add' || location.pathname === '/upload'
+    if (item.match === 'settings') {
+      return location.pathname === '/settings'
     }
     return false
   }
