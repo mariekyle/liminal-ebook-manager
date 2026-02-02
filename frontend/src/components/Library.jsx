@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { listBooks, getCategories, listSeries, getSettings } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
@@ -16,6 +16,7 @@ import SortDropdown from './SortDropdown'
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -305,132 +306,97 @@ function Library() {
 }, [setSearchParams, sort, sortDir, acquisition, activeView])
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)]">
-      {/* Toggle Bar + Search/Filter - Sticky below header */}
-      <div className="sticky top-[57px] z-30 bg-library-bg">
-        {/* Mobile Layout */}
-        <div className="md:hidden px-4 pt-3">
-          <div className="flex items-center justify-between">
-            {/* Toggle Bar - always show in library view */}
-            {activeView === 'library' && (
-              <div className="inline-flex rounded-lg bg-library-card p-1">
-                <button
-                  onClick={() => {
-                    setAcquisition('owned')
-                    updateUrlParams({ acquisition: 'owned' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'owned'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Home
-                </button>
-                <button
-                  onClick={() => {
-                    setAcquisition('browse')
-                    updateUrlParams({ acquisition: 'browse' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'browse'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Browse
-                </button>
-                <button
-                  onClick={() => {
-                    setAcquisition('wishlist')
-                    updateUrlParams({ acquisition: 'wishlist' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'wishlist'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Wishlist
-                </button>
-              </div>
-            )}
-            
-            {/* Search & Filter Icons - hide on Home tab */}
-            {!(activeView === 'library' && acquisition === 'owned') && (
-              <SearchBar
-                iconsOnly={true}
-                showFilter={true}
-                filterCount={activeFilterCount}
-                searchActive={!!search}
-                onSearchClick={() => setSearchModalOpen(true)}
-                onFilterClick={() => setFilterDrawerOpen(true)}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Desktop Layout */}
-        <div className="hidden md:block px-8 pt-3">
-          <div className="flex items-center gap-4">
-            {/* Toggle Bar - always show in library view */}
-            {activeView === 'library' && (
-              <div className="inline-flex rounded-lg bg-library-card p-1">
-                <button
-                  onClick={() => {
-                    setAcquisition('owned')
-                    updateUrlParams({ acquisition: 'owned' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'owned'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Home
-                </button>
-                <button
-                  onClick={() => {
-                    setAcquisition('browse')
-                    updateUrlParams({ acquisition: 'browse' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'browse'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Browse
-                </button>
-                <button
-                  onClick={() => {
-                    setAcquisition('wishlist')
-                    updateUrlParams({ acquisition: 'wishlist' })
-                  }}
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-                    acquisition === 'wishlist'
-                      ? 'bg-library-accent text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Wishlist
-                </button>
-              </div>
-            )}
-            
-            {/* Inline Search Bar - hide on Home tab */}
-            {!(activeView === 'library' && acquisition === 'owned') && (
-              <SearchBar
-                value={search}
-                onChange={(value) => {
-                  setSearch(value)
-                  updateUrlParams({ search: value })
+    <div className="flex flex-col min-h-[calc(100vh-64px)]">
+      {/* Tab Bar - Now top element */}
+      <div className="sticky top-0 z-30 bg-library-bg">
+        <div className="flex justify-between items-center px-4 pt-4">
+          {/* Tabs on left */}
+          {activeView === 'library' && (
+            <div className="flex gap-6">
+              <button
+                onClick={() => {
+                  setAcquisition('owned')
+                  updateUrlParams({ acquisition: 'owned' })
                 }}
-                placeholder={activeView === 'series' ? 'Search series...' : 'Search books...'}
-                showFilter={true}
-                filterCount={activeFilterCount}
-                onFilterClick={() => setFilterDrawerOpen(true)}
-              />
+                className={`text-sm pb-3 border-b-2 transition-colors ${
+                  acquisition === 'owned'
+                    ? 'text-library-accent border-library-accent'
+                    : 'text-gray-500 border-transparent'
+                }`}
+              >
+                Home
+              </button>
+              <button
+                onClick={() => {
+                  setAcquisition('browse')
+                  updateUrlParams({ acquisition: 'browse' })
+                }}
+                className={`text-sm pb-3 border-b-2 transition-colors ${
+                  acquisition === 'browse'
+                    ? 'text-library-accent border-library-accent'
+                    : 'text-gray-500 border-transparent'
+                }`}
+              >
+                Browse
+              </button>
+              <button
+                onClick={() => {
+                  setAcquisition('wishlist')
+                  updateUrlParams({ acquisition: 'wishlist' })
+                }}
+                className={`text-sm pb-3 border-b-2 transition-colors ${
+                  acquisition === 'wishlist'
+                    ? 'text-library-accent border-library-accent'
+                    : 'text-gray-500 border-transparent'
+                }`}
+              >
+                Wishlist
+              </button>
+            </div>
+          )}
+
+          {/* Actions on right - context dependent */}
+          <div className="flex items-center gap-1">
+            {/* Add button - all tabs */}
+            <button
+              onClick={() => navigate('/add')}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-library-card transition-colors"
+              aria-label="Add book"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+
+            {/* Search button - all tabs */}
+            <button
+              onClick={() => setSearchModalOpen(true)}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-library-card transition-colors"
+              aria-label="Search"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
+            {/* Filter button - Browse and Wishlist only */}
+            {activeView === 'library' && (acquisition === 'browse' || acquisition === 'wishlist') && (
+              <button
+                onClick={() => setFilterDrawerOpen(true)}
+                className={`relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-library-card transition-colors ${
+                  activeFilterCount > 0 ? 'text-library-accent' : 'text-gray-400 hover:text-white'
+                }`}
+                aria-label="Filter"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-library-accent text-white text-xs rounded-full flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             )}
           </div>
         </div>

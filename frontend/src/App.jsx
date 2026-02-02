@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Library from './components/Library'
 import BookDetail from './components/BookDetail'
@@ -18,6 +18,10 @@ import { checkHealth } from './api'
 function App() {
   const [connected, setConnected] = useState(null)
   const [error, setError] = useState(null)
+  const location = useLocation()
+  
+  // Hide Header on Library page - tabs are the top element there
+  const isLibraryPage = location.pathname === '/'
 
   useEffect(() => {
     checkHealth()
@@ -64,7 +68,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-library-bg pb-16 md:pb-0">
-      <Header />
+      {!isLibraryPage && <Header />}
       <main>
         <Routes>
           <Route path="/" element={<Library />} />
