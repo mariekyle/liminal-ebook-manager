@@ -9,77 +9,84 @@ export default {
       colors: {
         // ===========================================
         // LEGACY ALIASES (keep for existing code)
-        // These map to the new warmer values so existing
-        // classes shift automatically. Migrate to semantic
-        // tokens in new code.
+        // Maps to Warm A values so existing classes
+        // shift automatically. Use semantic tokens
+        // in all new code.
         // ===========================================
         library: {
-          bg: '#1a1f2e',       // Was #0f172a — now warmer
-          card: '#242b3d',     // Was #1e293b — now warmer
-          accent: '#6366f1',   // Was #667eea — now indigo-500
+          bg: '#1a1918',       // Warm charcoal base
+          card: '#242220',     // Warm surface
+          accent: '#5e8a8a',   // Muted teal
         },
 
         // ===========================================
         // SEMANTIC TOKENS — Use these in all new code
+        // Warm A palette: Swan Song inspired
         // ===========================================
 
-        // Backgrounds
+        // Backgrounds — warm charcoal family
         bg: {
-          base: '#1a1f2e',       // Main app background
-          surface: '#242b3d',    // Cards, modals, drawers
-          elevated: '#2d3548',   // Inputs, hover states, nested surfaces
-          overlay: 'rgba(0, 0, 0, 0.5)',  // Modal backdrops
+          base: '#1a1918',
+          surface: '#242220',
+          elevated: '#2e2b28',
         },
 
-        // Text
+        // Text — warm off-whites and grays
         text: {
-          primary: '#ffffff',
-          secondary: '#9ca3af',    // gray-400
-          muted: '#6b7280',        // gray-500
-          inverse: '#1a1f2e',      // Text on light backgrounds
+          primary: '#e8e4df',
+          secondary: '#9a958e',
+          muted: '#6e6962',
+          inverse: '#1a1918',
+          body: '#cdc8c1',
         },
 
         // Borders
         border: {
-          default: '#374151',      // gray-700
-          subtle: '#2d3548',       // Same as elevated bg
-          focus: '#6366f1',        // Matches action-primary
+          default: '#3a3633',
+          subtle: '#2e2b28',
+          focus: '#5e8a8a',
         },
 
-        // Actions (buttons, links, interactive)
+        // Actions — calm, not corporate
         action: {
-          primary: '#6366f1',          // indigo-500 — main actions
-          'primary-hover': '#5558e3',  // Hover/pressed
-          success: '#22c55e',          // green-500 — confirmations only
-          'success-hover': '#1ea550',
-          danger: '#ef4444',           // red-500 — destructive
-          'danger-hover': '#dc2626',
-          warning: '#f59e0b',          // amber-500 — alerts
-          secondary: '#4b5563',        // gray-600 — cancel/dismiss
-          'secondary-hover': '#6b7280',
+          primary: '#5e8a8a',
+          'primary-hover': '#4d7878',
+          success: '#7a9e6a',
+          'success-hover': '#698a5b',
+          danger: '#c0564e',
+          'danger-hover': '#a84940',
+          warning: '#c4956a',
+          secondary: '#4a4541',
+          'secondary-hover': '#5e5954',
         },
 
-        // Chips & metadata
+        // Chips — desaturated, ambient metadata
         chip: {
-          fiction: '#3b82f6',        // blue-500
-          fanfiction: '#8b5cf6',     // violet-500
-          nonfiction: '#10b981',     // emerald-500
-          fandom: '#8b5cf6',         // violet-500
-          ship: '#ec4899',           // pink-500
-          character: '#06b6d4',      // cyan-500
-          rating: '#ef4444',         // red-500
-          warning: '#f59e0b',        // amber-500
-          default: '#4b5563',        // gray-600
-          filter: '#374151',         // gray-700
+          fiction: '#6a8fb0',
+          fanfiction: '#8a7eb0',
+          nonfiction: '#6a9e88',
+          fandom: '#8a7eb0',
+          ship: '#b08090',
+          character: '#6a9eaa',
+          default: '#5e5954',
+          filter: '#3a3633',
         },
 
         // Status
         status: {
-          unread: '#6b7280',         // gray-500
-          reading: '#3b82f6',        // blue-500
-          finished: '#22c55e',       // green-500
-          abandoned: '#ef4444',      // red-500
+          unread: '#7a756e',
+          reading: '#5e8a8a',
+          finished: '#7a9e6a',
+          dnf: '#7a756e',       // NOT red — DNF is neutral, not an error
         },
+      },
+
+      // Calm transition timing
+      transitionDuration: {
+        'calm': '200ms',
+      },
+      transitionTimingFunction: {
+        'calm': 'ease-out',
       },
     },
   },

@@ -1,58 +1,84 @@
 /*
- * Liminal Typography Utilities
- * 
- * Usage: Apply these classes directly in JSX.
- * These use @apply to compose Tailwind utilities into semantic names.
- * 
- * Import this file in index.css AFTER the Tailwind directives.
+ * Liminal Design Tokens — Typography + Utilities
+ *
+ * Warm A palette. Import in index.css after Tailwind directives.
  */
 
 @layer components {
   /* =============================================
-     HEADINGS
+     HEADINGS — warm off-white (#e8e4df)
      ============================================= */
-  
-  /* Page titles (rare — most pages use UnifiedNavBar) */
+
   .text-h1 {
-    @apply text-2xl font-bold text-white;
+    @apply text-2xl font-bold;
+    color: #e8e4df;
   }
-  
-  /* Section headers, modal titles */
+
   .text-h2 {
-    @apply text-xl font-semibold text-white;
+    @apply text-xl font-semibold;
+    color: #e8e4df;
   }
-  
-  /* Card group headers, subsection titles */
+
   .text-h3 {
-    @apply text-lg font-semibold text-white;
+    @apply text-lg font-semibold;
+    color: #e8e4df;
   }
-  
-  /* List item titles, bold labels */
+
   .text-h4 {
-    @apply text-base font-medium text-white;
+    @apply text-base font-medium;
+    color: #e8e4df;
   }
 
   /* =============================================
-     BODY TEXT
+     BODY TEXT — warm grays
      ============================================= */
-  
-  /* Default body text */
+
   .text-body {
-    @apply text-base text-gray-300;
+    @apply text-base;
+    color: #cdc8c1;
   }
-  
-  /* Secondary info, descriptions */
+
   .text-body-sm {
-    @apply text-sm text-gray-400;
+    @apply text-sm;
+    color: #9a958e;
   }
-  
-  /* Timestamps, metadata, hints */
+
   .text-caption {
-    @apply text-xs text-gray-500;
+    @apply text-xs;
+    color: #6e6962;
   }
-  
-  /* Form labels, field names */
+
   .text-label {
-    @apply text-sm font-medium text-gray-300;
+    @apply text-sm font-medium;
+    color: #cdc8c1;
   }
+}
+
+/* =============================================
+  GLASSMORPHISM UTILITY (optional — for modals)
+  ============================================= */
+
+.glass-panel {
+  background: rgba(36, 34, 32, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(232, 228, 223, 0.06);
+}
+
+/* =============================================
+  GRAIN TEXTURE OVERLAY (optional — for body)
+  Apply class "grain-overlay" to body or wrapper.
+  Barely perceptible warmth, not visible noise.
+  ============================================= */
+
+.grain-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
