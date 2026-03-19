@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Phase 9.5: Pre-Migration Completion (In Progress)
-- Work Group 1: 🔄 In Progress (Sessions A, B, B+ complete — Session C next)
+- Work Group 1: 🔄 In Progress (Sessions A, B, B+, C1-C3 complete — C4 next)
 - Work Group 2-10: ⬜ Not Started
 
 ### Technical Debt
@@ -24,6 +24,151 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed "Reading Notes" template to "Notes While Reading" with simplified content (single `## Notes While Reading` header)
 - Added new "Thoughts After Reading" template with `## Thoughts After Reading` header
 - Template dropdown now shows 3 options: Structured Review, Notes While Reading, Thoughts After Reading
+
+---
+
+## [0.31.0] - 2026-02-02
+
+### Added
+
+#### Phase 9.5 Work Group 1 Session C: Navigation & Layout Overhaul 🧭
+Major navigation redesign affecting bottom nav, Library header, and all detail pages.
+
+**C1: Bottom Nav Redesign**
+- Replaced Library book icon with italic script "L" (Libre Baskerville font)
+- Replaced Add button with Settings (gear icon, navigates to /settings)
+- Created new Settings page with UnifiedNavBar title-only variant
+- Added Google Fonts link for Libre Baskerville
+
+**Bottom Nav Order (New):**
+| Position | Item | Icon |
+|----------|------|------|
+| 1 | Library | Script "L" |
+| 2 | Series | Stacked boxes |
+| 3 | Collections | List |
+| 4 | Authors | Person |
+| 5 | Settings | Gear |
+
+**C2: Remove Brand Header**
+- Removed "Liminal" brand header from Library page entirely
+- Library tabs (Home/Browse/Wishlist) now topmost element with sticky positioning
+- Added action icons to tab bar right side:
+  - Home tab: [+] [🔍]
+  - Browse tab: [+] [🔍] [🔽]
+  - Wishlist tab: [+] [🔍] [🔽]
+- Wired up actions: + → /add, 🔍 → search modal, 🔽 → filter drawer
+- Removed legacy Header component from App.jsx
+
+**C3: Detail Page Contextual Nav**
+- Created `UnifiedNavBar` component with two variants:
+  - Back link variant: `backTo` (Link-based) or `onBack` (callback-based)
+  - Title-only variant: for Settings page
+- Applied to all detail pages with contextual back navigation:
+
+| Page | Back Label | Destination |
+|------|------------|-------------|
+| Book Detail | Dynamic | returnUrl from state (Collections/Series/Authors/Library) |
+| Series Detail | Series | Browser history (navigate -1) |
+| Author Detail | Authors | Browser history (navigate -1) |
+| Collection Detail | Collections | /collections |
+| Settings | (title only) | N/A |
+| Add Page | Back | Multi-step form logic (handleBack) |
+
+**returnUrl Pattern:**
+- BookDetail reads `returnUrl` from location state
+- SeriesDetail passes `returnUrl` when linking to books
+- Back label dynamically shows origin ("← Collections", "← Series", etc.)
+
+---
+
+### Removed
+
+**Legacy Components:**
+- Removed Header component render from App.jsx (brand bar no longer used)
+- Removed Add button from bottom nav (replaced with Settings)
+- Removed book icon from Library nav item (replaced with script "L")
+
+**From Library.jsx:**
+- Removed brand header section ("Liminal" + gear icon)
+- Removed `isLibraryPage` conditional logic from App.jsx
+
+---
+
+### Changed
+
+**Library Page:**
+- Tab bar now sticky at `top-0` (was `top-[57px]`)
+- Tabs use underline style instead of pill buttons
+- Actions integrated into tab bar header
+
+**Detail Pages:**
+- All detail pages now use UnifiedNavBar for consistent navigation
+- Responsive padding: `px-4 md:px-8` on all nav bars
+
+**Navigation Behavior:**
+- SeriesDetail/AuthorDetail use history-based back (`navigate(-1)`)
+- BookDetail uses explicit returnUrl for predictable navigation
+- AddPage preserves multi-step form back navigation
+
+---
+
+### Technical
+
+#### Files Created
+- `frontend/src/components/UnifiedNavBar.jsx` — Reusable contextual nav bar
+- `frontend/src/pages/Settings.jsx` — New settings page (placeholder)
+
+#### Files Modified
+- `frontend/src/components/BottomNav.jsx` — Script L, Settings replaces Add
+- `frontend/src/pages/Library.jsx` — Remove brand header, restructure tab bar
+- `frontend/src/App.jsx` — Remove Header, add /settings route
+- `frontend/src/pages/BookDetail.jsx` — Use UnifiedNavBar with returnUrl
+- `frontend/src/pages/SeriesDetail.jsx` — Use UnifiedNavBar, pass returnUrl to books
+- `frontend/src/pages/AuthorDetail.jsx` — Use UnifiedNavBar with history back
+- `frontend/src/pages/CollectionDetail.jsx` — Use UnifiedNavBar
+- `frontend/src/pages/AddPage.jsx` — Use UnifiedNavBar with handleBack
+- `frontend/index.html` — Add Libre Baskerville Google Font
+
+#### Component API
+```jsx
+// Back link variant (Link-based)
+<UnifiedNavBar backLabel="Library" backTo="/" />
+
+// Back link variant (callback-based)
+<UnifiedNavBar backLabel="Back" onBack={handleBack} />
+
+// Title-only variant
+<UnifiedNavBar title="Settings" />
+
+// With right-side content
+<UnifiedNavBar backLabel="Library" backTo="/">
+  <button>•••</button>
+</UnifiedNavBar>
+```
+
+#### Navigation Specs
+```
+Script "L": font-family: 'Libre Baskerville'; font-style: italic; font-size: 1.5rem
+Nav icon size: 24px (w-6 h-6)
+Colors: #6b6b6b (inactive) / #14b8a6 (active)
+```
+
+---
+
+### Known Issues (To Fix)
+
+- **Author Detail → Book returnUrl** — Not passing returnUrl; back shows "Library" instead of "Authors"
+- **Search filter redirect** — Filter link in search modal redirects to Home instead of filtered Browse
+
+---
+
+### Development Stats
+- **Date:** February 2, 2026
+- **Session:** Phase 9.5 Work Group 1, Session C (C1-C3)
+- **Files created:** 2 (UnifiedNavBar.jsx, Settings.jsx)
+- **Files modified:** 9
+- **Components added:** 1 (UnifiedNavBar)
+- **Items completed:** 11 (C1: 3, C2: 4, C3: 4)
 
 ---
 

@@ -1,18 +1,21 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** February 1, 2026 (v0.30.0)  
-> **Current Focus:** Phase 9.5 — Pre-Migration Completion  
+> **Last Updated:** March 19, 2026 (v0.32.0)  
+> **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
 
 ## Vision
 
-Liminal is a personal reading companion that eliminates the friction of managing an ebook library across multiple systems. It provides a single, mobile-friendly home for browsing, tracking, discovering, and reflecting on books — both owned and wished for — so that the reader can spend less time managing and more time in the liminal space of reading.
+Liminal is a **connected reading hub** that eliminates friction across your entire reading ecosystem. It integrates with external metadata sources, your reading app, your notes system, and local AI — so you spend less time managing and more time in the liminal space of reading.
+
+**The old vision** was a polished, standalone book management UI.  
+**The new vision** is an integration layer that connects everything together.
 
 ---
 
-## Current State (v0.30.0)
+## Current State (v0.31.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -26,362 +29,542 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Collections system | ✅ Smart Collections complete |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
-| Book detail page | 🔄 Sessions A, B, B+ complete — Session C next |
 | Editions system | ✅ Add formats, merge duplicates |
 | Automated backups | ✅ Grandfather-father-son rotation |
-| Folder structure independence | ✅ File metadata primary |
-| Custom cover upload | ✅ Restored (Session B+) |
-| Auto cover extraction | ✅ Restored (Session B+) |
-| Gradient covers | ✅ Fixed |
+| Navigation | ✅ UnifiedNavBar, bottom nav redesign |
+
+**What's Missing:**
+- ❌ No reusable component library (inconsistent UI across screens)
+- ❌ Can't download/open books from the app
+- ❌ Wishlist requires manual metadata entry
+- ❌ No connection to Moon Reader
+- ❌ Notes are siloed from Obsidian
+- ❌ No usage analytics to inform UI decisions
+- ❌ No intelligent analysis of fanfiction content
 
 ---
 
 ## Roadmap Overview
 
 ```
-┌───────────┬──────────────────────────────────────────────────────────┐
-│  CURRENT  │  Phase 9.5: Pre-Migration Completion                     │
-│           │  10 work groups, ~80 items (~3-4 weeks)                  │
-│           │  Complete each area fully before moving on               │
-├───────────┼──────────────────────────────────────────────────────────┤
-│   PREP    │  Phase 10: Design System Refactor (1 week)               │
-├───────────┼──────────────────────────────────────────────────────────┤
-│   PREP    │  Phase 11: React Native Learning (1 week)                │
-├───────────┼──────────────────────────────────────────────────────────┤
-│   MAJOR   │  Phase 12: React Native Web Migration (3-4 weeks)        │
-├───────────┼──────────────────────────────────────────────────────────┤
-│  FUTURE   │  Phase 13: AI Enhancements                               │
-└───────────┴──────────────────────────────────────────────────────────┘
+┌───────────┬──────────────────────────────────────────────────────────────┐
+│  CURRENT  │  Phase 10: Liminal Connects                                  │
+│           │  9 sub-phases, ~17-23 sessions                               │
+│           │  Ship each sub-phase independently                           │
+├───────────┼──────────────────────────────────────────────────────────────┤
+│  PARALLEL │  Critical Fixes                                              │
+│           │  Cherry-picked bugs from Phase 9.5                           │
+│           │  Address opportunistically between features                  │
+├───────────┼──────────────────────────────────────────────────────────────┤
+│  FUTURE   │  Phase 11: Smart Features                                    │
+│           │  Recommendations, mood-based discovery                       │
+│           │  Requires Phase 10 data/infrastructure                       │
+└───────────┴──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 9.5: Pre-Migration Completion ← CURRENT
+## Phase 10: Liminal Connects ← CURRENT
 
-**Goal:** Complete all remaining Phase 9 features before React Native migration.
+**Goal:** Transform Liminal from a standalone app into a connected hub that integrates with your reading ecosystem.
 
-**Philosophy:** Complete each work group fully before moving to the next. No scattered, half-done work.
+**Philosophy:** Each sub-phase ships independently and delivers immediate value. No waiting for a "big bang" release.
 
-**Estimated Timeline:** 19-28 working sessions (~3-4 weeks)
+**Estimated Timeline:** 17-23 working sessions (~5-7 weeks)
 
 ---
 
-### Work Group 1: Book Detail Page Completion
+### 10.0: Component Foundation
 
-**Status:** 🔄 In Progress (Sessions A, B, B+ complete)  
-**Files:** `BookDetail.jsx`, `UnifiedEditModal.jsx`, `ChangeCoverModal.jsx`, `CollectionPicker.jsx`, `Library.jsx`, `BottomNav.jsx`
+**Priority:** P0 — Prerequisite for Consistent Development  
+**Status:** 🔄 Session A Complete — Session B Next  
+**Sessions:** 2
 
-**Session A — Menu & Icon Consolidation: ✅ Complete**
-- [x] 1.2 **Remove Scattered Edit Icons** — Removed tag/merge/pencil icons from header area
-- [x] 1.3 **Add 3-Dot Menu** — Desktop dropdown + mobile bottom sheet with all actions
-- [x] 1.4 **Move Add Format to Menu** — Removed standalone button
-- [x] 1.A1 **Move Rescan Metadata to Menu** — Removed standalone section
-- [x] 1.A2 **Move Add Reading Session to Menu** — Removed inline "+ Add Session" links
-- [x] 1.A3 **Move Add to Collection to Menu** — Removed inline "+ Add" link
-- [x] 1.A4 **Toast Notification System** — Added for rescan feedback (loading/success/error)
-- [x] 1.A5 **Wishlist Menu Filtering** — Menu items filtered appropriately (library vs wishlist)
-- [x] 1.A6 **Component Stability** — Extracted Toast/ThreeDotMenu outside BookDetail to prevent remounts
-- [x] 1.A7 **Memory Leak Prevention** — Toast timeout cleanup on unmount via useRef
+**The Problem:**  
+No reusable components exist. Every screen has slightly different buttons, headers, cards, spacing, and colors. This causes:
+- Visual inconsistency across the app
+- Slow feature development (reinventing UI each time)
+- Maintenance burden (fixing the same thing in 12 places)
 
-**Session B — Unified Edit Modal: ✅ Complete**
-- [x] 1.1 **Unified Edit Modal** — Combined EditBookModal + EnhancedMetadataModal into single tabbed modal
-  - Segmented control tab navigation (iOS-style)
-  - Dynamic tabs: 2 tabs (Details, About) or 3 tabs (+Metadata for FanFiction)
-  - Details tab: Title, Authors, Series/Number, Category, Year, Source URL
-  - About tab: Summary (or "Why this one?" for wishlist), Tags, Pairing Type (Fiction/FanFic only)
-  - Metadata tab: Completion Status, Fandom, Ships, Content Rating, Warnings (FanFic library only)
-  - Characters field removed from UI (merged into Tags)
-  - Single "Save" button for all tabs
-- [x] 1.B2 **Delete Legacy Modals** — Removed EditBookModal.jsx and EnhancedMetadataModal.jsx
-- [x] 1.B3 **Menu Consolidation** — "Edit Details...", "Edit About & Tags...", "Change Cover..." → single "Edit..."
+**The Solution:**  
+Establish design tokens and core components before building Phase 10 features. All new code will use these primitives, ensuring consistency going forward.
 
-**Session B+ — Change Cover Modal: ✅ Complete**
-- [x] 1.B1 **Change Cover Modal** — Dedicated modal for cover management
-  - Cover preview (200×300px) with source badge
-  - Upload Image / Extract from EPUB / Use Gradient Instead
-  - Added "Change Cover" to 3-dot menu (after Edit, before divider)
-  - Fixed EPUB detection (editions not formats)
-  - Fixed pairing_type → ao3_category field mapping
+**Reference Documents:**
+- `DESIGN_SYSTEM_REFACTOR.md` — January 2026 audit of 29 screens, component inventory, inconsistency analysis
+- `RN_DESIGN_TOKENS.md` — Token definitions (colors, spacing, typography, etc.)
 
-**Session C — Navigation & Layout Overhaul: ⬅️ CURRENT**
+**⚠️ Caveat:** These documents were created in January 2026. Several features have shipped since then (UnifiedEditModal, ChangeCoverModal, UnifiedNavBar, Toast, ThreeDotMenu, CollapsibleSection, ReadingStatusCard, Smart Collections). Session 10.0A should begin with a quick audit refresh to capture new patterns.
 
-This is a major session that addresses navigation chrome and Book Detail layout to match mockups.
+---
 
-**C1: Bottom Nav Redesign**
-- [ ] 1.C1 **Script "L" for Library** — Replace book icon with italic script "L" (Libre Baskerville)
-- [ ] 1.C2 **Settings Replaces Add** — Remove Add from bottom nav, add Settings (gear icon)
-- [ ] 1.C3 **Update Active States** — Ensure script L displays correctly in active/inactive states
+**Session 10.0A: Tokens + Audit Refresh**
 
-**C2: Remove Brand Header**
-- [ ] 1.C4 **Remove Brand Bar from Library** — Delete "Liminal" + gear header entirely
-- [ ] 1.C5 **Tabs Start at Top** — Library tabs (Home/Browse/Wishlist) become top element
-- [ ] 1.C6 **Tab Bar Actions** — Add icons to right side of tab bar:
-  - Home tab: `[+]` `[🔍]`
-  - Browse tab: `[+]` `[🔍]` `[🔽]`
-  - Wishlist tab: `[+]` `[🔍]` `[🔽]`
-- [ ] 1.C7 **Wire Up Actions** — + opens Add screen, 🔍 opens search modal → results on Browse, 🔽 opens filter
+- [x] 10.0.1 **Audit Refresh** — Quick review of components built since January:
+  - UnifiedNavBar (good pattern, extract)
+  - Toast (good pattern, already extracted)
+  - ThreeDotMenu/BottomSheet (good pattern, extract)
+  - CollapsibleSection (good pattern, extract)
+  - ReadingStatusCard (review for reusability)
+  - UnifiedEditModal tabs (SegmentedControl pattern)
+- [x] 10.0.2 **Color Tokens** — Add to `tailwind.config.js`:
+  - Background: base, surface, elevated
+  - Text: primary, secondary, muted
+  - Action: primary (indigo), success (green), danger (red), secondary (gray)
+  - Chip colors: category, status, metadata
+- [x] 10.0.3 **Typography Classes** — Custom Tailwind utilities:
+  - Headings: h1, h2, h3, h4
+  - Body: body, bodySmall, caption, label
+- [x] 10.0.4 **Document Token Usage** — Quick reference for which classes to use where
 
-**C3: Detail Page Contextual Nav**
-- [ ] 1.C8 **Build UnifiedNavBar Component** — Sticky nav with back link + optional 3-dot menu
-- [ ] 1.C9 **Apply to Book Detail** — `← Library` (or origin page) + `•••` menu
-- [ ] 1.C10 **Apply to All Detail Pages** — Series, Author, Collection details use same pattern
-- [ ] 1.C11 **Settings Page Header** — Title only ("Settings"), no back link needed
+**Session 10.0B: Core Components**
 
-**C4: Book Detail Single Scroll**
-- [ ] 1.C12 **Remove Details/Notes/History Tabs** — Delete tab navigation entirely
-- [ ] 1.C13 **Single Scroll Layout** — All content in one scrollable page per mockup
-- [ ] 1.C14 **Section Order** — Cover → Series Line → Title/Author/Pills → Reading Status Card → About (collapsible) → Tags (collapsible) → Metadata → Notes → Reading History → Collections → Series
-- [ ] 1.C15 **Hide Empty Sections** — Sections with no content don't render at all
-- [ ] 1.C16 **Simplify Info Pills** — Remove sub-labels, keep just: read time, year, category
-- [ ] 1.C17 **Move Ebook Badge** — Into metadata section or remove
+- [ ] 10.0.5 **Button Component** — `components/ui/Button.jsx`
+  - Variants: primary, secondary, ghost, danger
+  - Sizes: sm, md, lg
+  - States: loading, disabled
+  - 44px minimum touch target
+- [ ] 10.0.6 **IconButton Component** — `components/ui/IconButton.jsx`
+  - Consistent sizing and hover states
+  - Optional tooltip
+- [ ] 10.0.7 **Badge Component** — `components/ui/Badge.jsx`
+  - Status badges, category pills, metadata chips
+  - Consistent sizing and colors
+- [ ] 10.0.8 **SearchInput Component** — `components/ui/SearchInput.jsx`
+  - Clear button, loading state
+  - Consistent with existing search patterns
+- [ ] 10.0.9 **Modal Component** — `components/ui/Modal.jsx`
+  - Standardized Header/Body/Footer structure
+  - ✕ always on right
+  - Consistent footer pattern (Cancel + Primary action)
+  - Sizes: sm, md, lg, fullscreen
+- [ ] 10.0.10 **BookCard Redesign** — `components/BookCard.jsx`
+  - **Visual refresh**: Review proportions, text treatment, cover display
+  - **Cross-screen consistency**: Same component used in Library grid, Collection detail, Series detail, Search results, Author detail
+  - **Variants**: Standard, compact, list view
+  - **Optional elements**: Status badge, progress indicator, quick actions
 
-**C5: Loading State**
-- [ ] 1.C18 **Branded Loading** — Replace book icon with script "L" (large, teal, pulse animation)
-- [ ] 1.C19 **Update Loading Text** — "Liminal is loading" instead of "Loading"
+**Components to Extract (Already Built Well):**
+- [ ] 10.0.11 Move `UnifiedNavBar` to `components/ui/`
+- [ ] 10.0.12 Move `Toast` to `components/ui/`
+- [ ] 10.0.13 Move `CollapsibleSection` to `components/ui/`
+- [ ] 10.0.14 Extract `BottomSheet` from ThreeDotMenu to `components/ui/`
 
-**C6: Verification**
-- [ ] 1.C20 **Test All Navigation Paths** — Verify back links work correctly from all detail pages
-- [ ] 1.C21 **Test Bottom Nav** — All 5 items work, active states correct
-- [ ] 1.C22 **Test Tab Actions** — +, search, filter all work on all tabs
-- [ ] 1.C23 **Mobile Testing** — Verify touch targets, scroll behavior, sticky nav
+**Out of Scope (Build When Needed):**
+- ChipInput (complex, defer to when forms need it)
+- StarRating (exists, refactor later)
+- FileDropZone (Add flow, not Phase 10 priority)
+- CoverCard unification (after BookCard is solid)
 
-**Session D — Collection Picker Enhancements:**
-- [ ] 1.D1 **Quick Create** — "Create new collection" option within picker
-- [ ] 1.D2 **Search** — Filter collections as you type
-- [ ] 1.D3 **Contextual Quick Create** — "Create [search term]" when no matches
-- [ ] 1.D4 **Recent Collections** — Show top 5 most recently used (API-based: `last_book_added_at`)
+---
 
-**Session E — Download & Cover Viewer:**
-- [ ] 1.E1 **EPUB Download Button** — Wire up download icon on ReadingStatusCard
-- [ ] 1.E2 **Full-Screen Cover Viewer** — Tap cover → fullscreen, dismiss via backdrop OR X button
+**Acceptance Criteria:**
+- Tokens are defined in Tailwind config
+- Core components exist in `components/ui/`
+- BookCard looks consistent across all screens
+- New Phase 10 features can import and use these components
 
-**Session F — Cleanup:**
-- [ ] 1.F1 **Move Location to Metadata** — Move location field into Metadata section
+**Definition of Done:** Foundation exists. All Phase 10.1+ code uses shared components.
 
-- [ ] **GROUP 1 COMPLETE** — Update CHANGELOG, commit
+---
 
-**Definition of Done:** Navigation redesigned (script L, no brand header, contextual nav). Book Detail is single scroll with no tabs. All actions consolidated in 3-dot menu. Collection picker has search and quick create.
+### 10.1: Download & Share
 
-**Current Menu Structure:**
+**Priority:** P0 — Highest Impact  
+**Status:** ⬜ Not Started  
+**Sessions:** 1-2
+
+**The Problem:**  
+Finding and opening a book currently requires: Open Liminal → Note the book → Open NAS file browser → Navigate to books folder → Search → Download → Open in Moon Reader. This takes 1-2 minutes every time.
+
+**The Solution:**  
+One-tap download with share sheet integration.
+
+**Tasks:**
+- [ ] 10.1.1 **Serve EPUB Files** — Backend endpoint to serve book files with proper MIME type
+- [ ] 10.1.2 **Download Button** — Add "Read" button to ReadingStatusCard on BookDetail
+- [ ] 10.1.3 **Edition Selection** — If multiple editions exist, show picker (default to EPUB)
+- [ ] 10.1.4 **Web Share API** — Integrate share sheet for "Open in Moon Reader" on mobile
+- [ ] 10.1.5 **Fallback Download** — Direct download for browsers without Web Share API
+- [ ] 10.1.6 **Download Feedback** — Loading state, success/error toast
+
+**Acceptance Criteria:**
+- Tap "Read" on any library book → file downloads or share sheet opens
+- Can select Moon Reader from share sheet and book opens
+- Works on Android Chrome (primary use case)
+
+**Definition of Done:** The "find book → read book" loop is closed. No more NAS searching.
+
+---
+
+### 10.2: Usage Analytics
+
+**Priority:** P1 — Foundational  
+**Status:** ⬜ Not Started  
+**Sessions:** 1
+
+**The Problem:**  
+No data on how the app is actually used. UI decisions are based on guesswork instead of evidence.
+
+**The Solution:**  
+Simple event logging to SQLite. No external tools needed.
+
+**Tasks:**
+- [ ] 10.2.1 **Events Table** — Create `events` table (event, timestamp, metadata JSON)
+- [ ] 10.2.2 **Log Endpoint** — `POST /api/analytics/event` 
+- [ ] 10.2.3 **Frontend Helper** — `trackEvent(event, metadata)` function
+- [ ] 10.2.4 **Core Events** — Instrument key interactions:
+  - `nav_tapped` (item: library/series/collections/authors/settings)
+  - `search_opened` (from: home/browse/wishlist)
+  - `book_opened` (book_id, from: library/collection/series/search)
+  - `book_downloaded` (book_id)
+  - `wishlist_added` (method: manual/search/photo)
+  - `filter_applied` (filter_type)
+  - `tab_switched` (tab: home/browse/wishlist)
+- [ ] 10.2.5 **Query Examples** — Document useful SQL queries for analysis
+
+**Acceptance Criteria:**
+- Events are logged to database
+- Can query "what do I tap most?" and get real data
+- No visible impact on app performance
+
+**Definition of Done:** Data collection begins. Every day of usage adds insight.
+
+---
+
+### 10.3: External Book Search
+
+**Priority:** P2 — High Frequency Pain  
+**Status:** ⬜ Not Started  
+**Sessions:** 2-3
+
+**The Problem:**  
+Adding a book to wishlist requires manually typing title, author, summary. This happens weekly and takes 5+ minutes per book.
+
+**The Solution:**  
+Search external APIs and one-tap import.
+
+**Tasks:**
+- [ ] 10.3.1 **Google Books Integration** — Search endpoint, parse results
+- [ ] 10.3.2 **Open Library Fallback** — Secondary source when Google Books misses
+- [ ] 10.3.3 **Hardcover Integration** — Third source (has good romance/genre coverage)
+- [ ] 10.3.4 **Search UI** — Search input on Add page with results list
+- [ ] 10.3.5 **Result Display** — Cover, title, author, year for each result
+- [ ] 10.3.6 **One-Tap Import** — Select result → pre-fill form → confirm
+- [ ] 10.3.7 **Debounced Search** — Don't hit API on every keystroke
+- [ ] 10.3.8 **Loading/Empty/Error States** — Handle all cases gracefully
+- [ ] 10.3.9 **Works for Library Too** — "Search External" option when editing library books with bad metadata
+
+**API Details:**
+
+| Source | API | Auth | Coverage |
+|--------|-----|------|----------|
+| Google Books | REST, free | None (basic) | Broad, weak on romance |
+| Open Library | REST, free | None | Good classics, variable |
+| Hardcover | GraphQL | API key | Strong genre fiction |
+
+**Acceptance Criteria:**
+- Search "tomorrow tomorrow zevin" → find the book
+- One tap to add to wishlist with full metadata
+- Works when only partial info is known
+
+**Definition of Done:** Wishlist entry goes from 5 minutes to 30 seconds.
+
+---
+
+### 10.4: Local AI Infrastructure
+
+**Priority:** P3 — Foundational for Future Features  
+**Status:** ⬜ Not Started  
+**Sessions:** 1-2
+
+**The Problem:**  
+AI features (analysis, photo lookup) would require expensive cloud API calls. Infrastructure for local inference doesn't exist.
+
+**The Solution:**  
+Set up Ollama on Beelink as a local AI server.
+
+**Hardware:**
+- Beelink SER8: Ryzen 7 8845HS, 32GB RAM, 1TB SSD
+- Running TrueNAS Scale
+- Connected to Synology via local network
+
+**Tasks:**
+- [ ] 10.4.1 **Install Ollama** — Docker container on TrueNAS or native install
+- [ ] 10.4.2 **Pull Models** — Llama 3 8B (text), LLaVA 13B (vision)
+- [ ] 10.4.3 **Network Config** — Ensure Synology/Liminal can reach Ollama endpoint
+- [ ] 10.4.4 **Health Check Endpoint** — Liminal can verify Ollama is running
+- [ ] 10.4.5 **Test Inference** — Verify text and vision models respond correctly
+- [ ] 10.4.6 **Document Setup** — Add to ARCHITECTURE.md for future reference
+
+**Acceptance Criteria:**
+- `curl http://beelink:11434/api/generate` returns model response
+- Liminal backend can call Ollama successfully
+- Vision model can describe an image
+
+**Definition of Done:** Local AI infrastructure is operational and ready for features.
+
+---
+
+### 10.5: Fanfic Analysis Pipeline
+
+**Priority:** P4 — Leverages 10.4  
+**Status:** ⬜ Not Started  
+**Sessions:** 2-3
+
+**The Problem:**  
+Fanfiction has rich metadata potential (tone, tropes, emotional impact) but it's not captured. Previous manual analysis via ChatGPT was tedious.
+
+**The Solution:**  
+Background analysis using local Ollama, storing structured metadata.
+
+**Tasks:**
+- [ ] 10.5.1 **Analysis Schema** — Define fields: tone, smut_level, angst_level, serotonin_level, emotional_impact, tropes, hook, warnings
+- [ ] 10.5.2 **Database Fields** — Add JSON column for AI analysis metadata
+- [ ] 10.5.3 **Analysis Prompt** — Craft prompt for consistent, structured output
+- [ ] 10.5.4 **Single Book Analysis** — "Analyze" button on BookDetail for fanfic
+- [ ] 10.5.5 **Background Worker** — Queue-based processing for batch analysis
+- [ ] 10.5.6 **Analysis Display** — Show tone/tropes/hook in BookDetail metadata section
+- [ ] 10.5.7 **Smart Chunking** — For long fics: AO3 tags + first/last chapters only (context limits)
+- [ ] 10.5.8 **Progress Tracking** — "X of Y books analyzed" indicator
+- [ ] 10.5.9 **Filter by Analysis** — Collections can filter by tone, tropes, etc.
+
+**Analysis Output Example:**
+```json
+{
+  "tone": 2,
+  "smut_level": 4,
+  "angst_level": 5,
+  "serotonin_level": 2,
+  "emotional_impact": 5,
+  "tropes": ["enemies to lovers", "slow burn", "redemption arc", "war trauma"],
+  "hook": "Draco Malfoy is assigned to protect the one person who could destroy him...",
+  "warnings": ["violence", "trauma", "dark themes"]
+}
 ```
-Edit                      → UnifiedEditModal (tabbed)
-Change Cover              → ChangeCoverModal
-─────────────────────────
-Add Reading Session       → Session modal
-Add to Collection         → Collection picker
-Add Format                → Edition modal
-─────────────────────────
-Merge                     → Merge modal
-Rescan Metadata           → Toast feedback (library books with folder only)
+
+**Acceptance Criteria:**
+- Can analyze any fanfic book with one tap
+- Analysis runs locally (no API costs)
+- Can batch-analyze library overnight
+- Analysis data is queryable in collections
+
+**Definition of Done:** Fanfic library has rich, searchable metadata without manual entry.
+
+---
+
+### 10.6: Moon Reader Integration
+
+**Priority:** P5 — High Value, Requires Setup  
+**Status:** ⬜ Not Started  
+**Sessions:** 3-4
+
+**The Problem:**  
+Reading sessions are entered manually. Highlights and bookmarks are trapped in Moon Reader.
+
+**The Solution:**  
+Read Moon Reader's sync data (via MoonSync approach) and import into Liminal.
+
+**Prerequisites:**
+- Enable WebDAV on Synology
+- Configure Moon Reader to sync to WebDAV
+- Locate `books.sync` file
+
+**Tasks:**
+- [ ] 10.6.1 **WebDAV Setup Guide** — Document how to configure Synology + Moon Reader
+- [ ] 10.6.2 **Parse books.sync** — Understand format (reference MoonSync project)
+- [ ] 10.6.3 **Book Matching** — Match Moon Reader entries to Liminal books (by filename or title)
+- [ ] 10.6.4 **Import Reading Progress** — Pages read, percentage, current position
+- [ ] 10.6.5 **Import Highlights** — Text, color, location
+- [ ] 10.6.6 **Import Sessions** — Reading dates, duration (if available)
+- [ ] 10.6.7 **Sync Trigger** — Manual "Sync from Moon Reader" button
+- [ ] 10.6.8 **Auto-Sync Option** — Periodic background sync (optional)
+- [ ] 10.6.9 **Conflict Handling** — What if Liminal has different data?
+- [ ] 10.6.10 **Display Highlights** — Show in Notes section or dedicated tab
+
+**Reference:** [MoonSync GitHub](https://github.com/titandrive/Obsidian-MoonSync) — MIT licensed, shows sync file format
+
+**Acceptance Criteria:**
+- Finish reading in Moon Reader → data appears in Liminal without manual entry
+- Highlights are captured and viewable
+- Reading progress syncs automatically (or one-tap)
+
+**Definition of Done:** Moon Reader and Liminal share reading data. Manual session entry eliminated.
+
+---
+
+### 10.7: Notes ↔ Obsidian Sync
+
+**Priority:** P6 — Important but Not Urgent  
+**Status:** ⬜ Not Started  
+**Sessions:** 2-3
+
+**The Problem:**  
+Notes in Liminal are siloed. Can't search them in Obsidian, can't link to them from other notes, can't use them in AI analysis workflows.
+
+**The Solution:**  
+Bi-directional sync between Liminal notes and markdown files in Obsidian vault.
+
+**Tasks:**
+- [ ] 10.7.1 **File Naming Convention** — `{Title} - {Author}.md` with YAML frontmatter
+- [ ] 10.7.2 **Frontmatter Schema** — book_id, title, author, series, status, rating
+- [ ] 10.7.3 **Export to Files** — Write Liminal notes as .md files
+- [ ] 10.7.4 **Import from Files** — Read .md files back into Liminal
+- [ ] 10.7.5 **Conflict Detection** — Warn if both Liminal and file have changed
+- [ ] 10.7.6 **Last-Write-Wins Option** — Simple resolution strategy
+- [ ] 10.7.7 **Sync Folder Config** — Settings to specify Obsidian vault path
+- [ ] 10.7.8 **Manual Sync Trigger** — "Sync Notes" button in Settings
+- [ ] 10.7.9 **Auto-Sync Option** — Periodic background sync
+
+**File Format Example:**
+```markdown
+---
+book_id: 1234
+title: "Tomorrow, and Tomorrow, and Tomorrow"
+author: "Gabrielle Zevin"
+series: null
+status: "read"
+rating: 5
+synced_at: 2026-03-09T10:30:00Z
+---
+
+## Notes While Reading
+
+The video game development scenes feel so authentic...
+
+## Thoughts After Reading
+
+This book broke me in the best way.
 ```
 
-**Header by Screen Type (Session C):**
-| Screen | Top Left | Top Right |
-|--------|----------|-----------|
-| Library (all tabs) | Home \| Browse \| Wishlist | + 🔍 (Home) or + 🔍 🔽 (Browse/Wishlist) |
-| Book Detail | ← Library | ••• |
-| Series Detail | ← Series | ••• |
-| Author Detail | ← Authors | ••• |
-| Collection Detail | ← Collections | ••• |
-| Settings | Settings | (none) |
+**Acceptance Criteria:**
+- Notes appear in Obsidian vault as .md files
+- Can edit in either location (with conflict warning)
+- Can search book notes in Obsidian
+
+**Definition of Done:** Notes flow between Liminal and Obsidian. Both systems have access.
 
 ---
 
-### Work Group 2: Wishlist Detail Unification
+### 10.8: Photo Lookup
 
+**Priority:** P7 — Nice to Have (Free with Local AI)  
 **Status:** ⬜ Not Started  
-**Files:** `WishlistDetail.jsx` (or merge into `BookDetail.jsx`)
+**Sessions:** 1-2
 
-- [ ] 2.1 **Refactor as Book Detail State** — Wishlist items render through BookDetail with `acquisition_status` check
-- [ ] 2.2 **Fix Notes Duplication** — "Why this one?" and "Notes" should be single field
-- [ ] 2.3 **Apply 3-Dot Menu Pattern** — Same menu pattern as Book Detail (Edit, Merge, Remove)
-- [ ] 2.4 **Match Layout Structure** — Same section order, same component usage
-- [ ] **GROUP 2 COMPLETE** — Update CHANGELOG, commit
+**The Problem:**  
+Photos of book covers sitting in camera roll, not added to wishlist because it's too tedious.
 
-**Definition of Done:** No separate WishlistDetail component. BookDetail handles both owned and wishlist items.
+**The Solution:**  
+Upload photo → local vision AI extracts title/author → feeds into external search.
 
----
+**Tasks:**
+- [ ] 10.8.1 **Photo Upload UI** — Camera/gallery button on Add page
+- [ ] 10.8.2 **Vision API Call** — Send image to Ollama LLaVA
+- [ ] 10.8.3 **Extract Title/Author** — Parse model response
+- [ ] 10.8.4 **Feed to Search** — Auto-search with extracted text
+- [ ] 10.8.5 **Confidence Display** — "Found: The Love Hypothesis by Ali Hazelwood — is this right?"
+- [ ] 10.8.6 **Fallback to Manual** — If vision fails, allow manual entry
+- [ ] 10.8.7 **Screenshot Support** — Works for screenshots of book recommendations too
 
-### Work Group 3: Series Detail Overhaul
+**Acceptance Criteria:**
+- Take photo of book → Liminal identifies it → one tap to add
+- Runs locally (no API costs)
+- Works for most clear cover photos
 
-**Status:** ⬜ Not Started  
-**Files:** `SeriesDetail.jsx`
-
-- [ ] 3.1 **Stacked Cover Mosaic Hero** — 3-cover fanned display at top (Hardcover reference)
-- [ ] 3.2 **Enrich Book List Rows** — Add: cover thumbnail, author, year, est. time
-- [ ] 3.3 **Add 3-Dot Menu** — Menu with "Edit Series" option
-- [ ] 3.4 **Add Grid/List View Toggle** — Match Collection Detail pattern
-- [ ] 3.5 **"You own X of Y" Display** — Show ownership stats prominently
-- [ ] 3.6 **Build Edit Series Modal** — Modal for editing series metadata
-- [ ] **GROUP 3 COMPLETE** — Update CHANGELOG, commit
-
-**Definition of Done:** Series Detail has mosaic hero, enriched book rows, view toggle, 3-dot menu with edit capability.
+**Definition of Done:** Photo backlog can be cleared. Physical books easily added.
 
 ---
 
-### Work Group 4: Author Detail Overhaul
+### Phase 10 Progress Summary
 
-**Status:** ⬜ Not Started  
-**Files:** `AuthorDetail.jsx`
-
-- [ ] 4.1 **Update Checkmark Style** — Match library grid style (dark badge + white check)
-- [ ] 4.2 **Add 3-Dot Menu** — Menu with "Edit Author" option
-- [ ] 4.3 **Add Grid/List View Toggle** — Match other detail pages
-- [ ] 4.4 **Standalone/Series Sections** — Separate standalone books from series groupings
-- [ ] 4.5 **Series Mosaic Cards** — Show series as grouped mosaic cards (not individual books)
-- [ ] 4.6 **Remove "Books by" Heading** — Redundant with author name at top
-- [ ] 4.7 **Add Author Notes Display** — Show notes below book count if present
-- [ ] 4.8 **Gradient Hero (Optional)** — Add gradient banner like Collections
-- [ ] **GROUP 4 COMPLETE** — Update CHANGELOG, commit
-
-**Definition of Done:** Author Detail has consistent header, view toggle, 3-dot menu, and properly separated standalone vs. series sections.
+| Sub-Phase | Name | Sessions | Status |
+|-----------|------|----------|--------|
+| 10.0 | Component Foundation | 2 | 🔄 Session A done |
+| 10.1 | Download & Share | 1-2 | ⬜ |
+| 10.2 | Usage Analytics | 1 | ⬜ |
+| 10.3 | External Book Search | 2-3 | ⬜ |
+| 10.4 | Local AI Infrastructure | 1-2 | ⬜ |
+| 10.5 | Fanfic Analysis Pipeline | 2-3 | ⬜ |
+| 10.6 | Moon Reader Integration | 3-4 | ⬜ |
+| 10.7 | Notes ↔ Obsidian Sync | 2-3 | ⬜ |
+| 10.8 | Photo Lookup | 1-2 | ⬜ |
+| | **Total** | **17-23** | |
 
 ---
 
-### Work Group 5: Collection Detail Polish
+## Critical Fixes (Parallel Track)
 
-**Status:** ⬜ Not Started  
-**Files:** `CollectionDetail.jsx`
+**Goal:** Address genuinely broken functionality from Phase 9.5, without getting lost in polish work.
 
-- [ ] 5.1 **Move Instruction Banner** — Show only on type chip tap, not always visible
-- [ ] 5.2 **Checklist Pagination Fix** — Resolve infinite loop issue (see Technical Debt)
-- [ ] 5.3 **Empty State Improvements** — Better messaging when collection is empty
-- [ ] 5.4 **Drag Handle Visibility** — Only show reorder handles in edit mode
-- [ ] **GROUP 5 COMPLETE** — Update CHANGELOG, commit
+**Philosophy:** Fix these opportunistically — as warmup tasks, or when they actively annoy you. Don't block feature work.
 
-**Definition of Done:** Collection Detail has cleaner UI with hidden instruction banner and fixed pagination.
+### Navigation & Scroll Issues ⚠️
 
----
+- [ ] **Scroll Position Restoration** — Back navigation should return to previous scroll position
+- [ ] **Author Detail returnUrl** — Pass returnUrl when linking to books (back shows "Library" instead of "Authors")
+- [ ] **Search Filter Redirect** — Filter link in search modal goes to Home instead of filtered Browse
 
-### Work Group 6: Landing Pages & Navigation
+### Layout Issues ⚠️
 
-**Status:** ⬜ Not Started  
-**Files:** Various landing pages
+- [ ] **Book Detail Layout** — Tab content layout issues (reported but specifics TBD)
+- [ ] **Notes Section Layout** — Formatting/display issues in notes area
+- [ ] **Series Landing Page** — Missing page title, layout issues
+- [ ] **Authors Landing Page** — Missing page title, layout issues
 
-- [ ] 6.1 **Authors Landing Page** — Grid of author cards with book counts
-- [ ] 6.2 **Series Landing Page** — Grid of series cards with mosaic covers
-- [ ] 6.3 **Tags Landing Page** — Tag cloud or grid with usage counts
-- [ ] 6.4 **Fandoms Landing Page** — Grid for FanFiction fandoms
-- [ ] 6.5 **Ships Landing Page** — Grid for FanFiction ships
-- [ ] 6.6 **Navigation Menu Update** — Add links to new landing pages
-- [ ] 6.7 **Breadcrumb Navigation** — Consistent back navigation across pages
-- [ ] 6.8 **Recently Added Section** — Show newest books on home
-- [ ] 6.9 **Continue Reading Section** — Show in-progress books on home
-- [ ] 6.10 **Random Pick Feature** — "What should I read?" button
-- [ ] 6.11 **Search Improvements** — Search across all entity types
-- [ ] 6.12 **Filter Persistence** — Remember filter state across navigation
-- [ ] **GROUP 6 COMPLETE** — Update CHANGELOG, commit
+### Functional Bugs ⚠️
 
-**Definition of Done:** All entity types have landing pages. Navigation is consistent and discoverable.
+- [ ] **Checklist Pagination Loop** — Infinite spinner flicker at bottom of large checklists
+- [ ] **Cover Cache Issues** — Changes don't reflect immediately after editing many covers
+
+### Low Priority Cleanup
+
+- [ ] **TBRList → Wishlist Rename** — File still named TBRList.jsx
 
 ---
 
-### Work Group 7: Library Home Improvements
+## Killed / Deferred
 
-**Status:** ⬜ Not Started  
-**Files:** `Library.jsx`
+These items were on the previous roadmap but are **no longer planned**:
 
-- [ ] 7.1 **Category Tabs** — Quick filter tabs for Fiction/Non-Fiction/FanFiction
-- [ ] 7.2 **Sort Persistence** — Remember sort preference per category
-- [ ] 7.3 **View Mode Toggle** — Grid/List view toggle
-- [ ] **GROUP 7 COMPLETE** — Update CHANGELOG, commit
+| Item | Reason |
+|------|--------|
+| **Phase 9.5 (91 polish items)** | Mostly cosmetic polish that doesn't solve real problems. Critical bugs moved to Critical Fixes track. |
+| **Phase 10 Design System Refactor** | Premature optimization. Can refactor when patterns stabilize. |
+| **Phase 11 React Native Learning** | Not needed. Web Share API provides sufficient mobile integration. |
+| **Phase 12 React Native Migration** | Massive effort with unclear benefit. Current web app works well. |
+| **Smart Suggestions** | Deferred until Phase 10.5 provides analysis data to make suggestions meaningful. |
 
-**Definition of Done:** Library home has category tabs, persistent sort, and view toggle.
-
----
-
-### Work Group 8: Forms & Settings Polish
-
-**Status:** ⬜ Not Started  
-**Files:** Various form components, `SettingsDrawer.jsx`
-
-- [ ] 8.1 **Form Validation** — Consistent validation patterns across all forms
-- [ ] 8.2 **Error Handling** — User-friendly error messages
-- [ ] 8.3 **Settings Organization** — Group related settings logically
-- [ ] 8.4 **Backup/Restore UI** — Clearer backup management interface
-- [ ] **GROUP 8 COMPLETE** — Update CHANGELOG, commit
-
-**Definition of Done:** Forms have consistent validation and error handling. Settings are well-organized.
-
----
-
-### Work Group 9: Stats Page
-
-**Status:** ⬜ Not Started  
-**Files:** New `Stats.jsx` page
-
-- [ ] 9.1 **Reading Calendar** — GitHub-style contribution graph for reading activity
-- [ ] 9.2 **Monthly/Yearly Views** — Toggle between time periods
-- [ ] 9.3 **Multiple Books Per Day** — Handle and display multiple completions
-- [ ] 9.4 **Summary Stats** — Total books, total words for selected year
-- [ ] 9.5 **Year Navigation** — Navigate between years
-- [ ] 9.6 **Link from Home** — "View Stats" link on Library/Home
-- [ ] **GROUP 9 COMPLETE** — Update CHANGELOG, commit
-
-**Definition of Done:** Stats page with calendar view, year navigation, summary stats, accessible from Home.
-
----
-
-### Work Group 10: Data Quality Tools
-
-**Status:** ⬜ Not Started  
-**Files:** New components, `SettingsDrawer.jsx`, backend routers
-
-- [ ] 10.1 **Duplicate Scanner Algorithm** — Find exact + fuzzy matches
-- [ ] 10.2 **Duplicate Review Interface** — UI to review groups
-- [ ] 10.3 **Merge from Scanner** — Merge duplicates from results
-- [ ] 10.4 **Dismiss Groups** — Mark as "not duplicates"
-- [ ] 10.5 **Fix Find Duplicates Page** — Address current page bugs
-- [ ] 10.6 **Unprocessed Files Detection** — Find folders not in library
-- [ ] 10.7 **Manual Add from Unprocessed** — Add discovered files
-- [ ] 10.8 **Dismiss Unprocessed** — Mark as "ignore"
-- [ ] 10.9 **Delete Book Backend** — `DELETE /api/books/{id}` removes record AND deletes folder/files from NAS
-- [ ] 10.10 **Delete Confirmation Modal** — Type-to-confirm field ("DELETE"), warning checkbox, shows folder path and file count
-- [ ] 10.11 **Delete Philosophy Documentation** — Update ARCHITECTURE.md to document destructive operations policy
-- [ ] **GROUP 10 COMPLETE** — Update CHANGELOG, commit
-
-**Definition of Done:** Can scan for duplicates, review and merge them. Can find unprocessed files and handle them. Can permanently delete books with robust confirmation safeguards.
-
----
-
-### Phase 9.5 Progress Summary
-
-| Group | Name | Items | Status |
-|-------|------|-------|--------|
-| 1 | Book Detail Completion | 30 | 🔄 (12/30) |
-| 2 | Wishlist Detail Unification | 4 | ⬜ |
-| 3 | Series Detail Overhaul | 6 | ⬜ |
-| 4 | Author Detail Overhaul | 8 | ⬜ |
-| 5 | Collection Detail Polish | 4 | ⬜ |
-| 6 | Landing Pages & Navigation | 12 | ⬜ |
-| 7 | Library Home Improvements | 3 | ⬜ |
-| 8 | Forms & Settings Polish | 4 | ⬜ |
-| 9 | Stats Page | 6 | ⬜ |
-| 10 | Data Quality Tools | 11 | ⬜ |
-| | **Total** | **88** | |
+**Time Saved:** ~8-10 weeks of planned work that wasn't going to help.
 
 ---
 
 ## Technical Debt
 
-Items to address when time permits (not blocking migration):
-
-### Checklist Collection Pagination Infinite Loop ⚠️
-**Location:** `CollectionDetail.jsx`  
-**Symptom:** Scrolling to bottom of large checklist collections causes infinite spinner flicker.  
-**Workaround:** Visual noise only, collection still usable.  
-**Priority:** Medium
+Items to address when time permits:
 
 ### Browser Cache Issues with Covers
 **Symptom:** Cover changes may not reflect immediately after editing many covers.  
 **Workaround:** Clear browser cache for past hour.  
 **Priority:** Low
 
-### TBRList → Wishlist Rename
-**Location:** `TBRList.jsx`  
-**Issue:** File still named TBRList. Storage key already fixed.  
-**Status:** Deferred to React Native migration.  
-**Priority:** Low
+### Checklist Collection Pagination
+**Symptom:** Infinite spinner flicker at bottom of large checklist collections.  
+**Workaround:** Visual noise only, collection still usable.  
+**Priority:** Medium — moved to Critical Fixes
+
+---
+
+## Future: Phase 11 — Smart Features
+
+**Status:** Future (after Phase 10)
+
+**Potential Features:**
+- **Mood-based suggestions** — "I want something angsty" → recommendations based on analysis data
+- **Similar book discovery** — "More like this" using trope/tone matching
+- **Reading insights** — Patterns in what you read, when, how fast
+- **Author affinity** — "You've loved 5 books by this author, here's another"
+
+**Prerequisite:** Phase 10.5 (Fanfic Analysis) provides the data foundation.
 
 ---
 
@@ -399,105 +582,83 @@ Items to address when time permits (not blocking migration):
 | 9E.5 | Collections Polish | Jan 18-19 | Landing page, detail page, reorder, gradients |
 | 9F | Book Detail Foundation | Jan 25 | CollapsibleSection, ReadingStatusCard, page structure |
 
----
+### Phase 9.5 Sessions A-C (Partial)
 
-## Phase 10: Design System Refactor
+| Session | Name | Completed | Key Deliverables |
+|---------|------|-----------|------------------|
+| A | Menu Consolidation | Feb 1 | 3-dot menu, toast system |
+| B | Unified Edit Modal | Feb 1 | Tabbed edit modal |
+| B+ | Change Cover Modal | Feb 1 | Cover management |
+| C1-C3 | Navigation Redesign | Feb 2 | Script L, tab bar, UnifiedNavBar |
 
-**Goal:** Establish unified design system before React Native migration.
-
-**Status:** Planned (after Phase 9.5)
-
-**Scope:**
-- Design tokens (colors, spacing, typography, radius)
-- Component library (buttons, inputs, cards, modals)
-- Layout primitives (containers, grids, stacks)
-- Animation standards
-- Mobile-first responsive patterns
-
-**Timeline:** 1 week
+**Note:** Phase 9.5 Sessions C4-F and Work Groups 2-11 were **not completed** and are now **abandoned** (except items moved to Critical Fixes).
 
 ---
 
-## Phase 11: React Native Learning
+## Infrastructure
 
-**Goal:** Dedicated learning phase before migration.
+### Current Architecture
 
-**Status:** Planned
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Tailscale Network                        │
+│                                                              │
+│   ┌─────────────┐         ┌─────────────────────┐           │
+│   │  Your Phone │◄───────►│      Beelink        │           │
+│   │             │         │   (TrueNAS Scale)   │           │
+│   └─────────────┘         │                     │           │
+│                           │  • Plex             │           │
+│                           │  • Ollama (10.4)    │           │
+│                           │  • Other apps       │           │
+│                           └──────────┬──────────┘           │
+│                                      │                      │
+│   ┌─────────────┐         ┌──────────▼──────────┐           │
+│   │   Synology  │◄───────►│    Synology NAS     │           │
+│   │  (Liminal)  │         │    (Storage)        │           │
+│   │             │         │                     │           │
+│   │  • Backend  │         │  • Book files       │           │
+│   │  • Frontend │         │  • SQLite DB        │           │
+│   │  • Docker   │         │  • Obsidian vault   │           │
+│   └─────────────┘         └─────────────────────┘           │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
-**Scope:**
-- React Native fundamentals
-- React Native Web setup
-- Navigation patterns
-- Performance optimization
-- Android build process
+### Future with Moon Reader Sync
 
-**Timeline:** 1 week
-
----
-
-## Phase 12: React Native Web Migration
-
-**Goal:** Port complete app to React Native, enable Android native.
-
-**Status:** Future
-
-**Approach:**
-- Start with shared components
-- Migrate screen by screen
-- Test on both web and Android
-- Deploy when feature-complete
-
-**Timeline:** 3-4 weeks
-
----
-
-## Phase 13: AI Enhancements
-
-**Goal:** Add intelligent features using LLMs.
-
-**Status:** Future
-
-**Planned features:**
-- Smart recommendations
-- Automatic summaries
-- Auto-tagging
-- Similar book discovery
-- Reading insights
-
-**Timeline:** TBD (after RN migration)
+```
+Moon+ Reader → WebDAV (Synology) → books.sync file
+                                        ↓
+                              Liminal reads + imports
+                                        ↓
+                              Reading data in DB
+```
 
 ---
 
 ## Development Philosophy
 
-1. **Mobile-first** — Every feature works great on Android
-2. **Single source of truth** — Liminal is THE place for book data
-3. **Reduce friction** — If it takes more than 2 taps, simplify it
-4. **Data integrity** — Never lose user's notes or reading history
-5. **Complete visibility** — Every book in storage visible in the app
-6. **Calm UX** — Interfaces feel peaceful, not overwhelming
-7. **Build complete, then migrate** — Finish features before framework changes
-8. **Complete each area fully** — No scattered, half-done work
+1. **Solve real friction first** — Features that save time daily beat polish that looks nice
+2. **Ship incrementally** — Each sub-phase delivers value independently
+3. **Connect, don't rebuild** — Integrate with existing tools (Moon Reader, Obsidian, Google Books) instead of replacing them
+4. **Local-first AI** — Use Ollama on Beelink to avoid API costs and keep data private
+5. **Mobile-first** — Every feature works great on Android
+6. **Data integrity** — Never lose user's notes or reading history
+7. **Measure, then optimize** — Analytics before UI redesign
 
 ---
 
 ## Reference Documents
 
-These documents contain historical context and design decisions. The roadmap checklist above is the source of truth for what remains to be done.
-
 | Document | Purpose |
 |----------|---------|
-| `PHASE_9F_DETAIL_PAGES_SPEC.md` | Original detail pages audit (design reference) |
-| `PHASE_9F_DESIGN_SUMMARY.md` | Design decisions from mockup phase |
-| `book-detail-mockup-v2.html` | Visual reference for Book Detail |
-| `phase9f-mockups-v3.html` | Visual reference for all detail pages |
-| `nav-redesign-mockup-v2.html` | Visual reference for Session C navigation |
-| `unified-edit-modal-mockup-v2.html` | Visual reference for Session B modal |
-| `change-cover-modal-mockup.html` | Visual reference for Session B+ modal |
+| `ARCHITECTURE.md` | System design, data flow (needs update after Phase 10) |
+| `CHANGELOG.md` | Version history |
 | `CODE_PATTERNS.md` | Battle-tested code solutions |
+| `CURSOR_PROMPT_GUIDE.md` | How to write effective prompts |
 
 ---
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: February 1, 2026*
+*Last updated: March 19, 2026*
