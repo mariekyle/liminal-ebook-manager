@@ -1,48 +1,59 @@
-## [0.32.0] - 2026-03-19
+## [0.33.0] - 2026-03-20
 
 ### Added
 
-#### Phase 10.0A: Design Tokens (Warm A Palette)
-Shift from blue-navy corporate dark mode to warm charcoal aesthetic inspired by Territory Studio's Swan Song UI.
+#### Phase 10.0.10: BookCard Redesign (mockup v4 approved)
+Design-only — implementation pending.
 
-**Token system established in `tailwind.config.js`:**
-- Semantic color tokens: `bg.*`, `text.*`, `border.*`, `action.*`, `chip.*`, `status.*`
-- Legacy `library.*` aliases preserved (auto-mapped to warm values)
-- Backgrounds: warm charcoal family (#1a1918, #242220, #2e2b28)
-- Text: warm off-white (#e8e4df) instead of stark #ffffff
-- Primary action: muted teal (#5e8a8a) — calm, not corporate
-- Chips: desaturated dusty colors (ambient metadata, not loud buttons)
-- Status DNF: neutral warm gray (not red — setting aside ≠ failure)
-- Calm transition timing: 0.2s ease-out
+**Grid view badges:**
+- Opaque dark bg (`rgba(26,25,24,0.88)`) + white icons for all badge types — ~7:1 contrast on any gradient
+- Finished: checkmark icon. DNF: pause icon (⏸). Wishlist: bookmark icon. Unread: no badge.
+- In Progress: 4px progress bar with opaque dark track (50% default until real percentage data exists)
+- Checklist completed: green bg badge + card dimmed to 45%
 
-**Typography utilities in `src/styles/tokens.css`:**
-- text-h1, text-h2, text-h3, text-h4 (warm off-white headings)
-- text-body, text-body-sm, text-caption, text-label (warm grays)
+**List view:**
+- Finished: checkmark overlay on cover thumbnail (50% scrim), no text status
+- DNF: pause overlay on cover thumbnail (50% scrim), no text status
+- In Progress: teal dot + label + progress bar (only status with text indicator)
+- Unread: clean row with no status indicator
+- Est. read time shown for all items
 
-**Optional utilities:**
-- `.glass-panel` — glassmorphism effect for modals
-- `.grain-overlay` — subtle noise texture for warmth
+**Killed from earlier mockup iterations:**
+- Left-edge color stripe (couldn't be intuited, added visual noise)
+- Wishlist dashed/subtle border (bookmark badge is sufficient)
+- Backdrop-blur on badges (inconsistent across gradients, poor performance)
+- Text "DNF" badge (breaks when user renames status in settings)
+- Status dot/label for finished and DNF in list view (cover overlays are clearer)
 
-#### Phase 10.0B: Core UI Components
-New reusable primitives in `components/ui/`, all using Warm A tokens.
+**Component API simplified:**
+- Three boolean props (`showTitleBelow`, `showAuthorBelow`, `showSeriesBelow`) → single `variant` prop
+- Variants: standard (3-col grid), compact (4-col grid), list (horizontal row)
 
-**Components created:**
-- `Button.jsx` — Variants: primary (teal), secondary, ghost, danger. Sizes: sm/md/lg. States: loading, disabled. 44px touch targets.
-- `IconButton.jsx` — 44px default, 36px small. Variants: default, accent. Hover tooltip.
-- `Badge.jsx` — Status badges with dot indicator (Unread, In Progress, Finished, DNF). Category badges (Fiction, FanFiction, Non-Fiction). Metadata chips (fandom, ship, character, tag).
-- `SearchInput.jsx` — Search icon, clear button, loading spinner. Controlled input with placeholder.
-- `Modal.jsx` — Standard (✕ right, footer with Cancel + action) and fullscreen (✕ left, action in header) variants. Sizes: sm/md/lg/fullscreen. Compound components: Modal.Header, Modal.Body, Modal.Footer. Escape key and backdrop click to close. Optional glassmorphism via `.glass-panel`.
-- `FormField.jsx` — Label + input/textarea with error state. Controlled with value fallback. forwardRef for programmatic focus.
+#### Phase 10.0C: Full Component Conversion (planned)
+8-session systematic conversion of all 62 JSX files to shared design system components.
 
-**Components extracted to `components/ui/`:**
-- `UnifiedNavBar.jsx` — moved from components root
-- `CollapsibleSection.jsx` — moved from components root
-- `Toast.jsx` — extracted from inline definition in BookDetail.jsx
+**Scope determined by Claude Code frontend audit (`FRONTEND_AUDIT_2026.md`):**
+- 26 bespoke modals → shared `<Modal>`
+- ~262 raw `<button>` instances → `<Button>` component
+- 81 raw form elements → `<FormField>` component
+- ~1,445 hardcoded color instances → warm token variables
+- 5 pages missing `<UnifiedNavBar>` → add nav
+- 4 modals missing Escape handler → fixed by Modal adoption
+- ChipInput, StarRating, FileDropZone → extract to components/ui/
 
-All import paths updated across: BookDetail, SeriesDetail, AuthorDetail, CollectionDetail, AddPage, Settings.
+**Timeline:** C1-C3 before 10.1 (BookDetail + Library + HomeTab), C4-C8 interleaved with features.
+
+#### Gradient Palette Warm Shift (approved)
+10 gradient lane seed colors updated from vivid Tailwind-stock to warm desaturated palette matching Warm A tokens. Implementation pending — backend-only change + database migration. GradientCover.jsx stays frozen.
 
 ### Changed
-- Phase 9.5 officially abandoned — critical bugs moved to parallel track, remaining polish items killed
-- Roadmap restructured around Phase 10: Liminal Connects
+- Roadmap updated with 10.0C conversion plan, BookCard v4 spec, gradient palette task
+- Estimated Phase 10 total: 17-23 → 25-31 sessions (10.0C adds 8 sessions)
+- ChipInput, StarRating, FileDropZone moved from "Out of Scope" back into 10.0C
+
+### Documentation
+- `FRONTEND_AUDIT_2026.md` — Complete frontend audit via Claude Code (62 files, all modals/buttons/forms/colors inventoried)
+- `bookcard-v4-final.html` — Approved BookCard mockup with all NNG recommendations
+- `gradient-cover-exploration.html` — Vivid vs warm gradient lane comparison
 
 ---
