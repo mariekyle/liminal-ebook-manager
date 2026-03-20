@@ -77,7 +77,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ### 10.0: Component Foundation
 
 **Priority:** P0 — Prerequisite for Consistent Development  
-**Status:** 🔄 Session A Complete — Session B Next  
+**Status:** 🔄 Sessions A+B mostly complete — BookCard + BottomSheet remain  
 **Sessions:** 2
 
 **The Problem:**  
@@ -118,25 +118,29 @@ Establish design tokens and core components before building Phase 10 features. A
 
 **Session 10.0B: Core Components**
 
-- [ ] 10.0.5 **Button Component** — `components/ui/Button.jsx`
+- [x] 10.0.5 **Button Component** — `components/ui/Button.jsx`
   - Variants: primary, secondary, ghost, danger
   - Sizes: sm, md, lg
   - States: loading, disabled
   - 44px minimum touch target
-- [ ] 10.0.6 **IconButton Component** — `components/ui/IconButton.jsx`
+- [x] 10.0.6 **IconButton Component** — `components/ui/IconButton.jsx`
   - Consistent sizing and hover states
   - Optional tooltip
-- [ ] 10.0.7 **Badge Component** — `components/ui/Badge.jsx`
+- [x] 10.0.7 **Badge Component** — `components/ui/Badge.jsx`
   - Status badges, category pills, metadata chips
   - Consistent sizing and colors
-- [ ] 10.0.8 **SearchInput Component** — `components/ui/SearchInput.jsx`
+- [x] 10.0.8 **SearchInput Component** — `components/ui/SearchInput.jsx`
   - Clear button, loading state
   - Consistent with existing search patterns
-- [ ] 10.0.9 **Modal Component** — `components/ui/Modal.jsx`
+- [x] 10.0.9 **Modal Component** — `components/ui/Modal.jsx`
   - Standardized Header/Body/Footer structure
   - ✕ always on right
   - Consistent footer pattern (Cancel + Primary action)
   - Sizes: sm, md, lg, fullscreen
+- [x] 10.0.9b **FormField Component** — `components/ui/FormField.jsx`
+  - Label + input/textarea with error state
+  - Controlled with value fallback, forwardRef
+  - Warm A token styling
 - [ ] 10.0.10 **BookCard Redesign** — `components/BookCard.jsx`
   - **Visual refresh**: Review proportions, text treatment, cover display
   - **Cross-screen consistency**: Same component used in Library grid, Collection detail, Series detail, Search results, Author detail
@@ -144,9 +148,9 @@ Establish design tokens and core components before building Phase 10 features. A
   - **Optional elements**: Status badge, progress indicator, quick actions
 
 **Components to Extract (Already Built Well):**
-- [ ] 10.0.11 Move `UnifiedNavBar` to `components/ui/`
-- [ ] 10.0.12 Move `Toast` to `components/ui/`
-- [ ] 10.0.13 Move `CollapsibleSection` to `components/ui/`
+- [x] 10.0.11 Move `UnifiedNavBar` to `components/ui/`
+- [x] 10.0.12 Move `Toast` to `components/ui/` (extracted from BookDetail inline)
+- [x] 10.0.13 Move `CollapsibleSection` to `components/ui/`
 - [ ] 10.0.14 Extract `BottomSheet` from ThreeDotMenu to `components/ui/`
 
 **Out of Scope (Build When Needed):**
@@ -479,7 +483,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 
 | Sub-Phase | Name | Sessions | Status |
 |-----------|------|----------|--------|
-| 10.0 | Component Foundation | 2 | 🔄 Session A done |
+| 10.0 | Component Foundation | 2 | 🔄 BookCard + BottomSheet remain |
 | 10.1 | Download & Share | 1-2 | ⬜ |
 | 10.2 | Usage Analytics | 1 | ⬜ |
 | 10.3 | External Book Search | 2-3 | ⬜ |
