@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import UnifiedNavBar from '../components/UnifiedNavBar'
+import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 
 export default function Settings() {
   return (

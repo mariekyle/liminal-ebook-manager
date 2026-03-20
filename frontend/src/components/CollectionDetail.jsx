@@ -38,7 +38,7 @@ import SmartPasteModal from './SmartPasteModal'
 import GradientCover from './GradientCover'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
-import UnifiedNavBar from './UnifiedNavBar'
+import UnifiedNavBar from './ui/UnifiedNavBar'
 
 // LocalStorage key for view mode preference
 const VIEW_MODE_KEY = 'collection_detail_view_mode'

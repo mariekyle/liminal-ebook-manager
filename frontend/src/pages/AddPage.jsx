@@ -16,7 +16,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, createEdition, getBook, linkFilesToTitle } from '../api'
-import UnifiedNavBar from '../components/UnifiedNavBar'
+import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'

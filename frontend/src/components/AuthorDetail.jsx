@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getAuthor, getSettings } from '../api'
 import GradientCover from './GradientCover'
 import EditAuthorModal from './EditAuthorModal'
-import UnifiedNavBar from './UnifiedNavBar'
+import UnifiedNavBar from './ui/UnifiedNavBar'
 
 function AuthorDetail() {
   const { name } = useParams()

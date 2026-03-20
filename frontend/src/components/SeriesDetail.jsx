@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getSeriesDetail } from '../api'
-import UnifiedNavBar from './UnifiedNavBar'
+import UnifiedNavBar from './ui/UnifiedNavBar'
 
 function SeriesDetail() {
   const { name } = useParams()
