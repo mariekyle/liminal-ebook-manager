@@ -66,7 +66,7 @@ class TitleSummary(BaseModel):
     series_number: Optional[str] = None
     category: Optional[str] = None
     status: Optional[str] = None
-    rating: Optional[int] = None
+    rating: Optional[float] = None
     word_count: Optional[int] = None
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
@@ -92,7 +92,7 @@ class TitleDetail(BaseModel):
     series_number: Optional[str] = None
     category: Optional[str] = None
     status: Optional[str] = None
-    rating: Optional[int] = None
+    rating: Optional[float] = None
     date_started: Optional[str] = None
     date_finished: Optional[str] = None
     publication_year: Optional[int] = None
@@ -167,7 +167,7 @@ class SeriesBookItem(BaseModel):
     title: str
     series_number: Optional[str] = None
     status: Optional[str] = None
-    rating: Optional[int] = None
+    rating: Optional[float] = None
 
 
 class SeriesDetail(BaseModel):
@@ -225,7 +225,7 @@ class BookStatusUpdate(BaseModel):
 
 class BookRatingUpdate(BaseModel):
     """Request body for updating a title's rating."""
-    rating: Optional[int] = None  # None to clear rating, 1-5 to set
+    rating: Optional[float] = None  # None to clear rating, 1-5 to set
 
 
 class BookDatesUpdate(BaseModel):
