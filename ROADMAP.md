@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 25, 2026 (v0.34.0)  
+> **Last Updated:** March 28, 2026 (v0.35.0)  
 > **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.34.0)
+## Current State (v0.35.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 
 **What's Missing:**
-- ❌ Design system components exist but have 0% adoption (62 files, 0 converted)
+- ❌ Design system components exist but have low adoption (C1 complete, 61 files remaining)
 - ❌ Can't download/open books from the app
 - ❌ Wishlist requires manual metadata entry
 - ❌ No connection to Moon Reader
@@ -183,10 +183,10 @@ Establish design tokens and core components before building Phase 10 features. A
 
 ---
 
-### 10.0C: Full Component Conversion ← NEXT UP
+### 10.0C: Full Component Conversion ← IN PROGRESS
 
 **Priority:** P0 — Without this, the design system is fiction  
-**Status:** ⬜ Not Started  
+**Status:** 🔄 In Progress (C1 complete)  
 **Sessions:** 8 (C1-C3 before 10.1, C4-C8 interleaved with features)  
 **Based on:** `FRONTEND_AUDIT_2026.md` (Claude Code audit, March 2026)
 
@@ -198,16 +198,16 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 
 **Work Groups:**
 
-| Group | Files | Focus | Session |
-|-------|-------|-------|---------|
-| 1a | BookDetail (colors+buttons) | 211 colors, 45 buttons, typography | C1 |
-| 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 |
-| 2 | Library + HomeTab + TBRList | Daily drivers, missing NavBar, TBR rename | C3 |
-| 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 |
-| 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste Escape fix | C5 |
-| 6 | Series + Authors (7 files) | Colors, missing page titles, returnUrl fix | C6 |
-| 7+8 | Add flows + Upload flows (12 files) | Forms→FormField, FileDropZone extract | C7 |
-| 9+10 | Filter modals + misc (15 files) | Batch modal migration, Escape fixes, BookCard impl | C8 |
+| Group | Files | Focus | Session | Status |
+|-------|-------|-------|---------|--------|
+| 1a | BookDetail (colors+buttons) | 211 colors, 45 buttons, typography | C1 | ✅ Complete |
+| 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 | ⬜ |
+| 2 | Library + HomeTab + TBRList | Daily drivers, missing NavBar, TBR rename | C3 | ⬜ |
+| 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 | ⬜ |
+| 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste Escape fix | C5 | ⬜ |
+| 6 | Series + Authors (7 files) | Colors, missing page titles, returnUrl fix | C6 | ⬜ |
+| 7+8 | Add flows + Upload flows (12 files) | Forms→FormField, FileDropZone extract | C7 | ⬜ |
+| 9+10 | Filter modals + misc (15 files) | Batch modal migration, Escape fixes, BookCard impl | C8 | ⬜ |
 
 **Interleaved Timeline:**
 ```
@@ -216,7 +216,7 @@ C4-C8: Alongside feature phases
 ```
 
 **Critical Fixes Addressed (free during conversion):**
-- [ ] Book Detail layout issues (C1-C2)
+- [-] Book Detail layout issues (C1-C2) — color/button portion done in C1, modal/form portion in C2
 - [ ] Notes section layout issues (C1-C2)
 - [ ] Author Detail returnUrl (C6)
 - [ ] Series Landing missing page title (C6)
@@ -550,7 +550,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | Sub-Phase | Name | Sessions | Status |
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
-| 10.0C | Full Conversion | 8 | ⬜ (C1-C3 before 10.1, C4-C8 interleaved) |
+| 10.0C | Full Conversion | 8 | 🔄 In Progress (C1/8) |
 | 10.1 | Download & Share | 1-2 | ⬜ |
 | 10.2 | Usage Analytics | 1 | ⬜ |
 | 10.3 | External Book Search | 2-3 | ⬜ |
@@ -577,7 +577,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 
 ### Layout Issues ⚠️
 
-- [ ] **Book Detail Layout** — Tab content layout issues (reported but specifics TBD) (→ addressed in 10.0C Group 1)
+- [-] **Book Detail Layout** — Tab content layout issues (reported but specifics TBD) (→ color/button portion done in C1, modal/form portion in C2)
 - [ ] **Notes Section Layout** — Formatting/display issues in notes area (→ addressed in 10.0C Group 1)
 - [ ] **Series Landing Page** — Missing page title, layout issues (→ addressed in 10.0C Group 6)
 - [ ] **Authors Landing Page** — Missing page title, layout issues (→ addressed in 10.0C Group 6)
@@ -679,6 +679,7 @@ Items to address when time permits:
 | 10.0.10 | BookCard v4 | Mar 2026 | variant prop, grid badges, progress bar, list view |
 | 10.0.14 | ThreeDotMenu Extraction | Mar 2026 | Shared component for all detail pages |
 | 10.0.15 | Warm Gradient Palette | Mar 2026 | 10 warm lanes, migration of 1,700+ covers |
+| 10.0C-1 | BookDetail colors+buttons | Mar 2026 | 211 colors tokenized, 30 buttons converted, typography mapped |
 
 ---
 
@@ -749,4 +750,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 25, 2026*
+*Last updated: March 28, 2026*

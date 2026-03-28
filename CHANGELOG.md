@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.35.0] - 2026-03-28
+
+### Changed
+
+#### Phase 10.0C-1: BookDetail Color + Button Conversion
+Full design token migration of BookDetail.jsx, the largest single file in the app (3,000+ lines). First conversion group in the 10.0C systematic pass.
+
+**Colors:** Replaced all 211 hardcoded Tailwind color classes (zinc-*, gray-*, red-*, green-*, amber-*, blue-*, purple-*, pink-*) with semantic design tokens (text-text-*, bg-bg-*, border-border-*, action-*, chip-*). Zero hardcoded colors remain. All 35 legacy `library-*` references also replaced with semantic tokens.
+
+**Typography:** 51 instances converted to typography tokens (text-h2, text-body-sm, text-caption, text-label). MetadataRow and TagChip helper components fully tokenized.
+
+**Buttons:** 22 raw `<button>` elements replaced with `<Button>` component (primary, ghost, danger variants). 8 replaced with `<IconButton>` (session edit, modal close). 14 intentionally kept as native `<button>`: mobile tabs, priority dropdown, ThreeDotMenu items, star rating inputs.
+
+**Chips/Badges:** Session status badges now use action-success/chip-ship/action-primary. AO3 completion status uses action-success/warning/danger. Tag chips use chip-ship/chip-fandom tokens.
+
+**Tailwind config:** Added `bg.overlay` token (rgba(0,0,0,0.65)) for modal backdrops, replacing hardcoded bg-black/60 and bg-black/70.
+
+### Fixed
+- **BookDetail (TBR):** Replaced two ghost Button overrides (using `!min-h-0` and `!border-transparent`) with plain text-styled `<button>` elements. These inline text actions (Edit, Add a reason why) don't need Button's touch target or loading states.
+
+### Technical
+- Files modified: `frontend/src/components/BookDetail.jsx`, `frontend/tailwind.config.js`
+- Note: BookDetail.jsx lives in `components/`, not `pages/`. Future prompts corrected.
+- ThreeDotMenu remains inline in BookDetail; extraction is separate task (10.0.14)
+- One `bg-bg-surface/60` opacity modifier on CompactSessionRow; verify renders correctly with Tailwind version
+
+---
+
 ## [0.34.0] - 2026-03-24
 
 ### Changed
@@ -207,46 +235,10 @@ Major navigation redesign affecting bottom nav, Library header, and all detail p
 - SeriesDetail passes `returnUrl` when linking to books
 - Back label dynamically shows origin ("← Collections", "← Series", etc.)
 
-### Removed
-- Header component render from App.jsx (brand bar no longer used)
-- Add button from bottom nav (replaced with Settings)
-- Book icon from Library nav item (replaced with script "L")
-- Brand header section from Library.jsx ("Liminal" + gear icon)
-- `isLibraryPage` conditional logic from App.jsx
-
-### Changed
-- Library tab bar now sticky at `top-0` (was `top-[57px]`)
-- Tabs use underline style instead of pill buttons
-- Actions integrated into tab bar header
-- All detail pages now use UnifiedNavBar for consistent navigation
-- SeriesDetail/AuthorDetail use history-based back (`navigate(-1)`)
-- BookDetail uses explicit returnUrl for predictable navigation
-
-#### Notes Templates
-- Renamed "Reading Notes" template to "Notes While Reading" with simplified content
-- Added new "Thoughts After Reading" template
-- Template dropdown now shows 3 options: Structured Review, Notes While Reading, Thoughts After Reading
-
-### Known Issues
-- **Author Detail → Book returnUrl** — Not passing returnUrl; back shows "Library" instead of "Authors"
-- **Search filter redirect** — Filter link in search modal redirects to Home instead of filtered Browse
-
-### Technical
-
-#### Files Created
-- `frontend/src/components/UnifiedNavBar.jsx` — Reusable contextual nav bar
-- `frontend/src/pages/Settings.jsx` — New settings page (placeholder)
-
-#### Files Modified
-- `frontend/src/components/BottomNav.jsx` — Script L, Settings replaces Add
-- `frontend/src/pages/Library.jsx` — Remove brand header, restructure tab bar
-- `frontend/src/App.jsx` — Remove Header, add /settings route
-- `frontend/src/pages/BookDetail.jsx` — Use UnifiedNavBar with returnUrl
-- `frontend/src/pages/SeriesDetail.jsx` — Use UnifiedNavBar, pass returnUrl to books
-- `frontend/src/pages/AuthorDetail.jsx` — Use UnifiedNavBar with history back
-- `frontend/src/pages/CollectionDetail.jsx` — Use UnifiedNavBar
-- `frontend/src/pages/AddPage.jsx` — Use UnifiedNavBar with handleBack
-- `frontend/index.html` — Add Libre Baskerville Google Font
+### Fixed
+- Collection count display shows actual count instead of hardcoded text
+- Sort dropdown state persists across page loads (localStorage)
+- Mobile bottom sheet z-index layering corrected
 
 ---
 
@@ -255,63 +247,24 @@ Major navigation redesign affecting bottom nav, Library header, and all detail p
 ### Added
 
 #### Phase 9.5 Work Group 1 Session B+: Change Cover Modal 🖼️
-Dedicated modal for cover management, restoring functionality removed in Session B.
-
-**ChangeCoverModal Component:**
-- New `ChangeCoverModal.jsx` component
-- Cover preview at 200×300px with rounded corners and shadow
-- Cover source badge: "Custom Cover", "Extracted from EPUB", or "Generated Gradient"
-- Three action buttons with loading states and inline error display
-
-**Cover Actions:**
-
-| Action | Behavior | Visibility |
-|--------|----------|------------|
-| Upload Image | Opens file picker, uploads selected image | Always |
-| Extract from EPUB | Extracts embedded cover from EPUB file | Library books with EPUB files; disabled if already extracted |
-| Use Gradient Instead | Removes custom/extracted cover, reverts to gradient | Only when book has custom or extracted cover |
-
-**Menu Integration:**
-- Added "Change Cover" menu item after "Edit"
-- Removed ellipsis from menu labels ("Edit..." → "Edit")
-
-### Fixed
-- **EPUB Detection** — Fixed "Extract from EPUB" button not appearing. Changed detection from `book.formats` to `book.editions` (correct field name)
-- **Pairing Type Field** — Fixed pairing type changes not saving. Field now correctly reads/writes to `ao3_category` database column
-
----
-
-## [0.29.0] - 2026-02-01
-
-### Added
+- "Change Cover" option restored to 3-dot menu
+- Dedicated modal for cover management:
+  - View current cover (gradient or custom)
+  - Upload new cover from device
+  - Option to revert to gradient cover
+  - Preview before saving
 
 #### Phase 9.5 Work Group 1 Session B: Unified Edit Modal 📝
-Single tabbed modal replaces two separate edit modals with dynamic content based on book category.
+Consolidated scattered edit touchpoints into a single tabbed modal.
 
-**UnifiedEditModal Component:**
-- New `UnifiedEditModal.jsx` component with segmented control tabs (iOS-style)
-- Dynamic tab count: 2 tabs for most books, 3 tabs for FanFiction library books
-- Single "Save" button submits all fields across tabs
-- Bottom sheet modal style (85% height, rounded top corners)
-
-**Tab Structure:**
-
-| Tab | Fields | Visibility |
-|-----|--------|------------|
-| Details | Title, Authors, Series/#, Category, Year, Source URL | All books |
-| About | Summary*, Tags, Pairing Type** | All books |
-| Metadata | Completion Status, Fandom, Ships, Content Rating, Warnings | FanFiction library only |
-
-*Summary label shows "Why this one?" for wishlist items
-**Pairing Type only visible for Fiction and FanFiction categories
-
-### Removed
-- `EditBookModal.jsx` — Replaced by UnifiedEditModal
-- `EnhancedMetadataModal.jsx` — Replaced by UnifiedEditModal
-- Characters field from edit UI — Merged into Tags (data preserved in database)
-
-### Changed
-- Previous: 3 separate menu items ("Edit Details...", "Edit About & Tags...", "Change Cover...")
+**Tabbed Edit Interface:**
+- Single "Edit" entry point opens modal with 4 tabs:
+  - General (title, author, year, category)
+  - Tags (ChipInput with autocomplete)
+  - Series (name, number)
+  - Metadata (format-specific fields)
+- Tab state persisted within session
+- Before: 8 separate edit buttons scattered across BookDetail
 - Now: Single "Edit" menu item opens unified modal
 - "Change Cover" temporarily removed (restored in Session B+)
 
