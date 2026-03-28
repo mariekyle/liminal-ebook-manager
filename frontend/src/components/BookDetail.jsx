@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import CollapsibleSection from './ui/CollapsibleSection'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import UnifiedEditModal from './UnifiedEditModal'
@@ -29,8 +31,8 @@ const MetadataRow = ({ label, children, show = true }) => {
   if (!show || !children) return null
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 mb-2">
-      <span className="text-zinc-500 text-xs min-w-[80px]">{label}</span>
-      <div className="text-zinc-200 text-sm">{children}</div>
+      <span className="text-caption min-w-[80px]">{label}</span>
+      <div className="text-body-sm">{children}</div>
     </div>
   )
 }
@@ -38,13 +40,13 @@ const MetadataRow = ({ label, children, show = true }) => {
 // Helper for displaying tag chips (Phase 7.0)
 const TagChip = ({ children, variant = 'default' }) => {
   const variants = {
-    default: 'bg-zinc-800 text-zinc-300',
-    rating: 'bg-red-900/40 text-red-300 border border-red-800/50',
-    warning: 'bg-amber-900/40 text-amber-300 border border-amber-800/50',
-    ship: 'bg-pink-900/40 text-pink-300 border border-pink-800/50',
-    fandom: 'bg-purple-900/40 text-purple-300 border border-purple-800/50',
+    default: 'bg-chip-default/20 text-text-secondary',
+    rating: 'bg-action-danger/20 text-action-danger border border-action-danger/30',
+    warning: 'bg-action-warning/20 text-action-warning border border-action-warning/30',
+    ship: 'bg-chip-ship/20 text-chip-ship border border-chip-ship/30',
+    fandom: 'bg-chip-fandom/20 text-chip-fandom border border-chip-fandom/30',
   }
-  
+
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs ${variants[variant]}`}>
       {children}
@@ -134,7 +136,7 @@ const ThreeDotMenu = ({
       {/* 3-dot button */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors"
+        className="text-text-secondary hover:text-text-primary p-1.5 rounded hover:bg-bg-elevated transition-colors"
         aria-label="More actions"
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -148,15 +150,15 @@ const ThreeDotMenu = ({
       {menuOpen && (
         <>
           {/* Desktop dropdown - hidden on mobile */}
-          <div className="hidden md:block absolute right-0 top-full mt-1 w-56 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+          <div className="hidden md:block absolute right-0 top-full mt-1 w-56 bg-bg-surface border border-border-default rounded-lg shadow-xl z-50 py-1 overflow-hidden">
             {visibleItems.map((item, idx) => (
               item.type === 'divider' ? (
-                <div key={idx} className="border-t border-zinc-700 my-1" />
+                <div key={idx} className="border-t border-border-default my-1" />
               ) : (
                 <button
                   key={idx}
                   onClick={item.onClick}
-                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm text-text-body hover:bg-bg-elevated transition-colors"
                 >
                   {item.label}
                 </button>
@@ -168,27 +170,27 @@ const ThreeDotMenu = ({
           <div className="md:hidden fixed inset-0 z-50">
             {/* Backdrop */}
             <div 
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-bg-overlay"
               onClick={() => setMenuOpen(false)}
             />
             
             {/* Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-zinc-900 rounded-t-2xl overflow-hidden">
+            <div className="absolute bottom-0 left-0 right-0 bg-bg-surface rounded-t-2xl overflow-hidden">
               {/* Handle */}
               <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+                <div className="w-10 h-1 bg-bg-elevated rounded-full" />
               </div>
               
               {/* Menu Items */}
               <div className="px-2 pb-2">
                 {visibleItems.map((item, idx) => (
                   item.type === 'divider' ? (
-                    <div key={idx} className="border-t border-zinc-800 my-1 mx-2" />
+                    <div key={idx} className="border-t border-border-default my-1 mx-2" />
                   ) : (
                     <button
                       key={idx}
                       onClick={item.onClick}
-                      className="w-full text-left px-4 py-3.5 text-base text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+                      className="w-full text-left px-4 py-3.5 text-base text-text-body hover:bg-bg-elevated rounded-lg transition-colors"
                     >
                       {item.label}
                     </button>
@@ -197,10 +199,10 @@ const ThreeDotMenu = ({
               </div>
               
               {/* Cancel Button */}
-              <div className="px-2 pb-6 pt-2 border-t border-zinc-800">
+              <div className="px-2 pb-6 pt-2 border-t border-border-default">
                 <button
                   onClick={() => setMenuOpen(false)}
-                  className="w-full py-3.5 text-base font-medium text-zinc-400 hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="w-full py-3.5 text-base font-medium text-text-secondary hover:bg-bg-elevated rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -1215,7 +1217,7 @@ function BookDetail() {
     return (
       <div className="text-center py-12">
         <div className="animate-pulse-slow text-4xl mb-4">📖</div>
-        <p className="text-gray-400">Loading book...</p>
+        <p className="text-text-secondary">Loading book...</p>
       </div>
     )
   }
@@ -1224,13 +1226,13 @@ function BookDetail() {
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-4">⚠️</div>
-        <p className="text-red-400">{error || 'Book not found'}</p>
-        <button 
-          onClick={() => navigate(returnUrl)} 
-          className="text-library-accent mt-4 inline-block"
+        <p className="text-action-danger">{error || 'Book not found'}</p>
+        <Link 
+          to={returnUrl} 
+          className="text-action-primary mt-4 inline-block"
         >
           ← {getBackLabel()}
-        </button>
+        </Link>
       </div>
     )
   }
@@ -1284,7 +1286,7 @@ function BookDetail() {
           <Link
             key={key}
             to={`/book/${part.book.id}`}
-            className="text-library-accent hover:underline"
+            className="text-action-primary hover:underline"
           >
             {part.title}
           </Link>
@@ -1292,7 +1294,7 @@ function BookDetail() {
       } else {
         // Book not found - render as gray text
         return (
-          <span key={key} className="text-gray-500">
+          <span key={key} className="text-text-secondary">
             {part.title}
           </span>
         )
@@ -1336,7 +1338,7 @@ function BookDetail() {
     const stars = []
     for (let i = 1; i <= maxStars; i++) {
       stars.push(
-        <span key={i} className={i <= rating ? 'text-yellow-400' : 'text-gray-600'}>
+        <span key={i} className={i <= rating ? 'text-action-warning' : 'text-text-muted'}>
           ★
         </span>
       )
@@ -1346,12 +1348,12 @@ function BookDetail() {
 
   // Compact session row for Reading History
   const CompactSessionRow = ({ session, onEdit }) => (
-    <div className="bg-zinc-800/60 rounded-lg px-4 py-3 flex justify-between items-center gap-3">
+    <div className="bg-bg-surface/60 rounded-lg px-4 py-3 flex justify-between items-center gap-3 border border-border-default">
       {/* Session info */}
       <div className="flex-1 min-w-0">
         {/* Date line - primary element */}
         {formatSessionDateRange(session.date_started, session.date_finished) && (
-          <div className="text-zinc-100 text-sm mb-1">
+          <div className="text-body-sm mb-1">
             {formatSessionDateRange(session.date_started, session.date_finished)}
           </div>
         )}
@@ -1360,10 +1362,10 @@ function BookDetail() {
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
             session.session_status === 'finished' 
-              ? 'bg-green-500/20 text-green-400' 
+              ? 'bg-action-success/20 text-action-success' 
               : session.session_status === 'dnf'
-              ? 'bg-pink-500/20 text-pink-400'
-              : 'bg-indigo-500/20 text-indigo-400'
+              ? 'bg-chip-ship/20 text-chip-ship'
+              : 'bg-action-primary/20 text-action-primary'
           }`}>
             {session.session_status === 'finished' ? (
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -1377,7 +1379,7 @@ function BookDetail() {
             {getLabel(session.session_status)}
           </span>
           {session.rating && (
-            <span className="text-yellow-400 text-sm">
+            <span className="text-action-warning text-sm">
               {'★'.repeat(session.rating)}
             </span>
           )}
@@ -1385,14 +1387,16 @@ function BookDetail() {
       </div>
       
       {/* Edit button */}
-      <button
-        className="text-zinc-500 hover:text-zinc-300 p-1 flex-shrink-0"
+      <IconButton
+        size="sm"
+        className="flex-shrink-0"
+        aria-label="Edit session"
         onClick={() => onEdit(session)}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
         </svg>
-      </button>
+      </IconButton>
     </div>
   )
 
@@ -1423,12 +1427,12 @@ function BookDetail() {
       <div className="px-4 md:px-8">
       {/* Wishlist Banner */}
       {isWishlist && (
-        <div className="bg-gray-700/50 border border-gray-600 border-dashed rounded-lg px-4 py-2 mb-6 flex items-center gap-2">
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-bg-elevated/50 border border-border-default border-dashed rounded-lg px-4 py-2 mb-6 flex items-center gap-2">
+          <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
-          <span className="text-gray-300 text-sm font-medium">WISHLIST</span>
-          <span className="text-gray-500 text-sm">— You don't own this yet</span>
+          <span className="text-label">WISHLIST</span>
+          <span className="text-text-secondary text-sm">— You don't own this yet</span>
         </div>
       )}
 
@@ -1460,31 +1464,31 @@ function BookDetail() {
           {book.series && (
             <Link 
               to={`/series/${encodeURIComponent(book.series)}`}
-              className="text-zinc-500 hover:text-teal-400 text-sm mb-1 text-center md:text-left block transition-colors"
+              className="text-text-secondary hover:text-action-primary text-sm mb-1 text-center md:text-left block transition-colors"
             >
               {book.series} #{book.series_number || '?'}
             </Link>
           )}
           
-          <h1 className="text-xl md:text-2xl font-bold text-white mb-1 text-center md:text-left">
+          <h1 className="text-h2 mb-1 text-center md:text-left">
             {book.title}
           </h1>
           
           {/* Completion status */}
           {book.completion_status && book.completion_status !== 'Complete' && (
-            <div className="text-gray-500 text-sm mb-1 text-center md:text-left">
+            <div className="text-text-secondary text-sm mb-1 text-center md:text-left">
               {book.completion_status}
             </div>
           )}
           
-          <p className="text-gray-400 mb-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
+          <p className="text-text-secondary mb-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
             <span>By{' '}
               {book.authors?.length > 0 ? (
                 book.authors.map((author, index) => (
                   <span key={`${author}-${index}`}>
                     <Link
                       to={`/author/${encodeURIComponent(author)}`}
-                      className="hover:text-library-accent transition-colors"
+                      className="hover:text-action-primary transition-colors"
                     >
                       {author}
                     </Link>
@@ -1497,8 +1501,8 @@ function BookDetail() {
             </span>
             {book.publication_year && (
               <>
-                <span className="text-gray-600">•</span>
-                <span className="text-gray-500">{book.publication_year}</span>
+                <span className="text-text-muted">•</span>
+                <span className="text-text-secondary">{book.publication_year}</span>
               </>
             )}
           </p>
@@ -1508,9 +1512,9 @@ function BookDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               {/* Read Time */}
               {readTimeData && (
-                <div className="bg-library-card rounded-lg px-3 py-2 text-center">
-                  <div className="text-white font-semibold">{readTimeData.display}</div>
-                  <div className="text-gray-500 text-xs">{readTimeData.microcopy}</div>
+                <div className="bg-bg-surface rounded-lg px-3 py-2 text-center border border-border-default">
+                  <div className="text-text-primary font-semibold">{readTimeData.display}</div>
+                  <div className="text-caption">{readTimeData.microcopy}</div>
                 </div>
               )}
               
@@ -1520,10 +1524,10 @@ function BookDetail() {
                   const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
                   target?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                className="bg-library-card rounded-lg px-3 py-2 text-center hover:bg-gray-700 transition-colors"
+                className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
-                <div className="text-white font-semibold">{getLabel(selectedStatus)}</div>
-                <div className="text-gray-500 text-xs">status</div>
+                <div className="text-text-primary font-semibold">{getLabel(selectedStatus)}</div>
+                <div className="text-caption">status</div>
               </button>
               
               {/* Rating - clickable to jump to reading history */}
@@ -1532,19 +1536,19 @@ function BookDetail() {
                   const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
                   target?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                className="bg-library-card rounded-lg px-3 py-2 text-center hover:bg-gray-700 transition-colors"
+                className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
                 <div className="flex items-center justify-center gap-0.5">
                   {[1, 2, 3, 4, 5].map(star => (
                     <span 
                       key={star} 
-                      className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-yellow-400' : 'text-gray-600'}`}
+                      className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-action-warning' : 'text-text-muted'}`}
                     >
                       ★
                     </span>
                   ))}
                 </div>
-                <div className="text-gray-500 text-xs">
+                <div className="text-caption">
                   {sessionsStats.average_rating > 0 
                     ? getRatingLabel(sessionsStats.average_rating)
                     : 'no rating'}
@@ -1552,9 +1556,9 @@ function BookDetail() {
               </button>
               
               {/* Category */}
-              <div className="bg-library-card rounded-lg px-3 py-2 text-center">
-                <div className="text-white font-semibold">{selectedCategory || 'Uncategorized'}</div>
-                <div className="text-gray-500 text-xs">category</div>
+              <div className="bg-bg-surface rounded-lg px-3 py-2 text-center border border-border-default">
+                <div className="text-text-primary font-semibold">{selectedCategory || 'Uncategorized'}</div>
+                <div className="text-caption">category</div>
               </div>
             </div>
           )}
@@ -1564,12 +1568,12 @@ function BookDetail() {
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
               {book.editions?.map((edition) => {
                 const formatConfig = {
-                  ebook: { label: 'Ebook', color: 'bg-blue-900/50 text-blue-300 border-blue-700', hoverX: 'hover:bg-blue-800/50' },
-                  physical: { label: 'Physical', color: 'bg-amber-900/50 text-amber-300 border-amber-700', hoverX: 'hover:bg-amber-800/50' },
-                  audiobook: { label: 'Audiobook', color: 'bg-purple-900/50 text-purple-300 border-purple-700', hoverX: 'hover:bg-purple-800/50' },
-                  web: { label: 'Web', color: 'bg-emerald-900/50 text-emerald-300 border-emerald-700', hoverX: 'hover:bg-emerald-800/50' }
+                  ebook: { label: 'Ebook', color: 'bg-chip-fiction/20 text-chip-fiction border-chip-fiction/30', hoverX: 'hover:bg-bg-elevated' },
+                  physical: { label: 'Physical', color: 'bg-action-warning/20 text-action-warning border-action-warning/30', hoverX: 'hover:bg-bg-elevated' },
+                  audiobook: { label: 'Audiobook', color: 'bg-chip-fandom/20 text-chip-fandom border-chip-fandom/30', hoverX: 'hover:bg-bg-elevated' },
+                  web: { label: 'Web', color: 'bg-chip-nonfiction/20 text-chip-nonfiction border-chip-nonfiction/30', hoverX: 'hover:bg-bg-elevated' }
                 }
-                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-gray-700 text-gray-300 border-gray-600', hoverX: 'hover:bg-gray-600' }
+                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default', hoverX: 'hover:bg-bg-surface' }
                 const canDelete = book.editions?.length > 1
                 
                 return (
@@ -1580,18 +1584,20 @@ function BookDetail() {
                   >
                     {config.label}
                     {canDelete && (
-                      <button
+                      <IconButton
+                        type="button"
+                        size="sm"
+                        className={`ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full !w-7 !h-7 min-h-0 ${config.hoverX}`}
+                        aria-label={`Remove ${config.label} edition`}
                         onClick={(e) => {
                           e.stopPropagation()
                           setEditionToDelete({ ...edition, label: config.label })
                         }}
-                        className={`ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0.5 ${config.hoverX}`}
-                        title={`Remove ${config.label} edition`}
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                      </button>
+                      </IconButton>
                     )}
                   </span>
                 )
@@ -1605,7 +1611,7 @@ function BookDetail() {
               href={book.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-library-accent hover:underline text-sm mt-3 block truncate"
+              className="text-action-primary hover:underline text-sm mt-3 block truncate"
             >
               {book.source_url.replace(/^https?:\/\//, '')}
             </a>
@@ -1616,13 +1622,13 @@ function BookDetail() {
       {/* Mobile Tab Navigation - only show on mobile for owned books */}
       {!isWishlist && (
         <div className="md:hidden mb-4">
-          <div className="flex border-b border-gray-700">
+          <div className="flex border-b border-border-default">
             <button
               onClick={() => setActiveTab('details')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'details'
-                  ? 'text-library-accent border-b-2 border-library-accent'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-action-primary border-b-2 border-action-primary'
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               Details
@@ -1631,8 +1637,8 @@ function BookDetail() {
               onClick={() => setActiveTab('notes')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'notes'
-                  ? 'text-library-accent border-b-2 border-library-accent'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-action-primary border-b-2 border-action-primary'
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               Notes
@@ -1641,8 +1647,8 @@ function BookDetail() {
               onClick={() => setActiveTab('history')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'history'
-                  ? 'text-library-accent border-b-2 border-library-accent'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-action-primary border-b-2 border-action-primary'
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               History
@@ -1655,29 +1661,29 @@ function BookDetail() {
       {/* On mobile: show in Details tab OR History tab. On desktop: only show for Wishlist */}
       <div className={`${
   isWishlist 
-    ? 'bg-library-card rounded-lg p-4 mb-6' 
+    ? 'bg-bg-surface border border-border-default rounded-lg p-4 mb-6' 
     : (activeTab === 'details' || activeTab === 'history') 
-      ? 'border-t border-zinc-800 pt-4 mt-4 md:hidden'
+      ? 'border-t border-border-default pt-4 mt-4 md:hidden'
       : 'hidden'
 }`}>
         {isWishlist ? (
           /* TBR UI */
           <div>
             <div className="flex flex-wrap gap-3 items-center mb-4">
-              <span className="text-gray-400 text-sm">Priority:</span>
+              <span className="text-label">Priority:</span>
               
               {/* Priority Chip + Popup */}
               <div className="relative">
                 <button
                   onClick={() => setPriorityPopupOpen(!priorityPopupOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-base border border-border-default hover:border-text-muted transition-colors cursor-pointer"
                 >
                   <span className={`text-sm ${
-                    selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
+                    selectedPriority === 'high' ? 'text-action-warning' : 'text-text-body'
                   }`}>
                     {selectedPriority === 'high' ? '⭐ High Priority' : 'Normal'}
                   </span>
-                  <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -1690,14 +1696,14 @@ function BookDetail() {
                       onClick={() => setPriorityPopupOpen(false)}
                     />
                     {/* Popup */}
-                    <div className="absolute top-full left-0 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                    <div className="absolute top-full left-0 mt-1 bg-bg-base border border-border-default rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
                       <button
                         onClick={() => {
                           handlePriorityChange('normal')
                           setPriorityPopupOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                          selectedPriority === 'normal' ? 'text-library-accent' : 'text-gray-300'
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bg-elevated transition-colors ${
+                          selectedPriority === 'normal' ? 'text-action-primary' : 'text-text-body'
                         }`}
                       >
                         Normal
@@ -1707,8 +1713,8 @@ function BookDetail() {
                           handlePriorityChange('high')
                           setPriorityPopupOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                          selectedPriority === 'high' ? 'text-amber-400' : 'text-gray-300'
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bg-elevated transition-colors ${
+                          selectedPriority === 'high' ? 'text-action-warning' : 'text-text-body'
                         }`}
                       >
                         ⭐ High Priority
@@ -1718,16 +1724,16 @@ function BookDetail() {
                 )}
                 
                 {priorityStatus === 'saved' && (
-                  <span className="text-green-400 text-sm ml-1">✓</span>
+                  <span className="text-action-success text-sm ml-1">✓</span>
                 )}
                 {priorityStatus === 'error' && (
-                  <span className="text-red-400 text-sm ml-1">!</span>
+                  <span className="text-action-danger text-sm ml-1">!</span>
                 )}
               </div>
               
               {/* Category - Read Only Chip */}
               {selectedCategory && (
-                <span className="px-3 py-1.5 rounded-full bg-library-bg border border-gray-600 text-sm text-gray-300">
+                <span className="px-3 py-1.5 rounded-full bg-bg-base border border-border-default text-sm text-text-body">
                   {selectedCategory}
                 </span>
               )}
@@ -1737,14 +1743,15 @@ function BookDetail() {
             {(book.tbr_reason || isEditingReason) && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-sm">Why this one?</span>
+                  <span className="text-label">Why this one?</span>
                   {!isEditingReason && (
                     <button
+                      type="button"
+                      className="text-action-primary hover:underline text-sm"
                       onClick={() => {
                         setReasonDraft(book.tbr_reason || '')
                         setIsEditingReason(true)
                       }}
-                      className="text-library-accent text-sm hover:underline"
                     >
                       Edit
                     </button>
@@ -1757,26 +1764,25 @@ function BookDetail() {
                       onChange={(e) => setReasonDraft(e.target.value)}
                       placeholder="A friend recommended it, saw it on TikTok..."
                       rows={2}
-                      className="w-full bg-library-bg border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-library-accent resize-none"
+                      className="w-full bg-bg-base border border-border-default rounded-lg px-3 py-2 text-sm text-text-body placeholder:text-text-muted focus:outline-none focus:border-border-focus resize-none"
                     />
                     <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => setIsEditingReason(false)}
-                        className="text-gray-400 text-sm hover:text-gray-300"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setIsEditingReason(false)}>
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={handleReasonSave}
                         disabled={reasonLoading}
-                        className="text-library-accent text-sm hover:underline disabled:opacity-50"
+                        loading={reasonLoading}
                       >
-                        {reasonLoading ? 'Saving...' : 'Save'}
-                      </button>
+                        Save
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-300 text-sm italic">"{book.tbr_reason}"</p>
+                  <p className="text-body-sm italic">"{book.tbr_reason}"</p>
                 )}
               </div>
             )}
@@ -1784,44 +1790,46 @@ function BookDetail() {
             {/* Add reason link if none exists */}
             {!book.tbr_reason && !isEditingReason && (
               <button
+                type="button"
+                className="text-action-primary hover:underline text-sm mb-4"
                 onClick={() => {
                   setReasonDraft('')
                   setIsEditingReason(true)
                 }}
-                className="text-library-accent text-sm hover:underline mb-4 block"
               >
-                + Add why you want to read this
+                + Add a reason why
               </button>
             )}
             
             {/* "I got this book" button */}
-            <div className="pt-3 border-t border-gray-700">
-              <button
+            <div className="pt-3 border-t border-border-default">
+              <Button
+                variant="primary"
+                className="w-full"
                 onClick={() => setShowAcquireModal(true)}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
               >
                 I got this book!
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
           /* Library Reading Tracker UI - Reading History Only */
           <>
             {/* Reading History Section */}
-            <div className={`mt-4 pt-4 border-t border-gray-700 ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
+            <div className={`mt-4 pt-4 border-t border-border-default ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
               <div className="space-y-4">
                 {/* Header */}
                 <div className="mb-3">
-                  <h3 id="reading-history" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+                  <h3 id="reading-history" className="text-label uppercase tracking-wide">
                     Reading History
                   </h3>
                 </div>
 
                 {/* Sessions List */}
                 {sessionsLoading ? (
-                  <div className="text-gray-500 text-sm">Loading sessions...</div>
+                  <div className="text-text-secondary text-sm">Loading sessions...</div>
                 ) : sessions.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No reading sessions recorded</div>
+                  <div className="text-text-secondary text-sm">No reading sessions recorded</div>
                 ) : (
                   <div className="space-y-2">
                     {sessions.map((session) => (
@@ -1836,18 +1844,18 @@ function BookDetail() {
 
                 {/* Stats Row */}
                 {sessions.length > 0 && (
-                  <div className="border-t border-gray-700 pt-4 mt-4">
+                  <div className="border-t border-border-default pt-4 mt-4">
                     <div className="flex justify-between text-sm">
                       <div>
-                        <div className="text-gray-400">Times Read</div>
-                        <div className="text-white font-semibold text-lg">{sessionsStats.times_read}</div>
+                        <div className="text-text-secondary">Times Read</div>
+                        <div className="text-text-primary font-semibold text-lg">{sessionsStats.times_read}</div>
                       </div>
                       {sessionsStats.average_rating && (
                         <div className="text-right">
-                          <div className="text-gray-400">Average Rating</div>
-                          <div className="text-white font-semibold text-lg flex items-center justify-end gap-1">
+                          <div className="text-text-secondary">Average Rating</div>
+                          <div className="text-text-primary font-semibold text-lg flex items-center justify-end gap-1">
                             {sessionsStats.average_rating}
-                            <span className="text-yellow-400">★</span>
+                            <span className="text-action-warning">★</span>
                           </div>
                         </div>
                       )}
@@ -1939,10 +1947,10 @@ function BookDetail() {
                 label: 'Status', 
                 value: (
                   <span className={`text-xs px-2 py-0.5 rounded ${
-                    book.completion_status === 'Complete' ? 'bg-green-900/40 text-green-300' :
-                    book.completion_status === 'WIP' ? 'bg-yellow-900/40 text-yellow-300' :
-                    book.completion_status === 'Abandoned' ? 'bg-red-900/40 text-red-300' :
-                    'bg-zinc-800 text-zinc-400'
+                    book.completion_status === 'Complete' ? 'bg-action-success/20 text-action-success' :
+                    book.completion_status === 'WIP' ? 'bg-action-warning/20 text-action-warning' :
+                    book.completion_status === 'Abandoned' ? 'bg-action-danger/20 text-action-danger' :
+                    'bg-chip-default/20 text-text-muted'
                   }`}>
                     {book.completion_status}
                   </span>
@@ -1955,7 +1963,7 @@ function BookDetail() {
                     href={book.source_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-teal-400 hover:text-teal-300 text-xs truncate max-w-[250px] inline-block"
+                    className="text-action-primary hover:opacity-90 text-xs truncate max-w-[250px] inline-block"
                   >
                     {book.source_url?.replace(/^https?:\/\//, '')?.split('/')?.slice(0, 2)?.join('/')}
                   </a>
@@ -1993,9 +2001,9 @@ function BookDetail() {
               <>
                 {/* About This Book - Summary (collapsible) */}
                 {hasSummary && (
-                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                  <div className="border-t border-border-default pt-4 mt-4">
                     <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
-                      <p className="text-zinc-300 text-sm leading-relaxed">
+                      <p className="text-body-sm leading-relaxed">
                         {decodeHtmlEntities(book.summary)}
                       </p>
                     </CollapsibleSection>
@@ -2004,7 +2012,7 @@ function BookDetail() {
                 
                 {/* Tags Section (collapsible) */}
                 {hasTags && (
-                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                  <div className="border-t border-border-default pt-4 mt-4">
                     <CollapsibleSection 
                       title="Tags" 
                       variant="tags" 
@@ -2015,7 +2023,7 @@ function BookDetail() {
                         {allTags.map((tag, idx) => (
                           <span 
                             key={idx}
-                            className="px-2.5 py-1 bg-zinc-800 rounded-md text-sm text-zinc-300"
+                            className="px-2.5 py-1 bg-bg-elevated rounded-md text-sm text-text-body border border-border-default"
                           >
                             {tag}
                           </span>
@@ -2027,13 +2035,13 @@ function BookDetail() {
                 
                 {/* Metadata Section (collapsible) */}
                 {hasMetadata && (
-                  <div className="border-t border-zinc-800 pt-4 mt-4">
+                  <div className="border-t border-border-default pt-4 mt-4">
                     <CollapsibleSection title="Metadata" variant="grid" className="border-t-0">
                       <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                         {metadataEntries.map((entry, idx) => (
                           <Fragment key={idx}>
-                            <span className="text-zinc-500">{entry.label}</span>
-                            <div className="text-zinc-300">{entry.value}</div>
+                            <span className="text-caption">{entry.label}</span>
+                            <div className="text-body-sm">{entry.value}</div>
                           </Fragment>
                         ))}
                       </div>
@@ -2049,20 +2057,20 @@ function BookDetail() {
 
       {/* Reading History Section - Desktop only (appears after About This Book) */}
       {!isWishlist && (
-        <div className="hidden md:block border-t border-zinc-800 pt-4 mt-4">
+        <div className="hidden md:block border-t border-border-default pt-4 mt-4">
           <div className="space-y-4">
             {/* Header */}
             <div className="mb-3">
-              <h3 id="reading-history-desktop" className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+              <h3 id="reading-history-desktop" className="text-label uppercase tracking-wide">
                 Reading History
               </h3>
             </div>
 
             {/* Sessions List */}
             {sessionsLoading ? (
-              <div className="text-gray-500 text-sm">Loading sessions...</div>
+              <div className="text-text-secondary text-sm">Loading sessions...</div>
             ) : sessions.length === 0 ? (
-              <div className="text-gray-500 text-sm">No reading sessions recorded</div>
+              <div className="text-text-secondary text-sm">No reading sessions recorded</div>
             ) : (
               <div className="space-y-2">
                 {sessions.map((session) => (
@@ -2077,18 +2085,18 @@ function BookDetail() {
 
             {/* Stats Row */}
             {sessions.length > 0 && (
-              <div className="border-t border-gray-700 pt-4 mt-4">
+              <div className="border-t border-border-default pt-4 mt-4">
                 <div className="flex justify-between text-sm">
                   <div>
-                    <div className="text-gray-400">Times Read</div>
-                    <div className="text-white font-semibold text-lg">{sessionsStats.times_read}</div>
+                    <div className="text-text-secondary">Times Read</div>
+                    <div className="text-text-primary font-semibold text-lg">{sessionsStats.times_read}</div>
                   </div>
                   {sessionsStats.average_rating && (
                     <div className="text-right">
-                      <div className="text-gray-400">Average Rating</div>
-                      <div className="text-white font-semibold text-lg flex items-center justify-end gap-1">
+                      <div className="text-text-secondary">Average Rating</div>
+                      <div className="text-text-primary font-semibold text-lg flex items-center justify-end gap-1">
                         {sessionsStats.average_rating}
-                        <span className="text-yellow-400">★</span>
+                        <span className="text-action-warning">★</span>
                       </div>
                     </div>
                   )}
@@ -2101,20 +2109,20 @@ function BookDetail() {
 
       {/* Collections Section - show for owned books */}
       {!isWishlist && (
-        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+        <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="mb-3">
-            <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Collections</h2>
+            <h2 className="text-label uppercase tracking-wide">Collections</h2>
           </div>
           
           {collectionsLoading ? (
-            <div className="text-gray-500 text-sm">Loading...</div>
+            <div className="text-text-secondary text-sm">Loading...</div>
           ) : bookCollections.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {bookCollections.map(collection => (
                 <a
                   key={collection.id}
                   href={`/collections/${collection.id}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-sm text-zinc-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-surface hover:bg-bg-elevated rounded-full text-sm text-text-body border border-border-default transition-colors"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
                     <line x1="8" y1="6" x2="21" y2="6" />
@@ -2129,44 +2137,44 @@ function BookDetail() {
               ))}
             </div>
           ) : (
-            <p className="text-zinc-500 text-sm">Not in any collections</p>
+            <p className="text-text-secondary text-sm">Not in any collections</p>
           )}
         </div>
       )}
 
       {/* Notes Section */}
       {/* On mobile: only show in Notes tab (or always for wishlist). On desktop: always show */}
-      <div className={`border-t border-zinc-800 pt-4 mt-4 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
+      <div className={`border-t border-border-default pt-4 mt-4 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide">Notes</h2>
+          <h2 className="text-label uppercase tracking-wide">Notes</h2>
           
           <div className="flex items-center gap-2">
             {saveStatus === 'saved' && (
-              <span className="text-green-400 text-sm">✓ Saved</span>
+              <span className="text-action-success text-sm">✓ Saved</span>
             )}
             {saveStatus === 'error' && (
-              <span className="text-red-400 text-sm">Failed to save</span>
+              <span className="text-action-danger text-sm">Failed to save</span>
             )}
             
-            <button
+            <IconButton
+              size="sm"
               onClick={() => setIsEditingNotes(true)}
-              className="text-gray-400 hover:text-white p-1"
               aria-label="Edit notes"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-            </button>
+            </IconButton>
           </div>
         </div>
         
         {/* Note Content - Read mode only */}
         {noteContent ? (
-          <div className="prose prose-invert prose-sm max-w-none text-gray-300">
+          <div className="prose prose-invert prose-sm max-w-none text-text-body">
             <ReactMarkdown
               components={{
-                h2: ({children}) => <h2 className="text-base font-semibold text-white mt-4 mb-2 first:mt-0">{children}</h2>,
-                h3: ({children}) => <h3 className="text-sm font-semibold text-white mt-3 mb-1">{children}</h3>,
+                h2: ({children}) => <h2 className="text-h4 mt-4 mb-2 first:mt-0">{children}</h2>,
+                h3: ({children}) => <h3 className="text-body-sm font-semibold text-text-primary mt-3 mb-1">{children}</h3>,
                 p: ({children}) => {
                   // Process children to handle [[Book Title]] links
                   const processChildren = (child, childIndex) => {
@@ -2180,13 +2188,13 @@ function BookDetail() {
                     ? children.map((child, i) => processChildren(child, i)).flat()
                     : processChildren(children, 0)
                   
-                  return <p className="text-gray-300 text-sm mb-2">{processed}</p>
+                  return <p className="text-body-sm mb-2">{processed}</p>
                 },
-                hr: () => <hr className="border-gray-600 my-4" />,
-                strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
-                em: ({children}) => <em className="text-gray-300">{children}</em>,
-                ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-300 mb-2">{children}</ul>,
-                ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-300 mb-2">{children}</ol>,
+                hr: () => <hr className="border-border-default my-4" />,
+                strong: ({children}) => <strong className="text-text-primary font-semibold">{children}</strong>,
+                em: ({children}) => <em className="text-text-body">{children}</em>,
+                ul: ({children}) => <ul className="list-disc list-inside text-sm text-text-body mb-2">{children}</ul>,
+                ol: ({children}) => <ol className="list-decimal list-inside text-sm text-text-body mb-2">{children}</ol>,
                 li: ({children}) => {
                   const processChildren = (child, childIndex) => {
                     if (typeof child === 'string') {
@@ -2207,41 +2215,36 @@ function BookDetail() {
             </ReactMarkdown>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm italic">No notes yet. Click the edit button to add some.</p>
+          <p className="text-text-secondary text-sm italic">No notes yet. Click the edit button to add some.</p>
         )}
       </div>
 
       {/* Notes Editor Full-Screen Modal */}
       {isEditingNotes && (
-        <div className="fixed inset-0 z-50 bg-library-bg flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-bg-base flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-library-card">
-            <button
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-default bg-bg-surface">
+            <IconButton
               onClick={saving ? undefined : handleCancelEdit}
               disabled={saving}
-              className={`p-1 ${saving ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
               aria-label="Close editor"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </IconButton>
             
-            <h2 className="text-lg font-medium text-white">Edit Notes</h2>
+            <h2 className="text-h3">Edit Notes</h2>
             
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleSaveNote}
               disabled={saving}
-              className={`
-                px-4 py-1.5 rounded-lg text-sm font-medium
-                ${saving 
-                  ? 'bg-gray-600 cursor-not-allowed text-gray-400' 
-                  : 'bg-library-accent hover:opacity-90 text-white'
-                }
-              `}
+              loading={saving}
             >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+              Save
+            </Button>
           </div>
           
           {/* Toolbar */}
@@ -2251,7 +2254,7 @@ function BookDetail() {
                 handleTemplateSelect(e.target.value)
                 e.target.value = ''
               }}
-              className="bg-library-bg text-gray-300 text-sm rounded px-2 py-1 border border-gray-600 focus:border-library-accent focus:outline-none cursor-pointer"
+              className="bg-bg-base text-text-body text-sm rounded px-2 py-1 border border-border-default focus:border-border-focus focus:outline-none cursor-pointer"
               defaultValue=""
             >
               <option value="" disabled>+ Template</option>
@@ -2261,7 +2264,7 @@ function BookDetail() {
             </select>
             
             {saveStatus === 'error' && (
-              <span className="text-red-400 text-sm ml-auto">Failed to save</span>
+              <span className="text-action-danger text-sm ml-auto">Failed to save</span>
             )}
           </div>
           
@@ -2272,7 +2275,7 @@ function BookDetail() {
               value={noteContent}
               onChange={handleNoteChange}
               placeholder="Write your notes here... (Type [[ to link to a book)"
-              className="absolute inset-0 m-4 bg-transparent text-white focus:outline-none resize-none text-sm leading-relaxed"
+              className="absolute inset-0 m-4 bg-transparent text-text-primary focus:outline-none resize-none text-sm leading-relaxed"
               autoFocus
             />
           </div>
@@ -2290,24 +2293,24 @@ function BookDetail() {
       {/* Backlinks Section (hide for wishlist items) */}
       {/* On mobile: only show in Notes tab. On desktop: always show */}
       {!isWishlist && (backlinks.length > 0 || backlinksLoading) && (
-        <div className={`border-t border-zinc-800 pt-4 mt-4 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
-            Referenced by {!backlinksLoading && <span className="text-zinc-500">({backlinks.length})</span>}
+        <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
+          <h2 className="text-label uppercase tracking-wide mb-3">
+            Referenced by {!backlinksLoading && <span className="text-text-secondary">({backlinks.length})</span>}
           </h2>
           
           {backlinksLoading ? (
-            <p className="text-gray-500 text-sm">Loading...</p>
+            <p className="text-text-secondary text-sm">Loading...</p>
           ) : (
             <ul className="space-y-2">
               {backlinks.map(book => (
                 <li key={book.id}>
                   <Link
                     to={`/book/${book.id}`}
-                    className="flex items-center gap-2 text-sm hover:bg-gray-800/50 -mx-2 px-2 py-1 rounded transition-colors"
+                    className="flex items-center gap-2 text-sm hover:bg-bg-elevated/50 -mx-2 px-2 py-1 rounded transition-colors"
                   >
-                    <span className="text-library-accent">←</span>
-                    <span className="text-white truncate">{book.title}</span>
-                    <span className="text-gray-500 truncate text-xs">
+                    <span className="text-action-primary">←</span>
+                    <span className="text-text-primary truncate">{book.title}</span>
+                    <span className="text-text-secondary truncate text-xs">
                       {book.authors?.[0]}
                     </span>
                   </Link>
@@ -2321,52 +2324,52 @@ function BookDetail() {
       {/* Series Section (hide for wishlist items) */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && book.series && (
-        <div className={`bg-library-card rounded-lg overflow-hidden mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-gray-400">
+        <div className={`bg-bg-surface rounded-lg overflow-hidden mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          <div className="px-4 py-3 border-b border-border-default flex items-center justify-between">
+            <h2 className="text-label">
               {book.series}
             </h2>
             <Link 
               to={`/series/${encodeURIComponent(book.series)}`}
-              className="text-library-accent text-sm hover:underline"
+              className="text-action-primary text-sm hover:underline"
             >
               View Series →
             </Link>
           </div>
           
           {seriesLoading ? (
-            <div className="px-4 py-6 text-center text-gray-400">
+            <div className="px-4 py-6 text-center text-text-secondary">
               Loading series...
             </div>
           ) : seriesBooks.length > 0 ? (
-            <ul className="divide-y divide-gray-700">
+            <ul className="divide-y divide-border-default">
               {seriesBooks.map((seriesBook) => {
                 const isCurrentBook = seriesBook.id === book.id
                 return (
                   <li key={seriesBook.id}>
                     {isCurrentBook ? (
-                      <div className="flex items-center gap-4 px-4 py-3 bg-gray-800/50">
-                        <span className="text-zinc-500 text-sm w-8 flex-shrink-0">
+                      <div className="flex items-center gap-4 px-4 py-3 bg-bg-elevated/50">
+                        <span className="text-caption w-8 flex-shrink-0">
                           {seriesBook.series_number ? String(seriesBook.series_number).padStart(2, '0') : '—'}
                         </span>
-                        <span className="text-library-accent font-medium flex-1 truncate">
+                        <span className="text-action-primary font-medium flex-1 truncate">
                           {seriesBook.title}
                         </span>
-                        <span className="text-gray-500 text-xs">You are here</span>
+                        <span className="text-text-secondary text-xs">You are here</span>
                       </div>
                     ) : (
                       <Link
                         to={`/book/${seriesBook.id}`}
-                        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-bg-elevated/50 transition-colors"
                       >
-                        <span className="text-zinc-500 text-sm w-8 flex-shrink-0">
+                        <span className="text-caption w-8 flex-shrink-0">
                           {seriesBook.series_number ? String(seriesBook.series_number).padStart(2, '0') : '—'}
                         </span>
-                        <span className="text-white flex-1 truncate">
+                        <span className="text-text-primary flex-1 truncate">
                           {seriesBook.title}
                         </span>
                         {seriesBook.status === 'Finished' && (
-                          <span className="text-green-400">
+                          <span className="text-action-success">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
@@ -2385,9 +2388,9 @@ function BookDetail() {
       {/* File Location (hide for wishlist items - no files yet) */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && book.folder_path && (
-        <div className={`text-gray-500 text-xs ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+        <div className={`text-text-muted text-xs ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <span className="font-medium">Location: </span>
-          <code className="bg-library-card px-2 py-1 rounded">
+          <code className="bg-bg-surface px-2 py-1 rounded border border-border-default">
             {book.folder_path}
           </code>
         </div>
@@ -2395,29 +2398,32 @@ function BookDetail() {
 
       {/* Acquire Book Modal (TBR → Library) */}
       {showAcquireModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-library-card rounded-xl p-6 max-w-sm w-full">
-            <h2 className="text-xl font-semibold text-white mb-2">🎉 You got it!</h2>
-            <p className="text-gray-400 text-sm mb-4">
+        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-surface border border-border-default rounded-xl p-6 max-w-sm w-full">
+            <h2 className="text-h2 mb-2">🎉 You got it!</h2>
+            <p className="text-text-secondary text-sm mb-4">
               Moving "{book.title}" to your library.
             </p>
             
             <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">What format?</label>
+              <label className="block text-sm text-text-secondary mb-2">What format?</label>
               <div className="flex flex-col gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
                   onClick={() => {
-                    // Navigate to upload page with linkTo param
                     navigate(`/add?mode=upload&linkTo=${book.id}`)
                   }}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
                 >
-                  <div className="text-white font-medium">Ebook</div>
-                  <div className="text-gray-400 text-sm">Upload your files now</div>
-                </button>
-                <button
+                  <span className="text-text-primary font-medium w-full text-left">Ebook</span>
+                  <span className="text-text-secondary text-sm font-normal w-full text-left">Upload your files now</span>
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                  disabled={acquireLoading}
                   onClick={async () => {
                     setAcquireLoading(true)
                     try {
@@ -2432,14 +2438,15 @@ function BookDetail() {
                       setAcquireLoading(false)
                     }
                   }}
-                  disabled={acquireLoading}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
-                  <div className="text-white font-medium">Physical</div>
-                  <div className="text-gray-400 text-sm">No files to upload</div>
-                </button>
-                <button
+                  <span className="text-text-primary font-medium w-full text-left">Physical</span>
+                  <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                  disabled={acquireLoading}
                   onClick={async () => {
                     setAcquireLoading(true)
                     try {
@@ -2454,14 +2461,15 @@ function BookDetail() {
                       setAcquireLoading(false)
                     }
                   }}
-                  disabled={acquireLoading}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
-                  <div className="text-white font-medium">Audiobook</div>
-                  <div className="text-gray-400 text-sm">No files to upload</div>
-                </button>
-                <button
+                  <span className="text-text-primary font-medium w-full text-left">Audiobook</span>
+                  <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                  disabled={acquireLoading}
                   onClick={async () => {
                     setAcquireLoading(true)
                     try {
@@ -2476,47 +2484,43 @@ function BookDetail() {
                       setAcquireLoading(false)
                     }
                   }}
-                  disabled={acquireLoading}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
-                  <div className="text-white font-medium">Web-based</div>
-                  <div className="text-gray-400 text-sm">For read tracking only</div>
-                </button>
+                  <span className="text-text-primary font-medium w-full text-left">Web-based</span>
+                  <span className="text-text-secondary text-sm font-normal w-full text-left">For read tracking only</span>
+                </Button>
               </div>
             </div>
             
-            <button
-              onClick={() => setShowAcquireModal(false)}
-              className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-500 transition-colors mt-2"
-            >
+            <Button variant="ghost" className="w-full mt-2" onClick={() => setShowAcquireModal(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Session Editor Modal */}
       {sessionModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md p-6 relative">
+        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-md p-6 relative">
             {/* Close button */}
-            <button
+            <IconButton
               onClick={closeSessionModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              className="absolute top-4 right-4"
+              aria-label="Close"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </IconButton>
 
             {/* Title */}
-            <h2 className="text-xl font-semibold text-white mb-6">
+            <h2 className="text-h2 mb-6">
               {editingSession ? `Edit Read #${editingSession.session_number}` : 'Add Reading Session'}
             </h2>
 
             {/* Error message */}
             {sessionError && (
-              <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded mb-4">
+              <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
                 {sessionError}
               </div>
             )}
@@ -2525,33 +2529,33 @@ function BookDetail() {
             <div className="space-y-4">
               {/* Start Date */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Start Date</label>
+                <label className="block text-sm text-text-secondary mb-1">Start Date</label>
                 <input
                   type="date"
                   value={sessionForm.date_started}
                   onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                 />
               </div>
 
               {/* End Date */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">End Date</label>
+                <label className="block text-sm text-text-secondary mb-1">End Date</label>
                 <input
                   type="date"
                   value={sessionForm.date_finished}
                   onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                 />
               </div>
 
               {/* Format */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Format</label>
+                <label className="block text-sm text-text-secondary mb-1">Format</label>
                 <select
                   value={sessionForm.format}
                   onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                 >
                   <option value="">— Not specified</option>
                   <option value="ebook">Ebook</option>
@@ -2563,7 +2567,7 @@ function BookDetail() {
 
               {/* Status */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Status</label>
+                <label className="block text-sm text-text-secondary mb-1">Status</label>
                 <div className="flex gap-2">
                   {['in_progress', 'finished', 'dnf'].map((status) => (
                     <button
@@ -2572,11 +2576,11 @@ function BookDetail() {
                       className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
                         sessionForm.session_status === status
                           ? status === 'finished'
-                            ? 'bg-green-600 text-white'
+                            ? 'bg-action-success text-text-inverse'
                             : status === 'dnf'
-                            ? 'bg-pink-600 text-white'
-                            : 'bg-gray-600 text-white'
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-chip-ship/40 text-chip-ship'
+                            : 'bg-action-secondary text-text-primary'
+                          : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
                       }`}
                     >
                       {getLabel(status)}
@@ -2587,7 +2591,7 @@ function BookDetail() {
 
               {/* Rating */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Rating</label>
+                <label className="block text-sm text-text-secondary mb-1">Rating</label>
                 <div className={`flex gap-1 ${sessionForm.session_status === 'in_progress' ? 'opacity-40' : ''}`}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -2603,10 +2607,10 @@ function BookDetail() {
                       }}
                       className={`text-3xl transition-colors ${
                         sessionForm.session_status === 'in_progress'
-                          ? 'cursor-not-allowed text-gray-600'
+                          ? 'cursor-not-allowed text-text-muted'
                           : sessionForm.rating && star <= sessionForm.rating
-                          ? 'text-yellow-400 hover:text-yellow-300'
-                          : 'text-gray-600 hover:text-gray-500'
+                          ? 'text-action-warning hover:opacity-90'
+                          : 'text-text-muted hover:text-text-secondary'
                       }`}
                     >
                       ★
@@ -2614,7 +2618,7 @@ function BookDetail() {
                   ))}
                 </div>
                 {sessionForm.session_status === 'in_progress' && (
-                  <p className="text-xs text-gray-500 mt-1">Rating available after marking Finished or DNF</p>
+                  <p className="text-xs text-text-secondary mt-1">Rating available after marking Finished or DNF</p>
                 )}
               </div>
             </div>
@@ -2622,29 +2626,27 @@ function BookDetail() {
             {/* Actions */}
             <div className="flex gap-3 mt-6">
               {editingSession && (
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={handleDeleteSession}
                   disabled={sessionSaving}
-                  className="px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
                 >
                   Delete
-                </button>
+                </Button>
               )}
               <div className="flex-1" />
-              <button
-                onClick={closeSessionModal}
-                disabled={sessionSaving}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-              >
+              <Button variant="ghost" onClick={closeSessionModal} disabled={sessionSaving}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleSaveSession}
                 disabled={sessionSaving}
-                className="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded font-medium transition-colors disabled:opacity-50"
+                loading={sessionSaving}
               >
-                {sessionSaving ? 'Saving...' : 'Save'}
-              </button>
+                Save
+              </Button>
             </div>
           </div>
         </div>
@@ -2652,34 +2654,31 @@ function BookDetail() {
 
       {/* Add Edition Modal (Phase 8.7b) */}
       {editionModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-library-card rounded-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-md">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">Add Format</h3>
-              <button
-                onClick={() => setEditionModalOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+            <div className="flex items-center justify-between p-4 border-b border-border-default">
+              <h3 className="text-h3">Add Format</h3>
+              <IconButton onClick={() => setEditionModalOpen(false)} aria-label="Close">
                 ✕
-              </button>
+              </IconButton>
             </div>
             
             {/* Content */}
             <div className="p-4 space-y-4">
               {editionError && (
-                <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm">
+                <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm">
                   {editionError}
                 </div>
               )}
               
               {/* Format Selection */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Format *</label>
+                <label className="block text-sm text-text-secondary mb-1">Format *</label>
                 <select
                   value={editionForm.format}
                   onChange={(e) => setEditionForm({ ...editionForm, format: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                 >
                   <option value="">Select format...</option>
                   <option value="ebook">Ebook</option>
@@ -2691,31 +2690,29 @@ function BookDetail() {
               
               {/* Acquired Date (optional) */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Acquired Date (optional)</label>
+                <label className="block text-sm text-text-secondary mb-1">Acquired Date (optional)</label>
                 <input
                   type="date"
                   value={editionForm.acquired_date}
                   onChange={(e) => setEditionForm({ ...editionForm, acquired_date: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                 />
               </div>
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end gap-3 p-4 border-t border-gray-700">
-              <button
-                onClick={() => setEditionModalOpen(false)}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
+            <div className="flex justify-end gap-3 p-4 border-t border-border-default">
+              <Button variant="ghost" onClick={() => setEditionModalOpen(false)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleSaveEdition}
                 disabled={editionSaving || !editionForm.format}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                loading={editionSaving}
               >
-                {editionSaving ? 'Adding...' : 'Add Format'}
-              </button>
+                Add Format
+              </Button>
             </div>
           </div>
         </div>
@@ -2723,40 +2720,37 @@ function BookDetail() {
 
       {/* Merge Modal (Phase 8.7d) */}
       {mergeModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-library-card rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">
+            <div className="flex items-center justify-between p-4 border-b border-border-default">
+              <h3 className="text-h3">
                 {mergeStep === 'search' ? 'Merge into Another Book' : 'Confirm Merge'}
               </h3>
-              <button
-                onClick={() => setMergeModalOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+              <IconButton onClick={() => setMergeModalOpen(false)} aria-label="Close">
                 ✕
-              </button>
+              </IconButton>
             </div>
             
             {/* Content */}
             <div className="p-4 flex-1 overflow-y-auto">
               {mergeError && (
-                <div className="bg-red-900/30 border border-red-700 rounded p-3 text-red-300 text-sm mb-4">
+                <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm mb-4">
                   {mergeError}
                 </div>
               )}
               
               {mergeStep === 'search' && (
                 <>
-                  <p className="text-gray-400 text-sm mb-4">
+                  <p className="text-text-secondary text-sm mb-4">
                     Search for the book you want to merge this one INTO. The selected book will be kept, and this book's data will be moved to it.
                   </p>
                   
                   {/* Current book preview */}
-                  <div className="bg-library-bg rounded-lg p-3 mb-4">
-                    <div className="text-xs text-gray-500 mb-1">This book (will be merged and deleted):</div>
-                    <div className="font-medium text-white">{book.title}</div>
-                    <div className="text-sm text-gray-400">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                  <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
+                    <div className="text-caption mb-1">This book (will be merged and deleted):</div>
+                    <div className="font-medium text-text-primary">{book.title}</div>
+                    <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
                   </div>
                   
                   {/* Search input */}
@@ -2766,11 +2760,11 @@ function BookDetail() {
                       value={mergeSearch}
                       onChange={(e) => handleMergeSearch(e.target.value)}
                       placeholder="Search by title..."
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+                      className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
                       autoFocus
                     />
                     {mergeSearching && (
-                      <div className="absolute right-3 top-2.5 text-gray-400 text-sm">
+                      <div className="absolute right-3 top-2.5 text-text-secondary text-sm">
                         Searching...
                       </div>
                     )}
@@ -2779,25 +2773,27 @@ function BookDetail() {
                   {/* Search results */}
                   {mergeResults.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-500 mb-2">Select the book to merge into:</div>
+                      <div className="text-caption mb-2">Select the book to merge into:</div>
                       {mergeResults.map((result) => (
-                        <button
+                        <Button
                           key={result.id}
+                          type="button"
+                          variant="secondary"
                           onClick={() => selectMergeTarget(result)}
-                          className="w-full text-left bg-library-bg hover:bg-gray-700 rounded-lg p-3 transition-colors"
+                          className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5 !text-left"
                         >
-                          <div className="font-medium text-white">{result.title}</div>
-                          <div className="text-sm text-gray-400">{result.authors?.join(', ') || 'Unknown Author'}</div>
+                          <span className="font-medium text-text-primary w-full">{result.title}</span>
+                          <span className="text-sm text-text-secondary font-normal w-full">{result.authors?.join(', ') || 'Unknown Author'}</span>
                           {result.category && (
-                            <div className="text-xs text-gray-500 mt-1">{result.category}</div>
+                            <span className="text-caption mt-1 w-full">{result.category}</span>
                           )}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   )}
                   
                   {mergeSearch.length >= 2 && mergeResults.length === 0 && !mergeSearching && (
-                    <div className="text-gray-500 text-sm text-center py-4">
+                    <div className="text-text-secondary text-sm text-center py-4">
                       No matching books found
                     </div>
                   )}
@@ -2806,12 +2802,12 @@ function BookDetail() {
               
               {mergeStep === 'confirm' && mergeTarget && (
                 <>
-                  <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4 mb-4">
+                  <div className="bg-action-warning/20 border border-action-warning rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-2">
-                      <span className="text-amber-400 text-lg">⚠️</span>
+                      <span className="text-action-warning text-lg">⚠️</span>
                       <div>
-                        <div className="font-medium text-amber-300">This action cannot be undone</div>
-                        <div className="text-sm text-amber-200/80 mt-1">
+                        <div className="font-medium text-action-warning">This action cannot be undone</div>
+                        <div className="text-sm text-text-secondary mt-1">
                           All data from the source book will be moved to the target, and the source will be permanently deleted.
                         </div>
                       </div>
@@ -2821,29 +2817,29 @@ function BookDetail() {
                   {/* Visual merge preview */}
                   <div className="space-y-3">
                     {/* Source (current book - will be deleted) */}
-                    <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
-                      <div className="text-xs text-red-400 mb-1 font-medium">SOURCE (will be deleted)</div>
-                      <div className="font-medium text-white">{book.title}</div>
-                      <div className="text-sm text-gray-400">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                    <div className="bg-action-danger/20 border border-action-danger rounded-lg p-3">
+                      <div className="text-xs text-action-danger mb-1 font-medium">SOURCE (will be deleted)</div>
+                      <div className="font-medium text-text-primary">{book.title}</div>
+                      <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
                     </div>
                     
                     {/* Arrow */}
-                    <div className="flex justify-center text-gray-500">
+                    <div className="flex justify-center text-text-secondary">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                       </svg>
                     </div>
                     
                     {/* Target (selected book - will be kept) */}
-                    <div className="bg-green-900/20 border border-green-800 rounded-lg p-3">
-                      <div className="text-xs text-green-400 mb-1 font-medium">TARGET (will be kept)</div>
-                      <div className="font-medium text-white">{mergeTarget.title}</div>
-                      <div className="text-sm text-gray-400">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
+                    <div className="bg-action-success/20 border border-action-success rounded-lg p-3">
+                      <div className="text-xs text-action-success mb-1 font-medium">TARGET (will be kept)</div>
+                      <div className="font-medium text-text-primary">{mergeTarget.title}</div>
+                      <div className="text-sm text-text-secondary">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
                     </div>
                   </div>
                   
-                  <div className="mt-4 text-sm text-gray-400">
-                    <div className="font-medium text-gray-300 mb-2">What will be moved:</div>
+                  <div className="mt-4 text-sm text-text-secondary">
+                    <div className="font-medium text-text-body mb-2">What will be moved:</div>
                     <ul className="list-disc list-inside space-y-1">
                       <li>All editions (file formats)</li>
                       <li>All reading sessions</li>
@@ -2856,30 +2852,25 @@ function BookDetail() {
             </div>
             
             {/* Footer */}
-            <div className="flex justify-between gap-3 p-4 border-t border-gray-700">
+            <div className="flex justify-between gap-3 p-4 border-t border-border-default">
               {mergeStep === 'confirm' && (
-                <button
-                  onClick={() => setMergeStep('search')}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                >
+                <Button variant="ghost" onClick={() => setMergeStep('search')}>
                   ← Back
-                </button>
+                </Button>
               )}
               <div className="flex-1" />
-              <button
-                onClick={() => setMergeModalOpen(false)}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
+              <Button variant="ghost" onClick={() => setMergeModalOpen(false)}>
                 Cancel
-              </button>
+              </Button>
               {mergeStep === 'confirm' && (
-                <button
+                <Button
+                  variant="danger"
                   onClick={handleMerge}
                   disabled={mergeSaving}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                  loading={mergeSaving}
                 >
-                  {mergeSaving ? 'Merging...' : 'Merge & Delete'}
-                </button>
+                  Merge & Delete
+                </Button>
               )}
             </div>
           </div>
@@ -2971,44 +2962,39 @@ function BookDetail() {
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       {editionToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-library-card rounded-lg w-full max-w-sm">
+        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-sm">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">Remove Edition</h3>
-              <button
-                onClick={() => setEditionToDelete(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+            <div className="flex items-center justify-between p-4 border-b border-border-default">
+              <h3 className="text-h3">Remove Edition</h3>
+              <IconButton onClick={() => setEditionToDelete(null)} aria-label="Close">
                 ✕
-              </button>
+              </IconButton>
             </div>
             
             {/* Content */}
             <div className="p-4">
-              <p className="text-gray-300">
-                Remove the <span className="font-semibold text-white">{editionToDelete.label}</span> edition from this title?
+              <p className="text-body-sm">
+                Remove the <span className="font-semibold text-text-primary">{editionToDelete.label}</span> edition from this title?
               </p>
-              <p className="text-gray-500 text-sm mt-2">
+              <p className="text-text-secondary text-sm mt-2">
                 This won't delete any reading sessions associated with this format.
               </p>
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end gap-3 p-4 border-t border-gray-700">
-              <button
-                onClick={() => setEditionToDelete(null)}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
+            <div className="flex justify-end gap-3 p-4 border-t border-border-default">
+              <Button variant="ghost" onClick={() => setEditionToDelete(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
                 onClick={handleDeleteEdition}
                 disabled={editionDeleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                loading={editionDeleting}
               >
-                {editionDeleting ? 'Removing...' : 'Remove'}
-              </button>
+                Remove
+              </Button>
             </div>
           </div>
         </div>

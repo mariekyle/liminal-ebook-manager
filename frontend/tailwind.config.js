@@ -29,6 +29,7 @@ export default {
           base: '#1a1918',
           surface: '#242220',
           elevated: '#2e2b28',
+          overlay: 'rgba(0, 0, 0, 0.65)', // modal backdrops (replaces bg-black/60–70)
         },
 
         // Text — warm off-whites and grays
