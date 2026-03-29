@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
 
 function SeriesCard({ series }) {
-  // Use provided gradient or fallback
   const gradient = series.cover_gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   const bgColor = series.cover_bg_color || '#667eea'
   const textColor = series.cover_text_color || '#fff'
   
-  // Truncate long series names
   const displayName = series.name.length > 40 
     ? series.name.slice(0, 37) + '...' 
     : series.name
@@ -14,17 +12,15 @@ function SeriesCard({ series }) {
   return (
     <Link 
       to={`/series/${encodeURIComponent(series.name)}`}
-      className="group block"
+      className="group block bg-bg-surface border border-border-default rounded-lg overflow-hidden"
     >
-      {/* Square Cover */}
       <div 
-        className="relative aspect-square rounded-lg overflow-hidden"
+        className="relative aspect-square overflow-hidden"
         style={{
           backgroundImage: gradient,
           backgroundColor: bgColor,
         }}
       >
-        {/* Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
           <h3 
             className="text-center font-serif font-bold text-sm sm:text-base leading-tight mb-2"
@@ -36,7 +32,7 @@ function SeriesCard({ series }) {
             {displayName}
           </h3>
           <p 
-            className="text-center text-xs"
+            className="text-center text-caption"
             style={{ 
               color: textColor,
               opacity: 0.7,
@@ -47,7 +43,6 @@ function SeriesCard({ series }) {
           </p>
         </div>
         
-        {/* Subtle texture overlay */}
         <div 
           className="absolute inset-0 opacity-10 pointer-events-none"
           style={{
@@ -56,9 +51,8 @@ function SeriesCard({ series }) {
         />
       </div>
       
-      {/* Author below cover */}
-      <div className="mt-2 px-1">
-        <p className="text-gray-400 text-xs truncate">
+      <div className="mt-2 px-2 pb-2">
+        <p className="text-caption text-text-muted truncate">
           {series.author}
         </p>
       </div>

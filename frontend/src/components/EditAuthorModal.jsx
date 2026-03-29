@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { updateAuthor } from '../api'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
+import FormField from './ui/FormField'
 
 function EditAuthorModal({ author, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -8,9 +11,7 @@ function EditAuthorModal({ author, isOpen, onClose, onSave }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
-  const modalRef = useRef(null)
 
-  // Initialize form when author changes or modal opens
   useEffect(() => {
     if (author && isOpen) {
       setFormData({
@@ -20,42 +21,6 @@ function EditAuthorModal({ author, isOpen, onClose, onSave }) {
       setError(null)
     }
   }, [author, isOpen])
-
-  // Handle click outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.body.style.overflow = ''
-    }
-  }, [isOpen, onClose])
-
-  // Handle escape key
-  useEffect(() => {
-    function handleEscape(event) {
-      if (event.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen, onClose])
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -90,112 +55,64 @@ function EditAuthorModal({ author, isOpen, onClose, onSave }) {
     }
   }
 
-  if (!isOpen) return null
+  if (!author) return null
 
   const isRenaming = formData.name.trim() !== author?.name
+  const nameInvalid = !formData.name.trim()
+  const nameErrorMsg = error && error.includes('cannot be empty') ? error : undefined
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 z-40"
-        aria-hidden="true"
-      />
-      
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          ref={modalRef}
-          className="bg-library-bg border border-gray-700 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit author"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">Edit Author</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white p-1"
-              aria-label="Close"
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal.Header onClose={onClose}>Edit Author</Modal.Header>
+
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <Modal.Body className="space-y-4">
+          {error && !nameErrorMsg && (
+            <div
+              role="alert"
+              className="rounded-lg px-3 py-2 text-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Author Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Author Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none"
-                required
-              />
-              {isRenaming && (
-                <p className="text-yellow-400 text-xs mt-1.5">
-                  ⚠️ Renaming will update all books by this author
-                </p>
-              )}
+              {error}
             </div>
+          )}
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Add notes about this author..."
-                className="w-full h-32 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none resize-y text-sm"
-              />
-            </div>
+          <FormField label="Name" error={nameErrorMsg}>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className={`w-full px-3 py-2 bg-bg-elevated border rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary ${
+                nameErrorMsg ? 'border-action-danger' : 'border-border-default'
+              }`}
+            />
+          </FormField>
+          {isRenaming && (
+            <p className="text-caption text-action-warning -mt-2">
+              Renaming will update all books by this author
+            </p>
+          )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className={`
-                  px-4 py-2 rounded font-medium
-                  ${saving 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-library-accent hover:opacity-90'
-                  }
-                  text-white transition-opacity
-                `}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </>
+          <FormField
+            label="Notes"
+            type="textarea"
+            rows={6}
+            value={formData.notes}
+            onChange={(v) => handleInputChange('notes', v)}
+            placeholder="Add notes about this author..."
+          />
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" loading={saving} disabled={saving || nameInvalid}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </Modal.Footer>
+      </form>
+    </Modal>
   )
 }
 
 export default EditAuthorModal
-

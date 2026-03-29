@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { listAuthors } from '../api'
+import Button from './ui/Button'
 
 function AuthorChips({ authors, onChange }) {
   const [newAuthor, setNewAuthor] = useState('')
@@ -12,7 +13,6 @@ function AuthorChips({ authors, onChange }) {
   const inputRef = useRef(null)
   const suggestionsRef = useRef(null)
 
-  // Load all authors on mount for autocomplete
   useEffect(() => {
     listAuthors()
       .then(data => {
@@ -21,7 +21,6 @@ function AuthorChips({ authors, onChange }) {
       .catch(err => console.error('Failed to load authors:', err))
   }, [])
 
-  // Filter suggestions based on input
   useEffect(() => {
     if (!newAuthor.trim()) {
       setSuggestions([])
@@ -34,16 +33,15 @@ function AuthorChips({ authors, onChange }) {
     const filtered = allAuthors
       .filter(author => 
         author.toLowerCase().includes(query) && 
-        !authorsLower.includes(author.toLowerCase()) // Case-insensitive exclusion
+        !authorsLower.includes(author.toLowerCase())
       )
-      .slice(0, 8) // Limit to 8 suggestions
+      .slice(0, 8)
 
     setSuggestions(filtered)
     setShowSuggestions(filtered.length > 0)
     setSelectedSuggestionIndex(-1)
   }, [newAuthor, allAuthors, authors])
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -99,7 +97,6 @@ function AuthorChips({ authors, onChange }) {
   }
 
   const handleRemoveAuthor = (index) => {
-    // Don't allow removing the last author
     if (authors.length <= 1) return
     const updated = authors.filter((_, i) => i !== index)
     onChange(updated)
@@ -145,7 +142,6 @@ function AuthorChips({ authors, onChange }) {
 
   return (
     <div className="space-y-3">
-      {/* Add author input with autocomplete - FIRST */}
       <div className="relative">
         <div className="flex gap-2">
           <input
@@ -156,23 +152,23 @@ function AuthorChips({ authors, onChange }) {
             onKeyDown={handleKeyDown}
             onFocus={() => newAuthor.trim() && suggestions.length > 0 && setShowSuggestions(true)}
             placeholder="Add author..."
-            className="flex-1 bg-library-card px-3 py-2 rounded text-white text-sm border border-gray-600 focus:border-library-accent focus:outline-none"
+            className="flex-1 bg-bg-elevated px-3 py-2 rounded-lg text-text-primary text-sm border border-border-default focus:border-action-primary focus:outline-none"
           />
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant="primary"
             onClick={() => handleAddAuthor()}
             disabled={!newAuthor.trim()}
-            className="px-3 py-2 bg-library-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             + Add
-          </button>
+          </Button>
         </div>
 
-        {/* Autocomplete dropdown */}
         {showSuggestions && (
           <div
             ref={suggestionsRef}
-            className="absolute top-full left-0 right-12 mt-1 bg-library-bg border border-gray-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto"
+            className="absolute top-full left-0 right-12 mt-1 bg-bg-surface border border-border-default rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto"
           >
             {suggestions.map((author, index) => (
               <button
@@ -182,8 +178,8 @@ function AuthorChips({ authors, onChange }) {
                 className={`
                   w-full text-left px-3 py-2 text-sm transition-colors
                   ${index === selectedSuggestionIndex 
-                    ? 'bg-library-accent/20 text-library-accent' 
-                    : 'text-gray-300 hover:bg-gray-700'
+                    ? 'bg-action-primary/15 text-action-primary' 
+                    : 'text-text-secondary hover:bg-bg-elevated'
                   }
                 `}
               >
@@ -194,12 +190,10 @@ function AuthorChips({ authors, onChange }) {
         )}
       </div>
 
-      {/* Helper text */}
-      <p className="text-gray-500 text-xs">
+      <p className="text-caption text-text-muted">
         Drag to reorder. First author appears on cover.
       </p>
 
-      {/* Author chips - BELOW input */}
       <div className="flex flex-wrap gap-2">
         {authors.map((author, index) => (
           <div
@@ -212,15 +206,14 @@ function AuthorChips({ authors, onChange }) {
             onDragEnd={handleDragEnd}
             className={`
               flex items-center gap-2 px-3 py-1.5 rounded-lg
-              bg-library-card border cursor-grab active:cursor-grabbing
+              bg-bg-elevated border cursor-grab active:cursor-grabbing
               transition-all duration-150
               ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
-              ${dragOverIndex === index ? 'border-library-accent ring-1 ring-library-accent' : 'border-gray-600'}
+              ${dragOverIndex === index ? 'border-action-primary ring-1 ring-action-primary' : 'border-border-default'}
             `}
           >
-            {/* Drag handle */}
             <svg 
-              className="w-4 h-4 text-gray-500 flex-shrink-0" 
+              className="w-4 h-4 text-text-muted flex-shrink-0" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -228,14 +221,13 @@ function AuthorChips({ authors, onChange }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
             </svg>
             
-            <span className="text-white text-sm">{author}</span>
+            <span className="text-text-primary text-sm">{author}</span>
             
-            {/* Remove button - only show if more than 1 author */}
             {authors.length > 1 && (
               <button
                 type="button"
                 onClick={() => handleRemoveAuthor(index)}
-                className="text-gray-400 hover:text-red-400 transition-colors ml-1"
+                className="text-text-muted hover:text-action-danger transition-colors ml-1"
                 aria-label={`Remove ${author}`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

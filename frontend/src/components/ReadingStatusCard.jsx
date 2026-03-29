@@ -1,18 +1,7 @@
 /**
  * ReadingStatusCard - Displays current reading status with contextual action
- * 
- * States:
- * - not_prioritized / unread: "Not Started" - blue book icon, optional download action
- * - in_progress: "Currently Reading" - blue book icon, no action
- * - finished: "Finished" - green checkmark, edit action
- * - dnf: "Abandoned" - green checkmark, edit action
- * 
- * Actions:
- * - Download: Opens file URL (for Not Started books with file_url)
- * - Edit: Opens reading session modal (for Finished/Abandoned)
  */
 
-// Icons
 const BookIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
@@ -37,45 +26,44 @@ const EditIcon = () => (
   </svg>
 )
 
-// Status configuration
 const STATUS_CONFIG = {
   unread: {
     label: 'Not Started',
     icon: BookIcon,
-    bgClass: 'bg-indigo-500/20',
-    iconClass: 'text-indigo-400',
+    bgClass: 'bg-action-primary/15',
+    iconClass: 'text-action-primary',
     showDownload: true,
     showEdit: false
   },
   not_prioritized: {
     label: 'Not Started',
     icon: BookIcon,
-    bgClass: 'bg-indigo-500/20',
-    iconClass: 'text-indigo-400',
+    bgClass: 'bg-action-primary/15',
+    iconClass: 'text-action-primary',
     showDownload: true,
     showEdit: false
   },
   in_progress: {
     label: 'Currently Reading',
     icon: BookIcon,
-    bgClass: 'bg-indigo-500/20',
-    iconClass: 'text-indigo-400',
+    bgClass: 'bg-action-primary/15',
+    iconClass: 'text-action-primary',
     showDownload: false,
     showEdit: false
   },
   finished: {
     label: 'Finished',
     icon: CheckIcon,
-    bgClass: 'bg-green-500/20',
-    iconClass: 'text-green-400',
+    bgClass: 'bg-action-success/15',
+    iconClass: 'text-action-success',
     showDownload: false,
     showEdit: true
   },
   dnf: {
     label: 'Abandoned',
     icon: CheckIcon,
-    bgClass: 'bg-green-500/20',
-    iconClass: 'text-green-400',
+    bgClass: 'bg-bg-elevated/50',
+    iconClass: 'text-text-muted',
     showDownload: false,
     showEdit: true
   }
@@ -83,10 +71,10 @@ const STATUS_CONFIG = {
 
 export default function ReadingStatusCard({
   status = 'unread',
-  subtitle = null,        // e.g., "Jan 15 – Jan 22, 2026" for finished books
-  fileUrl = null,         // URL to download file (for ebooks)
-  hasFile = false,        // Whether book has a downloadable file
-  onEditSession,          // Callback to open reading session modal
+  subtitle = null,
+  fileUrl = null,
+  hasFile = false,
+  onEditSession,
   className = ''
 }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.unread
@@ -102,33 +90,30 @@ export default function ReadingStatusCard({
     onEditSession?.()
   }
 
-  // Determine if we should show the download action
   const showDownloadAction = config.showDownload && hasFile && fileUrl
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl ${config.bgClass} ${className}`}>
-      {/* Status Icon */}
+    <div className={`flex items-center gap-3 p-3 rounded-xl border border-border-default bg-bg-surface ${config.bgClass} ${className}`}>
       <div className={`flex-shrink-0 ${config.iconClass}`}>
         <IconComponent />
       </div>
 
-      {/* Status Text */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-100">
+        <div className="font-medium text-text-primary">
           {config.label}
         </div>
         {subtitle && (
-          <div className="text-sm text-gray-400 truncate">
+          <div className="text-sm text-text-secondary truncate">
             {subtitle}
           </div>
         )}
       </div>
 
-      {/* Action Button */}
       {showDownloadAction && (
         <button
+          type="button"
           onClick={handleDownload}
-          className="flex-shrink-0 p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/10 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
           title="Download"
         >
           <DownloadIcon />
@@ -137,8 +122,9 @@ export default function ReadingStatusCard({
 
       {config.showEdit && (
         <button
+          type="button"
           onClick={handleEdit}
-          className="flex-shrink-0 p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/10 transition-colors"
+          className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
           title="Edit reading session"
         >
           <EditIcon />
