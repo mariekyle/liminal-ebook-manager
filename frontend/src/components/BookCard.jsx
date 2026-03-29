@@ -26,7 +26,7 @@ function BookCard({
       className="group block"
     >
       {/* Wrapper div for checklist opacity */}
-      <div className={isChecklistCompleted ? 'opacity-50' : ''}>
+      <div className={isChecklistCompleted ? 'opacity-45' : ''}>
         <div className="relative">
           {/* Cover - pass book object with cover fields (Phase 9C fix) */}
           {/* FIXED: Removed size="fill" - default uses aspect-[2/3] which self-determines height */}

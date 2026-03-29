@@ -27,6 +27,9 @@ import { CSS } from '@dnd-kit/utilities'
 
 import CollectionCard from './CollectionCard'
 import CollectionModal from './CollectionModal'
+import UnifiedNavBar from './ui/UnifiedNavBar'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
 import { listCollections, reorderCollections, deleteCollection } from '../api'
 
 // LocalStorage key for view mode preference
@@ -237,8 +240,11 @@ export default function CollectionsTab() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-library-accent"></div>
+      <div className="flex flex-col min-h-[50vh]">
+        <UnifiedNavBar title="Collections" />
+        <div className="flex items-center justify-center flex-1">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-action-primary" />
+        </div>
       </div>
     )
   }
@@ -246,115 +252,109 @@ export default function CollectionsTab() {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        <p>{error}</p>
-        <button 
-          onClick={fetchCollections}
-          className="mt-4 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600"
-        >
-          Retry
-        </button>
+      <div className="flex flex-col min-h-[50vh]">
+        <UnifiedNavBar title="Collections" />
+        <div className="flex flex-col items-center justify-center flex-1 px-4 text-text-secondary">
+          <p>{error}</p>
+          <Button variant="secondary" className="mt-4" type="button" onClick={fetchCollections}>
+            Retry
+          </Button>
+        </div>
       </div>
     )
   }
   
   return (
-    <div className="px-4 pb-24">
-      {/* Header */}
-      <div className="flex items-center justify-between py-4">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-100">Collections</h1>
-          <p className="text-sm text-gray-400">
+    <div className="pb-24">
+      <UnifiedNavBar title="Collections" />
+      
+      <div className="px-4">
+        <div className="flex items-center justify-between py-3">
+          <p className="text-caption text-text-muted">
             {collections.length} {collections.length === 1 ? 'collection' : 'collections'}
           </p>
-        </div>
-        
-        {/* Menu button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            <DotsIcon />
-          </button>
           
-          {/* Dropdown menu */}
-          {showMenu && (
-            <>
-              {/* Backdrop */}
-              <div 
-                className="fixed inset-0 z-40" 
-                onClick={() => setShowMenu(false)}
-              />
-              
-              {/* Menu */}
-              <div className="absolute right-0 mt-1 py-1 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50">
-                <button
-                  onClick={() => handleMenuAction('add')}
-                  className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors"
-                >
-                  Add Collection
-                </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors duration-200 ease-out"
+            >
+              <DotsIcon />
+            </button>
+            
+            {showMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowMenu(false)}
+                />
                 
-                {/* Only show when NOT in reorder mode */}
-                {!isReorderMode && (
-                  <>
-                    <button
-                      onClick={() => handleMenuAction('reorder')}
-                      className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors"
-                    >
-                      Reorder Collections
-                    </button>
-                    <button
-                      onClick={() => handleMenuAction('toggle_view')}
-                      className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors"
-                    >
-                      View: {viewMode === 'grid' ? 'List' : 'Grid'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+                <div className="absolute right-0 mt-1 py-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50">
+                  <button
+                    type="button"
+                    onClick={() => handleMenuAction('add')}
+                    className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
+                  >
+                    Add Collection
+                  </button>
+                  
+                  {!isReorderMode && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleMenuAction('reorder')}
+                        className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
+                      >
+                        Reorder Collections
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMenuAction('toggle_view')}
+                        className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
+                      >
+                        View: {viewMode === 'grid' ? 'List' : 'Grid'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
       
       {/* Reorder Mode Banner */}
       {isReorderMode && (
-        <div className="mb-4 px-4 py-3 flex items-center justify-between bg-library-accent/20 border border-library-accent rounded-lg">
-          <span className="text-sm text-gray-200 font-medium">Reorder Mode</span>
-          <button
-            onClick={exitReorderMode}
-            className="px-3 py-1 text-sm font-medium bg-library-accent hover:opacity-90 text-white rounded transition-opacity"
-          >
+        <div className="mb-4 px-4 py-3 flex items-center justify-between bg-action-primary/15 border border-action-primary rounded-lg">
+          <span className="text-body-sm text-text-primary font-medium">Reorder Mode</span>
+          <Button type="button" size="sm" variant="primary" onClick={exitReorderMode}>
             Done
-          </button>
+          </Button>
         </div>
       )}
       
       {/* Empty state */}
       {collections.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-center">
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
           <div className="text-5xl mb-4">📚</div>
-          <h2 className="text-lg font-medium text-gray-200 mb-2">No collections yet</h2>
-          <p className="text-gray-400 mb-6 max-w-xs">
+          <h2 className="text-h4 text-text-primary mb-2">No collections yet</h2>
+          <p className="text-body-sm text-text-secondary mb-6 max-w-xs">
             Create a collection to organize your books into custom lists
           </p>
-          <button
+          <Button
+            type="button"
+            variant="primary"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-library-accent hover:opacity-90 text-white rounded-lg font-medium transition-opacity"
+            icon={<PlusIcon />}
           >
-            <PlusIcon />
             Create Collection
-          </button>
+          </Button>
         </div>
       ) : isReorderMode ? (
-        /* Reorder Mode - Split into Default and User sections */
         <>
-          {/* Default Collections Section - No drag handles */}
           {defaultCollections.length > 0 && (
             <div className="mb-4">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
+              <div className="text-caption text-text-muted uppercase tracking-wider mb-2 px-2">
                 Default Collections
               </div>
               <div className="space-y-2">
@@ -373,15 +373,13 @@ export default function CollectionsTab() {
             </div>
           )}
 
-          {/* Visual Separator */}
           {defaultCollections.length > 0 && userCollections.length > 0 && (
-            <div className="my-4 border-t border-gray-700"></div>
+            <div className="my-4 border-t border-border-default" />
           )}
 
-          {/* User Collections Section - With drag handles */}
           {userCollections.length > 0 && (
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
+              <div className="text-caption text-text-muted uppercase tracking-wider mb-2 px-2">
                 My Collections
               </div>
               <DndContext
@@ -411,7 +409,6 @@ export default function CollectionsTab() {
           )}
         </>
       ) : (
-        /* Normal view - grid or list */
         viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {collections.map(collection => (
@@ -439,7 +436,6 @@ export default function CollectionsTab() {
         )
       )}
       
-      {/* Create Modal */}
       {showCreateModal && (
         <CollectionModal
           onClose={() => setShowCreateModal(false)}
@@ -447,7 +443,6 @@ export default function CollectionsTab() {
         />
       )}
       
-      {/* Edit Modal */}
       {showEditModal && (
         <CollectionModal
           collection={collectionToEdit}
@@ -463,37 +458,27 @@ export default function CollectionsTab() {
         />
       )}
       
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && collectionToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/70"
-            onClick={() => setShowDeleteConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-gray-800 rounded-xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Delete Collection?
-            </h3>
-            <p className="text-gray-400 mb-6">
-              Are you sure you want to delete "{collectionToDelete.name}"? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm && !!collectionToDelete}
+        onClose={() => setShowDeleteConfirm(false)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setShowDeleteConfirm(false)}>Delete Collection?</Modal.Header>
+        <Modal.Body>
+          <p className="text-body-sm text-text-secondary">
+            Are you sure you want to delete &quot;{collectionToDelete?.name}&quot;? This action cannot be undone.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" type="button" onClick={() => setShowDeleteConfirm(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" type="button" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      </div>
     </div>
   )
 }

@@ -15,9 +15,14 @@ import { useNavigate } from 'react-router-dom'
 import CollectionGradient from './CollectionGradient'
 import MosaicCover from './MosaicCover'
 
-// Drag handle icon (6 dots in 2 columns)
+const CollectionIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-text-muted shrink-0 mt-0.5" aria-hidden>
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  </svg>
+)
+
 const DragHandleIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-gray-500">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-text-muted">
     <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
   </svg>
 )
@@ -41,14 +46,12 @@ export default function CollectionCard({
     }
   }
   
-  // Context menu handler (right-click)
   const handleContextMenu = (e) => {
     if (isReorderMode) return
     
     e.preventDefault()
     e.stopPropagation()
     
-    // Adjust position to keep menu in viewport
     const x = Math.min(e.clientX, window.innerWidth - 200)
     const y = Math.min(e.clientY, window.innerHeight - 150)
     
@@ -56,7 +59,6 @@ export default function CollectionCard({
     setShowContextMenu(true)
   }
   
-  // Long press handlers for mobile
   const handleTouchStart = (e) => {
     if (isReorderMode) return
     
@@ -78,14 +80,12 @@ export default function CollectionCard({
   }
   
   const handleTouchMove = () => {
-    // Cancel long press if finger moves
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
     }
   }
   
-  // Determine which cover component to use
   const renderCover = (className) => {
     if (collection.cover_type === 'custom') {
       return (
@@ -98,7 +98,6 @@ export default function CollectionCard({
       )
     }
     
-    // Use CollectionGradient for non-custom covers
     return (
       <CollectionGradient
         collectionId={collection.id}
@@ -108,45 +107,44 @@ export default function CollectionCard({
     )
   }
   
-  // Context Menu Component
   const ContextMenu = () => {
     if (!showContextMenu) return null
     
     return (
       <>
-        {/* Backdrop */}
         <div 
           className="fixed inset-0 z-40" 
           onClick={() => setShowContextMenu(false)}
         />
         
-        {/* Menu */}
         <div 
-          className="fixed z-50 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1"
+          className="fixed z-50 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default py-1"
           style={{
             left: `${menuPosition.x}px`,
             top: `${menuPosition.y}px`,
           }}
         >
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               setShowContextMenu(false)
               onEdit?.(collection)
             }}
-            className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors"
+            className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
           >
             Edit Collection
           </button>
           
           {!collection.is_default && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 setShowContextMenu(false)
                 onDelete?.(collection)
               }}
-              className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 transition-colors"
+              className="w-full px-4 py-2 text-left text-action-danger hover:bg-bg-surface transition-colors"
             >
               Delete Collection
             </button>
@@ -156,7 +154,6 @@ export default function CollectionCard({
     )
   }
   
-  // LIST VIEW
   if (viewMode === 'list') {
     return (
       <>
@@ -167,37 +164,36 @@ export default function CollectionCard({
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
           className={`
-            flex items-center gap-3 px-3 py-2 rounded-lg
-            bg-gray-800/50 hover:bg-gray-800
-            transition-colors
+            flex items-center gap-3 px-3 py-2 rounded-lg border border-border-default bg-bg-surface
+            hover:bg-bg-elevated transition-colors duration-200 ease-out
             ${!isReorderMode ? 'cursor-pointer' : 'cursor-default'}
           `}
         >
-          {/* Mini thumbnail */}
-          <div className="flex-shrink-0 w-12 h-16 overflow-hidden rounded">
+          <div className="flex-shrink-0 w-12 h-16 overflow-hidden rounded-md border border-border-subtle">
             {renderCover('w-full h-full')}
           </div>
           
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-gray-100 truncate">
-              {collection.name}
-            </h3>
-            {collection.description && (
-              <p className="text-xs text-gray-500 truncate">
-                {collection.description}
-              </p>
-            )}
+          <div className="flex-1 min-w-0 flex items-start gap-2">
+            <CollectionIcon />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-body-sm text-text-primary font-medium truncate">
+                {collection.name}
+              </h3>
+              {collection.description && (
+                <p className="text-caption text-text-muted truncate">
+                  {collection.description}
+                </p>
+              )}
+            </div>
           </div>
           
-          {/* Book count */}
-          <div className="flex-shrink-0 text-sm text-gray-400">
-            {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
+          <div className="flex-shrink-0 text-caption text-text-muted tabular-nums">
+            {collection.book_count}
           </div>
           
-          {/* Drag handle - only shown in reorder mode */}
           {isReorderMode && dragHandleProps && (
             <button
+              type="button"
               {...dragHandleProps}
               className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing touch-none"
               onClick={(e) => e.stopPropagation()}
@@ -212,10 +208,10 @@ export default function CollectionCard({
     )
   }
   
-  // GRID VIEW (default)
   return (
     <>
       <button
+        type="button"
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
@@ -227,19 +223,22 @@ export default function CollectionCard({
           ${isReorderMode ? 'cursor-default' : ''}
         `}
       >
-        {/* Cover - square aspect ratio */}
-        <div className="relative rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow aspect-square">
-          {renderCover('w-full h-full')}
-        </div>
-        
-        {/* Info - below the cover */}
-        <div className="mt-2 px-0.5">
-          <h3 className="font-medium text-gray-100 truncate group-hover:text-white transition-colors">
-            {collection.name}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
-          </p>
+        <div className="bg-bg-surface border border-border-default rounded-lg p-2 transition-all duration-200 ease-out group-hover:border-action-primary/30">
+          <div className="relative rounded-md overflow-hidden shadow-md group-hover:shadow-lg aspect-square">
+            {renderCover('w-full h-full')}
+          </div>
+          
+          <div className="mt-2 flex items-start gap-1.5 px-0.5">
+            <CollectionIcon />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-body-sm text-text-primary font-medium truncate group-hover:text-action-primary transition-colors">
+                {collection.name}
+              </h3>
+              <p className="text-caption text-text-muted">
+                {collection.book_count} {collection.book_count === 1 ? 'title' : 'titles'}
+              </p>
+            </div>
+          </div>
         </div>
       </button>
       

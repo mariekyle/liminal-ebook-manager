@@ -16,14 +16,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { createCollection, updateCollection, updateCollectionCoverType, uploadCollectionCover, deleteCollectionCover } from '../api'
 import CriteriaBuilder from './CriteriaBuilder'
-
-// X icon for close button
-const XIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-)
+import Modal from './ui/Modal'
+import Button from './ui/Button'
+import FormField from './ui/FormField'
 
 const CameraIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
@@ -294,91 +289,81 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
   // Determine if criteria is read-only (default automatic collections)
   const criteriaReadOnly = isEditing && isDefaultCollection && collection?.collection_type === 'automatic'
   
+  const nameHasError = !!error && /name|required/i.test(error)
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/70"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative w-full sm:max-w-md max-h-[90vh] bg-library-card rounded-t-xl sm:rounded-xl shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-100">
-            {isEditing ? 'Edit Collection' : 'New Collection'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-200 rounded"
-          >
-            <XIcon />
-          </button>
-        </div>
-        
-        {/* Form - Scrollable */}
-        <form id="collection-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Name field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Name
-            </label>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="lg"
+      fullscreenOnMobile
+      className="max-h-[90vh] sm:max-h-[85vh]"
+    >
+      <Modal.Header onClose={onClose}>
+        {isEditing ? 'Edit Collection' : 'Create Collection'}
+      </Modal.Header>
+
+      <form id="collection-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <Modal.Body className="space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg px-3 py-2 text-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+            >
+              {error}
+            </div>
+          )}
+
+          <FormField label="Name">
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Collection"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:border-library-accent"
+              className={`w-full px-3 py-2 bg-bg-elevated border rounded-lg text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-action-primary ${
+                nameHasError ? 'border-action-danger' : 'border-border-default'
+              }`}
               autoFocus
             />
-          </div>
-          
-          {/* Description field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Description <span className="text-gray-500">(optional)</span>
-            </label>
+          </FormField>
+
+          <FormField label="Description (optional)">
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What's this collection about?"
               rows={3}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:border-library-accent resize-none"
+              className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-action-primary resize-none"
             />
-            <p className="mt-1 text-xs text-gray-500">Supports markdown formatting</p>
-          </div>
+            <p className="mt-1 text-caption text-text-muted">Supports markdown formatting</p>
+          </FormField>
           
           {/* ===== Phase 9E: Collection Type Selector (only when creating) ===== */}
           {!isEditing && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-300">
-                  Collection Type
-                </label>
+                <span className="text-label text-text-primary">Type</span>
                 <button
                   type="button"
                   onClick={() => setShowTypeInfo(!showTypeInfo)}
-                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                  className="flex items-center gap-1 text-caption text-action-primary hover:opacity-90"
                 >
                   <InfoIcon />
                   {showTypeInfo ? 'Hide' : 'Info'}
                 </button>
               </div>
 
-              {/* Type info tooltip */}
               {showTypeInfo && (
-                <div className="mb-3 p-3 bg-gray-800 border border-gray-700 rounded-lg space-y-2 text-sm">
+                <div className="mb-3 p-3 bg-bg-elevated border border-border-default rounded-lg space-y-2 text-body-sm">
                   {COLLECTION_TYPES.map(type => (
                     <div key={type.id}>
-                      <span className="font-medium text-gray-200">{type.icon} {type.name}:</span>
-                      <span className="text-gray-400 ml-1">{type.description}</span>
+                      <span className="font-medium text-text-primary">{type.icon} {type.name}:</span>
+                      <span className="text-text-secondary ml-1">{type.description}</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Type selector buttons */}
               <div className="grid grid-cols-3 gap-2">
                 {COLLECTION_TYPES.map(type => (
                   <button
@@ -387,8 +372,8 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                     onClick={() => setCollectionType(type.id)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       collectionType === type.id
-                        ? 'bg-library-accent/20 border-library-accent text-white'
-                        : 'bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                        ? 'bg-action-primary/15 border-action-primary text-text-primary'
+                        : 'bg-bg-elevated border-border-default text-text-secondary hover:border-action-primary/50 hover:text-text-primary'
                     }`}
                   >
                     <span className="text-lg mb-0.5">{type.icon}</span>
@@ -397,43 +382,34 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                 ))}
               </div>
 
-              {/* Example text for selected type */}
-              <p className="mt-1.5 text-xs text-gray-500">
+              <p className="mt-1.5 text-caption text-text-muted">
                 e.g. {COLLECTION_TYPES.find(t => t.id === collectionType)?.example}
               </p>
             </div>
           )}
 
-          {/* Show current type when editing (read-only badge) */}
           {isEditing && collection?.collection_type && collection.collection_type !== 'manual' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Collection Type
-              </label>
-              <div className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 text-sm flex items-center gap-2">
+            <FormField label="Type">
+              <div className="px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-body-sm text-text-secondary flex items-center gap-2">
                 <span>{COLLECTION_TYPES.find(t => t.id === collection.collection_type)?.icon}</span>
                 <span className="capitalize">{collection.collection_type}</span>
-                <span className="text-gray-500 text-xs ml-auto">(cannot be changed)</span>
+                <span className="text-caption text-text-muted ml-auto">(cannot be changed)</span>
               </div>
-            </div>
+            </FormField>
           )}
 
-          {/* ===== Phase 9E: Criteria Builder ===== */}
-          {/* Show for: new automatic collections OR editing non-default automatic collections */}
           {showCriteriaBuilder && (
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-border-default pt-4">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-gray-300">
-                  Rules
-                </label>
+                <span className="text-label text-text-primary">Rules</span>
                 {previewLoading ? (
-                  <span className="text-xs text-gray-500">Counting...</span>
+                  <span className="text-caption text-text-muted">Counting...</span>
                 ) : previewCount !== null ? (
-                  <span className="text-xs text-blue-400">
+                  <span className="text-caption text-action-primary">
                     ~{previewCount} book{previewCount !== 1 ? 's' : ''} match
                   </span>
                 ) : (
-                  <span className="text-xs text-gray-500">Set rules to see matches</span>
+                  <span className="text-caption text-text-muted">Set rules to see matches</span>
                 )}
               </div>
 
@@ -444,58 +420,48 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
             </div>
           )}
 
-          {/* Show criteria as read-only for default automatic collections */}
           {criteriaReadOnly && (
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-border-default pt-4">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-300">
-                  Rules
-                </label>
-                <span className="text-xs text-gray-500">(cannot be changed)</span>
+                <span className="text-label text-text-primary">Rules</span>
+                <span className="text-caption text-text-muted">(cannot be changed)</span>
               </div>
-              <div className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 text-sm">
+              <div className="px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-body-sm text-text-secondary">
                 {Object.entries(criteria).map(([key, value]) => (
                   <div key={key}>
-                    <span className="text-gray-500">{key}:</span> {JSON.stringify(value)}
+                    <span className="text-text-muted">{key}:</span> {JSON.stringify(value)}
                   </div>
                 ))}
               </div>
             </div>
           )}
           
-          {/* Cover Type - only show when editing existing collection */}
           {collection?.id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Cover Style
-              </label>
+            <FormField label="Cover style">
               <div className="space-y-2">
-                {/* Gradient option */}
                 <button
                   type="button"
                   onClick={() => handleCoverTypeChange('gradient')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     coverType === 'gradient'
-                      ? 'bg-library-accent/20 text-white ring-1 ring-library-accent'
-                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                      ? 'bg-action-primary/15 text-text-primary ring-1 ring-action-primary'
+                      : 'bg-bg-elevated text-text-primary hover:bg-bg-surface'
                   }`}
                 >
-                  <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-600 to-pink-500" />
+                  <div className="w-6 h-6 rounded bg-gradient-to-br from-action-primary to-chip-fanfiction" />
                   <span className="text-sm">Gradient</span>
                 </button>
                 
-                {/* Custom upload option */}
                 <label
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                     coverType === 'custom'
-                      ? 'bg-library-accent/20 text-white ring-1 ring-library-accent'
-                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                      ? 'bg-action-primary/15 text-text-primary ring-1 ring-action-primary'
+                      : 'bg-bg-elevated text-text-primary hover:bg-bg-surface'
                   } ${uploadingCover ? 'opacity-50 pointer-events-none' : ''}`}
                 >
-                  {/* Thumbnail preview or camera icon */}
-                  <div className="w-6 h-6 rounded bg-gray-600 flex items-center justify-center overflow-hidden">
+                  <div className="w-6 h-6 rounded bg-bg-surface flex items-center justify-center overflow-hidden">
                     {uploadingCover ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-action-primary" />
                     ) : coverPreviewUrl ? (
                       <img 
                         src={coverPreviewUrl} 
@@ -510,7 +476,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                     {coverPreviewUrl ? 'Change image' : 'Custom image'}
                   </span>
                   {coverPreviewUrl && (
-                    <span className="text-xs text-gray-400">✓ Set</span>
+                    <span className="text-xs text-text-muted">✓ Set</span>
                   )}
                   <input
                     type="file"
@@ -521,45 +487,34 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                   />
                 </label>
                 
-                {/* Remove custom cover */}
                 {coverType === 'custom' && (
                   <button
                     type="button"
                     onClick={handleDeleteCover}
-                    className="w-full text-sm text-red-400 hover:text-red-300 py-1"
+                    className="w-full text-sm text-action-danger hover:opacity-90 py-1 text-left"
                   >
                     Remove custom cover
                   </button>
                 )}
               </div>
-            </div>
+            </FormField>
           )}
-          
-          {/* Error */}
-          {error && (
-            <p className="text-red-400 text-sm">{error}</p>
-          )}
-        </form>
-        
-        {/* Actions - Fixed at bottom */}
-        <div className="flex gap-3 p-4 border-t border-gray-700">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-          >
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            form="collection-form"
+            variant="primary"
+            loading={saving}
             disabled={saving || !name.trim()}
-            className="flex-1 px-4 py-2 bg-library-accent hover:opacity-90 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg font-medium transition-opacity"
           >
             {saving ? 'Saving...' : (isEditing ? 'Save' : 'Create')}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </Modal.Footer>
+      </form>
+    </Modal>
   )
 }

@@ -34,8 +34,10 @@ import { getCollection, deleteCollection, removeBookFromCollection, updateCollec
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
-import SmartPasteModal from './SmartPasteModal'
 import GradientCover from './GradientCover'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
+import FormField from './ui/FormField'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
 import UnifiedNavBar from './ui/UnifiedNavBar'
@@ -78,13 +80,6 @@ const XIcon = () => (
   </svg>
 )
 
-const PasteIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-  </svg>
-)
-
 const CheckCircleIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
     <path d="M9 12l2 2 4-4" />
@@ -111,7 +106,7 @@ const ListIcon = () => (
 )
 
 const DragHandleIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-gray-500">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-text-muted">
     <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
   </svg>
 )
@@ -159,8 +154,8 @@ function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 
   return (
     <div 
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer ${
-        isChecklistCompleted ? 'opacity-60' : ''
+      className={`flex items-center gap-3 p-3 bg-bg-elevated/60 hover:bg-bg-elevated rounded-lg transition-colors cursor-pointer ${
+        isChecklistCompleted ? 'opacity-45' : ''
       }`}
     >
       {/* Book cover thumbnail - hide text overlay for gradient covers */}
@@ -171,12 +166,12 @@ function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 
       {/* Book info */}
       <div className="flex-1 min-w-0">
         {/* Line 1: Title (Series #N) */}
-        <p className="text-gray-100 font-medium truncate">
+        <p className="text-text-primary font-medium truncate">
           {book.title}{seriesInfo}
         </p>
         
         {/* Line 2: By Author • Year • Est. read time */}
-        <p className="text-sm text-gray-400 truncate">
+        <p className="text-body-sm text-text-secondary truncate">
           By {authorDisplay}
           {book.publication_year ? ` • ${book.publication_year}` : ''}
           {readingTime ? ` • Est. read time ${readingTime}` : ''}
@@ -185,7 +180,7 @@ function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 
       
       {/* Checkmark for completed items */}
       {isChecklistCompleted && (
-        <div className="flex-shrink-0 text-emerald-400">
+        <div className="flex-shrink-0 text-action-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
             <path d="M9 12l2 2 4-4" />
             <circle cx="12" cy="12" r="10" />
@@ -237,7 +232,7 @@ function SortableBookItem({
       {/* Drag handle overlay */}
       <div 
         {...dragHandleProps}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 touch-none bg-gray-900/80 rounded-lg ${
+        className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 touch-none bg-bg-base/80 rounded-lg ${
           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab active:cursor-grabbing'
         }`}
       >
@@ -259,7 +254,6 @@ export default function CollectionDetail() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
-  const [showSmartPaste, setShowSmartPaste] = useState(false)
   const [showTitleBelow, setShowTitleBelow] = useState(false)
   const [showAuthorBelow, setShowAuthorBelow] = useState(false)
   const [showSeriesBelow, setShowSeriesBelow] = useState(false)
@@ -961,7 +955,7 @@ export default function CollectionDetail() {
     return (
       <div className="text-center py-12">
         <div className="animate-pulse-slow text-4xl mb-4">📚</div>
-        <p className="text-gray-400">Loading collection...</p>
+        <p className="text-text-secondary">Loading collection...</p>
       </div>
     )
   }
@@ -971,8 +965,8 @@ export default function CollectionDetail() {
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-4">⚠️</div>
-        <p className="text-red-400 mb-4">{error}</p>
-        <Link to="/collections" className="text-library-accent hover:underline">
+        <p className="text-action-danger mb-4">{error}</p>
+        <Link to="/collections" className="text-action-primary hover:underline">
           ← Back to Collections
         </Link>
       </div>
@@ -985,7 +979,6 @@ export default function CollectionDetail() {
   const isAutomatic = collection.collection_type === 'automatic'
   const isDefault = collection.is_default
   
-  // Render a single book (grid or list)
   // Render a single book (grid or list)
   // canSort: whether this book should be wrapped in SortableBookItem (only true for incomplete in reorder mode)
   const renderBook = (book, isChecklistCompleted = false, canSort = true) => {
@@ -1039,8 +1032,8 @@ export default function CollectionDetail() {
                 isChecklistCompleted={isChecklistCompleted}
                 readingSpeed={readingSpeed}
               />
-              <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <div className="bg-red-600 rounded-full p-2">
+              <div className="absolute inset-0 bg-action-danger/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="bg-action-danger text-text-primary rounded-full p-2">
                   <XIcon />
                 </div>
               </div>
@@ -1094,8 +1087,8 @@ export default function CollectionDetail() {
                 showSeriesBelow={showSeriesBelow}
                 isChecklistCompleted={isChecklistCompleted}
               />
-              <div className="absolute inset-0 bg-red-900/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="bg-red-600 rounded-full p-2">
+              <div className="absolute inset-0 bg-action-danger/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-action-danger text-text-primary rounded-full p-2">
                   <XIcon />
                 </div>
               </div>
@@ -1122,7 +1115,7 @@ export default function CollectionDetail() {
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="p-2 text-text-secondary hover:text-text-primary rounded-lg hover:bg-bg-elevated transition-colors"
           >
             <DotsIcon />
           </button>
@@ -1134,13 +1127,13 @@ export default function CollectionDetail() {
                 className="fixed inset-0 z-40"
                 onClick={() => setShowMenu(false)}
               />
-              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50 overflow-hidden">
                 <button
                   onClick={() => {
                     setShowMenu(false)
                     setShowEditModal(true)
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                 >
                   <PencilIcon />
                   Edit Collection
@@ -1152,25 +1145,11 @@ export default function CollectionDetail() {
                     setShowMenu(false)
                     setShowDuplicateModal(true)
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                 >
                   <CopyIcon />
                   Duplicate
                 </button>
-                
-                {/* Smart Paste - only for manual/checklist */}
-                {!isAutomatic && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      setShowSmartPaste(true)
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
-                  >
-                    <PasteIcon />
-                    Smart Paste
-                  </button>
-                )}
                 
                 {/* Remove Books - only for manual/checklist with books, not in reorder mode */}
                 {!isAutomatic && totalBooks > 0 && !isReorderMode && (
@@ -1179,7 +1158,7 @@ export default function CollectionDetail() {
                       setShowMenu(false)
                       setRemoveMode(!removeMode)
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                   >
                     <XIcon />
                     {removeMode ? 'Done Removing' : 'Remove Books'}
@@ -1211,7 +1190,7 @@ export default function CollectionDetail() {
                         setIsReorderMode(true)
                       }
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                   >
                     <ReorderIcon />
                     {isReorderMode ? 'Done Reordering' : 'Reorder Books'}
@@ -1225,7 +1204,7 @@ export default function CollectionDetail() {
                       setShowMenu(false)
                       setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                   >
                     {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
                     View: {viewMode === 'grid' ? 'List' : 'Grid'}
@@ -1239,7 +1218,7 @@ export default function CollectionDetail() {
                       setShowMenu(false)
                       setShowDeleteConfirm(true)
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-action-danger hover:bg-bg-surface transition-colors"
                   >
                     <TrashIcon />
                     Delete Collection
@@ -1265,27 +1244,27 @@ export default function CollectionDetail() {
       {/* Collection Info */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-h2 text-text-primary">
             {collection.name}
           </h1>
           {/* Collection type badge - greyscale */}
           {isChecklist && (
-            <span className="text-xs px-2 py-0.5 bg-gray-600/30 text-gray-400 rounded">
+            <span className="text-xs px-2 py-0.5 bg-bg-elevated/80 text-text-muted rounded">
               Checklist
             </span>
           )}
           {isAutomatic && (
-            <span className="text-xs px-2 py-0.5 bg-gray-600/30 text-gray-400 rounded">
+            <span className="text-xs px-2 py-0.5 bg-bg-elevated/80 text-text-muted rounded">
               Auto
             </span>
           )}
         </div>
         {/* Book count row with sort (for automatic collections) */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-gray-400">
+          <p className="text-text-secondary">
             {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
             {isChecklist && completedTotal > 0 && (
-              <span className="text-emerald-400"> · {completedTotal} completed</span>
+              <span className="text-action-success"> · {completedTotal} completed</span>
             )}
           </p>
           
@@ -1309,7 +1288,7 @@ export default function CollectionDetail() {
           )}
         </div>
         {collection.description && (
-          <p className="text-gray-300 text-sm whitespace-pre-wrap">
+          <p className="text-body-sm text-text-secondary whitespace-pre-wrap">
             {collection.description}
           </p>
         )}
@@ -1317,8 +1296,8 @@ export default function CollectionDetail() {
 
       {/* Checklist hint - greyscale */}
       {isChecklist && !removeMode && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
-        <div className="mb-4 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-          <p className="text-gray-400 text-sm">
+        <div className="mb-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
+          <p className="text-body-sm text-text-secondary">
             Long-press or right-click a book to mark it complete
           </p>
         </div>
@@ -1326,11 +1305,11 @@ export default function CollectionDetail() {
       
       {/* Remove mode banner */}
       {removeMode && (
-        <div className="mb-4 px-4 py-3 bg-red-900/30 border border-red-800 rounded-lg flex items-center justify-between">
-          <span className="text-red-200">Tap a book to remove it from this collection</span>
+        <div className="mb-4 px-4 py-3 bg-action-danger/10 border border-action-danger/30 rounded-lg flex items-center justify-between">
+          <span className="text-action-danger">Tap a book to remove it from this collection</span>
           <button
             onClick={() => setRemoveMode(false)}
-            className="text-red-300 hover:text-red-100 font-medium"
+            className="text-action-primary hover:opacity-90 font-medium"
           >
             Done
           </button>
@@ -1339,14 +1318,17 @@ export default function CollectionDetail() {
 
       {/* Reorder mode banner */}
       {isReorderMode && (
-        <div className="mb-4 px-4 py-3 flex items-center justify-between bg-library-accent/20 border border-library-accent rounded-lg">
-          <span className="text-sm text-gray-200 font-medium">
+        <div className="mb-4 px-4 py-3 flex items-center justify-between bg-action-primary/15 border border-action-primary rounded-lg">
+          <span className="text-body-sm text-text-primary font-medium">
             {isSavingReorder ? 'Saving...' : 'Drag to reorder books'}
           </span>
-          <button
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            disabled={isSavingReorder}
             onClick={() => {
-              if (isSavingReorder) return // Don't exit while saving
-              // Restore original view mode when exiting reorder
+              if (isSavingReorder) return
               if (preReorderViewMode) {
                 setViewMode(preReorderViewMode)
                 localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
@@ -1354,22 +1336,16 @@ export default function CollectionDetail() {
               setPreReorderViewMode(null)
               setIsReorderMode(false)
             }}
-            disabled={isSavingReorder}
-            className={`px-3 py-1 text-sm font-medium rounded transition-opacity ${
-              isSavingReorder 
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                : 'bg-library-accent hover:opacity-90 text-white'
-            }`}
           >
             Done
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Automatic collection info - greyscale */}
       {isAutomatic && (
-        <div className="mb-4 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-          <p className="text-gray-400 text-sm">
+        <div className="mb-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
+          <p className="text-body-sm text-text-secondary">
             This collection updates automatically based on your reading activity
           </p>
         </div>
@@ -1408,7 +1384,7 @@ export default function CollectionDetail() {
             {incompleteHasMore && (
               <div ref={incompleteLoaderRef} className="w-full py-4 flex justify-center">
                 {loadingSection === 'incomplete' && (
-                  <div className="inline-flex items-center gap-2 text-zinc-400">
+                  <div className="inline-flex items-center gap-2 text-text-muted">
                     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1422,11 +1398,11 @@ export default function CollectionDetail() {
             {/* Completed section divider */}
             {(completedBooks.length > 0 || completedHasMore) && (
               <div className="flex items-center gap-4 my-8">
-                <div className="flex-1 h-px bg-gray-700" />
-                <span className="text-gray-500 text-sm font-medium">
+                <div className="flex-1 h-px bg-border-default" />
+                <span className="text-caption text-text-muted font-medium">
                   Completed · {completedTotal}
                 </span>
-                <div className="flex-1 h-px bg-gray-700" />
+                <div className="flex-1 h-px bg-border-default" />
               </div>
             )}
 
@@ -1441,7 +1417,7 @@ export default function CollectionDetail() {
             {completedHasMore && (
               <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
                 {loadingSection === 'completed' && (
-                  <div className="inline-flex items-center gap-2 text-zinc-400">
+                  <div className="inline-flex items-center gap-2 text-text-muted">
                     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1455,7 +1431,7 @@ export default function CollectionDetail() {
             {/* "All books loaded" message - show when both sections are done */}
             {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
               <div className="w-full py-8 flex justify-center">
-                <span className="text-gray-500 text-sm">
+                <span className="text-caption text-text-muted">
                   All {totalBooks} books loaded
                 </span>
               </div>
@@ -1464,7 +1440,7 @@ export default function CollectionDetail() {
         ) : (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📚</div>
-            <p className="text-gray-400">An empty collection, ready for whatever arrives</p>
+            <p className="text-text-secondary">An empty collection, ready for whatever arrives</p>
           </div>
         )
       ) : (
@@ -1495,7 +1471,7 @@ export default function CollectionDetail() {
             {/* Infinite scroll trigger */}
             <div ref={loaderRef} className="w-full py-8 flex justify-center">
               {loadingMore && (
-                <div className="inline-flex items-center gap-2 text-zinc-400">
+                <div className="inline-flex items-center gap-2 text-text-muted">
                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1504,7 +1480,7 @@ export default function CollectionDetail() {
                 </div>
               )}
               {!hasMore && books.length > 0 && (
-                <span className="text-gray-500 text-sm">
+                <span className="text-caption text-text-muted">
                   All {totalBooks} books loaded
                 </span>
               )}
@@ -1513,7 +1489,7 @@ export default function CollectionDetail() {
         ) : (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📚</div>
-            <p className="text-gray-400">
+            <p className="text-text-secondary">
               {isAutomatic 
                 ? 'No books match the current criteria'
                 : 'An empty collection, ready for whatever arrives'
@@ -1531,7 +1507,7 @@ export default function CollectionDetail() {
             onClick={() => setContextMenu({ show: false, book: null, x: 0, y: 0 })}
           />
           <div 
-            className="fixed z-50 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden"
+            className="fixed z-50 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default overflow-hidden"
             style={{ 
               left: Math.min(contextMenu.x, window.innerWidth - 200),
               top: Math.min(contextMenu.y, window.innerHeight - 100)
@@ -1540,7 +1516,7 @@ export default function CollectionDetail() {
           >
             <button
               onClick={() => handleChecklistAction(contextMenu.book)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-200 hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
             >
               {contextMenu.book.status === 'Finished' ? (
                 <>
@@ -1579,18 +1555,6 @@ export default function CollectionDetail() {
         />
       )}
 
-      {/* Smart Paste Modal */}
-      {showSmartPaste && (
-        <SmartPasteModal
-          collectionId={parseInt(id)}
-          onClose={() => setShowSmartPaste(false)}
-          onSuccess={() => {
-            setShowSmartPaste(false)
-            fetchCollection()
-          }}
-        />
-      )}
-
       {/* Mark Finished Modal */}
       {showMarkFinishedModal && selectedBook && (
         <MarkFinishedModal
@@ -1618,36 +1582,26 @@ export default function CollectionDetail() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/70"
-            onClick={() => setShowDeleteConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-gray-800 rounded-xl shadow-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Delete Collection?
-            </h3>
-            <p className="text-gray-400 mb-6">
-              Are you sure you want to delete "{collection.name}"? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setShowDeleteConfirm(false)}>Delete Collection</Modal.Header>
+        <Modal.Body>
+          <p className="text-body-sm text-text-secondary">
+            Are you sure you want to delete &quot;{collection.name}&quot;? This action cannot be undone.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" type="button" onClick={() => setShowDeleteConfirm(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" type="button" onClick={handleDelete}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
       </div>
     </div>
   )
@@ -1656,9 +1610,8 @@ export default function CollectionDetail() {
 // ============================================
 // Mark Finished Modal Component
 // ============================================
-function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
+function MarkFinishedModal({ book, statusLabel: _statusLabel, onConfirm, onClose }) {
   const [dateFinished, setDateFinished] = useState(() => {
-    // Use existing date if available, otherwise default to today
     if (book.date_finished) {
       return book.date_finished.split('T')[0]
     }
@@ -1672,47 +1625,20 @@ function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/70"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-sm bg-library-card rounded-xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">
-            Mark as {statusLabel}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-        
+    <Modal isOpen onClose={onClose} size="md">
+      <Modal.Header onClose={onClose}>Mark as Finished</Modal.Header>
+      <Modal.Body>
         <div className="space-y-4">
-          {/* Date Finished */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Date Finished
-            </label>
+          <FormField label="Date finished">
             <input
               type="date"
               value={dateFinished}
               onChange={(e) => setDateFinished(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-library-accent"
+              className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary"
             />
-          </div>
-          
-          {/* Rating (optional) */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Rating (optional)
-            </label>
-            <div className="flex gap-1">
+          </FormField>
+          <FormField label="Rating (optional)">
+            <div className="flex flex-wrap items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -1725,8 +1651,8 @@ function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
                   <svg
                     className={`w-7 h-7 ${
                       star <= (hoveredRating || rating)
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-600'
+                        ? 'text-action-warning fill-current'
+                        : 'text-text-muted'
                     }`}
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1740,31 +1666,24 @@ function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
                 <button
                   type="button"
                   onClick={() => setRating(0)}
-                  className="ml-2 text-xs text-gray-500 hover:text-gray-300"
+                  className="ml-2 text-caption text-text-muted hover:text-text-secondary"
                 >
                   Clear
                 </button>
               )}
             </div>
-          </div>
+          </FormField>
         </div>
-
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="ghost" type="button" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" type="button" onClick={handleSubmit}>
+          Mark Finished
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
 
@@ -1774,7 +1693,6 @@ function MarkFinishedModal({ book, statusLabel, onConfirm, onClose }) {
 function ChangeStatusModal({ book, statusLabels, onConfirm, onClose }) {
   const [selectedStatus, setSelectedStatus] = useState('')
 
-  // Status options (excluding Finished since we're moving away from it)
   const statusOptions = [
     { value: 'Unread', label: statusLabels.unread },
     { value: 'In Progress', label: statusLabels.in_progress },
@@ -1787,100 +1705,50 @@ function ChangeStatusModal({ book, statusLabels, onConfirm, onClose }) {
     }
   }
 
-  // Format date for display
   const formatDate = (dateStr) => {
     if (!dateStr) return null
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/70"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-sm bg-library-card rounded-xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">
-            Update Status
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
+    <Modal isOpen onClose={onClose} size="md">
+      <Modal.Header onClose={onClose}>Change Status</Modal.Header>
+      <Modal.Body>
+        <FormField label="Status">
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-        
-        <div className="space-y-2">
-          {statusOptions.map((option) => (
-            <label
-              key={option.value}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedStatus === option.value
-                  ? 'bg-gray-700 border border-library-accent'
-                  : 'bg-gray-800 border border-transparent hover:bg-gray-750'
-              }`}
-            >
-              <input
-                type="radio"
-                name="status"
-                value={option.value}
-                checked={selectedStatus === option.value}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="sr-only"
-              />
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                selectedStatus === option.value
-                  ? 'border-library-accent'
-                  : 'border-gray-500'
-              }`}>
-                {selectedStatus === option.value && (
-                  <div className="w-2 h-2 rounded-full bg-library-accent" />
-                )}
-              </div>
-              <span className="text-gray-200">{option.label}</span>
-            </label>
-          ))}
-        </div>
-
-        {/* Gentle reminder about date being cleared */}
+            <option value="">Select status…</option>
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
         {book.date_finished && (
-          <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-            <p className="text-gray-400 text-sm">
-              ℹ️ Finish date will be cleared ({formatDate(book.date_finished)})
+          <div className="mt-4 p-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
+            <p className="text-body-sm text-text-secondary">
+              Finish date will be cleared ({formatDate(book.date_finished)})
             </p>
           </div>
         )}
-
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedStatus}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-              selectedStatus
-                ? 'bg-library-accent hover:bg-library-accent/80 text-white'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="ghost" type="button" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" type="button" onClick={handleSubmit} disabled={!selectedStatus}>
+          Apply
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
