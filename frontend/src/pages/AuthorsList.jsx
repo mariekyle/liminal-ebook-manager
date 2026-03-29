@@ -50,7 +50,7 @@ function AuthorsList() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-[40vh]">
-        <UnifiedNavBar backLabel="Library" backTo="/" />
+        <UnifiedNavBar title="Authors" />
         <div className="text-center py-12 flex-1">
           <div className="animate-pulse-slow text-4xl mb-4">✍️</div>
           <p className="text-body-sm text-text-secondary">Loading authors...</p>
@@ -62,7 +62,7 @@ function AuthorsList() {
   if (error) {
     return (
       <div className="flex flex-col min-h-[40vh]">
-        <UnifiedNavBar backLabel="Library" backTo="/" />
+        <UnifiedNavBar title="Authors" />
         <div className="text-center py-12 flex-1">
           <div className="text-4xl mb-4">⚠️</div>
           <p className="text-action-danger">{error}</p>
@@ -73,12 +73,10 @@ function AuthorsList() {
 
   return (
     <div className="pb-24">
-      <UnifiedNavBar backLabel="Library" backTo="/" />
+      <UnifiedNavBar title="Authors" />
 
       <div className="px-4 md:px-8 pt-4">
-        <h1 className="text-h2 text-text-primary mb-4">Authors</h1>
-
-        <div className="sticky top-14 z-30 bg-bg-base/95 backdrop-blur-sm pb-3 -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="sticky top-[4.5rem] z-30 bg-bg-base/95 backdrop-blur-sm pb-3 -mx-4 px-4 md:mx-0 md:px-0">
           <SearchInput
             value={search}
             onChange={setSearch}

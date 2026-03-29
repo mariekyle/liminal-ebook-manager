@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.37.5] - 2026-03-29
+
+### Changed
+
+#### C8 — Filter modals + misc design system
+- **Tag search order** (`utils/searchSort.js`): When filtering tags, order is exact match → starts-with (A–Z) → contains (A–Z); empty search in **TagsModal** keeps count-based order. **TagsMultiSelect** uses the same relevance order for string tags.
+- **FandomModal**, **ShipModal**, **TagsModal**: Shared **`Modal`** + **`SearchInput`** + **`Button`**; Warm A tokens.
+- **SearchModal**: **`Modal size="fullscreen"`** + **`SearchInput`**; tokenized results list.
+- **SortDropdown**: Tokens; active sort **`text-action-primary`**; mobile **Cancel** uses **`Button variant="secondary"`**; "Sort By" uses **`text-label`**.
+- **TagsMultiSelect**, **BottomNav**, **Header**, **SearchBar**: Token conversion (nav items stay native links/buttons).
+- **ReadingStatusCard**: Subtitle typography token.
+- **AuthorsList**: **`UnifiedNavBar title="Authors"`** (title-only); sticky search offset adjusted.
+- **ImportPage**: **`UnifiedNavBar title="Import"`**; dark theme tokens; **`Button`** for actions; **`useEffect`** for initial stats (replaces mistaken **`useState`** hook).
+- **DuplicatesPage**: **`UnifiedNavBar title="Find Duplicates"`**; tokens + **`Button`** merge control.
+- **MosaicCover**: Unchanged (no Tailwind chrome to convert).
+
+### Technical
+- New: `frontend/src/utils/searchSort.js`
+- Modified: `FandomModal.jsx`, `ShipModal.jsx`, `TagsModal.jsx`, `TagsMultiSelect.jsx`, `SortDropdown.jsx`, `SearchModal.jsx`, `BottomNav.jsx`, `Header.jsx`, `SearchBar.jsx`, `ReadingStatusCard.jsx`, `pages/AuthorsList.jsx`, `ImportPage.jsx`, `DuplicatesPage.jsx`
+
+### Notes
+- **BookCard `variant`**: Main **`BookCard.jsx`** does not define a `variant` prop; enforcement deferred until the component supports it.
+- **SmartPasteModal**: Already absent; no references in repo.
+
+---
+
 ## [0.37.4] - 2026-03-29
 
 ### Changed
@@ -16,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Add flow**: **`AddChoice`**, **`AddToLibrary`**, **`ManualEntryForm`**, **`WishlistForm`**, **`AddSuccess`**, **`StepIndicator`**, **`AnalyzingModal`** — Warm A tokens, **`Button`**, **`FormField`** (manual/wishlist forms; author chips + autocomplete logic unchanged).
 - **Upload flow**: **`ReviewBooks`**, **`UploadProgress`**, **`UploadSuccess`**, **`CancelModal`** (shared **`Modal`** + **`Button`**), **`upload/BookCard`** — tokens + **`FormField`** for editable metadata; gradient cover hex styles preserved for dynamic previews.
 - **Review title persistence**: After **`finalizeUpload`**, **`AddPage`** applies **`updateBookMetadata`** for each result with `title_id` when the book was edited on the review step (reconciles DB title with user-edited fields after server prefers file metadata on create).
+- **AddPage cleanup**: Error banner and linked-book context banner tokenized; series and series_number trimmed before save (consistent with title/author handling).
 
 ### Technical
 - New: `frontend/src/components/ui/FileDropZone.jsx`
@@ -50,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CollectionsTab.jsx**: **`UnifiedNavBar`** title `"Collections"`; **`Modal`** + **`Button`** for delete confirmation; loading/error/empty states and menus use tokens.
 - **CollectionModal.jsx**: Shared **`Modal`** (`fullscreenOnMobile`, `lg`) with **`FormField`**, error banner, **`Button`** footer; type/cover controls tokenized (gradient swatch uses design tokens).
 - **CollectionPicker.jsx**: Shared **`Modal`** with scrollable body, **`Button variant="secondary"`** Done, token checkbox rows.
-- **CollectionCard.jsx**: Distinct container styling (`bg-bg-surface`, border, collection icon, `text-body-sm` / `text-caption`); list + grid + context menu tokenized; copy uses “titles” for counts.
+- **CollectionCard.jsx**: Distinct container styling (`bg-bg-surface`, border, collection icon, `text-body-sm` / `text-caption`); list + grid + context menu tokenized; copy uses "titles" for counts.
 - **CollectionGradient.jsx**: Unchanged (no Tailwind hardcodes outside gradient math).
 
 ### Technical
@@ -75,12 +102,12 @@ Dev-only route at `/dev/components` for visual verification of all shared UI com
 
 ### Changed
 
-#### SettingsDrawer (C4 design system)
-- Drawer shell and backdrop use tokens (`bg-bg-surface`, `bg-bg-overlay`, `border-border-default`) aligned with `FilterDrawer`
-- Section titles use `text-h4`; inputs/selects use `text-text-primary` on `bg-bg-elevated`
-- Close control uses shared `IconButton`; primary actions use `Button` (sync, duplicates, rescan, backup, save settings, cover extract) with loading states
-- Reading speed and backup path use `FormField`; backup status toasts use success/danger token surfaces
-- File: `frontend/src/components/SettingsDrawer.jsx`
+#### C4 — Drawers + UnifiedEditModal + ChangeCoverModal design system
+- **SettingsDrawer**: Drawer shell and backdrop use tokens (`bg-bg-surface`, `bg-bg-overlay`, `border-border-default`) aligned with `FilterDrawer`. Section titles use `text-h4`; inputs/selects use `text-text-primary` on `bg-bg-elevated`. Close control uses shared `IconButton`; primary actions use `Button` (sync, duplicates, rescan, backup, save settings, cover extract) with loading states. Reading speed and backup path use `FormField`; backup status toasts use success/danger token surfaces.
+- **FilterDrawer**: Drawer container standardized to match SettingsDrawer pattern (same width, animation, overlay). `SearchInput` adoption. Apply/Clear footer uses `Button`. Filter category buttons stay native `<button>` (selection controls). All 48 hardcoded colors replaced with tokens.
+- **UnifiedEditModal**: Migrated from bespoke bottom sheet to shared `Modal` (`fullscreenOnMobile`). All 14 form elements (9 inputs, 4 textareas, 1 select) wrapped in `FormField`. Tabs (Details/About/Metadata) stay native `<button>`. `ChipInput` adopted for tags, authors, and other multi-value fields. All 47 hardcoded colors replaced.
+- **ChangeCoverModal**: Migrated to shared `Modal` (`fullscreenOnMobile`). Upload, extract, and gradient revert actions use `Button`. All hardcoded colors replaced.
+- **New `ChipInput`** (`components/ui/ChipInput.jsx`): Input on top, chips below. Enter/comma to add, × to remove. Optional async `fetchSuggestions`. `FormField` wrapper for label + error. 44px touch targets on chip remove buttons.
 
 #### Modal `size="fullscreen"` support
 - Modal component now accepts `size="fullscreen"` as a prop value (previously only supported `fullscreenOnMobile` boolean and the undocumented `fullscreen` boolean)
@@ -89,10 +116,15 @@ Dev-only route at `/dev/components` for visual verification of all shared UI com
 
 ### Technical
 #### Files Created
-- `frontend/src/pages/ComponentPreview.jsx` -- all 10 component sections with variant/state coverage
+- `frontend/src/pages/ComponentPreview.jsx`
+- `frontend/src/components/ui/ChipInput.jsx`
 #### Files Modified
 - `frontend/src/App.jsx` -- `/dev/components` route added outside ConnectedApp (no health check, no BottomNav)
 - `frontend/src/components/ui/Modal.jsx` -- `size="fullscreen"` support, ModalLayoutContext for header layout
+- `frontend/src/components/SettingsDrawer.jsx`
+- `frontend/src/components/FilterDrawer.jsx`
+- `frontend/src/components/UnifiedEditModal.jsx`
+- `frontend/src/components/ChangeCoverModal.jsx`
 
 ---
 
@@ -242,7 +274,7 @@ Full design token migration of BookDetail.jsx, the largest single file in the ap
 - Adjusted dark theme lightness from 46-62% to 42-58% for better contrast
 - Increased vignette opacity from 0.10 to 0.12 for text contrast
 - Ran migration script on all ~1,700 titles to regenerate cover_gradient values
-- GradientCover.jsx unchanged (FROZEN) — backend-only change in `backend/services/covers.py`
+- GradientCover.jsx unchanged (FROZEN) -- backend-only change in `backend/services/covers.py`
 
 #### BookCard v4 (10.0.10)
 - Rewrote BookCard with `variant` prop: "standard", "compact", "list"
@@ -255,7 +287,7 @@ Full design token migration of BookDetail.jsx, the largest single file in the ap
 
 #### ThreeDotMenu Extraction (10.0.14)
 - Extracted ThreeDotMenu from BookDetail.jsx to `components/ui/ThreeDotMenu.jsx`
-- Zero behavior changes — desktop dropdown + mobile bottom sheet identical
+- Zero behavior changes -- desktop dropdown + mobile bottom sheet identical
 - Now importable by Series, Author, Collection detail pages (used in 10.0C)
 
 ### Fixed
@@ -276,7 +308,7 @@ Full design token migration of BookDetail.jsx, the largest single file in the ap
 ### Added
 
 #### Phase 10.0.10: BookCard Redesign (mockup v4 approved)
-Design-only — implementation pending.
+Design-only -- implementation pending.
 
 **Grid view badges:**
 - Opaque dark bg (#1a1918 @ 88%) + white icon for all types
@@ -355,10 +387,10 @@ Design-only — implementation pending.
 Complete redesign of book detail page with flattened structure and new components.
 
 **New Components:**
-- `SortDropdown` — Reusable sort with localStorage persistence, desktop dropdown + mobile bottom sheet
-- `CollapsibleSection` — Expandable sections with gradient fade, three variants (text/tags/grid)
-- `ReadingStatusCard` — Status-aware display with blue (reading) and green (finished) themes
-- `CompactSessionRow` — Single-row session display with smart date formatting
+- `SortDropdown` -- Reusable sort with localStorage persistence, desktop dropdown + mobile bottom sheet
+- `CollapsibleSection` -- Expandable sections with gradient fade, three variants (text/tags/grid)
+- `ReadingStatusCard` -- Status-aware display with blue (reading) and green (finished) themes
+- `CompactSessionRow` -- Single-row session display with smart date formatting
 
 **Page Structure Overhaul:**
 - Removed "Book Details" card wrapper
@@ -402,7 +434,7 @@ Complete redesign of book detail page with flattened structure and new component
 - Stale cover preview when switching cover types in modal
 
 ### Documentation
-- `CODE_PATTERNS.md` — Battle-tested solutions for common problems
+- `CODE_PATTERNS.md` -- Battle-tested solutions for common problems
 
 ---
 
@@ -437,8 +469,8 @@ Complete UX overhaul of collections landing page.
 **3-Dot Menu** with Add Collection, Reorder, View Toggle options.
 **Grid/List View Toggle** with localStorage persistence.
 **Reorder Mode** with drag-and-drop, default collections pinned.
-**Collection Gradients** — 3 styles (Layered Mist, Drift Bloom, Veiled Depth) × 2 color variations.
-**Context Menu** — Right-click (desktop) or long-press (mobile) for Edit/Delete.
+**Collection Gradients** -- 3 styles (Layered Mist, Drift Bloom, Veiled Depth) × 2 color variations.
+**Context Menu** -- Right-click (desktop) or long-press (mobile) for Edit/Delete.
 
 #### Dependencies Added
 - `@dnd-kit/core@^6.3.1`, `@dnd-kit/sortable@^10.0.0`, `@dnd-kit/utilities@^3.2.2`

@@ -78,16 +78,14 @@ function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-library-card border-t border-gray-700 z-40 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border-default z-40 md:hidden">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         {navItems.map(({ to, label, icon: Icon, match }) => (
           <NavLink
             key={match}
             to={to}
-            className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
-              isActive({ match }) 
-                ? 'text-library-accent' 
-                : 'text-gray-500 hover:text-gray-300'
+            className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-200 ease-out ${
+              isActive({ match }) ? 'text-action-primary' : 'text-text-muted hover:text-text-secondary'
             }`}
           >
             <Icon />

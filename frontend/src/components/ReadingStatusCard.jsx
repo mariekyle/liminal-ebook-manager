@@ -103,7 +103,7 @@ export default function ReadingStatusCard({
           {config.label}
         </div>
         {subtitle && (
-          <div className="text-sm text-text-secondary truncate">
+          <div className="text-body-sm text-text-secondary truncate">
             {subtitle}
           </div>
         )}

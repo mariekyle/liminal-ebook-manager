@@ -12,14 +12,13 @@ const FilterIcon = () => (
 )
 
 /**
- * SearchBar component with two modes:
- * - Desktop: Full inline search input with filter button
- * - Mobile (iconsOnly): Just search and filter icon buttons
+ * SearchBar — inline search + optional filter (Library toolbar).
+ * Kept as custom wrapper (filter affordance); colors use design tokens.
  */
-function SearchBar({ 
-  value, 
-  onChange, 
-  placeholder = 'Search...', 
+function SearchBar({
+  value,
+  onChange,
+  placeholder = 'Search...',
   showFilter = false,
   filterCount = 0,
   onFilterClick,
@@ -27,33 +26,32 @@ function SearchBar({
   iconsOnly = false,
   searchActive = false,
 }) {
-  // Icons-only mode (mobile Browse/Wishlist)
   if (iconsOnly) {
     return (
       <div className="flex items-center gap-2">
-        {/* Search Button */}
-        <button 
+        <button
+          type="button"
           onClick={onSearchClick}
-          className={`relative p-2 rounded-lg transition-colors ${
-            searchActive 
-              ? 'bg-library-accent text-white' 
-              : 'text-gray-400 hover:text-white hover:bg-library-card'
+          className={`relative p-2 rounded-lg transition-all duration-200 ease-out min-w-[44px] min-h-[44px] flex items-center justify-center ${
+            searchActive
+              ? 'bg-action-primary text-text-primary'
+              : 'text-text-muted hover:text-text-primary hover:bg-bg-surface'
           }`}
           title="Search"
         >
           <SearchIcon />
         </button>
-        
-        {/* Filter Button */}
+
         {showFilter && (
-          <button 
+          <button
+            type="button"
             onClick={onFilterClick}
-            className="relative text-gray-400 hover:text-white hover:bg-library-card p-2 rounded-lg transition-colors"
+            className="relative text-text-muted hover:text-text-primary hover:bg-bg-surface p-2 rounded-lg transition-all duration-200 ease-out min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Filters"
           >
             <FilterIcon />
             {filterCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-library-accent text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-action-primary text-text-primary text-xs rounded-full w-4 h-4 flex items-center justify-center">
                 {filterCount}
               </span>
             )}
@@ -63,29 +61,25 @@ function SearchBar({
     )
   }
 
-  // Full search bar mode (desktop)
   return (
     <div className="flex items-center gap-2 flex-1 max-w-md">
-      <div className="flex items-center gap-2 px-3 py-2 bg-library-card rounded-lg flex-1">
-        {/* Search Icon */}
-        <span className="text-gray-400">
+      <div className="flex items-center gap-2 px-3 py-2 bg-bg-elevated rounded-lg flex-1 border border-border-default">
+        <span className="text-text-muted">
           <SearchIcon />
         </span>
-        
-        {/* Search Input */}
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm"
+          className="flex-1 bg-transparent text-text-primary placeholder:text-text-muted focus:outline-none text-body-sm"
         />
-        
-        {/* Clear button when there's text */}
         {value && (
           <button
+            type="button"
             onClick={() => onChange('')}
-            className="text-gray-500 hover:text-white"
+            className="text-text-muted hover:text-text-primary min-w-[36px] min-h-[36px] flex items-center justify-center"
+            aria-label="Clear search"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -93,17 +87,17 @@ function SearchBar({
           </button>
         )}
       </div>
-      
-      {/* Filter Button */}
+
       {showFilter && (
-        <button 
+        <button
+          type="button"
           onClick={onFilterClick}
-          className="relative text-gray-400 hover:text-white p-2 transition-colors"
+          className="relative text-text-muted hover:text-text-primary p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           title="Filters"
         >
           <FilterIcon />
           {filterCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-library-accent text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-action-primary text-text-primary text-xs rounded-full w-4 h-4 flex items-center justify-center">
               {filterCount}
             </span>
           )}

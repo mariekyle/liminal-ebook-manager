@@ -83,10 +83,10 @@ function Header() {
 
   return (
     <>
-      <header className="bg-library-card border-b border-gray-700 sticky top-0 z-50">
+      <header className="bg-bg-surface border-b border-border-default sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-3 md:px-8">
           {/* Logo */}
-          <NavLink to="/" className="text-xl font-bold text-white">
+          <NavLink to="/" className="text-xl font-bold text-text-primary">
             Liminal
           </NavLink>
           
@@ -96,10 +96,10 @@ function Header() {
               <NavLink
                 key={match}
                 to={to}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ease-out ${
                   isActive({ match })
-                    ? 'bg-gray-700 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    ? 'bg-bg-elevated text-text-primary'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 }`}
               >
                 <Icon />
@@ -111,7 +111,7 @@ function Header() {
           {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}
-            className="text-gray-400 hover:text-white p-2"
+            className="text-text-secondary hover:text-text-primary p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Open settings"
           >
             <SettingsIcon />

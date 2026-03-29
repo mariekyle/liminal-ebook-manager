@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { findDuplicates, mergeTitles } from '../api'
+import UnifiedNavBar from '../components/ui/UnifiedNavBar'
+import Button from '../components/ui/Button'
 
 // Simple color generator based on string hash (no text display)
 function getColorFromString(str) {
@@ -13,7 +15,6 @@ function getColorFromString(str) {
 }
 
 function DuplicatesPage() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
@@ -109,45 +110,31 @@ function DuplicatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-library-bg">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-library-bg/95 backdrop-blur border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-400 hover:text-white p-1"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-white">Find Duplicates</h1>
-              <p className="text-gray-400 text-sm">Review and merge duplicate entries in your library</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-bg-base pb-24">
+      <UnifiedNavBar title="Find Duplicates" />
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        <p className="text-body-sm text-text-secondary mb-6">
+          Review and merge duplicate entries in your library
+        </p>
+
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <svg className="animate-spin h-10 w-10 mb-4" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <span className="text-lg">Scanning library for duplicates...</span>
+            <span className="text-body text-text-secondary">Scanning library for duplicates...</span>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-900/30 border border-red-800 rounded-lg p-4 text-red-400">
+          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-action-danger">
             {error}
             <button
+              type="button"
               onClick={scanForDuplicates}
-              className="ml-4 underline hover:no-underline"
+              className="ml-4 underline hover:no-underline text-body-sm"
             >
               Try again
             </button>
@@ -159,11 +146,11 @@ function DuplicatesPage() {
             {results.groups.length === 0 ? (
               <div className="text-center py-20">
                 <div className="text-6xl mb-4">✨</div>
-                <div className="text-white text-xl font-medium mb-2">No duplicates found</div>
-                <div className="text-gray-400">Your library is clean!</div>
+                <div className="text-text-primary text-h4 mb-2">No duplicates found</div>
+                <div className="text-text-secondary text-body-sm">Your library is clean!</div>
                 <Link
                   to="/"
-                  className="inline-block mt-6 px-6 py-2 bg-library-accent text-white rounded-lg hover:opacity-90"
+                  className="inline-block mt-6 px-6 py-2 bg-action-primary text-text-primary rounded-lg hover:bg-action-primary-hover transition-colors"
                 >
                   Back to Library
                 </Link>
@@ -172,13 +159,14 @@ function DuplicatesPage() {
               <div className="space-y-6">
                 {/* Summary */}
                 <div className="flex items-center justify-between">
-                  <div className="text-gray-400">
+                  <div className="text-text-secondary text-body-sm">
                     Found {results.groups.length} potential duplicate {results.groups.length === 1 ? 'group' : 'groups'} ({results.total_duplicates} books)
                   </div>
                   <button
+                    type="button"
                     onClick={scanForDuplicates}
                     disabled={loading}
-                    className="text-gray-400 hover:text-white text-sm flex items-center gap-1"
+                    className="text-text-muted hover:text-text-primary text-body-sm flex items-center gap-1 min-h-[44px]"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -191,36 +179,38 @@ function DuplicatesPage() {
                 {results.groups.map((group, groupIndex) => (
                   <div 
                     key={groupIndex}
-                    className={`bg-library-card rounded-lg overflow-hidden transition-opacity ${
+                    className={`bg-bg-surface rounded-lg overflow-hidden border border-border-default transition-opacity ${
                       mergeSuccess[groupIndex] ? 'opacity-50' : ''
                     }`}
                   >
                     {/* Group Header */}
-                    <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    <div className="px-4 py-3 border-b border-border-default flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded text-caption font-medium ${
                           group.match_type === 'exact' 
-                            ? 'bg-red-500/20 text-red-400' 
-                            : 'bg-yellow-500/20 text-yellow-400'
+                            ? 'bg-action-danger/15 text-action-danger' 
+                            : 'bg-action-warning/15 text-action-warning'
                         }`}>
                           {group.match_type === 'exact' ? 'Exact Match' : 'Similar Title'}
                         </span>
                         {group.same_author && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
+                          <span className="px-2 py-0.5 rounded text-caption font-medium bg-chip-fanfiction/15 text-chip-fanfiction">
                             Same Author
                           </span>
                         )}
-                        <span className="text-gray-500 text-sm">
+                        <span className="text-text-muted text-body-sm">
                           {group.books.length} books
                         </span>
                       </div>
                       
                       {/* Merge button */}
                       {!mergeSuccess[groupIndex] && (
-                        <button
+                        <Button
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleMergeGroup(groupIndex)}
                           disabled={merging[groupIndex] || !selections[groupIndex]}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded transition-colors flex items-center gap-2"
+                          className="flex items-center gap-2"
                         >
                           {merging[groupIndex] ? (
                             <>
@@ -233,11 +223,11 @@ function DuplicatesPage() {
                           ) : (
                             <>Merge into Selected</>
                           )}
-                        </button>
+                        </Button>
                       )}
                       
                       {mergeSuccess[groupIndex] && (
-                        <span className="text-green-400 text-sm flex items-center gap-1">
+                        <span className="text-action-success text-body-sm flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -248,18 +238,18 @@ function DuplicatesPage() {
 
                     {/* Error */}
                     {mergeError[groupIndex] && (
-                      <div className="px-4 py-2 bg-red-900/20 text-red-400 text-sm">
+                      <div className="px-4 py-2 bg-action-danger/10 text-action-danger text-body-sm border-b border-border-subtle">
                         {mergeError[groupIndex]}
                       </div>
                     )}
 
                     {/* Books in group */}
-                    <div className="divide-y divide-gray-700/50">
+                    <div className="divide-y divide-border-subtle">
                       {group.books.map((book) => (
                         <label
                           key={book.id}
-                          className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-white/5 transition-colors ${
-                            selections[groupIndex] === book.id ? 'bg-indigo-900/20' : ''
+                          className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-bg-elevated/50 transition-colors ${
+                            selections[groupIndex] === book.id ? 'bg-action-primary/10' : ''
                           }`}
                         >
                           {/* Radio button */}
@@ -269,7 +259,7 @@ function DuplicatesPage() {
                             checked={selections[groupIndex] === book.id}
                             onChange={() => handleSelectionChange(groupIndex, book.id)}
                             disabled={merging[groupIndex] || mergeSuccess[groupIndex]}
-                            className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500 focus:ring-offset-gray-800"
+                            className="w-4 h-4 text-action-primary bg-bg-elevated border-border-default focus:ring-action-primary focus:ring-offset-bg-surface"
                           />
                           
                           {/* Cover (simple color, no text) */}
@@ -280,13 +270,13 @@ function DuplicatesPage() {
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="text-white font-medium truncate">
+                            <div className="text-text-primary font-medium truncate text-body-sm">
                               {book.title}
                             </div>
-                            <div className="text-gray-400 text-sm truncate">
+                            <div className="text-text-secondary text-body-sm truncate">
                               {book.authors}
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-gray-500">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-caption text-text-muted">
                               <span>{book.edition_count} {book.edition_count === 1 ? 'edition' : 'editions'}</span>
                               {book.category && (
                                 <>
@@ -297,7 +287,7 @@ function DuplicatesPage() {
                               {formatSeriesInfo(book) && (
                                 <>
                                   <span>•</span>
-                                  <span className="text-purple-400">{formatSeriesInfo(book)}</span>
+                                  <span className="text-chip-fanfiction">{formatSeriesInfo(book)}</span>
                                 </>
                               )}
                             </div>
@@ -305,7 +295,7 @@ function DuplicatesPage() {
 
                           {/* Keep indicator */}
                           {selections[groupIndex] === book.id && (
-                            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
+                            <span className="px-2 py-1 bg-action-success/15 text-action-success text-caption rounded">
                               Keep
                             </span>
                           )}
@@ -314,7 +304,7 @@ function DuplicatesPage() {
                           <Link
                             to={`/book/${book.id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-gray-500 hover:text-white transition-colors"
+                            className="p-2 text-text-muted hover:text-text-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="View book details"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,8 +317,8 @@ function DuplicatesPage() {
 
                     {/* Help text */}
                     {!mergeSuccess[groupIndex] && (
-                      <div className="px-4 py-3 bg-gray-800/30 text-gray-500 text-xs">
-                        💡 Select the book to keep, then click "Merge into Selected". Other books will be merged into it.
+                      <div className="px-4 py-3 bg-bg-elevated/50 text-text-muted text-caption border-t border-border-subtle">
+                        💡 Select the book to keep, then click &quot;Merge into Selected&quot;. Other books will be merged into it.
                       </div>
                     )}
                   </div>

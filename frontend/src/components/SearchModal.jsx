@@ -1,22 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listBooks } from '../api'
+import Modal from './ui/Modal'
+import SearchInput from './ui/SearchInput'
 
 function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
   const [query, setQuery] = useState(currentSearch)
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef(null)
   const listRef = useRef(null)
   const navigate = useNavigate()
 
-  // Focus input on mount
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    setQuery(currentSearch)
+  }, [currentSearch])
 
-  // Search books when query changes (debounced)
   useEffect(() => {
     if (!query.trim()) {
       setBooks([])
@@ -26,13 +25,13 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
 
     setLoading(true)
     setSelectedIndex(0)
-    
+
     const timer = setTimeout(() => {
       listBooks({ search: query.trim(), limit: 20 })
-        .then(data => {
+        .then((data) => {
           setBooks(data.books || [])
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Failed to search books:', err)
           setBooks([])
         })
@@ -42,7 +41,6 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
     return () => clearTimeout(timer)
   }, [query])
 
-  // Scroll selected item into view
   useEffect(() => {
     if (listRef.current && books.length > 0) {
       const selectedEl = listRef.current.children[selectedIndex]
@@ -54,25 +52,21 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex(i => Math.min(i + 1, books.length - 1))
+        setSelectedIndex((i) => Math.min(i + 1, books.length - 1))
         break
       case 'ArrowUp':
         e.preventDefault()
-        setSelectedIndex(i => Math.max(i - 1, 0))
+        setSelectedIndex((i) => Math.max(i - 1, 0))
         break
       case 'Enter':
         e.preventDefault()
         if (books[selectedIndex]) {
-          // Navigate to selected book
           handleNavigateToBook(books[selectedIndex].id)
         } else if (query.trim()) {
-          // Apply as filter
           handleApplyFilter()
         }
         break
-      case 'Escape':
-        e.preventDefault()
-        onClose()
+      default:
         break
     }
   }
@@ -88,93 +82,62 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 z-50"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="fixed inset-x-4 top-20 z-50 max-w-lg mx-auto">
-        <div className="bg-library-card rounded-xl shadow-2xl overflow-hidden border border-gray-600">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-            <h3 className="text-white font-medium">Search Library</h3>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-white p-1"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Search Input */}
-          <div className="p-3 border-b border-gray-700">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search books..."
-              className="w-full bg-library-bg text-white text-sm rounded-lg px-4 py-3 border border-gray-600 focus:border-library-accent focus:outline-none"
-            />
-          </div>
-
-          {/* Results */}
-          <div ref={listRef} className="max-h-64 overflow-y-auto">
-            {loading ? (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                Searching...
-              </div>
-            ) : books.length > 0 ? (
-              books.map((book, index) => (
-                <button
-                  key={book.id}
-                  onClick={() => handleNavigateToBook(book.id)}
-                  className={`w-full text-left px-4 py-3 transition-colors ${
-                    index === selectedIndex
-                      ? 'bg-library-accent/20'
-                      : 'hover:bg-gray-700'
-                  }`}
-                >
-                  <div className="font-medium text-white truncate">{book.title}</div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {book.authors?.[0] || 'Unknown Author'}
-                    {book.category && ` • ${book.category}`}
-                  </div>
-                </button>
-              ))
-            ) : query.trim() ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-gray-500 text-sm mb-1">No books found</p>
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                Type to search your library
-              </div>
-            )}
-          </div>
-          
-          {/* Footer - Apply to Library option */}
-          {query.trim() && (
-            <div className="px-4 py-3 border-t border-gray-700 text-center">
+    <Modal isOpen={true} onClose={onClose} size="fullscreen">
+      <Modal.Header onClose={onClose}>Search Library</Modal.Header>
+      <Modal.Body className="flex flex-col gap-3 min-h-0">
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search books..."
+          loading={loading}
+          autoFocus
+          onKeyDown={handleKeyDown}
+        />
+        <div
+          ref={listRef}
+          className="flex-1 min-h-0 max-h-[min(50vh,360px)] overflow-y-auto rounded-lg border border-border-subtle bg-bg-elevated/50"
+        >
+          {loading ? (
+            <div className="px-4 py-8 text-center text-text-muted text-body-sm">Searching...</div>
+          ) : books.length > 0 ? (
+            books.map((book, index) => (
               <button
-                onClick={handleApplyFilter}
-                className="text-library-accent text-sm hover:underline"
+                key={book.id}
+                type="button"
+                onClick={() => handleNavigateToBook(book.id)}
+                className={`w-full text-left px-4 py-3 transition-all duration-200 ease-out min-h-[44px] border-b border-border-subtle last:border-b-0 ${
+                  index === selectedIndex ? 'bg-action-primary/15' : 'hover:bg-bg-surface'
+                }`}
               >
-                Filter library by "{query.trim()}" →
+                <div className="font-medium text-text-primary truncate text-body-sm">{book.title}</div>
+                <div className="text-caption text-text-muted truncate">
+                  {book.authors?.[0] || 'Unknown Author'}
+                  {book.category && ` • ${book.category}`}
+                </div>
               </button>
+            ))
+          ) : query.trim() ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-text-muted text-body-sm mb-1">No books found</p>
             </div>
+          ) : (
+            <div className="px-4 py-8 text-center text-text-muted text-body-sm">Type to search your library</div>
           )}
         </div>
-      </div>
-    </>
+        {query.trim() && (
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={handleApplyFilter}
+              className="text-action-primary text-body-sm hover:underline min-h-[44px] px-2"
+            >
+              Filter library by &quot;{query.trim()}&quot; →
+            </button>
+          </div>
+        )}
+      </Modal.Body>
+    </Modal>
   )
 }
 
 export default SearchModal
-

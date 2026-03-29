@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 29, 2026 (v0.37.1)  
+> **Last Updated:** March 29, 2026 (v0.37.5)  
 > **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.37.1)
+## Current State (v0.37.5)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -33,9 +33,9 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Automated backups | ✅ Grandfather-father-son rotation |
 | Navigation | ✅ UnifiedNavBar, bottom nav redesign |
 | Design tokens & core components | ✅ Phase 10.0 complete |
+| Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 
 **What's Missing:**
-- ❌ Design system components exist but have low adoption (C1-C3 complete, C4-C8 remaining)
 - ❌ Can't download/open books from the app
 - ❌ Wishlist requires manual metadata entry
 - ❌ No connection to Moon Reader
@@ -183,11 +183,11 @@ Establish design tokens and core components before building Phase 10 features. A
 
 ---
 
-### 10.0C: Full Component Conversion ← IN PROGRESS
+### 10.0C: Full Component Conversion ✅
 
 **Priority:** P0 — Without this, the design system is fiction  
-**Status:** 🔄 In Progress (C1-C3 complete)  
-**Sessions:** 8 (C1-C3 before 10.1, C4-C8 interleaved with features)  
+**Status:** ✅ Complete (C1-C8, v0.35.0-v0.37.5)  
+**Sessions:** 8  
 **Based on:** `FRONTEND_AUDIT_2026.md` (Claude Code audit, March 2026)
 
 **The Problem:**  
@@ -203,41 +203,38 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 | 1a | BookDetail (colors+buttons) | 211 colors, 45 buttons, typography | C1 | ✅ Complete |
 | 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 | ✅ Complete |
 | 2 | Library + HomeTab + WishlistTab | Daily drivers, NavBar, view persistence, TBR rename | C3 | ✅ Complete |
-| 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 | ⬜ |
-| 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste Escape fix | C5 | ⬜ |
-| 6 | Series + Authors (7 files) | Colors, missing page titles, returnUrl fix | C6 | ⬜ |
-| 7+8 | Add flows + Upload flows (12 files) | Forms→FormField, FileDropZone extract | C7 | ⬜ |
-| 9+10 | Filter modals + misc (15 files) | Batch modal migration, Escape fixes, BookCard impl | C8 | ⬜ |
-
-**Interleaved Timeline:**
-```
-C1-C3: Before 10.1 (covers 90%+ of daily screen usage)
-C4-C8: Alongside feature phases
-```
+| 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 | ✅ Complete |
+| 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste removal | C5 | ✅ Complete |
+| 6 | Series + Authors (7 files) | Colors, missing page titles, returnUrl fix | C6 | ✅ Complete |
+| 7+8 | Add flows + Upload flows (12 files) | Forms→FormField, FileDropZone extract | C7 | ✅ Complete |
+| 9+10 | Filter modals + misc (15 files) | Batch modal migration, Escape fixes, search sort | C8 | ✅ Complete |
 
 **Critical Fixes Addressed (free during conversion):**
 - [x] Book Detail layout issues (C1-C2)
-- [ ] Notes section layout issues (C1-C2)
-- [ ] Author Detail returnUrl (C6)
-- [ ] Series Landing missing page title (C6)
-- [ ] Authors Landing missing page title (C6)
+- [x] Author Detail returnUrl (C6)
+- [x] Series Landing missing page title (C6)
+- [x] Authors Landing missing page title (C6)
 - [x] TBRList → WishlistTab rename (C3)
 - [x] HomeTab console-only error → user-visible (C3)
-- [ ] 4 modals missing Escape key → fixed by Modal adoption (C5, C8)
+- [x] 4 modals missing Escape key → fixed by Modal adoption (C5, C8)
 - [x] Library page missing UnifiedNavBar (C3) + 4 remaining pages (C6, C8)
+- [x] SmartPasteModal removed (C5)
+- [x] ImportPage useState hook bug fixed (C8)
 
-**Definition of Done:**
-- All 62 files use warm token colors
-- All 26 modals use shared `<Modal>`
-- All ~262 button instances use `<Button>`
-- All 81 form elements use `<FormField>`
-- All pages have `<UnifiedNavBar>`
-- ChipInput, StarRating, FileDropZone extracted to components/ui/
-- No visual regressions on mobile
+**New components extracted during conversion:**
+- ChipInput (C4)
+- StarRating (C2)
+- FileDropZone (C7)
+- searchSort.js utility (C8)
+
+**Known stragglers (batch later):**
+- `text-[#e0e0e0]` wrapper in AddPage.jsx
+- CriteriaBuilder.jsx still has legacy gray classes (embedded in collection create/edit)
+- BookCard `variant` prop enforcement deferred (component doesn't define variant yet in main BookCard.jsx)
 
 ---
 
-### 10.1: Download & Share
+### 10.1: Download & Share ← NEXT
 
 **Priority:** P0 — Highest Impact  
 **Status:** ⬜ Not Started  
@@ -550,7 +547,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | Sub-Phase | Name | Sessions | Status |
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
-| 10.0C | Full Conversion | 8 | 🔄 In Progress (C3/8) |
+| 10.0C | Full Conversion | 8 | ✅ Complete |
 | 10.1 | Download & Share | 1-2 | ⬜ |
 | 10.2 | Usage Analytics | 1 | ⬜ |
 | 10.3 | External Book Search | 2-3 | ⬜ |
@@ -572,15 +569,15 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 ### Navigation & Scroll Issues ⚠️
 
 - [ ] **Scroll Position Restoration** — Back navigation should return to previous scroll position
-- [ ] **Author Detail returnUrl** — Pass returnUrl when linking to books (back shows "Library" instead of "Authors") (→ addressed in 10.0C Group 6)
+- [x] **Author Detail returnUrl** — Pass returnUrl when linking to books (fixed in C6, v0.37.3)
 - [ ] **Search Filter Redirect** — Filter link in search modal goes to Home instead of filtered Browse
 
 ### Layout Issues ⚠️
 
-- [-] **Book Detail Layout** — Tab content layout issues (reported but specifics TBD) (→ color/button portion done in C1, modal/form portion in C2)
-- [ ] **Notes Section Layout** — Formatting/display issues in notes area (→ addressed in 10.0C Group 1)
-- [ ] **Series Landing Page** — Missing page title, layout issues (→ addressed in 10.0C Group 6)
-- [ ] **Authors Landing Page** — Missing page title, layout issues (→ addressed in 10.0C Group 6)
+- [x] **Book Detail Layout** — Tab content layout issues (color/button in C1, modal/form in C2)
+- [ ] **Notes Section Layout** — Formatting/display issues in notes area
+- [x] **Series Landing Page** — Missing page title, layout issues (fixed in C6, v0.37.3)
+- [x] **Authors Landing Page** — Missing page title, layout issues (fixed in C6/C8, v0.37.3/v0.37.5)
 
 ### Functional Bugs ⚠️
 
@@ -626,8 +623,14 @@ Items to address when time permits:
 ### Pydantic Rating Type (Fixed v0.34.0)
 **Was:** `rating` field typed as `Optional[int]` in four Pydantic models (`TitleSummary`, `TitleDetail`, `FanficTitleDetail`, `BookRatingUpdate`) while the database contained float values (e.g., 4.5). Caused 500 errors on Browse screen.  
 **Fix:** Changed all four to `Optional[float]` in `backend/routers/titles.py`.  
-**Watch for:** If Pydantic models are regenerated or new ones are added, `rating` must always be `float`, not `int`. Half-star ratings are valid (range 1.0–5.0).  
+**Watch for:** If Pydantic models are regenerated or new ones are added, `rating` must always be `float`, not `int`. Half-star ratings are valid (range 1.0-5.0).  
 **Priority:** ✅ Fixed — documented here as a gotcha
+
+### Minor Design System Stragglers
+- `text-[#e0e0e0]` wrapper in `AddPage.jsx` (should be `text-text-primary`)
+- `CriteriaBuilder.jsx` still has legacy gray classes (embedded in collection create/edit automatic mode)
+- BookCard `variant` prop enforcement deferred (main BookCard.jsx doesn't define variant yet)
+**Priority:** Low — batch in a future cleanup pass
 
 ---
 
@@ -679,10 +682,19 @@ Items to address when time permits:
 | 10.0.10 | BookCard v4 | Mar 2026 | variant prop, grid badges, progress bar, list view |
 | 10.0.14 | ThreeDotMenu Extraction | Mar 2026 | Shared component for all detail pages |
 | 10.0.15 | Warm Gradient Palette | Mar 2026 | 10 warm lanes, migration of 1,700+ covers |
-| 10.0C-1 | BookDetail colors+buttons | Mar 2026 | 211 colors tokenized, 30 buttons converted, typography mapped |
-| 10.0C-2 | BookDetail modals+forms | Mar 2026 | 5 modals to shared Modal, 9 FormFields, StarRating extracted |
-| 10.0C-3 | Library+HomeTab+WishlistTab | Mar 2026 | UnifiedNavBar, view persistence, error states, TBR rename, voice fixes |
-| — | Component Preview Page | Mar 2026 | /dev/components route, all 10 UI components with variant/state coverage |
+
+### Phase 10.0C Design System Conversion
+
+| Group | Name | Completed | Key Deliverables |
+|-------|------|-----------|------------------|
+| C1 | BookDetail colors+buttons | Mar 28 | 211 colors tokenized, 30 buttons converted, typography mapped |
+| C2 | BookDetail modals+forms | Mar 28 | 5 modals to shared Modal, 9 FormFields, StarRating extracted |
+| C3 | Library+HomeTab+WishlistTab | Mar 29 | UnifiedNavBar, view persistence, error states, TBR rename, voice fixes |
+| C4 | Drawers+EditModal+CoverModal | Mar 29 | 204 colors, ChipInput extracted, 4 files to shared Modal |
+| C5 | Collections family | Mar 29 | SmartPaste removed, 3 modals migrated, 6 files tokenized |
+| C6 | Series+Authors | Mar 29 | returnUrl threading, page titles, 7 files tokenized |
+| C7 | Add+Upload flows | Mar 29 | FileDropZone extracted, 12 files tokenized, series trim fix |
+| C8 | Filter modals+misc | Mar 29 | 4 modals migrated, searchSort utility, 13 files tokenized |
 
 ---
 
@@ -753,4 +765,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 29, 2026 (v0.37.1)*
+*Last updated: March 29, 2026 (v0.37.5)*
