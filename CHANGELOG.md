@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.37.0] - 2026-03-29
+
+### Changed
+
+#### Phase 10.0C-3: Library + HomeTab + WishlistTab Conversion
+Third conversion group: the three daily-driver screens migrated to design tokens, shared components, and Liminal voice conventions.
+
+**Library.jsx:**
+- Added `UnifiedNavBar` with dynamic title (Home/Browse/Wishlist/Series) and settings gear `IconButton`
+- Settings gear wired to existing `SettingsDrawer`
+- Grid/list view preference persisted in `localStorage` as JSON (`liminal-view-preference`), default compact grid
+- Compact/Standard grid variant toggle for Browse and Series views
+- `BookCard` receives `variant` prop (compact/standard/list) derived from persisted preference
+- Browse error state uses `<Button variant="secondary">` for retry
+- Filter pills use chip tokens (`chip-fandom`, `chip-ship`, `chip-character`) for enhanced metadata filters
+- "Clear all" uses `<Button variant="ghost">`
+- Wishlist content rendered via renamed `WishlistTab` component (uses `listTBR` endpoint)
+- Filter icon, phrase strip, and sort controls hidden on Home and Wishlist tabs (self-contained)
+
+**HomeTab.jsx:**
+- Per-section inline error with retry via shared `SectionError` component
+- Full-page retry when all five section loads fail
+- Discover refresh uses `IconButton` with `tooltip` (replaces `title` attribute)
+- All typography converted to tokens (`text-h4` section headers, `text-body-sm`, `text-caption`, `text-label`, `text-h2` stat numbers)
+- All colors use semantic tokens (`bg-bg-surface`, `text-text-muted`, `border-border-default`, `bg-action-primary`)
+
+**WishlistTab.jsx (renamed from TBRList.jsx):**
+- File renamed, component renamed, `TBRList.jsx` deleted
+- User-facing label stays "Wishlist"
+- `TBRCard` renamed to `WishlistCard`
+- Priority badge uses `bg-action-warning` + `text-text-inverse`
+- Error state with `<Button>` retry, Liminal voice copy
+- All typography tokenized; priority filter buttons stay native `<button>` per spec
+- Voice fix: "stories" replaced with "titles" / "reads" in subtitle copy
+
+**Voice/copy corrections (cleanup pass):**
+- HomeTab: "No books finished" changed to "No titles finished"
+- WishlistTab: "Stories calling to you" changed to "Your future reads"; "story/stories waiting to be discovered" changed to "title(s) on your list"
+
+**Tabs and toggles:** Home/Browse/Wishlist tabs, sort triggers, priority filter buttons, and grid/list toggles remain native `<button>` elements per spec (not `<Button>` component).
+
+### Fixed
+- HomeTab errors now user-visible with per-section retry (was console-only)
+- Library page now has `UnifiedNavBar` (was missing)
+- TBRList naming inconsistency resolved (file matched component name)
+
+### Technical
+#### Files Created
+- `frontend/src/components/WishlistTab.jsx` (renamed from TBRList.jsx)
+#### Files Modified
+- `frontend/src/components/Library.jsx` -- UnifiedNavBar, view persistence, token conversion, WishlistTab import
+- `frontend/src/components/HomeTab.jsx` -- error states, token conversion, voice fix
+#### Files Deleted
+- `frontend/src/components/TBRList.jsx` (replaced by WishlistTab.jsx)
+
+---
+
 ## [0.36.0] - 2026-03-28
 
 ### Added

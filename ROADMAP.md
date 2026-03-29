@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 28, 2026 (v0.36.0)  
+> **Last Updated:** March 29, 2026 (v0.37.0)  
 > **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.35.0)
+## Current State (v0.37.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 
 **What's Missing:**
-- ❌ Design system components exist but have low adoption (C1-C2 complete, 61 files remaining)
+- ❌ Design system components exist but have low adoption (C1-C3 complete, C4-C8 remaining)
 - ❌ Can't download/open books from the app
 - ❌ Wishlist requires manual metadata entry
 - ❌ No connection to Moon Reader
@@ -186,7 +186,7 @@ Establish design tokens and core components before building Phase 10 features. A
 ### 10.0C: Full Component Conversion ← IN PROGRESS
 
 **Priority:** P0 — Without this, the design system is fiction  
-**Status:** 🔄 In Progress (C1-C2 complete)  
+**Status:** 🔄 In Progress (C1-C3 complete)  
 **Sessions:** 8 (C1-C3 before 10.1, C4-C8 interleaved with features)  
 **Based on:** `FRONTEND_AUDIT_2026.md` (Claude Code audit, March 2026)
 
@@ -202,7 +202,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 |-------|-------|-------|---------|--------|
 | 1a | BookDetail (colors+buttons) | 211 colors, 45 buttons, typography | C1 | ✅ Complete |
 | 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 | ✅ Complete |
-| 2 | Library + HomeTab + TBRList | Daily drivers, missing NavBar, TBR rename | C3 | ⬜ |
+| 2 | Library + HomeTab + WishlistTab | Daily drivers, NavBar, view persistence, TBR rename | C3 | ✅ Complete |
 | 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 | ⬜ |
 | 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste Escape fix | C5 | ⬜ |
 | 6 | Series + Authors (7 files) | Colors, missing page titles, returnUrl fix | C6 | ⬜ |
@@ -221,10 +221,10 @@ C4-C8: Alongside feature phases
 - [ ] Author Detail returnUrl (C6)
 - [ ] Series Landing missing page title (C6)
 - [ ] Authors Landing missing page title (C6)
-- [ ] TBRList → WishlistTab rename (C3)
-- [ ] HomeTab console-only error → user-visible (C3)
+- [x] TBRList → WishlistTab rename (C3)
+- [x] HomeTab console-only error → user-visible (C3)
 - [ ] 4 modals missing Escape key → fixed by Modal adoption (C5, C8)
-- [ ] 5 pages missing UnifiedNavBar (C3, C6, C8)
+- [x] Library page missing UnifiedNavBar (C3) + 4 remaining pages (C6, C8)
 
 **Definition of Done:**
 - All 62 files use warm token colors
@@ -550,7 +550,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | Sub-Phase | Name | Sessions | Status |
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
-| 10.0C | Full Conversion | 8 | 🔄 In Progress (C1/8) |
+| 10.0C | Full Conversion | 8 | 🔄 In Progress (C3/8) |
 | 10.1 | Download & Share | 1-2 | ⬜ |
 | 10.2 | Usage Analytics | 1 | ⬜ |
 | 10.3 | External Book Search | 2-3 | ⬜ |
@@ -589,7 +589,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 
 ### Low Priority Cleanup
 
-- [ ] **TBRList → Wishlist Rename** — File still named TBRList.jsx (→ addressed in 10.0C Group 2)
+- [x] **TBRList → Wishlist Rename** — Renamed to WishlistTab.jsx in C3 (v0.37.0)
 
 ---
 
@@ -680,6 +680,8 @@ Items to address when time permits:
 | 10.0.14 | ThreeDotMenu Extraction | Mar 2026 | Shared component for all detail pages |
 | 10.0.15 | Warm Gradient Palette | Mar 2026 | 10 warm lanes, migration of 1,700+ covers |
 | 10.0C-1 | BookDetail colors+buttons | Mar 2026 | 211 colors tokenized, 30 buttons converted, typography mapped |
+| 10.0C-2 | BookDetail modals+forms | Mar 2026 | 5 modals to shared Modal, 9 FormFields, StarRating extracted |
+| 10.0C-3 | Library+HomeTab+WishlistTab | Mar 2026 | UnifiedNavBar, view persistence, error states, TBR rename, voice fixes |
 
 ---
 
@@ -750,4 +752,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 28, 2026*
+*Last updated: March 29, 2026*

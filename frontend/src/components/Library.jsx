@@ -6,13 +6,45 @@ import SeriesCard from './SeriesCard'
 import TagsModal from './TagsModal'
 import { getRandomPhrase } from '../utils/categoryPhrases'
 import { READ_TIME_FILTERS, matchesReadTimeFilter } from '../utils/readTime'
-import SearchBar from './SearchBar'
 import FilterDrawer from './FilterDrawer'
 import HomeTab from './HomeTab'
 import SearchModal from './SearchModal'
 import FandomModal from './FandomModal'
 import ShipModal from './ShipModal'
 import SortDropdown from './SortDropdown'
+import WishlistTab from './WishlistTab'
+import SettingsDrawer from './SettingsDrawer'
+import UnifiedNavBar from './ui/UnifiedNavBar'
+import IconButton from './ui/IconButton'
+import Button from './ui/Button'
+
+const VIEW_PREF_KEY = 'liminal-view-preference'
+
+function readViewPreference() {
+  try {
+    const raw = localStorage.getItem(VIEW_PREF_KEY)
+    if (!raw) return { view: 'grid', gridVariant: 'compact' }
+    const p = JSON.parse(raw)
+    return {
+      view: p.view === 'list' ? 'list' : 'grid',
+      gridVariant: p.gridVariant === 'standard' ? 'standard' : 'compact',
+    }
+  } catch {
+    return { view: 'grid', gridVariant: 'compact' }
+  }
+}
+
+const SettingsGearIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+)
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -72,6 +104,40 @@ function Library() {
   
   // Phrase state - regenerates on filter/search changes
   const [phraseKey, setPhraseKey] = useState(0)
+
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false)
+  const [viewPreference, setViewPreference] = useState(readViewPreference)
+
+  const updateViewPreference = useCallback((partial) => {
+    setViewPreference((prev) => {
+      const next = { ...prev, ...partial }
+      try {
+        localStorage.setItem(VIEW_PREF_KEY, JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const libraryNavTitle = useMemo(() => {
+    if (activeView === 'series') return 'Series'
+    if (acquisition === 'owned') return 'Home'
+    if (acquisition === 'browse') return 'Browse'
+    return 'Wishlist'
+  }, [activeView, acquisition])
+
+  const bookCardVariant = useMemo(() => {
+    if (viewPreference.view === 'list') return 'list'
+    return viewPreference.gridVariant === 'compact' ? 'compact' : 'standard'
+  }, [viewPreference])
+
+  const manifestGridClass = useMemo(() => {
+    if (viewPreference.view === 'list') return ''
+    return viewPreference.gridVariant === 'compact'
+      ? 'grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+      : 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 xl:grid-cols-6'
+  }, [viewPreference])
 
   // Filters that apply to current view
   const hasActiveFilters = activeView === 'library'
@@ -154,11 +220,19 @@ function Library() {
     return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
-  // Load books when filters change
+  // Load books when filters change (wishlist tab uses WishlistTab + listTBR)
   useEffect(() => {
+    if (acquisition === 'wishlist') {
+      setLoading(false)
+      setError(null)
+      setBooks([])
+      setTotal(0)
+      return
+    }
+
     setLoading(true)
     setError(null)
-    
+
     listBooks({
       category: category || undefined,
       status: status || undefined,
@@ -307,47 +381,68 @@ function Library() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)]">
-      {/* Tab Bar - Now top element */}
-      <div className="sticky top-0 z-30 bg-library-bg">
+      <UnifiedNavBar
+        title={
+          <div className="flex w-full max-w-[100vw] items-center justify-between gap-3">
+            <span className="text-h3">{libraryNavTitle}</span>
+            <IconButton
+              type="button"
+              variant="default"
+              size="md"
+              tooltip="Settings"
+              aria-label="Open settings"
+              onClick={() => setSettingsDrawerOpen(true)}
+            >
+              <SettingsGearIcon />
+            </IconButton>
+          </div>
+        }
+      />
+
+      {/* Tab Bar */}
+      <div className="sticky top-0 z-30 bg-bg-base border-b border-border-subtle">
         <div className="flex justify-between items-center px-4 pt-4">
           {/* Tabs on left */}
           {activeView === 'library' && (
-            <div className="flex gap-6">
+            <div className="flex gap-6 min-h-[44px] items-end">
               <button
+                type="button"
                 onClick={() => {
                   setAcquisition('owned')
                   updateUrlParams({ acquisition: 'owned' })
                 }}
-                className={`text-sm pb-3 border-b-2 transition-colors ${
+                className={`text-body-sm pb-3 border-b-2 transition-all duration-200 ease-out min-h-[44px] ${
                   acquisition === 'owned'
-                    ? 'text-library-accent border-library-accent'
-                    : 'text-gray-500 border-transparent'
+                    ? 'text-action-primary border-action-primary'
+                    : 'text-text-muted border-transparent'
                 }`}
               >
                 Home
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setAcquisition('browse')
                   updateUrlParams({ acquisition: 'browse' })
                 }}
-                className={`text-sm pb-3 border-b-2 transition-colors ${
+                className={`text-body-sm pb-3 border-b-2 transition-all duration-200 ease-out min-h-[44px] ${
                   acquisition === 'browse'
-                    ? 'text-library-accent border-library-accent'
-                    : 'text-gray-500 border-transparent'
+                    ? 'text-action-primary border-action-primary'
+                    : 'text-text-muted border-transparent'
                 }`}
               >
                 Browse
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setAcquisition('wishlist')
                   updateUrlParams({ acquisition: 'wishlist' })
                 }}
-                className={`text-sm pb-3 border-b-2 transition-colors ${
+                className={`text-body-sm pb-3 border-b-2 transition-all duration-200 ease-out min-h-[44px] ${
                   acquisition === 'wishlist'
-                    ? 'text-library-accent border-library-accent'
-                    : 'text-gray-500 border-transparent'
+                    ? 'text-action-primary border-action-primary'
+                    : 'text-text-muted border-transparent'
                 }`}
               >
                 Wishlist
@@ -357,194 +452,282 @@ function Library() {
 
           {/* Actions on right - context dependent */}
           <div className="flex items-center gap-1">
-            {/* Add button - all tabs */}
-            <button
-              onClick={() => navigate('/add')}
-              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-library-card transition-colors"
+            <IconButton
+              type="button"
+              variant="default"
+              size="md"
               aria-label="Add book"
+              onClick={() => navigate('/add')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-            </button>
+            </IconButton>
 
-            {/* Search button - all tabs */}
-            <button
-              onClick={() => setSearchModalOpen(true)}
-              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white rounded-lg hover:bg-library-card transition-colors"
+            <IconButton
+              type="button"
+              variant="default"
+              size="md"
               aria-label="Search"
+              onClick={() => setSearchModalOpen(true)}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </button>
+            </IconButton>
 
-            {/* Filter button - Browse and Wishlist only */}
-            {activeView === 'library' && (acquisition === 'browse' || acquisition === 'wishlist') && (
-              <button
-                onClick={() => setFilterDrawerOpen(true)}
-                className={`relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-library-card transition-colors ${
-                  activeFilterCount > 0 ? 'text-library-accent' : 'text-gray-400 hover:text-white'
-                }`}
+            {/* Filter button - Browse only (Wishlist uses WishlistTab) */}
+            {activeView === 'library' && acquisition === 'browse' && (
+              <IconButton
+                type="button"
+                variant={activeFilterCount > 0 ? 'accent' : 'default'}
+                size="md"
                 aria-label="Filter"
+                onClick={() => setFilterDrawerOpen(true)}
+                className="relative"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-library-accent text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-0.5 bg-action-primary text-text-primary text-caption rounded-full flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}
-              </button>
+              </IconButton>
             )}
           </div>
         </div>
       </div>
 
-      {/* Poetic phrase + Sort + Active filters - hide on Home tab */}
-      {!(activeView === 'library' && acquisition === 'owned') && (
+      {/* Poetic phrase + Sort + Active filters — hide on Home and Wishlist (WishlistTab is self-contained) */}
+      {!(activeView === 'library' && acquisition === 'owned') &&
+        !(activeView === 'library' && acquisition === 'wishlist') && (
       <div className="px-4 md:px-8 py-3">
         <div className="flex flex-col gap-2">
-          {/* Top row: phrase and sort */}
-          <div className="flex items-center justify-between">
-            <p className="text-gray-500 text-xs">
-              {activeView === 'series' 
+          {/* Top row: phrase, view controls, sort */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-caption text-text-muted max-w-[min(100%,28rem)]">
+              {activeView === 'series'
                 ? `${seriesTotal} series. Stories that needed more than one book.`
-                : acquisition === 'wishlist'
-                  ? `${filteredBooks.length} on the wishlist. Dreams waiting to become reality.`
-                  : acquisition === 'browse'
-                    ? currentPhrase
-                    : `${filteredBooks.length} titles. Your library awaits.`
-              }
+                : currentPhrase}
             </p>
-            
-            {/* Sort dropdown + direction toggle */}
-            {activeView === 'library' && (
-              <SortDropdown
-                value={sort}
-                direction={sortDir}
-                onChange={(field, dir) => {
-                  setSort(field)
-                  setSortDir(dir)
-                  updateUrlParams({ sort: field, sortDir: dir })
-                }}
-                options={['added', 'title', 'author', 'published']}
-              />
-            )}
+
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              {/* Grid / list + compact / standard — Browse and Series */}
+              {(activeView === 'library' && acquisition === 'browse') || activeView === 'series' ? (
+                <>
+                  <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                    <button
+                      type="button"
+                      onClick={() => updateViewPreference({ view: 'grid' })}
+                      className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                        viewPreference.view === 'grid'
+                          ? 'bg-bg-elevated text-text-primary'
+                          : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                      aria-pressed={viewPreference.view === 'grid'}
+                      aria-label="Grid view"
+                    >
+                      Grid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateViewPreference({ view: 'list' })}
+                      className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                        viewPreference.view === 'list'
+                          ? 'bg-bg-elevated text-text-primary'
+                          : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                      aria-pressed={viewPreference.view === 'list'}
+                      aria-label="List view"
+                    >
+                      List
+                    </button>
+                  </div>
+                  {viewPreference.view === 'grid' && (
+                    <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                      <button
+                        type="button"
+                        onClick={() => updateViewPreference({ gridVariant: 'compact' })}
+                        className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                          viewPreference.gridVariant === 'compact'
+                            ? 'bg-bg-elevated text-text-primary'
+                            : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                        aria-pressed={viewPreference.gridVariant === 'compact'}
+                        aria-label="Compact covers"
+                      >
+                        Compact
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateViewPreference({ gridVariant: 'standard' })}
+                        className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                          viewPreference.gridVariant === 'standard'
+                            ? 'bg-bg-elevated text-text-primary'
+                            : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                        aria-pressed={viewPreference.gridVariant === 'standard'}
+                        aria-label="Standard covers"
+                      >
+                        Standard
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : null}
+
+              {activeView === 'library' && acquisition === 'browse' && (
+                <SortDropdown
+                  value={sort}
+                  direction={sortDir}
+                  onChange={(field, dir) => {
+                    setSort(field)
+                    setSortDir(dir)
+                    updateUrlParams({ sort: field, sortDir: dir })
+                  }}
+                  options={['added', 'title', 'author', 'published']}
+                />
+              )}
+            </div>
           </div>
           
           {/* Active filter pills row */}
           {hasActiveFilters && (
             <div className="flex flex-wrap items-center gap-2">
               {category && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {category}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setCategory('')
                       updateUrlParams({ category: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
               {/* Library-only filter pills */}
               {activeView === 'library' && status && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {status}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setStatus('')
                       updateUrlParams({ status: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
               {activeView === 'library' && selectedTags.map(tag => (
-                <span 
+                <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption"
                 >
                   {tag}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       const newTags = selectedTags.filter(t => t !== tag)
                       setSelectedTags(newTags)
                       updateUrlParams({ tags: newTags })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
               {activeView === 'library' && readTimeFilter && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {READ_TIME_FILTERS.find(f => f.value === readTimeFilter)?.label || readTimeFilter}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setReadTimeFilter('')
                       updateUrlParams({ readTime: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
               {/* Enhanced metadata filter pills */}
               {activeView === 'library' && fandom && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-chip-fandom/20 text-chip-fandom rounded-full text-caption">
                   {fandom}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setFandom('')
                       updateUrlParams({ fandom: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
               {activeView === 'library' && ship && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-chip-ship/20 text-chip-ship rounded-full text-caption">
                   {ship}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setShip('')
                       updateUrlParams({ ship: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
               {activeView === 'library' && contentRating.map(rating => (
-                <span 
+                <span
                   key={rating}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-action-danger/15 text-action-danger rounded-full text-caption"
                 >
                   {rating}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       const newRatings = contentRating.filter(r => r !== rating)
                       setContentRating(newRatings)
                       updateUrlParams({ contentRating: newRatings })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
               {activeView === 'library' && completionStatus.map(status => (
-                <span 
+                <span
                   key={status}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-action-success/15 text-action-success rounded-full text-caption"
                 >
                   {status}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       const newStatuses = completionStatus.filter(s => s !== status)
                       setCompletionStatus(newStatuses)
                       updateUrlParams({ completionStatus: newStatuses })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
               {/* Format pills */}
@@ -558,16 +741,17 @@ function Library() {
                 return (
                   <span
                     key={format}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-900/40 text-blue-300 rounded-full text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-chip-character/20 text-chip-character rounded-full text-caption"
                   >
                     {formatLabels[format] || format}
                     <button
+                      type="button"
                       onClick={() => {
                         const newFormats = selectedFormats.filter(f => f !== format)
                         setSelectedFormats(newFormats)
                         updateUrlParams({ format: newFormats.length > 0 ? newFormats.join(',') : '' })
                       }}
-                      className="hover:text-white ml-0.5"
+                      className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
                     >
                       ×
                     </button>
@@ -575,92 +759,182 @@ function Library() {
                 )
               })}
               {search && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-library-accent/20 text-library-accent rounded-full text-xs">
-                  "{search}"
-                  <button 
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
+                  &quot;{search}&quot;
+                  <button
+                    type="button"
                     onClick={() => {
                       setSearch('')
                       updateUrlParams({ search: '' })
-                    }} 
-                    className="hover:text-white ml-0.5"
-                  >×</button>
+                    }}
+                    className="hover:text-text-primary ml-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center -m-1"
+                  >
+                    ×
+                  </button>
                 </span>
               )}
-              <button 
-                onClick={handleClearFilters}
-                className="text-gray-500 text-xs hover:text-white"
-              >
+              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
                 Clear all
-              </button>
+              </Button>
             </div>
           )}
         </div>
       </div>
       )}
 
-      {/* Content Area */}
-      <div className="flex-1 px-4 md:px-8 pb-8">
+      {/* Content Area — WishlistTab brings its own horizontal padding */}
+      <div
+        className={`flex-1 pb-8 ${
+          activeView === 'library' && acquisition === 'wishlist' ? '' : 'px-4 md:px-8'
+        }`}
+      >
         {/* Home Dashboard - show when on Home tab */}
         {activeView === 'library' && acquisition === 'owned' && (
           <HomeTab />
         )}
 
-        {/* Loading State - Library (Browse/Wishlist only) */}
-        {activeView === 'library' && acquisition !== 'owned' && loading && (
+        {/* Wishlist — dedicated tab (listTBR) */}
+        {activeView === 'library' && acquisition === 'wishlist' && <WishlistTab />}
+
+        {/* Loading State - Library Browse only */}
+        {activeView === 'library' && acquisition === 'browse' && loading && (
           <div className="text-center py-12">
             <div className="animate-pulse-slow text-4xl mb-4">📚</div>
-            <p className="text-gray-400">Loading library...</p>
+            <p className="text-body-sm text-text-secondary">Loading library...</p>
           </div>
         )}
 
-        {/* Error State - Library (Browse/Wishlist only) */}
-        {activeView === 'library' && acquisition !== 'owned' && error && !loading && (
-          <div className="text-center py-12">
+        {/* Error State - Library Browse */}
+        {activeView === 'library' && acquisition === 'browse' && error && !loading && (
+          <div className="flex flex-col items-center py-12 text-center">
             <div className="text-4xl mb-4">⚠️</div>
-            <p className="text-red-400">{error}</p>
+            <p className="text-body-sm text-text-secondary mb-1">Well, that wasn&apos;t supposed to happen.</p>
+            <p className="text-caption text-text-muted mb-4">{error}</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setLoading(true)
+                setError(null)
+                listBooks({
+                  category: category || undefined,
+                  status: status || undefined,
+                  tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
+                  search: search || undefined,
+                  sort,
+                  sort_dir: sortDir,
+                  acquisition: 'owned',
+                  fandom: fandom || undefined,
+                  content_rating: contentRating.length > 0 ? contentRating.join(',') : undefined,
+                  completion_status: completionStatus.length > 0 ? completionStatus.join(',') : undefined,
+                  ship: ship || undefined,
+                  format: selectedFormats.length > 0 ? selectedFormats.join(',') : undefined,
+                  limit: 10000,
+                })
+                  .then(data => {
+                    setBooks(data.books)
+                    setTotal(data.total)
+                  })
+                  .catch(err => {
+                    setError(err.message)
+                    setBooks([])
+                  })
+                  .finally(() => setLoading(false))
+              }}
+            >
+              Try again
+            </Button>
           </div>
         )}
 
-        {/* Empty State - Library (Browse/Wishlist only) */}
-        {activeView === 'library' && acquisition !== 'owned' && !loading && !error && filteredBooks.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">🔭</div>
-            <p className="text-gray-400 mb-4">No books found</p>
-            <p className="text-gray-500 text-sm">
-              {search || category || status || readTimeFilter
-                ? 'Try adjusting your filters' 
-                : 'Click "Sync Library" in settings to scan your book folders'
-              }
-            </p>
-          </div>
-        )}
+        {/* Empty State - Library Browse */}
+        {activeView === 'library' &&
+          acquisition === 'browse' &&
+          !loading &&
+          !error &&
+          filteredBooks.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-4">🔭</div>
+              <p className="text-body-sm text-text-secondary mb-4">No titles found</p>
+              <p className="text-caption text-text-muted">
+                {search || category || status || readTimeFilter
+                  ? 'Try adjusting your filters'
+                  : 'Click "Sync Library" in settings to scan your book folders'}
+              </p>
+            </div>
+          )}
 
-        {/* Book Grid - Library View (Browse/Wishlist only) */}
-        {activeView === 'library' && acquisition !== 'owned' && !loading && !error && filteredBooks.length > 0 && (
-          <div className={`grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 ${
-            gridColumns === '2' ? 'grid-cols-2' :
-            gridColumns === '3' ? 'grid-cols-3' :
-            'grid-cols-4'
-          }`}>
-            {filteredBooks.map(book => (
-              <BookCard key={book.id} book={book} showTitleBelow={showTitleBelow} showAuthorBelow={showAuthorBelow} showSeriesBelow={showSeriesBelow} />
-            ))}
-          </div>
-        )}
+        {/* Book grid / list — Browse only */}
+        {activeView === 'library' &&
+          acquisition === 'browse' &&
+          !loading &&
+          !error &&
+          filteredBooks.length > 0 &&
+          (viewPreference.view === 'list' ? (
+            <div className="flex flex-col gap-4">
+              {filteredBooks.map(book => (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  variant={bookCardVariant}
+                  showTitleBelow={showTitleBelow}
+                  showAuthorBelow={showAuthorBelow}
+                  showSeriesBelow={showSeriesBelow}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className={manifestGridClass}>
+              {filteredBooks.map(book => (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  variant={bookCardVariant}
+                  showTitleBelow={showTitleBelow}
+                  showAuthorBelow={showAuthorBelow}
+                  showSeriesBelow={showSeriesBelow}
+                />
+              ))}
+            </div>
+          ))}
 
         {/* Loading State - Series */}
         {activeView === 'series' && seriesLoading && (
           <div className="text-center py-12">
             <div className="animate-pulse-slow text-4xl mb-4">📚</div>
-            <p className="text-gray-400">Loading series...</p>
+            <p className="text-body-sm text-text-secondary">Loading series...</p>
           </div>
         )}
 
         {/* Error State - Series */}
         {activeView === 'series' && seriesError && !seriesLoading && (
-          <div className="text-center py-12">
+          <div className="flex flex-col items-center py-12 text-center">
             <div className="text-4xl mb-4">⚠️</div>
-            <p className="text-red-400">{seriesError}</p>
+            <p className="text-body-sm text-text-secondary mb-1">Well, that wasn&apos;t supposed to happen.</p>
+            <p className="text-caption text-text-muted mb-4">{seriesError}</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setSeriesLoading(true)
+                setSeriesError(null)
+                listSeries({
+                  category: category || undefined,
+                  search: search || undefined,
+                })
+                  .then(data => {
+                    setSeriesList(data.series)
+                    setSeriesTotal(data.total)
+                  })
+                  .catch(err => {
+                    setSeriesError(err.message)
+                    setSeriesList([])
+                  })
+                  .finally(() => setSeriesLoading(false))
+              }}
+            >
+              Try again
+            </Button>
           </div>
         )}
 
@@ -668,27 +942,30 @@ function Library() {
         {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length === 0 && (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">📚</div>
-            <p className="text-gray-400 mb-4">No series found</p>
-            <p className="text-gray-500 text-sm">
-              {search || category 
-                ? 'Try adjusting your filters' 
-                : 'Books with series information will appear here'
-              }
+            <p className="text-body-sm text-text-secondary mb-4">No series found</p>
+            <p className="text-caption text-text-muted">
+              {search || category
+                ? 'Try adjusting your filters'
+                : 'Books with series information will appear here'}
             </p>
           </div>
         )}
 
-        {/* Series Grid - Series View */}
+        {/* Series grid / list */}
         {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length > 0 && (
-          <div className={`grid gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 ${
-            gridColumns === '2' ? 'grid-cols-2' :
-            gridColumns === '3' ? 'grid-cols-3' :
-            'grid-cols-4'
-          }`}>
-            {seriesList.map(series => (
-              <SeriesCard key={series.name} series={series} />
-            ))}
-          </div>
+          viewPreference.view === 'list' ? (
+            <div className="flex flex-col gap-4">
+              {seriesList.map(series => (
+                <SeriesCard key={series.name} series={series} />
+              ))}
+            </div>
+          ) : (
+            <div className={manifestGridClass}>
+              {seriesList.map(series => (
+                <SeriesCard key={series.name} series={series} />
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -785,6 +1062,8 @@ function Library() {
         }}
         category={category}
       />
+
+      <SettingsDrawer isOpen={settingsDrawerOpen} onClose={() => setSettingsDrawerOpen(false)} />
     </div>
   )
 }
