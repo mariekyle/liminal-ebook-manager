@@ -3,11 +3,14 @@ import { forwardRef } from 'react'
 /**
  * FormField — Label + input/textarea with error state
  *
- * Usage:
+ * Controlled input mode:
  *   <FormField label="Title" value={title} onChange={setTitle} />
  *   <FormField label="Summary" type="textarea" rows={3} value={summary} onChange={setSummary} />
- *   <FormField label="Email" error="Required field" value={email} onChange={setEmail} />
- *   <FormField label="Author" placeholder="Enter author name" value={author} onChange={setAuthor} />
+ *
+ * Children mode (custom controls):
+ *   <FormField label="Start Date" error={booleanOrString}>
+ *     <input ... />
+ *   </FormField>
  */
 
 const FormField = forwardRef(function FormField(
@@ -21,10 +24,23 @@ const FormField = forwardRef(function FormField(
     rows = 3,
     disabled = false,
     className = '',
+    children,
     ...props
   },
   ref,
 ) {
+  if (children != null) {
+    return (
+      <div className={`mb-0 ${className}`}>
+        {label && <label className="block text-label mb-1.5">{label}</label>}
+        {children}
+        {error && typeof error === 'string' && (
+          <p className="mt-1.5 text-xs text-action-danger">{error}</p>
+        )}
+      </div>
+    )
+  }
+
   const inputClasses = `w-full bg-bg-elevated border rounded-lg text-text-primary text-sm font-[inherit] transition-[border-color] duration-[200ms] ease-out placeholder:text-text-muted focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 ${
     error
       ? 'border-action-danger focus:border-action-danger focus:ring-action-danger/15'
@@ -37,11 +53,7 @@ const FormField = forwardRef(function FormField(
 
   return (
     <div className={`mb-4 ${className}`}>
-      {label && (
-        <label className="block text-sm font-medium text-text-body mb-1.5">
-          {label}
-        </label>
-      )}
+      {label && <label className="block text-label mb-1.5">{label}</label>}
 
       {type === 'textarea' ? (
         <textarea
@@ -67,7 +79,7 @@ const FormField = forwardRef(function FormField(
         />
       )}
 
-      {error && (
+      {error && typeof error === 'string' && (
         <p className="mt-1.5 text-xs text-action-danger">{error}</p>
       )}
     </div>

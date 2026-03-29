@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.36.0] - 2026-03-28
+
+### Added
+
+#### Phase 10.0C-2: StarRating Component
+- **StarRating** (`components/ui/StarRating.jsx`): shared star rating control with `readOnly` prop
+  - Interactive mode: 44px tap targets, hover preview, toggle-to-clear (tap current rating to remove)
+  - Read-only mode: no tap targets, no hover, compact spacing
+  - Sizes: sm (inline metadata), md (detail display), lg (form input)
+  - Token colors: `action-warning` filled, `text-muted` empty
+
+### Changed
+
+#### Phase 10.0C-2: BookDetail Modals + Forms Conversion
+Second conversion group: all 5 inline modals in BookDetail migrated to shared `<Modal>` compound API, form fields wrapped in `<FormField>`, star rating extracted to reusable component.
+
+**Modal** (`components/ui/Modal.jsx`): upgraded to compound API
+- `Modal.Header` (title as children, `onClose` for X button), `Modal.Body`, `Modal.Footer` (slot-based, children only)
+- `fullscreenOnMobile`: below 768px renders full-viewport shell; md+ keeps centered dialog
+- Backdrop click closes; Escape key closes; body scrolls independently
+
+**FormField** (`components/ui/FormField.jsx`): children mode added
+- Wraps custom controls (selects, date inputs, StarRating) with consistent label + optional error
+- Labels use `text-label` token; `mb-0` in children mode so parent `space-y-4` controls spacing
+- Error prop: boolean (red border only) or string (red border + message text)
+- Original controlled input/textarea path unchanged
+
+**BookDetail modals converted (5 total):**
+- Acquire modal (format selection for wishlist-to-library conversion)
+- Session editor modal (start/end dates, format, status buttons, StarRating)
+- Edition modal (format select + optional acquired date, error banner + red border on invalid field)
+- Merge modal (`fullscreenOnMobile`, two-step search-then-confirm flow, "title" copy)
+- Delete edition confirmation modal
+
+**BookDetail form fields:** 9 form elements wrapped in `<FormField>` with stacked labels. Session rating uses `<StarRating size="lg">` interactive. Stats pill and CompactSessionRow use `<StarRating readOnly size="sm">`.
+
+**Error pattern (cross-cutting C2-C8 decision):** Banner at top of modal body + red border on offending field. No per-field message text.
+
+### Fixed
+- Removed dead `renderStars` helper (defined but zero call sites after StarRating adoption)
+- Fixed `text-text-body` token on merge confirm label (changed to `text-text-primary`)
+
+### Technical
+- Files modified: `BookDetail.jsx`, `Modal.jsx`, `FormField.jsx`
+- Files created: `StarRating.jsx`
+- 3 remaining `fixed inset-0` instances in BookDetail are non-modal (ThreeDotMenu bottom sheet, priority popup backdrop, notes editor fullscreen) -- correct, not in C2 scope
+- Modal `glass` prop added by Cursor (unused, harmless)
+- Status toggle buttons in session modal kept as plain `<button>` with `type="button"` (same C1 precedent as inline text actions)
+
+---
+
 ## [0.35.0] - 2026-03-28
 
 ### Changed

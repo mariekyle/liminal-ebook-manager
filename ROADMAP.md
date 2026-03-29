@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 28, 2026 (v0.35.0)  
+> **Last Updated:** March 28, 2026 (v0.36.0)  
 > **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 
 **What's Missing:**
-- ❌ Design system components exist but have low adoption (C1 complete, 61 files remaining)
+- ❌ Design system components exist but have low adoption (C1-C2 complete, 61 files remaining)
 - ❌ Can't download/open books from the app
 - ❌ Wishlist requires manual metadata entry
 - ❌ No connection to Moon Reader
@@ -186,7 +186,7 @@ Establish design tokens and core components before building Phase 10 features. A
 ### 10.0C: Full Component Conversion ← IN PROGRESS
 
 **Priority:** P0 — Without this, the design system is fiction  
-**Status:** 🔄 In Progress (C1 complete)  
+**Status:** 🔄 In Progress (C1-C2 complete)  
 **Sessions:** 8 (C1-C3 before 10.1, C4-C8 interleaved with features)  
 **Based on:** `FRONTEND_AUDIT_2026.md` (Claude Code audit, March 2026)
 
@@ -201,7 +201,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 | Group | Files | Focus | Session | Status |
 |-------|-------|-------|---------|--------|
 | 1a | BookDetail (colors+buttons) | 211 colors, 45 buttons, typography | C1 | ✅ Complete |
-| 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 | ⬜ |
+| 1b | BookDetail (modals+forms) | 5 inline modals, 9 form fields, StarRating extract | C2 | ✅ Complete |
 | 2 | Library + HomeTab + TBRList | Daily drivers, missing NavBar, TBR rename | C3 | ⬜ |
 | 3+4 | Drawers + UnifiedEditModal + ChangeCoverModal | 204 colors, ChipInput standardize | C4 | ⬜ |
 | 5 | Collections family (6 files) | 155 colors, 3 inline modals, SmartPaste Escape fix | C5 | ⬜ |
@@ -216,7 +216,7 @@ C4-C8: Alongside feature phases
 ```
 
 **Critical Fixes Addressed (free during conversion):**
-- [-] Book Detail layout issues (C1-C2) — color/button portion done in C1, modal/form portion in C2
+- [x] Book Detail layout issues (C1-C2)
 - [ ] Notes section layout issues (C1-C2)
 - [ ] Author Detail returnUrl (C6)
 - [ ] Series Landing missing page title (C6)

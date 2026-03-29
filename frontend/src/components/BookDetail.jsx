@@ -12,6 +12,9 @@ import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
 import UnifiedNavBar from './ui/UnifiedNavBar'
 import Toast from './ui/Toast'
+import Modal from './ui/Modal'
+import FormField from './ui/FormField'
+import StarRating from './ui/StarRating'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 import { useStatusLabels } from '../hooks/useStatusLabels'
@@ -1332,19 +1335,6 @@ function BookDetail() {
     if (end) return `Finished ${end}`
     return null
   }
-  
-  const renderStars = (rating, maxStars = 5) => {
-    if (rating === null || rating === undefined) return null
-    const stars = []
-    for (let i = 1; i <= maxStars; i++) {
-      stars.push(
-        <span key={i} className={i <= rating ? 'text-action-warning' : 'text-text-muted'}>
-          ★
-        </span>
-      )
-    }
-    return <span className="text-lg">{stars}</span>
-  }
 
   // Compact session row for Reading History
   const CompactSessionRow = ({ session, onEdit }) => (
@@ -1379,9 +1369,7 @@ function BookDetail() {
             {getLabel(session.session_status)}
           </span>
           {session.rating && (
-            <span className="text-action-warning text-sm">
-              {'★'.repeat(session.rating)}
-            </span>
+            <StarRating value={session.rating} readOnly size="sm" />
           )}
         </div>
       </div>
@@ -1538,16 +1526,7 @@ function BookDetail() {
                 }}
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
-                <div className="flex items-center justify-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <span 
-                      key={star} 
-                      className={`text-sm ${star <= (sessionsStats.average_rating || 0) ? 'text-action-warning' : 'text-text-muted'}`}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
+                <StarRating value={sessionsStats.average_rating || 0} readOnly size="sm" className="justify-center" />
                 <div className="text-caption">
                   {sessionsStats.average_rating > 0 
                     ? getRatingLabel(sessionsStats.average_rating)
@@ -2397,485 +2376,442 @@ function BookDetail() {
       )}
 
       {/* Acquire Book Modal (TBR → Library) */}
-      {showAcquireModal && (
-        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border-default rounded-xl p-6 max-w-sm w-full">
-            <h2 className="text-h2 mb-2">🎉 You got it!</h2>
-            <p className="text-text-secondary text-sm mb-4">
-              Moving "{book.title}" to your library.
-            </p>
-            
-            <div className="mb-4">
-              <label className="block text-sm text-text-secondary mb-2">What format?</label>
-              <div className="flex flex-col gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
-                  onClick={() => {
-                    navigate(`/add?mode=upload&linkTo=${book.id}`)
-                  }}
-                >
-                  <span className="text-text-primary font-medium w-full text-left">Ebook</span>
-                  <span className="text-text-secondary text-sm font-normal w-full text-left">Upload your files now</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
-                  disabled={acquireLoading}
-                  onClick={async () => {
-                    setAcquireLoading(true)
-                    try {
-                      await convertTBRToLibrary(id, { format: 'physical' })
-                      const updatedBook = await getBook(id)
-                      setBook(updatedBook)
-                      setShowAcquireModal(false)
-                      setSelectedStatus(updatedBook.status || 'Unread')
-                    } catch (err) {
-                      console.error('Failed to acquire book:', err)
-                    } finally {
-                      setAcquireLoading(false)
-                    }
-                  }}
-                >
-                  <span className="text-text-primary font-medium w-full text-left">Physical</span>
-                  <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
-                  disabled={acquireLoading}
-                  onClick={async () => {
-                    setAcquireLoading(true)
-                    try {
-                      await convertTBRToLibrary(id, { format: 'audiobook' })
-                      const updatedBook = await getBook(id)
-                      setBook(updatedBook)
-                      setShowAcquireModal(false)
-                      setSelectedStatus(updatedBook.status || 'Unread')
-                    } catch (err) {
-                      console.error('Failed to acquire book:', err)
-                    } finally {
-                      setAcquireLoading(false)
-                    }
-                  }}
-                >
-                  <span className="text-text-primary font-medium w-full text-left">Audiobook</span>
-                  <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
-                  disabled={acquireLoading}
-                  onClick={async () => {
-                    setAcquireLoading(true)
-                    try {
-                      await convertTBRToLibrary(id, { format: 'web' })
-                      const updatedBook = await getBook(id)
-                      setBook(updatedBook)
-                      setShowAcquireModal(false)
-                      setSelectedStatus(updatedBook.status || 'Unread')
-                    } catch (err) {
-                      console.error('Failed to acquire book:', err)
-                    } finally {
-                      setAcquireLoading(false)
-                    }
-                  }}
-                >
-                  <span className="text-text-primary font-medium w-full text-left">Web-based</span>
-                  <span className="text-text-secondary text-sm font-normal w-full text-left">For read tracking only</span>
-                </Button>
-              </div>
+      <Modal
+        isOpen={showAcquireModal}
+        onClose={() => setShowAcquireModal(false)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setShowAcquireModal(false)}>
+          🎉 You got it!
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-text-secondary text-sm mb-4">
+            Moving "{book.title}" to your library.
+          </p>
+          
+          <div>
+            <span className="text-label block mb-2">What format?</span>
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                onClick={() => {
+                  navigate(`/add?mode=upload&linkTo=${book.id}`)
+                }}
+              >
+                <span className="text-text-primary font-medium w-full text-left">Ebook</span>
+                <span className="text-text-secondary text-sm font-normal w-full text-left">Upload your files now</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                disabled={acquireLoading}
+                onClick={async () => {
+                  setAcquireLoading(true)
+                  try {
+                    await convertTBRToLibrary(id, { format: 'physical' })
+                    const updatedBook = await getBook(id)
+                    setBook(updatedBook)
+                    setShowAcquireModal(false)
+                    setSelectedStatus(updatedBook.status || 'Unread')
+                  } catch (err) {
+                    console.error('Failed to acquire book:', err)
+                  } finally {
+                    setAcquireLoading(false)
+                  }
+                }}
+              >
+                <span className="text-text-primary font-medium w-full text-left">Physical</span>
+                <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                disabled={acquireLoading}
+                onClick={async () => {
+                  setAcquireLoading(true)
+                  try {
+                    await convertTBRToLibrary(id, { format: 'audiobook' })
+                    const updatedBook = await getBook(id)
+                    setBook(updatedBook)
+                    setShowAcquireModal(false)
+                    setSelectedStatus(updatedBook.status || 'Unread')
+                  } catch (err) {
+                    console.error('Failed to acquire book:', err)
+                  } finally {
+                    setAcquireLoading(false)
+                  }
+                }}
+              >
+                <span className="text-text-primary font-medium w-full text-left">Audiobook</span>
+                <span className="text-text-secondary text-sm font-normal w-full text-left">No files to upload</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5"
+                disabled={acquireLoading}
+                onClick={async () => {
+                  setAcquireLoading(true)
+                  try {
+                    await convertTBRToLibrary(id, { format: 'web' })
+                    const updatedBook = await getBook(id)
+                    setBook(updatedBook)
+                    setShowAcquireModal(false)
+                    setSelectedStatus(updatedBook.status || 'Unread')
+                  } catch (err) {
+                    console.error('Failed to acquire book:', err)
+                  } finally {
+                    setAcquireLoading(false)
+                  }
+                }}
+              >
+                <span className="text-text-primary font-medium w-full text-left">Web-based</span>
+                <span className="text-text-secondary text-sm font-normal w-full text-left">For read tracking only</span>
+              </Button>
             </div>
-            
-            <Button variant="ghost" className="w-full mt-2" onClick={() => setShowAcquireModal(false)}>
-              Cancel
-            </Button>
           </div>
-        </div>
-      )}
+        </Modal.Body>
+        <Modal.Footer className="!justify-stretch flex-col items-stretch gap-2">
+          <Button variant="ghost" className="w-full" onClick={() => setShowAcquireModal(false)}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Session Editor Modal */}
-      {sessionModalOpen && (
-        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-md p-6 relative">
-            {/* Close button */}
-            <IconButton
-              onClick={closeSessionModal}
-              className="absolute top-4 right-4"
-              aria-label="Close"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </IconButton>
-
-            {/* Title */}
-            <h2 className="text-h2 mb-6">
-              {editingSession ? `Edit Read #${editingSession.session_number}` : 'Add Reading Session'}
-            </h2>
-
-            {/* Error message */}
-            {sessionError && (
-              <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
-                {sessionError}
-              </div>
-            )}
-
-            {/* Form */}
-            <div className="space-y-4">
-              {/* Start Date */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={sessionForm.date_started}
-                  onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
-                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={sessionForm.date_finished}
-                  onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
-                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                />
-              </div>
-
-              {/* Format */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Format</label>
-                <select
-                  value={sessionForm.format}
-                  onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
-                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                >
-                  <option value="">— Not specified</option>
-                  <option value="ebook">Ebook</option>
-                  <option value="physical">Physical</option>
-                  <option value="audiobook">Audiobook</option>
-                  <option value="web">Web</option>
-                </select>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Status</label>
-                <div className="flex gap-2">
-                  {['in_progress', 'finished', 'dnf'].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => setSessionForm({ ...sessionForm, session_status: status })}
-                      className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
-                        sessionForm.session_status === status
-                          ? status === 'finished'
-                            ? 'bg-action-success text-text-inverse'
-                            : status === 'dnf'
-                            ? 'bg-chip-ship/40 text-chip-ship'
-                            : 'bg-action-secondary text-text-primary'
-                          : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
-                      }`}
-                    >
-                      {getLabel(status)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rating */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Rating</label>
-                <div className={`flex gap-1 ${sessionForm.session_status === 'in_progress' ? 'opacity-40' : ''}`}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      disabled={sessionForm.session_status === 'in_progress'}
-                      onClick={() => {
-                        if (sessionForm.session_status !== 'in_progress') {
-                          setSessionForm({
-                            ...sessionForm,
-                            rating: sessionForm.rating === star ? null : star
-                          })
-                        }
-                      }}
-                      className={`text-3xl transition-colors ${
-                        sessionForm.session_status === 'in_progress'
-                          ? 'cursor-not-allowed text-text-muted'
-                          : sessionForm.rating && star <= sessionForm.rating
-                          ? 'text-action-warning hover:opacity-90'
-                          : 'text-text-muted hover:text-text-secondary'
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-                {sessionForm.session_status === 'in_progress' && (
-                  <p className="text-xs text-text-secondary mt-1">Rating available after marking Finished or DNF</p>
-                )}
-              </div>
+      <Modal
+        isOpen={sessionModalOpen}
+        onClose={closeSessionModal}
+        size="md"
+      >
+        <Modal.Header onClose={closeSessionModal}>
+          {editingSession ? `Edit Read #${editingSession.session_number}` : 'Add Reading Session'}
+        </Modal.Header>
+        <Modal.Body>
+          {/* Error banner */}
+          {sessionError && (
+            <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
+              {sessionError}
             </div>
+          )}
 
-            {/* Actions */}
-            <div className="flex gap-3 mt-6">
-              {editingSession && (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDeleteSession}
-                  disabled={sessionSaving}
-                >
-                  Delete
-                </Button>
-              )}
-              <div className="flex-1" />
-              <Button variant="ghost" onClick={closeSessionModal} disabled={sessionSaving}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSaveSession}
-                disabled={sessionSaving}
-                loading={sessionSaving}
+          <div className="space-y-4">
+            {/* Start Date */}
+            <FormField label="Start Date">
+              <input
+                type="date"
+                value={sessionForm.date_started}
+                onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
+                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+              />
+            </FormField>
+
+            {/* End Date */}
+            <FormField label="End Date">
+              <input
+                type="date"
+                value={sessionForm.date_finished}
+                onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
+                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+              />
+            </FormField>
+
+            {/* Format */}
+            <FormField label="Format">
+              <select
+                value={sessionForm.format}
+                onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
+                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus h-11"
               >
-                Save
-              </Button>
-            </div>
+                <option value="">— Not specified</option>
+                <option value="ebook">Ebook</option>
+                <option value="physical">Physical</option>
+                <option value="audiobook">Audiobook</option>
+                <option value="web">Web</option>
+              </select>
+            </FormField>
+
+            {/* Status */}
+            <FormField label="Status">
+              <div className="flex gap-2">
+                {['in_progress', 'finished', 'dnf'].map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, session_status: status })}
+                    className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
+                      sessionForm.session_status === status
+                        ? status === 'finished'
+                          ? 'bg-action-success text-text-inverse'
+                          : status === 'dnf'
+                          ? 'bg-chip-ship/40 text-chip-ship'
+                          : 'bg-action-secondary text-text-primary'
+                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
+                    }`}
+                  >
+                    {getLabel(status)}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+
+            {/* Rating */}
+            <FormField label="Rating">
+              <StarRating
+                value={sessionForm.rating}
+                onChange={(val) => setSessionForm({ ...sessionForm, rating: val })}
+                size="lg"
+                disabled={sessionForm.session_status === 'in_progress'}
+              />
+              {sessionForm.session_status === 'in_progress' && (
+                <p className="text-xs text-text-secondary mt-1">Rating available after marking Finished or DNF</p>
+              )}
+            </FormField>
           </div>
-        </div>
-      )}
+        </Modal.Body>
+        <Modal.Footer>
+          {/* Footer as slot: danger left, standard right */}
+          <div className="flex gap-3 w-full">
+            {editingSession && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteSession}
+                disabled={sessionSaving}
+              >
+                Delete
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button variant="ghost" onClick={closeSessionModal} disabled={sessionSaving}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveSession}
+              disabled={sessionSaving}
+              loading={sessionSaving}
+            >
+              Save
+            </Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
 
       {/* Add Edition Modal (Phase 8.7b) */}
-      {editionModalOpen && (
-        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-md">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border-default">
-              <h3 className="text-h3">Add Format</h3>
-              <IconButton onClick={() => setEditionModalOpen(false)} aria-label="Close">
-                ✕
-              </IconButton>
+      <Modal
+        isOpen={editionModalOpen}
+        onClose={() => setEditionModalOpen(false)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setEditionModalOpen(false)}>
+          Add Format
+        </Modal.Header>
+        <Modal.Body>
+          {editionError && (
+            <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm mb-4">
+              {editionError}
             </div>
-            
-            {/* Content */}
-            <div className="p-4 space-y-4">
-              {editionError && (
-                <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm">
-                  {editionError}
-                </div>
-              )}
-              
-              {/* Format Selection */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Format *</label>
-                <select
-                  value={editionForm.format}
-                  onChange={(e) => setEditionForm({ ...editionForm, format: e.target.value })}
-                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                >
-                  <option value="">Select format...</option>
-                  <option value="ebook">Ebook</option>
-                  <option value="physical">Physical</option>
-                  <option value="audiobook">Audiobook</option>
-                  <option value="web">Web</option>
-                </select>
-              </div>
-              
-              {/* Acquired Date (optional) */}
-              <div>
-                <label className="block text-sm text-text-secondary mb-1">Acquired Date (optional)</label>
-                <input
-                  type="date"
-                  value={editionForm.acquired_date}
-                  onChange={(e) => setEditionForm({ ...editionForm, acquired_date: e.target.value })}
-                  className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                />
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-end gap-3 p-4 border-t border-border-default">
-              <Button variant="ghost" onClick={() => setEditionModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSaveEdition}
-                disabled={editionSaving || !editionForm.format}
-                loading={editionSaving}
+          )}
+
+          <div className="space-y-4">
+            <FormField label="Format *" error={editionError && !editionForm.format}>
+              <select
+                value={editionForm.format}
+                onChange={(e) => setEditionForm({ ...editionForm, format: e.target.value })}
+                className={`w-full bg-bg-elevated border rounded-lg px-3 py-2 text-text-primary text-sm h-11 focus:outline-none focus:border-border-focus ${
+                  editionError && !editionForm.format ? 'border-action-danger' : 'border-border-default'
+                }`}
               >
-                Add Format
-              </Button>
-            </div>
+                <option value="">Select format...</option>
+                <option value="ebook">Ebook</option>
+                <option value="physical">Physical</option>
+                <option value="audiobook">Audiobook</option>
+                <option value="web">Web</option>
+              </select>
+            </FormField>
+
+            <FormField label="Acquired Date (optional)">
+              <input
+                type="date"
+                value={editionForm.acquired_date}
+                onChange={(e) => setEditionForm({ ...editionForm, acquired_date: e.target.value })}
+                className="w-full max-w-48 bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+              />
+            </FormField>
           </div>
-        </div>
-      )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" onClick={() => setEditionModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSaveEdition}
+            disabled={editionSaving || !editionForm.format}
+            loading={editionSaving}
+          >
+            Add Format
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Merge Modal (Phase 8.7d) */}
-      {mergeModalOpen && (
-        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border-default">
-              <h3 className="text-h3">
-                {mergeStep === 'search' ? 'Merge into Another Book' : 'Confirm Merge'}
-              </h3>
-              <IconButton onClick={() => setMergeModalOpen(false)} aria-label="Close">
-                ✕
-              </IconButton>
+      <Modal
+        isOpen={mergeModalOpen}
+        onClose={() => setMergeModalOpen(false)}
+        size="lg"
+        fullscreenOnMobile
+      >
+        <Modal.Header onClose={() => setMergeModalOpen(false)}>
+          {mergeStep === 'search' ? 'Merge into Another Title' : 'Confirm Merge'}
+        </Modal.Header>
+        <Modal.Body className="overflow-y-auto">
+          {mergeError && (
+            <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm mb-4">
+              {mergeError}
             </div>
-            
-            {/* Content */}
-            <div className="p-4 flex-1 overflow-y-auto">
-              {mergeError && (
-                <div className="bg-action-danger/20 border border-action-danger rounded p-3 text-action-danger text-sm mb-4">
-                  {mergeError}
+          )}
+
+          {mergeStep === 'search' && (
+            <>
+              <p className="text-text-secondary text-sm mb-4">
+                Search for the title you want to merge this one INTO. The selected title will be kept, and this one's data will be moved to it.
+              </p>
+
+              {/* Current book preview */}
+              <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
+                <div className="text-caption mb-1">This title (will be merged and deleted):</div>
+                <div className="font-medium text-text-primary">{book.title}</div>
+                <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
+              </div>
+
+              {/* Search input */}
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={mergeSearch}
+                  onChange={(e) => handleMergeSearch(e.target.value)}
+                  placeholder="Search by title..."
+                  className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+                  autoFocus
+                />
+                {mergeSearching && (
+                  <div className="absolute right-3 top-2.5 text-text-secondary text-sm">
+                    Searching...
+                  </div>
+                )}
+              </div>
+
+              {/* Search results */}
+              {mergeResults.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-caption mb-2">Select the title to merge into:</div>
+                  {mergeResults.map((result) => (
+                    <Button
+                      key={result.id}
+                      type="button"
+                      variant="secondary"
+                      onClick={() => selectMergeTarget(result)}
+                      className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5 !text-left"
+                    >
+                      <span className="font-medium text-text-primary w-full">{result.title}</span>
+                      <span className="text-sm text-text-secondary font-normal w-full">{result.authors?.join(', ') || 'Unknown Author'}</span>
+                      {result.category && (
+                        <span className="text-caption mt-1 w-full">{result.category}</span>
+                      )}
+                    </Button>
+                  ))}
                 </div>
               )}
-              
-              {mergeStep === 'search' && (
-                <>
-                  <p className="text-text-secondary text-sm mb-4">
-                    Search for the book you want to merge this one INTO. The selected book will be kept, and this book's data will be moved to it.
-                  </p>
-                  
-                  {/* Current book preview */}
-                  <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
-                    <div className="text-caption mb-1">This book (will be merged and deleted):</div>
-                    <div className="font-medium text-text-primary">{book.title}</div>
-                    <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
-                  </div>
-                  
-                  {/* Search input */}
-                  <div className="relative mb-4">
-                    <input
-                      type="text"
-                      value={mergeSearch}
-                      onChange={(e) => handleMergeSearch(e.target.value)}
-                      placeholder="Search by title..."
-                      className="w-full bg-bg-elevated border border-border-default rounded px-3 py-2 text-text-primary focus:outline-none focus:border-border-focus"
-                      autoFocus
-                    />
-                    {mergeSearching && (
-                      <div className="absolute right-3 top-2.5 text-text-secondary text-sm">
-                        Searching...
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Search results */}
-                  {mergeResults.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-caption mb-2">Select the book to merge into:</div>
-                      {mergeResults.map((result) => (
-                        <Button
-                          key={result.id}
-                          type="button"
-                          variant="secondary"
-                          onClick={() => selectMergeTarget(result)}
-                          className="w-full !justify-start flex-col items-stretch h-auto py-3 min-h-0 gap-0.5 !text-left"
-                        >
-                          <span className="font-medium text-text-primary w-full">{result.title}</span>
-                          <span className="text-sm text-text-secondary font-normal w-full">{result.authors?.join(', ') || 'Unknown Author'}</span>
-                          {result.category && (
-                            <span className="text-caption mt-1 w-full">{result.category}</span>
-                          )}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {mergeSearch.length >= 2 && mergeResults.length === 0 && !mergeSearching && (
-                    <div className="text-text-secondary text-sm text-center py-4">
-                      No matching books found
-                    </div>
-                  )}
-                </>
+
+              {mergeSearch.length >= 2 && mergeResults.length === 0 && !mergeSearching && (
+                <div className="text-text-secondary text-sm text-center py-4">
+                  No matching titles found
+                </div>
               )}
-              
-              {mergeStep === 'confirm' && mergeTarget && (
-                <>
-                  <div className="bg-action-warning/20 border border-action-warning rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-2">
-                      <span className="text-action-warning text-lg">⚠️</span>
-                      <div>
-                        <div className="font-medium text-action-warning">This action cannot be undone</div>
-                        <div className="text-sm text-text-secondary mt-1">
-                          All data from the source book will be moved to the target, and the source will be permanently deleted.
-                        </div>
-                      </div>
+            </>
+          )}
+
+          {mergeStep === 'confirm' && mergeTarget && (
+            <>
+              <div className="bg-action-warning/20 border border-action-warning rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-action-warning text-lg">⚠️</span>
+                  <div>
+                    <div className="font-medium text-action-warning">This action cannot be undone</div>
+                    <div className="text-sm text-text-secondary mt-1">
+                      All data from the source title will be moved to the target, and the source will be permanently deleted.
                     </div>
                   </div>
-                  
-                  {/* Visual merge preview */}
-                  <div className="space-y-3">
-                    {/* Source (current book - will be deleted) */}
-                    <div className="bg-action-danger/20 border border-action-danger rounded-lg p-3">
-                      <div className="text-xs text-action-danger mb-1 font-medium">SOURCE (will be deleted)</div>
-                      <div className="font-medium text-text-primary">{book.title}</div>
-                      <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
-                    </div>
-                    
-                    {/* Arrow */}
-                    <div className="flex justify-center text-text-secondary">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                      </svg>
-                    </div>
-                    
-                    {/* Target (selected book - will be kept) */}
-                    <div className="bg-action-success/20 border border-action-success rounded-lg p-3">
-                      <div className="text-xs text-action-success mb-1 font-medium">TARGET (will be kept)</div>
-                      <div className="font-medium text-text-primary">{mergeTarget.title}</div>
-                      <div className="text-sm text-text-secondary">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 text-sm text-text-secondary">
-                    <div className="font-medium text-text-body mb-2">What will be moved:</div>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>All editions (file formats)</li>
-                      <li>All reading sessions</li>
-                      <li>All notes</li>
-                      <li>All collection memberships</li>
-                    </ul>
-                  </div>
-                </>
-              )}
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-between gap-3 p-4 border-t border-border-default">
-              {mergeStep === 'confirm' && (
-                <Button variant="ghost" onClick={() => setMergeStep('search')}>
-                  ← Back
-                </Button>
-              )}
-              <div className="flex-1" />
-              <Button variant="ghost" onClick={() => setMergeModalOpen(false)}>
-                Cancel
+                </div>
+              </div>
+
+              {/* Visual merge preview */}
+              <div className="space-y-3">
+                {/* Source (current book - will be deleted) */}
+                <div className="bg-action-danger/20 border border-action-danger rounded-lg p-3">
+                  <div className="text-xs text-action-danger mb-1 font-medium">SOURCE (will be deleted)</div>
+                  <div className="font-medium text-text-primary">{book.title}</div>
+                  <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex justify-center text-text-secondary">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+
+                {/* Target (selected book - will be kept) */}
+                <div className="bg-action-success/20 border border-action-success rounded-lg p-3">
+                  <div className="text-xs text-action-success mb-1 font-medium">TARGET (will be kept)</div>
+                  <div className="font-medium text-text-primary">{mergeTarget.title}</div>
+                  <div className="text-sm text-text-secondary">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 text-sm text-text-secondary">
+                <div className="font-medium text-text-primary mb-2">What will be moved:</div>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>All editions (file formats)</li>
+                  <li>All reading sessions</li>
+                  <li>All notes</li>
+                  <li>All collection memberships</li>
+                </ul>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {/* Footer as slot: Back on left for confirm step, Cancel + action on right */}
+          <div className="flex justify-between gap-3 w-full">
+            {mergeStep === 'confirm' && (
+              <Button variant="ghost" onClick={() => setMergeStep('search')}>
+                ← Back
               </Button>
-              {mergeStep === 'confirm' && (
-                <Button
-                  variant="danger"
-                  onClick={handleMerge}
-                  disabled={mergeSaving}
-                  loading={mergeSaving}
-                >
-                  Merge & Delete
-                </Button>
-              )}
-            </div>
+            )}
+            <div className="flex-1" />
+            <Button variant="ghost" onClick={() => setMergeModalOpen(false)}>
+              Cancel
+            </Button>
+            {mergeStep === 'confirm' && (
+              <Button
+                variant="danger"
+                onClick={handleMerge}
+                disabled={mergeSaving}
+                loading={mergeSaving}
+              >
+                Merge & Delete
+              </Button>
+            )}
           </div>
-        </div>
-      )}
+        </Modal.Footer>
+      </Modal>
 
       {/* Collection Picker Modal */}
       {showCollectionPicker && (
@@ -2961,44 +2897,36 @@ function BookDetail() {
       />
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
-      {editionToDelete && (
-        <div className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border-default rounded-lg w-full max-w-sm">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border-default">
-              <h3 className="text-h3">Remove Edition</h3>
-              <IconButton onClick={() => setEditionToDelete(null)} aria-label="Close">
-                ✕
-              </IconButton>
-            </div>
-            
-            {/* Content */}
-            <div className="p-4">
-              <p className="text-body-sm">
-                Remove the <span className="font-semibold text-text-primary">{editionToDelete.label}</span> edition from this title?
-              </p>
-              <p className="text-text-secondary text-sm mt-2">
-                This won't delete any reading sessions associated with this format.
-              </p>
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-end gap-3 p-4 border-t border-border-default">
-              <Button variant="ghost" onClick={() => setEditionToDelete(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleDeleteEdition}
-                disabled={editionDeleting}
-                loading={editionDeleting}
-              >
-                Remove
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!editionToDelete}
+        onClose={() => setEditionToDelete(null)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setEditionToDelete(null)}>
+          Remove Edition
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-body-sm">
+            Remove the <span className="font-semibold text-text-primary">{editionToDelete?.label}</span> edition from this title?
+          </p>
+          <p className="text-text-secondary text-sm mt-2">
+            This won't delete any reading sessions associated with this format.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" onClick={() => setEditionToDelete(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleDeleteEdition}
+            disabled={editionDeleting}
+            loading={editionDeleting}
+          >
+            Remove
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       </div>
 
