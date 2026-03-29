@@ -23,6 +23,13 @@ Dev-only route at `/dev/components` for visual verification of all shared UI com
 
 ### Changed
 
+#### SettingsDrawer (C4 design system)
+- Drawer shell and backdrop use tokens (`bg-bg-surface`, `bg-bg-overlay`, `border-border-default`) aligned with `FilterDrawer`
+- Section titles use `text-h4`; inputs/selects use `text-text-primary` on `bg-bg-elevated`
+- Close control uses shared `IconButton`; primary actions use `Button` (sync, duplicates, rescan, backup, save settings, cover extract) with loading states
+- Reading speed and backup path use `FormField`; backup status toasts use success/danger token surfaces
+- File: `frontend/src/components/SettingsDrawer.jsx`
+
 #### Modal `size="fullscreen"` support
 - Modal component now accepts `size="fullscreen"` as a prop value (previously only supported `fullscreenOnMobile` boolean and the undocumented `fullscreen` boolean)
 - `ModalLayoutContext` added so `Modal.Header` automatically uses centered-title layout when parent shell is fullscreen

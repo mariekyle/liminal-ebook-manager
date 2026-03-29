@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSettings, updateSetting, syncLibrary, previewRescan, rescanMetadata, getBackupSettings, updateBackupSettings, testBackupPath, createManualBackup, bulkExtractCovers } from '../api'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import FormField from './ui/FormField'
+
+const XIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5" aria-hidden>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
 
 function SettingsDrawer({ isOpen, onClose }) {
   const navigate = useNavigate()
@@ -434,7 +444,7 @@ function SettingsDrawer({ isOpen, onClose }) {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-bg-overlay z-40 transition-opacity"
         aria-hidden="true"
       />
       
@@ -443,7 +453,7 @@ function SettingsDrawer({ isOpen, onClose }) {
         ref={drawerRef}
         className={`
           fixed top-0 right-0 h-full w-full sm:w-80 
-          bg-library-bg border-l border-gray-700
+          bg-bg-surface border-l border-border-default
           z-50 transform transition-transform duration-200 ease-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           overflow-y-auto
@@ -453,62 +463,54 @@ function SettingsDrawer({ isOpen, onClose }) {
         aria-label="Settings"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white">Settings</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white p-1"
-            aria-label="Close settings"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border-default">
+          <h2 className="text-h4 text-text-primary">Settings</h2>
+          <IconButton type="button" variant="default" size="md" onClick={onClose} aria-label="Close settings" tooltip="Close">
+            <XIcon />
+          </IconButton>
         </div>
 
         {loading ? (
-          <div className="p-4 text-gray-400">Loading settings...</div>
+          <div className="p-4 text-body-sm text-text-secondary">Loading settings...</div>
         ) : (
           <div className="p-4 space-y-6">
             {/* Reading Speed Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Reading Speed</h3>
-              <p className="text-gray-400 text-sm mb-3">
-                Used to estimate how long it takes to finish a book.
-              </p>
-              
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={wpmInput}
-                  onChange={handleWpmChange}
-                  onBlur={handleWpmBlur}
-                  className="w-20 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-center"
-                  aria-label="Words per minute"
-                />
-                <span className="text-gray-400 text-sm">words per minute</span>
-                
-                {wpmStatus === 'saving' && (
-                  <span className="text-gray-400 text-sm">Saving...</span>
-                )}
-                {wpmStatus === 'saved' && (
-                  <span className="text-green-400 text-sm">✓</span>
-                )}
-                {wpmStatus === 'error' && (
-                  <span className="text-red-400 text-sm">Failed</span>
-                )}
-              </div>
-              
+              <FormField label="Reading Speed">
+                <p className="text-body-sm text-text-secondary mb-3">
+                  Used to estimate how long it takes to finish a book.
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={wpmInput}
+                    onChange={handleWpmChange}
+                    onBlur={handleWpmBlur}
+                    className="w-20 bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-center text-sm"
+                    aria-label="Words per minute"
+                  />
+                  <span className="text-body-sm text-text-secondary">words per minute</span>
+                  {wpmStatus === 'saving' && (
+                    <span className="text-body-sm text-text-secondary">Saving...</span>
+                  )}
+                  {wpmStatus === 'saved' && (
+                    <span className="text-action-success text-sm">✓</span>
+                  )}
+                  {wpmStatus === 'error' && (
+                    <span className="text-action-danger text-sm">Failed</span>
+                  )}
+                </div>
+              </FormField>
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Grid Columns Setting */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Books per row (mobile)</h3>
-              <p className="text-gray-400 text-sm mb-3">
+              <h3 className="text-h4 mb-2 text-text-primary">Books per row (mobile)</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
                 Choose how many book covers to show per row on mobile devices.
               </p>
               
@@ -519,38 +521,38 @@ function SettingsDrawer({ isOpen, onClose }) {
                     onClick={() => handleGridColumnsChange(cols)}
                     className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
                       gridColumns === cols
-                        ? 'bg-library-accent text-white'
-                        : 'bg-library-card text-gray-300 hover:bg-gray-600'
+                        ? 'bg-action-primary text-white'
+                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-elevated'
                     }`}
                   >
                     {cols}
                   </button>
                 ))}
               </div>
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-text-muted text-xs mt-2">
                 Desktop always shows 4–6 columns
               </p>
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Display Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Display</h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <h3 className="text-h4 mb-2 text-text-primary">Display</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-4">
                 Choose what to show below book covers.
               </p>
               
               <div className="space-y-4">
                 {/* Title toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-300 text-sm">Show title</span>
+                  <span className="text-text-secondary text-sm">Show title</span>
                   <button
                     onClick={() => handleDisplayToggle('show_title_below', showTitleBelow, setShowTitleBelow)}
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showTitleBelow ? 'bg-library-accent' : 'bg-gray-600'}
+                      ${showTitleBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
                     `}
                     role="switch"
                     aria-checked={showTitleBelow}
@@ -566,12 +568,12 @@ function SettingsDrawer({ isOpen, onClose }) {
                 
                 {/* Author toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-300 text-sm">Show author</span>
+                  <span className="text-text-secondary text-sm">Show author</span>
                   <button
                     onClick={() => handleDisplayToggle('show_author_below', showAuthorBelow, setShowAuthorBelow)}
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showAuthorBelow ? 'bg-library-accent' : 'bg-gray-600'}
+                      ${showAuthorBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
                     `}
                     role="switch"
                     aria-checked={showAuthorBelow}
@@ -587,12 +589,12 @@ function SettingsDrawer({ isOpen, onClose }) {
                 
                 {/* Series toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-300 text-sm">Show series</span>
+                  <span className="text-text-secondary text-sm">Show series</span>
                   <button
                     onClick={() => handleDisplayToggle('show_series_below', showSeriesBelow, setShowSeriesBelow)}
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showSeriesBelow ? 'bg-library-accent' : 'bg-gray-600'}
+                      ${showSeriesBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
                     `}
                     role="switch"
                     aria-checked={showSeriesBelow}
@@ -609,12 +611,12 @@ function SettingsDrawer({ isOpen, onClose }) {
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Status Labels Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Status Labels</h3>
-              <p className="text-gray-400 text-sm mb-3">
+              <h3 className="text-h4 mb-2 text-text-primary">Status Labels</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
                 Customize the names shown for each reading status.
               </p>
               
@@ -626,7 +628,7 @@ function SettingsDrawer({ isOpen, onClose }) {
                   { key: 'dnf', label: 'Abandoned', placeholder: 'Abandoned' }
                 ].map(({ key, label, placeholder }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <span className="text-gray-500 text-sm w-24">
+                    <span className="text-text-muted text-sm w-24">
                       {label}
                     </span>
                     <input
@@ -635,24 +637,24 @@ function SettingsDrawer({ isOpen, onClose }) {
                       onChange={(e) => handleStatusLabelChange(key, e.target.value)}
                       onBlur={() => handleStatusLabelBlur(key)}
                       placeholder={placeholder}
-                      className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                      className="flex-1 bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
                     />
                   </div>
                 ))}
               </div>
               
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-text-muted text-xs mt-2">
                 💡 Changes apply throughout the app
               </p>
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Rating Labels Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Rating Labels</h3>
-              <p className="text-gray-400 text-sm mb-3">
+              <h3 className="text-h4 mb-2 text-text-primary">Rating Labels</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
                 Customize the descriptions shown for each star rating.
               </p>
               
@@ -665,7 +667,7 @@ function SettingsDrawer({ isOpen, onClose }) {
                   { star: 1, label: '★☆☆☆☆', placeholder: 'Disliked' }
                 ].map(({ star, label, placeholder }) => (
                   <div key={star} className="flex items-center gap-3">
-                    <span className="text-yellow-400 text-sm w-24 font-mono">
+                    <span className="text-action-warning text-sm w-24 font-mono">
                       {label}
                     </span>
                     <input
@@ -674,163 +676,139 @@ function SettingsDrawer({ isOpen, onClose }) {
                       onChange={(e) => handleRatingLabelChange(star, e.target.value)}
                       onBlur={() => handleRatingLabelBlur(star)}
                       placeholder={placeholder}
-                      className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                      className="flex-1 bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
                     />
                   </div>
                 ))}
               </div>
               
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-text-muted text-xs mt-2">
                 💡 Changes apply throughout the app
               </p>
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Library Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Library</h3>
-              <p className="text-gray-400 text-sm mb-3">
+              <h3 className="text-h4 mb-2 text-text-primary">Library</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
                 Scan your book folders for new or changed files.
               </p>
               
-              <button
-                onClick={handleSync}
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full"
+                loading={syncing}
                 disabled={syncing}
-                className={`
-                  w-full px-4 py-2 rounded text-sm font-medium
-                  ${syncing 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-library-accent hover:opacity-90'
-                  }
-                  text-white transition-opacity flex items-center justify-center gap-2
-                `}
+                onClick={handleSync}
+                icon={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                }
               >
-                {syncing ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Sync Library
-                  </>
-                )}
-              </button>
+                {syncing ? 'Syncing...' : 'Sync Library'}
+              </Button>
               
               {syncResult && (
-                <p className={`text-sm mt-2 ${syncResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-sm mt-2 ${syncResult.success ? 'text-action-success' : 'text-action-danger'}`}>
                   {syncResult.message}
                 </p>
               )}
               
               {/* Find Duplicates */}
-              <button
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full mt-3 !bg-action-warning hover:!opacity-90"
                 onClick={() => {
                   onClose()
                   navigate('/duplicates')
                 }}
-                className="w-full mt-3 px-4 py-2 rounded text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center justify-center gap-2"
+                icon={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                }
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
                 Find Duplicates
-              </button>
+              </Button>
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Rescan Metadata Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Enhanced Metadata</h3>
-              <p className="text-gray-400 text-sm mb-3">
+              <h3 className="text-h4 mb-2 text-text-primary">Enhanced Metadata</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
                 Re-extract metadata from your ebook files to populate fandom, 
                 relationships, source URLs, and more.
               </p>
               
               {rescanPreview && (
-                <div className="bg-zinc-800/50 rounded-lg p-3 mb-3 text-xs">
-                  <div className="grid grid-cols-2 gap-2 text-gray-400">
+                <div className="bg-bg-elevated/70 border border-border-subtle rounded-lg p-3 mb-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-body-sm text-text-secondary">
                     <span>Total books:</span>
-                    <span className="text-gray-300">{rescanPreview.total_books}</span>
+                    <span className="text-text-secondary">{rescanPreview.total_books}</span>
                     
                     <span>With EPUB files:</span>
-                    <span className="text-gray-300">{rescanPreview.books_with_epub}</span>
+                    <span className="text-text-secondary">{rescanPreview.books_with_epub}</span>
                     
                     <span>Already have fandom:</span>
-                    <span className="text-gray-300">{rescanPreview.already_has_fandom}</span>
+                    <span className="text-text-secondary">{rescanPreview.already_has_fandom}</span>
                     
                     <span>Already have source URL:</span>
-                    <span className="text-gray-300">{rescanPreview.already_has_source_url}</span>
+                    <span className="text-text-secondary">{rescanPreview.already_has_source_url}</span>
                   </div>
                 </div>
               )}
               
-              <button
-                onClick={handleRescan}
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full"
+                loading={rescanLoading}
                 disabled={rescanLoading}
-                className={`
-                  w-full px-4 py-2 rounded text-sm font-medium
-                  ${rescanLoading 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-teal-600 hover:bg-teal-500'
-                  }
-                  text-white transition-colors flex items-center justify-center gap-2
-                `}
+                onClick={handleRescan}
+                icon={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                }
               >
-                {rescanLoading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Rescanning...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    Rescan All Metadata
-                  </>
-                )}
-              </button>
+                {rescanLoading ? 'Rescanning...' : 'Rescan All Metadata'}
+              </Button>
               
               {rescanResults && !rescanResults.error && (
-                <div className="mt-3 bg-zinc-800/50 rounded-lg p-3 text-xs">
-                  <div className="text-teal-400 font-medium mb-2">Rescan Complete!</div>
-                  <div className="grid grid-cols-2 gap-1 text-gray-400">
+                <div className="mt-3 bg-bg-elevated/70 border border-border-subtle rounded-lg p-3 text-xs">
+                  <div className="text-action-primary font-medium mb-2">Rescan Complete!</div>
+                  <div className="grid grid-cols-2 gap-1 text-body-sm text-text-secondary">
                     <span>Books scanned:</span>
-                    <span className="text-gray-300">{rescanResults.total}</span>
+                    <span className="text-text-secondary">{rescanResults.total}</span>
                     
                     <span>Updated:</span>
-                    <span className="text-teal-400">{rescanResults.updated}</span>
+                    <span className="text-action-primary">{rescanResults.updated}</span>
                     
                     <span>AO3 metadata parsed:</span>
-                    <span className="text-gray-300">{rescanResults.details?.ao3_parsed || 0}</span>
+                    <span className="text-text-secondary">{rescanResults.details?.ao3_parsed || 0}</span>
                     
                     <span>Source URLs found:</span>
-                    <span className="text-gray-300">{rescanResults.details?.source_urls_found || 0}</span>
+                    <span className="text-text-secondary">{rescanResults.details?.source_urls_found || 0}</span>
                     
                     <span>Series extracted:</span>
-                    <span className="text-gray-300">{rescanResults.details?.series_extracted || 0}</span>
+                    <span className="text-text-secondary">{rescanResults.details?.series_extracted || 0}</span>
                     
                     <span>Skipped (no EPUB):</span>
-                    <span className="text-gray-500">{rescanResults.skipped_no_epub}</span>
+                    <span className="text-text-muted">{rescanResults.skipped_no_epub}</span>
                     
                     {rescanResults.errors > 0 && (
                       <>
                         <span>Errors:</span>
-                        <span className="text-red-400">{rescanResults.errors}</span>
+                        <span className="text-action-danger">{rescanResults.errors}</span>
                       </>
                     )}
                   </div>
@@ -838,19 +816,19 @@ function SettingsDrawer({ isOpen, onClose }) {
               )}
               
               {rescanResults?.error && (
-                <div className="mt-3 bg-red-900/30 border border-red-800 rounded-lg p-3 text-xs text-red-400">
+                <div className="mt-3 bg-action-danger/10 border border-action-danger/30 rounded-lg p-3 text-xs text-action-danger">
                   Error: {rescanResults.error}
                 </div>
               )}
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Phase 9A: Automated Backups Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Automated Backups</h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <h3 className="text-h4 mb-2 text-text-primary">Automated Backups</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-4">
                 Automatic database backups with grandfather-father-son rotation.
               </p>
               
@@ -858,12 +836,12 @@ function SettingsDrawer({ isOpen, onClose }) {
                 <div className="space-y-4">
                   {/* Enable Toggle */}
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-300 text-sm">Enable automatic backups</span>
+                    <span className="text-text-secondary text-sm">Enable automatic backups</span>
                     <button
                       onClick={() => handleBackupSettingsChange('backup_enabled', !backupSettings.backup_enabled)}
                       className={`
                         relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${backupSettings.backup_enabled ? 'bg-library-accent' : 'bg-gray-600'}
+                        ${backupSettings.backup_enabled ? 'bg-action-primary' : 'bg-bg-elevated'}
                       `}
                       role="switch"
                       aria-checked={backupSettings.backup_enabled}
@@ -882,49 +860,50 @@ function SettingsDrawer({ isOpen, onClose }) {
                     <>
                       {/* Backup Path */}
                       <div>
-                        <label className="block text-gray-300 text-sm mb-2">Backup location</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={backupPath}
-                            onChange={(e) => {
-                              setBackupPath(e.target.value)
-                              setPathTest(null)
-                            }}
-                            placeholder="/app/data/backups"
-                            className="flex-1 bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
-                          />
-                          <button
-                            onClick={handleTestPath}
-                            disabled={testingPath || !backupPath.trim()}
-                            className={`
-                              px-3 py-2 rounded text-sm font-medium
-                              ${testingPath ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-500'}
-                              text-white transition-colors
-                            `}
-                          >
-                            {testingPath ? '...' : 'Test'}
-                          </button>
-                        </div>
+                        <FormField label="Backup location">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={backupPath}
+                              onChange={(e) => {
+                                setBackupPath(e.target.value)
+                                setPathTest(null)
+                              }}
+                              placeholder="/app/data/backups"
+                              className="flex-1 min-w-0 bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="shrink-0"
+                              loading={testingPath}
+                              disabled={testingPath || !backupPath.trim()}
+                              onClick={handleTestPath}
+                            >
+                              Test
+                            </Button>
+                          </div>
+                        </FormField>
                         
                         {pathTest && (
-                          <p className={`text-xs mt-1 ${pathTest.valid ? 'text-green-400' : 'text-red-400'}`}>
+                          <p className={`text-xs mt-1 ${pathTest.valid ? 'text-action-success' : 'text-action-danger'}`}>
                             {pathTest.valid ? '✓ Path is writable' : `✗ ${pathTest.error}`}
                           </p>
                         )}
                         
-                        <p className="text-gray-500 text-xs mt-2">
+                        <p className="text-text-muted text-xs mt-2">
                           Examples: /app/data/backups (default) • /volumeUSB1/liminal-backups (USB) • /volume1/network-backups (NAS share)
                         </p>
                       </div>
 
                       {/* Schedule Selector */}
                       <div>
-                        <label className="block text-gray-300 text-sm mb-2">Backup schedule</label>
+                        <label className="block text-text-secondary text-sm mb-2">Backup schedule</label>
                         <select
                           value={backupSettings.backup_schedule || 'both'}
                           onChange={(e) => handleBackupSettingsChange('backup_schedule', e.target.value)}
-                          className="w-full bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                          className="w-full bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
                         >
                           <option value="before_sync">Before every sync only</option>
                           <option value="daily">Daily at specified time</option>
@@ -935,55 +914,55 @@ function SettingsDrawer({ isOpen, onClose }) {
                       {/* Time Picker - only show when daily or both */}
                       {(backupSettings.backup_schedule === 'daily' || backupSettings.backup_schedule === 'both') && (
                         <div>
-                          <label className="block text-gray-300 text-sm mb-2">Daily backup time</label>
+                          <label className="block text-text-secondary text-sm mb-2">Daily backup time</label>
                           <input
                             type="time"
                             value={backupSettings.backup_time || '03:00'}
                             onChange={(e) => handleBackupSettingsChange('backup_time', e.target.value)}
-                            className="bg-library-card px-3 py-2 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm"
+                            className="bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
                           />
                         </div>
                       )}
 
                       {/* Retention Policy */}
                       <div>
-                        <label className="block text-gray-300 text-sm mb-2">Retention policy</label>
+                        <label className="block text-text-secondary text-sm mb-2">Retention policy</label>
                         <div className="space-y-2">
                           <div className="flex items-center gap-3">
-                            <span className="text-gray-400 text-sm w-32">Daily backups:</span>
+                            <span className="text-body-sm text-text-secondary text-sm w-32">Daily backups:</span>
                             <input
                               type="number"
                               min="1"
                               max="30"
                               value={backupSettings.backup_daily_retention_days || 7}
                               onChange={(e) => handleBackupSettingsChange('backup_daily_retention_days', parseInt(e.target.value) || 7)}
-                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                              className="w-16 bg-bg-elevated px-2 py-1 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm text-center"
                             />
-                            <span className="text-gray-400 text-sm">days</span>
+                            <span className="text-body-sm text-text-secondary text-sm">days</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-gray-400 text-sm w-32">Weekly backups:</span>
+                            <span className="text-body-sm text-text-secondary text-sm w-32">Weekly backups:</span>
                             <input
                               type="number"
                               min="1"
                               max="12"
                               value={backupSettings.backup_weekly_retention_weeks || 4}
                               onChange={(e) => handleBackupSettingsChange('backup_weekly_retention_weeks', parseInt(e.target.value) || 4)}
-                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                              className="w-16 bg-bg-elevated px-2 py-1 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm text-center"
                             />
-                            <span className="text-gray-400 text-sm">weeks</span>
+                            <span className="text-body-sm text-text-secondary text-sm">weeks</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-gray-400 text-sm w-32">Monthly backups:</span>
+                            <span className="text-body-sm text-text-secondary text-sm w-32">Monthly backups:</span>
                             <input
                               type="number"
                               min="1"
                               max="24"
                               value={backupSettings.backup_monthly_retention_months || 6}
                               onChange={(e) => handleBackupSettingsChange('backup_monthly_retention_months', parseInt(e.target.value) || 6)}
-                              className="w-16 bg-library-card px-2 py-1 rounded text-white border border-gray-600 focus:border-library-accent focus:outline-none text-sm text-center"
+                              className="w-16 bg-bg-elevated px-2 py-1 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm text-center"
                             />
-                            <span className="text-gray-400 text-sm">months</span>
+                            <span className="text-body-sm text-text-secondary text-sm">months</span>
                           </div>
                         </div>
                       </div>
@@ -992,31 +971,31 @@ function SettingsDrawer({ isOpen, onClose }) {
 
                   {/* Stats Display */}
                   {backupStats && (
-                    <div className="bg-zinc-800/50 rounded-lg p-3 text-xs">
-                      <div className="grid grid-cols-2 gap-2 text-gray-400">
+                    <div className="bg-bg-elevated/70 border border-border-subtle rounded-lg p-3 text-xs">
+                      <div className="grid grid-cols-2 gap-2 text-body-sm text-text-secondary">
                         <span>Last backup:</span>
-                        <span className="text-gray-300">{formatTimeAgo(backupStats.last_backup_time)}</span>
+                        <span className="text-text-secondary">{formatTimeAgo(backupStats.last_backup_time)}</span>
                         
                         <span>Storage used:</span>
-                        <span className="text-gray-300">{formatBytes(backupStats.total_size)}</span>
+                        <span className="text-text-secondary">{formatBytes(backupStats.total_size)}</span>
                         
                         <span>Backup count:</span>
-                        <span className="text-gray-300">{backupStats.total_backups}</span>
+                        <span className="text-text-secondary">{backupStats.total_backups}</span>
                       </div>
                       
                       {backupStats.total_backups > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-700 grid grid-cols-3 gap-1 text-center">
+                        <div className="mt-2 pt-2 border-t border-border-default grid grid-cols-3 gap-1 text-center">
                           <div>
-                            <div className="text-gray-300">{backupStats.backups_by_type?.daily?.count || 0}</div>
-                            <div className="text-gray-500">daily</div>
+                            <div className="text-text-secondary">{backupStats.backups_by_type?.daily?.count || 0}</div>
+                            <div className="text-text-muted">daily</div>
                           </div>
                           <div>
-                            <div className="text-gray-300">{backupStats.backups_by_type?.weekly?.count || 0}</div>
-                            <div className="text-gray-500">weekly</div>
+                            <div className="text-text-secondary">{backupStats.backups_by_type?.weekly?.count || 0}</div>
+                            <div className="text-text-muted">weekly</div>
                           </div>
                           <div>
-                            <div className="text-gray-300">{backupStats.backups_by_type?.monthly?.count || 0}</div>
-                            <div className="text-gray-500">monthly</div>
+                            <div className="text-text-secondary">{backupStats.backups_by_type?.monthly?.count || 0}</div>
+                            <div className="text-text-muted">monthly</div>
                           </div>
                         </div>
                       )}
@@ -1024,61 +1003,43 @@ function SettingsDrawer({ isOpen, onClose }) {
                   )}
 
                   {/* Manual Backup Button */}
-                  <button
-                    onClick={handleManualBackup}
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="w-full"
+                    loading={creatingBackup}
                     disabled={creatingBackup}
-                    className={`
-                      w-full px-4 py-2 rounded text-sm font-medium
-                      ${creatingBackup 
-                        ? 'bg-gray-600 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-500'
-                      }
-                      text-white transition-colors flex items-center justify-center gap-2
-                    `}
+                    onClick={handleManualBackup}
+                    icon={
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    }
                   >
-                    {creatingBackup ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Creating Backup...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        Create Backup Now
-                      </>
-                    )}
-                  </button>
+                    {creatingBackup ? 'Creating Backup...' : 'Create Backup Now'}
+                  </Button>
 
                   {/* Save Settings Button */}
-                  <button
-                    onClick={handleSaveBackupSettings}
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="w-full !bg-action-success hover:!opacity-90"
+                    loading={savingBackupSettings}
                     disabled={savingBackupSettings}
-                    className={`
-                      w-full px-4 py-2 rounded text-sm font-medium
-                      ${savingBackupSettings 
-                        ? 'bg-gray-600 cursor-not-allowed' 
-                        : 'bg-green-600 hover:bg-green-500'
-                      }
-                      text-white transition-colors
-                    `}
+                    onClick={handleSaveBackupSettings}
                   >
                     {savingBackupSettings ? 'Saving...' : 'Save Backup Settings'}
-                  </button>
+                  </Button>
 
                   {/* Status Messages */}
                   {backupStatus && (
-                    <div className={`
-                      rounded-lg p-3 text-sm
-                      ${backupStatus.success 
-                        ? 'bg-green-900/30 border border-green-800 text-green-400' 
-                        : 'bg-red-900/30 border border-red-800 text-red-400'
+                    <div
+                      className={
+                        backupStatus.success
+                          ? 'rounded-lg p-3 text-sm bg-action-success/10 border border-action-success/30 text-action-success'
+                          : 'rounded-lg p-3 text-sm bg-action-danger/10 border border-action-danger/30 text-action-danger'
                       }
-                    `}>
+                    >
                       {backupStatus.message}
                     </div>
                   )}
@@ -1086,17 +1047,17 @@ function SettingsDrawer({ isOpen, onClose }) {
               )}
               
               {!backupSettings && (
-                <div className="text-gray-500 text-sm">Loading backup settings...</div>
+                <div className="text-text-muted text-sm">Loading backup settings...</div>
               )}
             </section>
 
             {/* Divider */}
-            <hr className="border-gray-700" />
+            <hr className="border-border-default" />
 
             {/* Phase 9C: Cover Extraction Section */}
             <section>
-              <h3 className="text-sm font-medium text-white mb-2">Cover Extraction</h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <h3 className="text-h4 mb-2 text-text-primary">Cover Extraction</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-4">
                 Extract cover images from EPUB files for existing books.
                 FanFiction is excluded (uses gradient covers only).
               </p>
@@ -1104,84 +1065,70 @@ function SettingsDrawer({ isOpen, onClose }) {
               <div className="space-y-4">
                 {/* Category Selection */}
                 <div>
-                  <label className="block text-gray-300 text-sm mb-2">Categories to process</label>
+                  <label className="block text-text-secondary text-sm mb-2">Categories to process</label>
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <label className="flex items-center gap-2 text-sm text-text-secondary">
                       <input
                         type="checkbox"
                         checked={extractCategories.Fiction}
                         onChange={(e) => setExtractCategories(prev => ({ ...prev, Fiction: e.target.checked }))}
-                        className="rounded border-gray-600 bg-library-card text-library-accent focus:ring-library-accent"
+                        className="rounded border-border-default bg-bg-elevated text-action-primary focus:ring-action-primary"
                       />
                       Fiction
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <label className="flex items-center gap-2 text-sm text-text-secondary">
                       <input
                         type="checkbox"
                         checked={extractCategories['Non-Fiction']}
                         onChange={(e) => setExtractCategories(prev => ({ ...prev, 'Non-Fiction': e.target.checked }))}
-                        className="rounded border-gray-600 bg-library-card text-library-accent focus:ring-library-accent"
+                        className="rounded border-border-default bg-bg-elevated text-action-primary focus:ring-action-primary"
                       />
                       Non-Fiction
                     </label>
                   </div>
-                  <p className="text-gray-500 text-xs mt-1">
+                  <p className="text-text-muted text-xs mt-1">
                     Books with custom covers are always preserved.
                   </p>
                 </div>
 
                 {/* Extract Button */}
-                <button
-                  onClick={handleBulkExtract}
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="w-full !bg-chip-fanfiction hover:!opacity-90"
+                  loading={extracting}
                   disabled={extracting}
-                  className={`
-                    w-full px-4 py-2 rounded text-sm font-medium
-                    ${extracting 
-                      ? 'bg-gray-600 cursor-not-allowed' 
-                      : 'bg-purple-600 hover:bg-purple-500'
-                    }
-                    text-white transition-colors flex items-center justify-center gap-2
-                  `}
+                  onClick={handleBulkExtract}
+                  icon={
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  }
                 >
-                  {extracting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Extracting Covers...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Extract Covers from EPUBs
-                    </>
-                  )}
-                </button>
+                  {extracting ? 'Extracting Covers...' : 'Extract Covers from EPUBs'}
+                </Button>
 
                 {/* Results Display */}
                 {extractResults && !extractResults.error && (
-                  <div className="bg-zinc-800/50 rounded-lg p-3 text-xs space-y-2">
-                    <div className="text-green-400 font-medium">
+                  <div className="bg-bg-elevated/70 border border-border-subtle rounded-lg p-3 text-xs space-y-2">
+                    <div className="text-action-success font-medium">
                       ✓ Extracted {extractResults.extracted} covers
                     </div>
-                    <div className="grid grid-cols-2 gap-1 text-gray-400">
+                    <div className="grid grid-cols-2 gap-1 text-body-sm text-text-secondary">
                       <span>Processed:</span>
-                      <span className="text-gray-300">{extractResults.processed}</span>
+                      <span className="text-text-secondary">{extractResults.processed}</span>
                       <span>Skipped (custom):</span>
-                      <span className="text-gray-300">{extractResults.skipped_custom}</span>
+                      <span className="text-text-secondary">{extractResults.skipped_custom}</span>
                       <span>Skipped (has cover):</span>
-                      <span className="text-gray-300">{extractResults.skipped_has_cover}</span>
+                      <span className="text-text-secondary">{extractResults.skipped_has_cover}</span>
                       <span>Skipped (no EPUB):</span>
-                      <span className="text-gray-300">{extractResults.skipped_no_epub}</span>
+                      <span className="text-text-secondary">{extractResults.skipped_no_epub}</span>
                       <span>Skipped (no cover in file):</span>
-                      <span className="text-gray-300">{extractResults.skipped_no_cover || 0}</span>
+                      <span className="text-text-secondary">{extractResults.skipped_no_cover || 0}</span>
                       {extractResults.failed > 0 && (
                         <>
-                          <span className="text-red-400">Failed:</span>
-                          <span className="text-red-400">{extractResults.failed}</span>
+                          <span className="text-action-danger">Failed:</span>
+                          <span className="text-action-danger">{extractResults.failed}</span>
                         </>
                       )}
                     </div>
@@ -1189,7 +1136,7 @@ function SettingsDrawer({ isOpen, onClose }) {
                 )}
 
                 {extractResults?.error && (
-                  <div className="bg-red-900/30 border border-red-800 rounded-lg p-3 text-xs text-red-400">
+                  <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-3 text-xs text-action-danger">
                     Error: {extractResults.error}
                   </div>
                 )}
