@@ -15,7 +15,17 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { analyzeUploadedFiles, finalizeUpload, cancelUpload, addToTBR, createTitle, createEdition, getBook, linkFilesToTitle } from '../api'
+import {
+  analyzeUploadedFiles,
+  finalizeUpload,
+  cancelUpload,
+  addToTBR,
+  createTitle,
+  createEdition,
+  getBook,
+  linkFilesToTitle,
+  updateBookMetadata,
+} from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 
 // Choice screens
@@ -361,7 +371,34 @@ export default function AddPage() {
       }, 500)
 
       const response = await finalizeUpload(sessionId, bookActions)
-      
+
+      // Review screen edits: finalize creates DB rows from file metadata first; re-apply user fields
+      const byId = new Map(books.map((b) => [b.id, b]))
+      const patchTasks = []
+      for (const r of response.results || []) {
+        if (!r.title_id || r.status === 'error' || r.status === 'skipped') continue
+        const book = byId.get(r.id)
+        if (!book?.edited) continue
+        const payload = {}
+        if (book.title != null && String(book.title).trim()) payload.title = book.title.trim()
+        if (book.author != null && String(book.author).trim()) {
+          payload.authors = [book.author.trim()]
+        }
+        if (book.series !== undefined && book.series !== null) payload.series = typeof book.series === 'string' ? book.series.trim() : (book.series || '')
+        if (book.series_number !== undefined && book.series_number !== null) {
+          payload.series_number = typeof book.series_number === 'string' ? book.series_number.trim() : (book.series_number || '')
+        }
+        if (book.category) payload.category = book.category
+        if (Object.keys(payload).length > 0) {
+          patchTasks.push(
+            updateBookMetadata(r.title_id, payload).catch((err) => {
+              console.warn('Failed to apply review edits after upload:', err)
+            }),
+          )
+        }
+      }
+      await Promise.all(patchTasks)
+
       clearInterval(progressInterval)
       setUploadProgress(100)
       setUploadResults(response)
@@ -473,17 +510,17 @@ export default function AddPage() {
       {/* Screen title - shown below nav bar when there's a title */}
       {headerConfig.title && (
         <div className="max-w-2xl mx-auto px-4 pt-4">
-          <h1 className="text-lg font-semibold text-white">{headerConfig.title}</h1>
+          <h1 className="text-h4 text-text-primary">{headerConfig.title}</h1>
         </div>
       )}
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-900/50 border-b border-red-500 px-4 py-3 text-center">
-          <p className="text-red-200">{error}</p>
+        <div className="bg-action-danger/10 border-b border-action-danger/30 px-4 py-3 text-center">
+          <p className="text-action-danger">{error}</p>
           <button 
             onClick={() => setError(null)}
-            className="text-red-300 underline text-sm mt-1"
+            className="text-action-danger/70 underline text-body-sm mt-1"
           >
             Dismiss
           </button>
@@ -521,13 +558,13 @@ export default function AddPage() {
           <>
             {/* Context banner when uploading for a linked wishlist book */}
             {linkedBook && (
-              <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 mb-4">
+              <div className="bg-action-success/10 border border-action-success/30 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-green-400">📚</span>
-                  <span className="text-green-300 font-medium">Adding files for:</span>
+                  <span className="text-action-success">📚</span>
+                  <span className="text-action-success font-medium">Adding files for:</span>
                 </div>
-                <p className="text-white font-semibold">{linkedBook.title}</p>
-                <p className="text-gray-400 text-sm">by {linkedBook.authors?.join(', ')}</p>
+                <p className="text-text-primary font-semibold">{linkedBook.title}</p>
+                <p className="text-text-secondary text-body-sm">by {linkedBook.authors?.join(', ')}</p>
               </div>
             )}
             <AddToLibrary

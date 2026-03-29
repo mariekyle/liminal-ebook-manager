@@ -1,13 +1,13 @@
 /**
  * ReviewBooks.jsx
- * 
+ *
  * Container for reviewing books before upload.
- * Shows all detected books and upload button.
  */
 
-import { useState, useCallback } from 'react';
-import BookCard from './BookCard';
-import StepIndicator from '../add/StepIndicator';
+import { useState, useCallback } from 'react'
+import BookCard from './BookCard'
+import StepIndicator from '../add/StepIndicator'
+import Button from '../ui/Button'
 
 export default function ReviewBooks({
   books,
@@ -16,38 +16,32 @@ export default function ReviewBooks({
   onUpload,
   onCancel,
   booksToUpload,
-  filesToUpload,
+  filesToUpload = 0,
   canUpload,
 }) {
   const [expandedBookId, setExpandedBookId] = useState(
-    // Expand first book by default
-    books.length > 0 ? books[0].id : null
-  );
+    books.length > 0 ? books[0].id : null,
+  )
 
   const handleToggle = useCallback((bookId) => {
-    setExpandedBookId(prev => prev === bookId ? null : bookId);
-  }, []);
+    setExpandedBookId((prev) => (prev === bookId ? null : bookId))
+  }, [])
 
-  // Count books needing attention (duplicates or familiar titles without action)
-  const needsAttention = books.filter(b => 
-    (b.duplicate && !b.action) || 
-    (b.familiar_title && !b.duplicate && !b.action)
-  ).length;
+  const needsAttention = books.filter(
+    (b) => (b.duplicate && !b.action) || (b.familiar_title && !b.duplicate && !b.action),
+  ).length
 
   return (
     <div>
-      {/* Step Indicator */}
       <StepIndicator steps={['Add', 'Review', 'Done']} currentStep={1} />
 
-      {/* Needs attention notice */}
       {needsAttention > 0 && (
-        <div className="mb-4 p-3 bg-[#3a3a2a] border border-[#ffc107] rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-bg-elevated border border-border-focus rounded-lg text-body-sm text-text-primary">
           <span className="mr-2">⚠️</span>
           {needsAttention} {needsAttention !== 1 ? 'items need' : 'item needs'} your attention
         </div>
       )}
 
-      {/* Book cards */}
       <div className="space-y-3">
         {books.map((book, index) => (
           <BookCard
@@ -63,27 +57,22 @@ export default function ReviewBooks({
         ))}
       </div>
 
-      {/* Actions */}
       <div className="flex flex-col gap-3 mt-6">
-        <button
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="w-full"
           onClick={onUpload}
           disabled={!canUpload}
-          className={`
-            w-full py-4 px-6 font-medium rounded-lg transition-colors min-h-[52px]
-            ${canUpload 
-              ? 'bg-[#667eea] hover:bg-[#5568d3] text-white' 
-              : 'bg-[#3a3a3a] text-[#666] cursor-not-allowed'}
-          `}
+          aria-label={`Add ${booksToUpload} ${booksToUpload === 1 ? 'story' : 'stories'}, ${filesToUpload} files`}
         >
           Add {booksToUpload} {booksToUpload === 1 ? 'Story' : 'Stories'}
-        </button>
-        <button
-          onClick={onCancel}
-          className="w-full py-3 text-[#aaa] hover:text-[#e0e0e0] transition-colors"
-        >
+        </Button>
+        <Button type="button" variant="ghost" className="w-full" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
-  );
+  )
 }

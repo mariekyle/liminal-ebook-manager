@@ -6,6 +6,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { listAuthors, listBooks } from '../../api'
+import Button from '../ui/Button'
+import FormField from '../ui/FormField'
+
+const inputClass = (hasError) =>
+  `w-full bg-bg-elevated border rounded-lg px-4 py-3 text-text-primary text-sm font-[inherit] placeholder:text-text-muted transition-[border-color] duration-200 ease-out focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus ${
+    hasError ? 'border-action-danger' : 'border-border-default'
+  }`
 
 export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, initialFormat = 'physical' }) {
   const [form, setForm] = useState({
@@ -223,102 +230,92 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   return (
     <div className="py-4">
       <div className="mb-6 text-center max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-2">Another Format</h1>
-        <p className="text-gray-400">What do you know about it?</p>
+        <h1 className="text-h2 mb-2">Another Format</h1>
+        <p className="text-body-sm text-text-secondary">What do you know about it?</p>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-        {/* Format */}
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Format</label>
-          <div className="flex gap-2">
+          <span className="block text-label mb-2">Format</span>
+          <div className="flex gap-2 flex-wrap">
             {[
               { value: 'physical', label: 'Physical' },
               { value: 'audiobook', label: 'Audiobook' },
               { value: 'web', label: 'Web/URL' },
-            ].map(opt => (
-              <button
+            ].map((opt) => (
+              <Button
                 key={opt.value}
                 type="button"
+                size="sm"
+                variant={form.format === opt.value ? 'primary' : 'secondary'}
                 onClick={() => updateForm('format', opt.value)}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  form.format === opt.value
-                    ? 'bg-library-accent text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
           {form.format === 'web' && (
-            <p className="text-gray-500 text-sm mt-2 italic">Choose this option for web-based works</p>
+            <p className="text-caption text-text-muted mt-2 italic">Choose this option for web-based works</p>
           )}
-        </div>
-        
-        {/* Title */}
-        <div className="relative">
-          <label className="block text-sm text-gray-400 mb-2">Title *</label>
-          <input
-            type="text"
-            value={form.title}
-            onChange={(e) => {
-              updateForm('title', e.target.value)
-              // Clear existing selection if user edits title
-              if (selectedExistingTitle) {
-                setSelectedExistingTitle(null)
-              }
-            }}
-            onFocus={() => form.title.trim().length >= 2 && setShowTitleDropdown(titleSuggestions.length > 0)}
-            onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
-            placeholder="What's it called?"
-            className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
-              errors.title ? 'border-red-500' : 'border-gray-700'
-            }`}
-          />
-          
-          {/* Title suggestions dropdown */}
-          {showTitleDropdown && (
-            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-              <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-700">
-                Already in your library:
-              </div>
-              {titleSuggestions.map(book => (
-                <button
-                  key={book.id}
-                  type="button"
-                  onClick={() => selectTitleSuggestion(book)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors"
-                >
-                  <div className="text-sm text-white">{book.title}</div>
-                  <div className="text-xs text-gray-400">
-                    {book.authors?.join(', ')} • {book.category}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          
-          {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
         </div>
 
-        {/* Adding Format Banner - show when existing title selected */}
+        <FormField label="Title *" error={errors.title}>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => {
+                updateForm('title', e.target.value)
+                if (selectedExistingTitle) {
+                  setSelectedExistingTitle(null)
+                }
+              }}
+              onFocus={() =>
+                form.title.trim().length >= 2 && setShowTitleDropdown(titleSuggestions.length > 0)
+              }
+              onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
+              placeholder="What's it called?"
+              className={inputClass(!!errors.title)}
+            />
+            {showTitleDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-bg-elevated border border-border-default rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                <div className="px-3 py-2 text-caption text-text-muted border-b border-border-default">
+                  Already in your library:
+                </div>
+                {titleSuggestions.map((book) => (
+                  <button
+                    key={book.id}
+                    type="button"
+                    onClick={() => selectTitleSuggestion(book)}
+                    className="w-full text-left px-4 py-2 min-h-[44px] hover:bg-bg-surface transition-all duration-200 ease-out"
+                  >
+                    <div className="text-body-sm text-text-primary">{book.title}</div>
+                    <div className="text-caption text-text-secondary">
+                      {book.authors?.join(', ')} • {book.category}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </FormField>
+
         {isAddingFormat && (
-          <div className="p-4 rounded-lg bg-green-900/30 border border-green-700/50">
+          <div className="p-4 rounded-lg bg-action-success/10 border border-action-success/40">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="font-medium text-green-300 flex items-center gap-2 mb-1">
+                <div className="font-medium text-action-success flex items-center gap-2 mb-1">
                   <span>✔</span> Adding format to existing title
                 </div>
-                <p className="text-sm text-gray-400">
-                  "{selectedExistingTitle.title}" is already in your library. 
-                  This will add a new {form.format} format.
+                <p className="text-body-sm text-text-secondary">
+                  &quot;{selectedExistingTitle.title}&quot; is already in your library. This will add a new{' '}
+                  {form.format} format.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={clearExistingSelection}
-                className="text-gray-500 hover:text-gray-300 p-1"
+                className="text-text-muted hover:text-text-primary p-2 min-w-[44px] min-h-[44px]"
                 title="Create as new title instead"
               >
                 ×
@@ -326,24 +323,21 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
             </div>
           </div>
         )}
-        
-        {/* Author */}
+
         <div className="relative">
-          <label className="block text-sm text-gray-400 mb-2">Author *</label>
-          
-          {/* Author chips */}
+          <span className="block text-label mb-2">Author *</span>
           {form.authors.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
-              {form.authors.map(author => (
+              {form.authors.map((author) => (
                 <span
                   key={author}
-                  className="bg-library-accent/20 text-library-accent px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                  className="bg-action-primary/15 text-action-primary px-3 py-1 rounded-full text-body-sm inline-flex items-center gap-2"
                 >
                   {author}
                   <button
                     type="button"
                     onClick={() => removeAuthor(author)}
-                    className="hover:text-white transition-colors"
+                    className="hover:text-text-primary transition-colors"
                   >
                     ×
                   </button>
@@ -351,7 +345,6 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
               ))}
             </div>
           )}
-          
           <input
             ref={authorInputRef}
             type="text"
@@ -360,137 +353,104 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
             onKeyDown={handleAuthorKeyDown}
             onFocus={() => form.authorInput.trim() && setShowAuthorDropdown(filteredAuthors.length > 0)}
             onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
-            placeholder={form.authors.length > 0 ? "Add another author..." : "Who wrote it?"}
+            placeholder={form.authors.length > 0 ? 'Add another author...' : 'Who wrote it?'}
             enterKeyHint="done"
             autoComplete="off"
-            className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
-              errors.author ? 'border-red-500' : 'border-gray-700'
-            }`}
+            className={inputClass(!!errors.author)}
           />
-          
-          {/* Autocomplete dropdown */}
           {showAuthorDropdown && (
-            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {filteredAuthors.map(author => (
+            <div className="absolute z-10 w-full mt-1 bg-bg-elevated border border-border-default rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {filteredAuthors.map((author) => (
                 <button
                   key={author}
                   type="button"
                   onClick={() => addAuthor(author)}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+                  className="w-full text-left px-4 py-2 min-h-[44px] text-body-sm text-text-secondary hover:bg-bg-surface"
                 >
                   {author}
                 </button>
               ))}
             </div>
           )}
-          
-          {errors.author && <p className="text-red-400 text-sm mt-1">{errors.author}</p>}
-          <p className="text-gray-500 text-xs mt-1">Press Enter to add multiple authors</p>
+          {errors.author && <p className="mt-1.5 text-xs text-action-danger">{errors.author}</p>}
+          <p className="text-caption text-text-muted mt-1">Press Enter to add multiple authors</p>
         </div>
-        
-        {/* Series Row */}
+
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-sm text-gray-400 mb-2">Series</label>
-            <input
-              type="text"
+            <FormField
+              label="Series"
               value={form.series}
-              onChange={(e) => updateForm('series', e.target.value)}
+              onChange={(v) => updateForm('series', v)}
               placeholder="Series name"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent"
             />
           </div>
-          <div className="w-20">
-            <label className="block text-sm text-gray-400 mb-2">#</label>
-            <input
-              type="text"
-              value={form.seriesNumber}
-              onChange={(e) => updateForm('seriesNumber', e.target.value)}
-              placeholder="1"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent"
-            />
+          <div className="w-24">
+            <FormField label="#" value={form.seriesNumber} onChange={(v) => updateForm('seriesNumber', v)} placeholder="1" />
           </div>
         </div>
-        
-        {/* Category */}
-        <div>
-          <label className="block text-sm text-gray-400 mb-2">Category</label>
+
+        <FormField label="Category">
           <select
             value={form.category}
             onChange={(e) => updateForm('category', e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-library-accent"
+            className="w-full h-11 px-3 rounded-lg text-body-sm text-text-primary bg-bg-elevated border border-border-default focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus"
           >
             <option value="Fiction">Fiction</option>
             <option value="Non-Fiction">Non-Fiction</option>
             <option value="FanFiction">FanFiction</option>
           </select>
-        </div>
-        
-        {/* FanFiction: Completion Status */}
+        </FormField>
+
         {showFanficFields && (
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Completion Status</label>
-            <div className="flex gap-2">
-              {['Complete', 'WIP', 'Abandoned'].map(status => (
-                <button
+            <span className="block text-label mb-2">Completion Status</span>
+            <div className="flex gap-2 flex-wrap">
+              {['Complete', 'WIP', 'Abandoned'].map((status) => (
+                <Button
                   key={status}
                   type="button"
+                  size="sm"
+                  variant={form.completionStatus === status ? 'primary' : 'secondary'}
                   onClick={() => updateForm('completionStatus', form.completionStatus === status ? '' : status)}
-                  className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                    form.completionStatus === status
-                      ? 'bg-library-accent text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
                 >
                   {status}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
         )}
-        
-        {/* Source URL */}
+
         {showUrlField && (
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Source URL {form.format === 'web' ? '*' : '(optional)'}
-            </label>
+          <FormField
+            label={`Source URL ${form.format === 'web' ? '*' : '(optional)'}`}
+            error={errors.sourceUrl}
+          >
             <input
               type="url"
               value={form.sourceUrl}
               onChange={(e) => updateForm('sourceUrl', e.target.value)}
               placeholder="https://archiveofourown.org/works/..."
-              className={`w-full bg-gray-800 border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-library-accent ${
-                errors.sourceUrl ? 'border-red-500' : 'border-gray-700'
-              }`}
+              className={inputClass(!!errors.sourceUrl)}
             />
-            {errors.sourceUrl && <p className="text-red-400 text-sm mt-1">{errors.sourceUrl}</p>}
-          </div>
+          </FormField>
         )}
-        
-        {/* Actions */}
+
         <div className="flex gap-3 pt-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-600 transition-colors"
-          >
+          <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={isSubmitting}
-            className={`flex-1 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 ${
-              isAddingFormat ? 'bg-green-600 hover:bg-green-700' : 'bg-library-accent'
-            }`}
-          >
-            {isSubmitting 
-              ? 'Adding...' 
-              : isAddingFormat 
-                ? 'Add Format' 
-                : 'Add to Library'
+            variant="primary"
+            className={
+              isAddingFormat ? 'flex-1 !bg-action-success hover:!bg-action-success-hover' : 'flex-1'
             }
-          </button>
+            disabled={isSubmitting}
+            loading={isSubmitting}
+          >
+            {isSubmitting ? 'Adding...' : isAddingFormat ? 'Add Format' : 'Add to Library'}
+          </Button>
         </div>
       </form>
     </div>

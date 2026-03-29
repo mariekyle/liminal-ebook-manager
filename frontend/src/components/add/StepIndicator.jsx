@@ -1,13 +1,7 @@
 /**
  * StepIndicator.jsx
- * 
+ *
  * Reusable step indicator showing progress through multi-step flows.
- * 
- * Usage:
- *   <StepIndicator 
- *     steps={['Add', 'Review', 'Done']} 
- *     currentStep={1}  // 0-indexed
- *   />
  */
 
 export default function StepIndicator({ steps, currentStep }) {
@@ -17,21 +11,20 @@ export default function StepIndicator({ steps, currentStep }) {
         const isCompleted = index < currentStep
         const isActive = index === currentStep
         const isLast = index === steps.length - 1
-        
+
         return (
           <div key={label} className="flex items-center">
-            {/* Step dot and label */}
             <div className="flex flex-col items-center">
-              {/* Dot */}
               <div
                 className={`
                   w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                  transition-all duration-200
-                  ${isCompleted 
-                    ? 'bg-green-500 text-white' 
-                    : isActive 
-                      ? 'bg-[#667eea] text-white' 
-                      : 'bg-transparent border-2 border-gray-600 text-gray-600'
+                  transition-all duration-200 ease-out
+                  ${
+                    isCompleted
+                      ? 'bg-action-success text-text-primary'
+                      : isActive
+                        ? 'bg-action-primary text-text-primary'
+                        : 'bg-transparent border-2 border-border-default text-text-muted'
                   }
                 `}
               >
@@ -41,29 +34,28 @@ export default function StepIndicator({ steps, currentStep }) {
                   <span className="sr-only">{index + 1}</span>
                 )}
               </div>
-              
-              {/* Label */}
+
               <span
                 className={`
-                  text-xs mt-1.5 transition-colors duration-200
-                  ${isCompleted 
-                    ? 'text-green-500' 
-                    : isActive 
-                      ? 'text-white' 
-                      : 'text-gray-500'
+                  text-caption mt-1.5 transition-colors duration-200 ease-out
+                  ${
+                    isCompleted
+                      ? 'text-action-success'
+                      : isActive
+                        ? 'text-text-primary'
+                        : 'text-text-muted'
                   }
                 `}
               >
                 {label}
               </span>
             </div>
-            
-            {/* Connector line */}
+
             {!isLast && (
               <div
                 className={`
-                  w-12 h-0.5 mx-2 transition-colors duration-200
-                  ${isCompleted ? 'bg-green-500' : 'bg-gray-700'}
+                  w-12 h-0.5 mx-2 transition-colors duration-200 ease-out
+                  ${isCompleted ? 'bg-action-success' : 'bg-border-default'}
                 `}
               />
             )}
@@ -74,17 +66,14 @@ export default function StepIndicator({ steps, currentStep }) {
   )
 }
 
-/**
- * Small checkmark icon for completed steps
- */
 function CheckIcon() {
   return (
-    <svg 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="3" 
-      strokeLinecap="round" 
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
       strokeLinejoin="round"
       className="w-3 h-3"
     >
@@ -92,4 +81,3 @@ function CheckIcon() {
     </svg>
   )
 }
-
