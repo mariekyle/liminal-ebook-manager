@@ -11,10 +11,11 @@ import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
 import DuplicatesPage from './pages/DuplicatesPage'
 import Settings from './pages/Settings'
+import ComponentPreview from './pages/ComponentPreview'
 import BottomNav from './components/BottomNav'
 import { checkHealth } from './api'
 
-function App() {
+function ConnectedApp() {
   const [connected, setConnected] = useState(null)
   const [error, setError] = useState(null)
 
@@ -50,7 +51,7 @@ function App() {
           <h1 className="text-xl font-bold text-white mb-2">Connection Error</h1>
           <p className="text-gray-400 mb-4">Could not connect to the library backend.</p>
           <p className="text-gray-500 text-sm mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-library-accent text-white px-4 py-2 rounded hover:opacity-90"
           >
@@ -84,6 +85,15 @@ function App() {
       </main>
       <BottomNav />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/dev/components" element={<ComponentPreview />} />
+      <Route path="*" element={<ConnectedApp />} />
+    </Routes>
   )
 }
 

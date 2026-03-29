@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.37.1] - 2026-03-29
+
+### Added
+
+#### Component Preview Page
+Dev-only route at `/dev/components` for visual verification of all shared UI components during design system conversion.
+
+- 10 component sections: Button, IconButton, Badge, SearchInput, FormField, StarRating, Modal, Toast, CollapsibleSection, UnifiedNavBar
+- All variant/size/state combinations rendered with descriptive labels
+- Book-themed placeholder content (Le Guin, Jemisin, Butler, Chiang)
+- Token-based layout throughout (`bg-bg-base`, `text-h2`, `bg-bg-surface` cards)
+- Inline SVG icon helpers (lucide-react stroke-compatible) since lucide-react is not in package.json
+- Route bypasses health check gate so preview works even when backend is down
+
+### Changed
+
+#### Modal `size="fullscreen"` support
+- Modal component now accepts `size="fullscreen"` as a prop value (previously only supported `fullscreenOnMobile` boolean and the undocumented `fullscreen` boolean)
+- `ModalLayoutContext` added so `Modal.Header` automatically uses centered-title layout when parent shell is fullscreen
+- Backward compatible: existing `fullscreenOnMobile` and `fullscreen` boolean props still work
+
+### Technical
+#### Files Created
+- `frontend/src/pages/ComponentPreview.jsx` -- all 10 component sections with variant/state coverage
+#### Files Modified
+- `frontend/src/App.jsx` -- `/dev/components` route added outside ConnectedApp (no health check, no BottomNav)
+- `frontend/src/components/ui/Modal.jsx` -- `size="fullscreen"` support, ModalLayoutContext for header layout
+
+---
+
 ## [0.37.0] - 2026-03-29
 
 ### Changed
@@ -190,206 +220,51 @@ Full design token migration of BookDetail.jsx, the largest single file in the ap
 Design-only — implementation pending.
 
 **Grid view badges:**
-- Opaque dark bg (`rgba(26,25,24,0.88)`) + white icons for all badge types — ~7:1 contrast on any gradient
-- Finished: checkmark icon. DNF: pause icon (⏸). Wishlist: bookmark icon. Unread: no badge.
-- In Progress: 4px progress bar with opaque dark track (50% default until real percentage data exists)
-- Checklist completed: green bg badge + card dimmed to 45%
+- Opaque dark bg (#1a1918 @ 88%) + white icon for all types
+- ~7:1 contrast on any gradient cover
 
 **List view:**
-- Finished: checkmark overlay on cover thumbnail (50% scrim), no text status
-- DNF: pause overlay on cover thumbnail (50% scrim), no text status
-- In Progress: teal dot + label + progress bar (only status with text indicator)
-- Unread: clean row with no status indicator
-- Est. read time shown for all items
+- Cover overlays for Finished/DNF, text labels for In Progress
+- Est. read time (clock icon + ~Xh)
 
-**Killed from earlier mockup iterations:**
-- Left-edge color stripe (couldn't be intuited, added visual noise)
-- Wishlist dashed/subtle border (bookmark badge is sufficient)
-- Backdrop-blur on badges (inconsistent across gradients, poor performance)
-- Text "DNF" badge (breaks when user renames status in settings)
-- Status dot/label for finished and DNF in list view (cover overlays are clearer)
-
-**Component API simplified:**
-- Three boolean props (`showTitleBelow`, `showAuthorBelow`, `showSeriesBelow`) → single `variant` prop
-- Variants: standard (3-col grid), compact (4-col grid), list (horizontal row)
-
-#### Phase 10.0C: Full Component Conversion (planned)
-8-session systematic conversion of all 62 JSX files to shared design system components.
-
-**Scope determined by Claude Code frontend audit (`FRONTEND_AUDIT_2026.md`):**
-- 26 bespoke modals → shared `<Modal>`
-- ~262 raw `<button>` instances → `<Button>` component
-- 81 raw form elements → `<FormField>` component
-- ~1,445 hardcoded color instances → warm token variables
-- 5 pages missing `<UnifiedNavBar>` → add nav
-- 4 modals missing Escape handler → fixed by Modal adoption
-- ChipInput, StarRating, FileDropZone → extract to components/ui/
-
-**Timeline:** C1-C3 before 10.1 (BookDetail + Library + HomeTab), C4-C8 interleaved with features.
-
-#### Gradient Palette Warm Shift (approved)
-10 gradient lane seed colors updated from vivid Tailwind-stock to warm desaturated palette matching Warm A tokens. Implementation pending — backend-only change + database migration. GradientCover.jsx stays frozen.
+**Design decisions confirmed:**
+- Single `variant` prop (standard/compact/list) replaces boolean soup
+- No left-edge stripe, no backdrop-blur, no text DNF badge
 
 ### Changed
-- Roadmap updated with 10.0C conversion plan, BookCard v4 spec, gradient palette task
-- Estimated Phase 10 total: 17-23 → 25-31 sessions (10.0C adds 8 sessions)
-- ChipInput, StarRating, FileDropZone moved from "Out of Scope" back into 10.0C
 
-### Documentation
-- `FRONTEND_AUDIT_2026.md` — Complete frontend audit via Claude Code (62 files, all modals/buttons/forms/colors inventoried)
-- `bookcard-v4-final.html` — Approved BookCard mockup with all NNG recommendations
-- `gradient-cover-exploration.html` — Vivid vs warm gradient lane comparison
+#### Phase 10.0A: Design Tokens
+- Added Warm A color tokens to `tailwind.config.js`
+- Background tokens: base, surface, elevated
+- Text tokens: primary, secondary, muted
+- Action tokens: primary (teal), success (green), danger (red), secondary (gray)
+- Chip tokens: category, status, fandom, ship, character
+- Custom typography utilities: text-h1 through text-h4, text-body, text-body-sm, text-caption, text-label
 
----
-
-## [0.32.0] - 2026-03-19
-
-### Added
-
-#### Phase 10.0A: Design Tokens (Warm A Palette)
-Shift from blue-navy corporate dark mode to warm charcoal aesthetic inspired by Territory Studio's Swan Song UI.
-
-**Token system established in `tailwind.config.js`:**
-- Semantic color tokens: `bg.*`, `text.*`, `border.*`, `action.*`, `chip.*`, `status.*`
-- Legacy `library.*` aliases preserved (auto-mapped to warm values)
-- Backgrounds: warm charcoal family (#1a1918, #242220, #2e2b28)
-- Text: warm off-white (#e8e4df) instead of stark #ffffff
-- Primary action: muted teal (#5e8a8a) — calm, not corporate
-- Chips: desaturated dusty colors (ambient metadata, not loud buttons)
-- Status DNF: neutral warm gray (not red — setting aside ≠ failure)
-- Calm transition timing: 0.2s ease-out
-
-**Typography utilities in `src/styles/tokens.css`:**
-- text-h1, text-h2, text-h3, text-h4 (warm off-white headings)
-- text-body, text-body-sm, text-caption, text-label (warm grays)
-
-**Optional utilities:**
-- `.glass-panel` — glassmorphism effect for modals
-- `.grain-overlay` — subtle noise texture for warmth
-
-#### Phase 10.0B: Core UI Components
-New reusable primitives in `components/ui/`, all using Warm A tokens.
-
-**Components created:**
-- `Button.jsx` — Variants: primary (teal), secondary, ghost, danger. Sizes: sm/md/lg. States: loading, disabled. 44px touch targets.
-- `IconButton.jsx` — 44px default, 36px small. Variants: default, accent. Hover tooltip.
-- `Badge.jsx` — Status badges with dot indicator (Unread, In Progress, Finished, DNF). Category badges (Fiction, FanFiction, Non-Fiction). Metadata chips (fandom, ship, character, tag).
-- `SearchInput.jsx` — Search icon, clear button, loading spinner. Controlled input with placeholder.
-- `Modal.jsx` — Standard (✕ right, footer with Cancel + action) and fullscreen (✕ left, action in header) variants. Sizes: sm/md/lg/fullscreen. Compound components: Modal.Header, Modal.Body, Modal.Footer. Escape key and backdrop click to close. Optional glassmorphism via `.glass-panel`.
-- `FormField.jsx` — Label + input/textarea with error state. Controlled with value fallback. forwardRef for programmatic focus.
-
-**Components extracted to `components/ui/`:**
-- `UnifiedNavBar.jsx` — moved from components root
-- `CollapsibleSection.jsx` — moved from components root
-- `Toast.jsx` — extracted from inline definition in BookDetail.jsx
-
-All import paths updated across: BookDetail, SeriesDetail, AuthorDetail, CollectionDetail, AddPage, Settings.
-
-### Changed
-- Phase 9.5 officially abandoned — critical bugs moved to parallel track, remaining polish items killed
-- Roadmap restructured around Phase 10: Liminal Connects
+#### Phase 10.0B: Core Components
+- Created `components/ui/Button.jsx` (primary/secondary/ghost/danger, sm/md/lg, loading/disabled)
+- Created `components/ui/IconButton.jsx` (default/accent, sm/default, optional tooltip)
+- Created `components/ui/Badge.jsx` (status/category/metadata chips)
+- Created `components/ui/SearchInput.jsx` (clear button, loading state)
+- Created `components/ui/Modal.jsx` (Header/Body/Footer, sm/md/lg/fullscreen, backdrop close, Escape)
+- Created `components/ui/FormField.jsx` (label + input/textarea, controlled, error states)
+- Extracted `UnifiedNavBar` to `components/ui/`
+- Extracted `Toast` to `components/ui/`
+- Extracted `CollapsibleSection` to `components/ui/`
+- Extracted `BottomSheet` to `components/ui/`
 
 ---
 
-## [0.31.0] - 2026-02-02
+## [0.30.0] - 2026-02-02
 
 ### Added
 
-#### Phase 9.5 Work Group 1 Session C: Navigation & Layout Overhaul 🧭
-Major navigation redesign affecting bottom nav, Library header, and all detail pages.
+#### Phase 9.5 Sessions A-C: Menu + Modal + Navigation
 
-**C1: Bottom Nav Redesign**
-- Replaced Library book icon with italic script "L" (Libre Baskerville font)
-- Replaced Add button with Settings (gear icon, navigates to /settings)
-- Created new Settings page with UnifiedNavBar title-only variant
-- Added Google Fonts link for Libre Baskerville
-
-**Bottom Nav Order (New):**
-| Position | Item | Icon |
-|----------|------|------|
-| 1 | Library | Script "L" |
-| 2 | Series | Stacked boxes |
-| 3 | Collections | List |
-| 4 | Authors | Person |
-| 5 | Settings | Gear |
-
-**C2: Remove Brand Header**
-- Removed "Liminal" brand header from Library page entirely
-- Library tabs (Home/Browse/Wishlist) now topmost element with sticky positioning
-- Added action icons to tab bar right side:
-  - Home tab: [+] [🔍]
-  - Browse tab: [+] [🔍] [🔽]
-  - Wishlist tab: [+] [🔍] [🔽]
-- Wired up actions: + → /add, 🔍 → search modal, 🔽 → filter drawer
-- Removed legacy Header component from App.jsx
-
-**C3: Detail Page Contextual Nav**
-- Created `UnifiedNavBar` component with two variants:
-  - Back link variant: `backTo` (Link-based) or `onBack` (callback-based)
-  - Title-only variant: for Settings page
-- Applied to all detail pages with contextual back navigation:
-
-| Page | Back Label | Destination |
-|------|------------|-------------|
-| Book Detail | Dynamic | returnUrl from state (Collections/Series/Authors/Library) |
-| Series Detail | Series | Browser history (navigate -1) |
-| Author Detail | Authors | Browser history (navigate -1) |
-| Collection Detail | Collections | /collections |
-| Settings | (title only) | N/A |
-| Add Page | Back | Multi-step form logic (handleBack) |
-
-**returnUrl Pattern:**
-- BookDetail reads `returnUrl` from location state
-- SeriesDetail passes `returnUrl` when linking to books
-- Back label dynamically shows origin ("← Collections", "← Series", etc.)
-
-### Fixed
-- Collection count display shows actual count instead of hardcoded text
-- Sort dropdown state persists across page loads (localStorage)
-- Mobile bottom sheet z-index layering corrected
-
----
-
-## [0.30.0] - 2026-02-01
-
-### Added
-
-#### Phase 9.5 Work Group 1 Session B+: Change Cover Modal 🖼️
-- "Change Cover" option restored to 3-dot menu
-- Dedicated modal for cover management:
-  - View current cover (gradient or custom)
-  - Upload new cover from device
-  - Option to revert to gradient cover
-  - Preview before saving
-
-#### Phase 9.5 Work Group 1 Session B: Unified Edit Modal 📝
-Consolidated scattered edit touchpoints into a single tabbed modal.
-
-**Tabbed Edit Interface:**
-- Single "Edit" entry point opens modal with 4 tabs:
-  - General (title, author, year, category)
-  - Tags (ChipInput with autocomplete)
-  - Series (name, number)
-  - Metadata (format-specific fields)
-- Tab state persisted within session
-- Before: 8 separate edit buttons scattered across BookDetail
-- Now: Single "Edit" menu item opens unified modal
-- "Change Cover" temporarily removed (restored in Session B+)
-
----
-
-## [0.28.0] - 2026-01-25
-
-### Added
-
-#### Phase 9.5 Work Group 1 Session A: 3-Dot Menu Consolidation 📱
-Complete action consolidation into a single 3-dot menu with responsive design and toast notifications.
-
-**3-Dot Menu System:**
-- New 3-dot menu (⋮) at top-right of book detail content area
-- Desktop: Dropdown menu aligned to right edge
-- Mobile: Bottom sheet with drag handle and Cancel button
-- Keyboard support: Escape key closes menu
+**Three-Dot Menu Consolidation:**
+- Consolidated 8 scattered icon buttons into single 3-dot menu on BookDetail
+- Desktop: click-triggered dropdown with hover states
+- Mobile: bottom sheet with backdrop
 - Click-outside dismissal on desktop, backdrop tap on mobile
 
 **Toast Notification System:**

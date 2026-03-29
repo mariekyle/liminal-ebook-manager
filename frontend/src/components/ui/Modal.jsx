@@ -1,10 +1,12 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, createContext, useContext } from 'react'
+
+const ModalLayoutContext = createContext({ fullscreen: false })
 
 /**
  * Modal — Compound layout: Modal.Header, Modal.Body, Modal.Footer
  *
- * Sizes: sm (360px), md (480px), lg (640px)
- * fullscreen: true → full viewport panel (no outer backdrop card)
+ * Sizes: sm (360px), md (480px), lg (640px), fullscreen (full viewport panel)
+ * fullscreen: true → full viewport panel (no outer backdrop card); prefer size="fullscreen"
  * fullscreenOnMobile: below md (768px), same as fullscreen; md+ uses normal centered modal
  *
  * Usage:
@@ -44,7 +46,8 @@ export default function Modal({
   className = '',
 }) {
   const mdUp = useMdBreakpoint()
-  const effectiveFullscreen = fullscreen || (fullscreenOnMobile && !mdUp)
+  const effectiveFullscreen =
+    size === 'fullscreen' || fullscreen || (fullscreenOnMobile && !mdUp)
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -66,14 +69,21 @@ export default function Modal({
 
   if (!isOpen) return null
 
+  const sizeClass = size === 'fullscreen' ? '' : SIZES[size] || SIZES.md
   const shellClasses = effectiveFullscreen
     ? `fixed inset-0 z-50 flex flex-col bg-bg-surface min-h-0 ${className}`
-    : `w-full ${SIZES[size]} max-h-[85vh] flex flex-col min-h-0 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${
+    : `w-full ${sizeClass} max-h-[85vh] flex flex-col min-h-0 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${
         glass ? 'glass-panel' : 'bg-bg-surface border border-border-default'
       } ${className}`
 
+  const layoutValue = { fullscreen: effectiveFullscreen }
+
   if (effectiveFullscreen) {
-    return <div className={shellClasses}>{children}</div>
+    return (
+      <ModalLayoutContext.Provider value={layoutValue}>
+        <div className={shellClasses}>{children}</div>
+      </ModalLayoutContext.Provider>
+    )
   }
 
   return (
@@ -84,14 +94,18 @@ export default function Modal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className={shellClasses} role="dialog" aria-modal="true">
-        {children}
-      </div>
+      <ModalLayoutContext.Provider value={layoutValue}>
+        <div className={shellClasses} role="dialog" aria-modal="true">
+          {children}
+        </div>
+      </ModalLayoutContext.Provider>
     </div>
   )
 }
 
-function ModalHeader({ onClose, children, right, fullscreen = false }) {
+function ModalHeader({ onClose, children, right, fullscreen }) {
+  const { fullscreen: ctxFullscreen } = useContext(ModalLayoutContext)
+  const useFullscreenHeader = fullscreen ?? ctxFullscreen
   const closeBtn = (
     <button
       type="button"
@@ -105,7 +119,7 @@ function ModalHeader({ onClose, children, right, fullscreen = false }) {
     </button>
   )
 
-  if (fullscreen) {
+  if (useFullscreenHeader) {
     return (
       <div className="flex items-center justify-between px-5 py-4 border-b border-border-default flex-shrink-0 gap-2">
         {closeBtn}

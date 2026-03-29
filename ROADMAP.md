@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 29, 2026 (v0.37.0)  
+> **Last Updated:** March 29, 2026 (v0.37.1)  
 > **Current Focus:** Phase 10 — Liminal Connects  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.37.0)
+## Current State (v0.37.1)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -682,6 +682,7 @@ Items to address when time permits:
 | 10.0C-1 | BookDetail colors+buttons | Mar 2026 | 211 colors tokenized, 30 buttons converted, typography mapped |
 | 10.0C-2 | BookDetail modals+forms | Mar 2026 | 5 modals to shared Modal, 9 FormFields, StarRating extracted |
 | 10.0C-3 | Library+HomeTab+WishlistTab | Mar 2026 | UnifiedNavBar, view persistence, error states, TBR rename, voice fixes |
+| — | Component Preview Page | Mar 2026 | /dev/components route, all 10 UI components with variant/state coverage |
 
 ---
 
@@ -752,4 +753,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 29, 2026*
+*Last updated: March 29, 2026 (v0.37.1)*
