@@ -15,6 +15,7 @@ but internally query the 'titles' table.
 import os
 import json
 import re
+import logging
 from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File
@@ -35,6 +36,8 @@ from services.metadata import extract_metadata
 from pathlib import Path
 
 router = APIRouter(tags=["titles"])
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
@@ -1610,31 +1613,60 @@ async def acquire_tbr(
     if not row:
         raise HTTPException(status_code=404, detail="TBR item not found")
     
-    # Convert to library item
-    await db.execute(
-        """UPDATE titles 
-           SET is_tbr = 0, updated_at = CURRENT_TIMESTAMP 
-           WHERE id = ?""",
-        [book_id]
-    )
-    
-    # Optionally create an edition
-    edition_id = None
-    if data.format:
-        cursor = await db.execute(
-            """INSERT INTO editions (title_id, format, acquired_date)
-               VALUES (?, ?, CURRENT_TIMESTAMP)""",
-            [book_id, data.format]
+    valid_formats = ['ebook', 'physical', 'audiobook', 'web']
+    if data.format and data.format not in valid_formats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format. Must be one of: {valid_formats}"
         )
-        edition_id = cursor.lastrowid
-    
-    await db.commit()
-    
-    return {
-        "status": "acquired",
-        "book_id": book_id,
-        "edition_id": edition_id
-    }
+
+    edition_id = None
+    try:
+        await db.execute("BEGIN")
+
+        if data.format:
+            try:
+                cursor = await db.execute(
+                    """INSERT INTO editions (title_id, format, acquired_date)
+                       VALUES (?, ?, CURRENT_TIMESTAMP)""",
+                    [book_id, data.format]
+                )
+                edition_id = cursor.lastrowid
+            except aiosqlite.IntegrityError:
+                logger.info(
+                    f"Edition already exists for title {book_id} format {data.format}, completing conversion"
+                )
+
+        # Always attempt conversion even if edition insert was skipped
+        await db.execute(
+            """
+            UPDATE titles
+            SET is_tbr = 0,
+                acquisition_status = 'owned',
+                status = COALESCE(NULLIF(status, ''), 'Unread'),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            [book_id],
+        )
+
+        await db.commit()
+
+        return {
+            "status": "acquired",
+            "book_id": book_id,
+            "edition_id": edition_id
+        }
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Conversion failed for title {book_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Something went wrong converting this title. Please try again."
+        )
 
 
 @router.delete("/tbr/{book_id}")

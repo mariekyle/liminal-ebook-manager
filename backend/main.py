@@ -7,6 +7,7 @@ This is the FastAPI application that serves both the API and the React frontend.
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -32,11 +33,44 @@ from routers.covers import router as covers_router
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
 DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/library.db")
 
+logger = logging.getLogger(__name__)
+
+
+async def fix_halfstate_tbr_titles(db: aiosqlite.Connection):
+    cursor = await db.execute(
+        """
+        UPDATE titles
+        SET acquisition_status = 'owned',
+            is_tbr = 0,
+            status = COALESCE(NULLIF(status, ''), 'Unread'),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE (acquisition_status = 'wishlist' OR is_tbr = 1)
+          AND id IN (SELECT DISTINCT title_id FROM editions)
+        """
+    )
+    await db.commit()
+    if cursor.rowcount and cursor.rowcount > 0:
+        logger.info(
+            f"Fixed {cursor.rowcount} half-state TBR title(s) that had editions but were never converted"
+        )
+    else:
+        logger.debug("No half-state TBR titles found")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database on startup, start backup scheduler."""
     await init_db(DATABASE_PATH)
+
+    # Fix half-state wishlist/TBR titles that already have editions
+    try:
+        db_path = get_db_path()
+        if db_path:
+            async with aiosqlite.connect(db_path) as db:
+                db.row_factory = aiosqlite.Row
+                await fix_halfstate_tbr_titles(db)
+    except Exception as e:
+        logger.warning(f"Half-state TBR fix failed: {e}")
     
     # Phase 9A: Start backup scheduler if enabled
     scheduler_started = False

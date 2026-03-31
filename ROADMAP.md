@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 29, 2026 (v0.37.5)  
-> **Current Focus:** Phase 10 — Liminal Connects  
+> **Last Updated:** March 31, 2026 (v0.38.0)  
+> **Current Focus:** Phase 10.0D — UX Audit Fix Sessions  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.37.5)
+## Current State (v0.38.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -25,7 +25,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Book upload & metadata extraction | ✅ Stable |
 | Reading status & session tracking | ✅ Stable |
 | Notes with wiki-style linking | ✅ Stable |
-| Wishlist management | ✅ Stable |
+| Wishlist management | ✅ Conversion fixed (v0.38.0) |
 | Collections system | ✅ Smart Collections complete |
 | Enhanced fanfiction metadata | ✅ Stable |
 | Add book flow | ✅ Redesigned |
@@ -34,6 +34,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Navigation | ✅ UnifiedNavBar, bottom nav redesign |
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
+| NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
+| UX fix sessions | 🔄 In progress — 1/10 sessions complete |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -49,13 +51,16 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ```
 ┌───────────┬──────────────────────────────────────────────────────────────┐
-│  CURRENT  │  Phase 10: Liminal Connects                                  │
-│           │  10 sub-phases, ~25-31 sessions                              │
-│           │  Ship each sub-phase independently                           │
+│  CURRENT  │  Phase 10.0D: UX Audit Fix Sessions                         │
+│           │  10 sessions, ~10-12 sessions                                │
+│           │  Ship each session independently                             │
+├───────────┼──────────────────────────────────────────────────────────────┤
+│  ON HOLD  │  Phase 10.1-10.8: Liminal Connects (feature work)           │
+│           │  Paused until 10.0D critical/major fixes are resolved        │
 ├───────────┼──────────────────────────────────────────────────────────────┤
 │  PARALLEL │  Critical Fixes                                              │
 │           │  Cherry-picked bugs from Phase 9.5                           │
-│           │  Address opportunistically between features                  │
+│           │  Some now covered by audit findings                          │
 ├───────────┼──────────────────────────────────────────────────────────────┤
 │  FUTURE   │  Phase 11: Smart Features                                    │
 │           │  Recommendations, mood-based discovery                       │
@@ -234,10 +239,56 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 
 ---
 
-### 10.1: Download & Share ← NEXT
+### 10.0D: UX Audit Fix Sessions ← CURRENT
+
+**Priority:** P0 — Fix What's Broken Before Building What's New  
+**Status:** 🔄 In Progress (Session 1 complete, 9 remaining)  
+**Sessions:** 10  
+**Based on:** `liminal-ux-audit.md` (141 findings, NNG heuristic + WCAG AA + user flows pass)
+
+**The Problem:**  
+A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user flows) revealed 4 critical issues, 29 major issues, and 75 minor issues. One core flow (wishlist-to-library conversion) is completely broken. The most-visited page (BookDetail) has a structural action architecture problem. Text contrast fails WCAG AA. Grid settings don't apply consistently. Building new features on top of these problems would compound them.
+
+**The Solution:**  
+10 fix sessions, ordered by severity. Each session follows: review findings → make design decisions (lock in Decisions.md) → write Cursor prompts → implement → verify. No rushing to prompts before decisions are locked.
+
+**Session Plan:** See `UX_FIX_SESSIONS.md` for full session details, finding IDs, and scope.
+
+**Sessions:**
+
+| # | Name | Scope | Findings | Status |
+|---|------|-------|----------|--------|
+| 1 | Emergency: Broken Wishlist Conversion | Silent failure, fake success screen, raw SQL error, half-state data | UF-14, UF-15, UF-16 | ✅ v0.38.0 |
+| 2 | One-Line Wins: Contrast + Grid | Lighten text-caption token, fix grid settings across pages | G1-02, G2-03, UF-32, G1-03, G4-02 | ⬜ |
+| 3 | BookDetail Action Architecture | Make metadata blocks tappable, add Mark Finished shortcut, inline section actions | UF-01, UF-02, UF-05, UF-06, UF-20, UF-24, G2-11, G2-12 | ⬜ |
+| 4 | Edit Modal Reorganization | Fix tab visibility, reorganize fields, unsaved changes guard | UF-25, UF-26, UF-27, G3-02, G3-03 | ⬜ |
+| 5 | Form Input Guards | Auto-commit author chips, default start date, category control, rating visibility | UF-11, UF-07, UF-12, UF-03, G3-07 | ⬜ |
+| 6 | Search and Sort Everywhere | Add search to CollectionPicker, sort author books, series grouping, collection search | UF-21, UF-30, UF-31, G3-08, G5-13 | ⬜ |
+| 7 | Settings Consolidation | Move drawer to /settings page, kill dead nav tab, remove gear icon | G1-11, G6-08, G1-07 | ⬜ |
+| 8 | Status Label + Voice/Tone | Standardize DNF terminology, fix microcopy, update placeholders | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | ⬜ |
+| 9 | Mobile-First Polish | Fix hover-only patterns, collection cover sizing, add choice page, view toggles | G2-14, G5-10, G5-03, G7-01, UF-33, G7-15 | ⬜ |
+| 10 | Destructive Action Guards | Add confirmation to merge, duplicates merge, replace window.confirm | G3-10, G8-02, G3-13 | ⬜ |
+
+**Priority tiers:**
+- **Fix now (Sessions 1-2):** Broken flow + accessibility failure + quick wins
+- **Fix next (Sessions 3-5):** Core interaction quality (BookDetail + forms)
+- **Batch after (Sessions 6-7):** Structural improvements (search/sort, settings)
+- **Polish (Sessions 8-10):** Copy, mobile, guards
+
+**Acceptance Criteria:**
+- All 4 critical findings resolved
+- All 29 major findings addressed or explicitly deferred with rationale
+- BookDetail friction reduced (mark-finished flow under 5 taps)
+- WCAG AA contrast compliance for all text tokens
+
+**Definition of Done:** The app's existing features work reliably and feel good to use. Then feature work resumes.
+
+---
+
+### 10.1: Download & Share — ON HOLD
 
 **Priority:** P0 — Highest Impact  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 1-2
 
 **The Problem:**  
@@ -266,7 +317,7 @@ One-tap download with share sheet integration.
 ### 10.2: Usage Analytics
 
 **Priority:** P1 — Foundational  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 1
 
 **The Problem:**  
@@ -301,7 +352,7 @@ Simple event logging to SQLite. No external tools needed.
 ### 10.3: External Book Search
 
 **Priority:** P2 — High Frequency Pain  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -341,7 +392,7 @@ Search external APIs and one-tap import.
 ### 10.4: Local AI Infrastructure
 
 **Priority:** P3 — Foundational for Future Features  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 1-2
 
 **The Problem:**  
@@ -375,7 +426,7 @@ Set up Ollama on Beelink as a local AI server.
 ### 10.5: Fanfic Analysis Pipeline
 
 **Priority:** P4 — Leverages 10.4  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -422,7 +473,7 @@ Background analysis using local Ollama, storing structured metadata.
 ### 10.6: Moon Reader Integration
 
 **Priority:** P5 — High Value, Requires Setup  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 3-4
 
 **The Problem:**  
@@ -462,7 +513,7 @@ Read Moon Reader's sync data (via MoonSync approach) and import into Liminal.
 ### 10.7: Notes ↔ Obsidian Sync
 
 **Priority:** P6 — Important but Not Urgent  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -515,7 +566,7 @@ This book broke me in the best way.
 ### 10.8: Photo Lookup
 
 **Priority:** P7 — Nice to Have (Free with Local AI)  
-**Status:** ⬜ Not Started  
+**Status:** ⏸ On hold (pending 10.0D completion)  
 **Sessions:** 1-2
 
 **The Problem:**  
@@ -548,15 +599,16 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
 | 10.0C | Full Conversion | 8 | ✅ Complete |
-| 10.1 | Download & Share | 1-2 | ⬜ |
-| 10.2 | Usage Analytics | 1 | ⬜ |
-| 10.3 | External Book Search | 2-3 | ⬜ |
-| 10.4 | Local AI Infrastructure | 1-2 | ⬜ |
-| 10.5 | Fanfic Analysis Pipeline | 2-3 | ⬜ |
-| 10.6 | Moon Reader Integration | 3-4 | ⬜ |
-| 10.7 | Notes ↔ Obsidian Sync | 2-3 | ⬜ |
-| 10.8 | Photo Lookup | 1-2 | ⬜ |
-| | **Total** | **25-31** | |
+| **10.0D** | **UX Audit Fix Sessions** | **10** | **🔄 In Progress** |
+| 10.1 | Download & Share | 1-2 | ⏸ On hold |
+| 10.2 | Usage Analytics | 1 | ⏸ On hold |
+| 10.3 | External Book Search | 2-3 | ⏸ On hold |
+| 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |
+| 10.5 | Fanfic Analysis Pipeline | 2-3 | ⏸ On hold |
+| 10.6 | Moon Reader Integration | 3-4 | ⏸ On hold |
+| 10.7 | Notes ↔ Obsidian Sync | 2-3 | ⏸ On hold |
+| 10.8 | Photo Lookup | 1-2 | ⏸ On hold |
+| | **Total** | **35-41** | |
 
 ---
 
@@ -564,7 +616,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 
 **Goal:** Address genuinely broken functionality from Phase 9.5, without getting lost in polish work.
 
-**Philosophy:** Fix these opportunistically — as warmup tasks, or when they actively annoy you. Don't block feature work.
+**Philosophy:** Many of these are now covered by 10.0D audit fix sessions. Items marked with 🔗 will be addressed during the linked session.
 
 ### Navigation & Scroll Issues ⚠️
 
@@ -760,9 +812,11 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 | `CODE_PATTERNS.md` | Battle-tested code solutions |
 | `CURSOR_PROMPT_GUIDE.md` | How to write effective prompts |
 | `FRONTEND_AUDIT_2026.md` | Claude Code audit — basis for 10.0C work groups |
+| `liminal-ux-audit.md` | NNG usability audit — 141 findings, basis for 10.0D fix sessions |
+| `UX_FIX_SESSIONS.md` | 10 prioritized fix sessions with finding IDs and scope |
 
 ---
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 29, 2026 (v0.37.5)*
+*Last updated: March 31, 2026 (v0.38.0)*

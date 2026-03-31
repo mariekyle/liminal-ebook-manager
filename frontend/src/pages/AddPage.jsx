@@ -283,9 +283,10 @@ export default function AddPage() {
             author: linkedBook?.authors?.join(', ') || 'Unknown',
             files: selectedFiles.map(f => ({ name: f.name, size: f.size })),
             action: 'add_to_existing',
+            title_id: parseInt(linkToId, 10),
           }])
           setUploadResults({
-            results: [{ id: linkToId, status: 'format_added' }]
+            results: [{ id: linkToId, status: 'format_added', title_id: parseInt(linkToId, 10) }]
           })
           
           setTimeout(() => {

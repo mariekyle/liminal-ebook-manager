@@ -25,7 +25,24 @@ async function apiFetch(endpoint, options = {}) {
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error.detail || `API error: ${response.status}`)
+    let message = error.detail || `API error: ${response.status}`
+
+    // Sanitize raw database errors — never show SQL to the user
+    if (typeof message === 'string') {
+      if (message.includes('UNIQUE constraint failed')) {
+        message = 'This already exists. If something looks wrong, try refreshing the page.'
+      } else if (
+        message.includes('FOREIGN KEY constraint') ||
+        message.includes('NOT NULL constraint') ||
+        message.includes('CHECK constraint')
+      ) {
+        message = 'Something went wrong saving this data. Try again?'
+      }
+    } else {
+      message = 'Something went wrong. Try again?'
+    }
+
+    throw new Error(message)
   }
   
   return response.json()

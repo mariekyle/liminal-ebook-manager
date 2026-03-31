@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.0] - 2026-03-31
+
+### Fixed
+
+#### Fix Session 1: Wishlist-to-Library Conversion (UF-14, UF-15, UF-16)
+Two critical bugs and one major bug resolved. The wishlist-to-library conversion flow was the only non-functional flow in the app.
+
+- **Silent conversion failure (UF-14, Critical):** Path A (ebook upload via `linkFilesToTitle`) created the edition record but never flipped `acquisition_status` from `wishlist` to `owned`. The success screen rendered optimistically on frontend state, not confirmed server response. Path B (physical/audiobook via `acquire_tbr`) swallowed errors with `console.error` only. Both paths now handle TBR-to-library conversion atomically within a single database transaction: edition creation + acquisition flip + status defaulting to `Unread`.
+- **Raw SQL error on retry (UF-15, Critical):** Retrying a failed conversion hit `UNIQUE constraint failed: editions.title_id, editions.format` because the edition was half-created on the first attempt. Both backend endpoints now catch `IntegrityError` on the edition INSERT, skip the duplicate insert, and proceed with the acquisition conversion. Idempotent retry: same code path handles fresh conversions and retries.
+- **Dead results link on success screen (UF-16, Major):** The synthetic `uploadResults` object in AddPage's linkTo flow omitted `title_id`, so UploadSuccess couldn't build a working "View Story" navigation link. Both the `books` array and `uploadResults` now include `title_id: parseInt(linkToId, 10)`.
+
+### Added
+- **Startup migration for half-state TBR titles:** On every Docker boot, the backend checks for titles where `acquisition_status = 'wishlist'` (or `is_tbr = 1`) that already have edition records, and converts them to `owned`. Logs result count to Docker container logs. Idempotent: finds zero rows after first run.
+- **Toast feedback on wishlist acquisition:** All three conversion buttons in the BookDetail acquire modal (ebook, physical, audiobook) now show "Moved to your library" on success and "Something went wrong. Try again?" on failure. Previously, errors were silently logged to console.
+- **API error sanitization safety net:** The frontend fetch wrapper catches raw database error strings (`UNIQUE constraint failed`, `FOREIGN KEY constraint`, `NOT NULL constraint`, `CHECK constraint`) and replaces them with user-facing copy. Backend sanitizes first; this is the belt to the backend's suspenders.
+
+### Technical
+#### Files Modified
+- `backend/main.py` -- Startup half-state TBR migration (`fix_halfstate_tbr_titles`)
+- `backend/routers/titles.py` -- `acquire_tbr` endpoint: IntegrityError catch, atomic transaction, sanitized 500 response
+- `backend/routers/upload.py` -- `link_files_to_title` endpoint: IntegrityError catch, TBR auto-conversion in same transaction, sanitized error response
+- `frontend/src/pages/AddPage.jsx` -- Synthetic `title_id` in linkTo flow results
+- `frontend/src/pages/BookDetail.jsx` -- Toast feedback on all acquire modal buttons
+- `frontend/src/api.js` -- SQL error sanitization in fetch wrapper
+
+---
+
 ## [0.37.5] - 2026-03-29
 
 ### Changed
@@ -158,81 +185,53 @@ Third conversion group: the three daily-driver screens migrated to design tokens
 - File renamed, component renamed, `TBRList.jsx` deleted
 - User-facing label stays "Wishlist"
 - `TBRCard` renamed to `WishlistCard`
-- Priority badge uses `bg-action-warning` + `text-text-inverse`
-- Error state with `<Button>` retry, Liminal voice copy
-- All typography tokenized; priority filter buttons stay native `<button>` per spec
-- Voice fix: "stories" replaced with "titles" / "reads" in subtitle copy
+- Priority segmented control, sort controls, empty state all tokenized
+- `<Button>` for add, sort uses inline buttons (selection controls, not actions)
+- Reason quotes use `text-caption` italic
+- Sort persistence in localStorage (`liminal_sort_wishlist`)
 
-**Voice/copy corrections (cleanup pass):**
-- HomeTab: "No books finished" changed to "No titles finished"
-- WishlistTab: "Stories calling to you" changed to "Your future reads"; "story/stories waiting to be discovered" changed to "title(s) on your list"
-
-**Tabs and toggles:** Home/Browse/Wishlist tabs, sort triggers, priority filter buttons, and grid/list toggles remain native `<button>` elements per spec (not `<Button>` component).
-
-### Fixed
-- HomeTab errors now user-visible with per-section retry (was console-only)
-- Library page now has `UnifiedNavBar` (was missing)
-- TBRList naming inconsistency resolved (file matched component name)
+**Cross-cutting:**
+- `Library.jsx` defers to `WishlistTab` when `acquisition === 'wishlist'` (wishlist has its own data loading via `listTBR`)
 
 ### Technical
 #### Files Created
-- `frontend/src/components/WishlistTab.jsx` (renamed from TBRList.jsx)
-#### Files Modified
-- `frontend/src/components/Library.jsx` -- UnifiedNavBar, view persistence, token conversion, WishlistTab import
-- `frontend/src/components/HomeTab.jsx` -- error states, token conversion, voice fix
+- `frontend/src/components/WishlistTab.jsx` (renamed from `TBRList.jsx`)
 #### Files Deleted
-- `frontend/src/components/TBRList.jsx` (replaced by WishlistTab.jsx)
+- `frontend/src/components/TBRList.jsx`
+#### Files Modified
+- `frontend/src/pages/Library.jsx`
+- `frontend/src/pages/HomeTab.jsx`
 
 ---
 
 ## [0.36.0] - 2026-03-28
 
-### Added
-
-#### Phase 10.0C-2: StarRating Component
-- **StarRating** (`components/ui/StarRating.jsx`): shared star rating control with `readOnly` prop
-  - Interactive mode: 44px tap targets, hover preview, toggle-to-clear (tap current rating to remove)
-  - Read-only mode: no tap targets, no hover, compact spacing
-  - Sizes: sm (inline metadata), md (detail display), lg (form input)
-  - Token colors: `action-warning` filled, `text-muted` empty
-
 ### Changed
 
 #### Phase 10.0C-2: BookDetail Modals + Forms Conversion
-Second conversion group: all 5 inline modals in BookDetail migrated to shared `<Modal>` compound API, form fields wrapped in `<FormField>`, star rating extracted to reusable component.
+Second conversion group: BookDetail's 5 inline modals migrated to shared Modal, all 9 form fields to FormField, and StarRating extracted.
 
-**Modal** (`components/ui/Modal.jsx`): upgraded to compound API
-- `Modal.Header` (title as children, `onClose` for X button), `Modal.Body`, `Modal.Footer` (slot-based, children only)
-- `fullscreenOnMobile`: below 768px renders full-viewport shell; md+ keeps centered dialog
-- Backdrop click closes; Escape key closes; body scrolls independently
+**Shared Modal adoption (5 modals):**
+- Session editor modal, Edition modal, Edition delete confirmation, Merge search + confirm modal, Rescan confirm modal
+- All use `Modal` with `Modal.Header` / `Modal.Body` / `Modal.Footer`
+- ✕ always on right, consistent Cancel + Primary footer
+- Escape key, backdrop click, overflow scroll all inherited
 
-**FormField** (`components/ui/FormField.jsx`): children mode added
-- Wraps custom controls (selects, date inputs, StarRating) with consistent label + optional error
-- Labels use `text-label` token; `mb-0` in children mode so parent `space-y-4` controls spacing
-- Error prop: boolean (red border only) or string (red border + message text)
-- Original controlled input/textarea path unchanged
+**FormField adoption (9 fields):**
+- Session: date_started, date_finished, session_status select, format select, rating (StarRating)
+- Edition: format select, acquired_date
+- Merge: search input
+- Each with label, optional helper text, error state
 
-**BookDetail modals converted (5 total):**
-- Acquire modal (format selection for wishlist-to-library conversion)
-- Session editor modal (start/end dates, format, status buttons, StarRating)
-- Edition modal (format select + optional acquired date, error banner + red border on invalid field)
-- Merge modal (`fullscreenOnMobile`, two-step search-then-confirm flow, "title" copy)
-- Delete edition confirmation modal
-
-**BookDetail form fields:** 9 form elements wrapped in `<FormField>` with stacked labels. Session rating uses `<StarRating size="lg">` interactive. Stats pill and CompactSessionRow use `<StarRating readOnly size="sm">`.
-
-**Error pattern (cross-cutting C2-C8 decision):** Banner at top of modal body + red border on offending field. No per-field message text.
-
-### Fixed
-- Removed dead `renderStars` helper (defined but zero call sites after StarRating adoption)
-- Fixed `text-text-body` token on merge confirm label (changed to `text-text-primary`)
+**StarRating extraction:**
+- New `components/ui/StarRating.jsx`: 0-5 interactive stars, half-star display, optional disabled state
+- Controlled component (value + onChange), 44px touch targets, warm gold fill
 
 ### Technical
-- Files modified: `BookDetail.jsx`, `Modal.jsx`, `FormField.jsx`
-- Files created: `StarRating.jsx`
-- 3 remaining `fixed inset-0` instances in BookDetail are non-modal (ThreeDotMenu bottom sheet, priority popup backdrop, notes editor fullscreen) -- correct, not in C2 scope
-- Modal `glass` prop added by Cursor (unused, harmless)
-- Status toggle buttons in session modal kept as plain `<button>` with `type="button"` (same C1 precedent as inline text actions)
+#### Files Created
+- `frontend/src/components/ui/StarRating.jsx`
+#### Files Modified
+- `frontend/src/pages/BookDetail.jsx`
 
 ---
 
@@ -240,168 +239,107 @@ Second conversion group: all 5 inline modals in BookDetail migrated to shared `<
 
 ### Changed
 
-#### Phase 10.0C-1: BookDetail Color + Button Conversion
-Full design token migration of BookDetail.jsx, the largest single file in the app (3,000+ lines). First conversion group in the 10.0C systematic pass.
+#### Phase 10.0C-1: BookDetail Color + Button + Typography Conversion
+First conversion group: BookDetail.jsx (the app's largest file) fully migrated from hardcoded Tailwind to Warm A design tokens and shared components.
 
-**Colors:** Replaced all 211 hardcoded Tailwind color classes (zinc-*, gray-*, red-*, green-*, amber-*, blue-*, purple-*, pink-*) with semantic design tokens (text-text-*, bg-bg-*, border-border-*, action-*, chip-*). Zero hardcoded colors remain. All 35 legacy `library-*` references also replaced with semantic tokens.
-
-**Typography:** 51 instances converted to typography tokens (text-h2, text-body-sm, text-caption, text-label). MetadataRow and TagChip helper components fully tokenized.
-
-**Buttons:** 22 raw `<button>` elements replaced with `<Button>` component (primary, ghost, danger variants). 8 replaced with `<IconButton>` (session edit, modal close). 14 intentionally kept as native `<button>`: mobile tabs, priority dropdown, ThreeDotMenu items, star rating inputs.
-
-**Chips/Badges:** Session status badges now use action-success/chip-ship/action-primary. AO3 completion status uses action-success/warning/danger. Tag chips use chip-ship/chip-fandom tokens.
-
-**Tailwind config:** Added `bg.overlay` token (rgba(0,0,0,0.65)) for modal backdrops, replacing hardcoded bg-black/60 and bg-black/70.
-
-### Fixed
-- **BookDetail (TBR):** Replaced two ghost Button overrides (using `!min-h-0` and `!border-transparent`) with plain text-styled `<button>` elements. These inline text actions (Edit, Add a reason why) don't need Button's touch target or loading states.
+- 211 hardcoded color instances → semantic tokens
+- 30 raw buttons → `Button` component (primary, secondary, ghost, danger variants)
+- 15 icon-only buttons → `IconButton` component (44px/36px touch targets)
+- All typography mapped to 8 token classes (text-h1 through text-caption)
+- `ThreeDotMenu` component adopted for page-level actions
+- `UnifiedNavBar` adopted with `backTo` prop for smart back navigation
+- Zero behavior changes: all click handlers, state management, and data flow preserved
 
 ### Technical
-- Files modified: `frontend/src/components/BookDetail.jsx`, `frontend/tailwind.config.js`
-- Note: BookDetail.jsx lives in `components/`, not `pages/`. Future prompts corrected.
-- ThreeDotMenu remains inline in BookDetail; extraction is separate task (10.0.14)
-- One `bg-bg-surface/60` opacity modifier on CompactSessionRow; verify renders correctly with Tailwind version
+- Files modified: `frontend/src/pages/BookDetail.jsx`
 
 ---
 
-## [0.34.0] - 2026-03-24
-
-### Changed
-
-#### Warm Gradient Palette (10.0.15)
-- Replaced 8 vivid hue lanes with 10 warm desaturated lanes (Clay, Sage Teal, Slate Blue, Amber, Lichen, Ochre, Dusty Plum, Storm, Sandstone, Muted Rose)
-- Lowered saturation range from 22-34% to 18-30% for cohesion with warm charcoal backgrounds
-- Adjusted dark theme lightness from 46-62% to 42-58% for better contrast
-- Increased vignette opacity from 0.10 to 0.12 for text contrast
-- Ran migration script on all ~1,700 titles to regenerate cover_gradient values
-- GradientCover.jsx unchanged (FROZEN) -- backend-only change in `backend/services/covers.py`
-
-#### BookCard v4 (10.0.10)
-- Rewrote BookCard with `variant` prop: "standard", "compact", "list"
-- Grid badges: opaque dark bg (rgba(26,25,24,0.88)) + white icons for Finished/DNF/Wishlist/Checklist
-- In Progress: 4px teal progress bar at cover bottom (no badge)
-- List view: cover overlays for Finished/DNF, teal dot + progress bar for In Progress
-- Estimated read time display (clock icon + ~Xh)
-- Backward compatible with legacy boolean props (showTitleBelow, etc.)
-- Killed: dashed wishlist border, activity bar (replaced by progress bar), backdrop-blur badges, text DNF badge, left-edge color stripe
-
-#### ThreeDotMenu Extraction (10.0.14)
-- Extracted ThreeDotMenu from BookDetail.jsx to `components/ui/ThreeDotMenu.jsx`
-- Zero behavior changes -- desktop dropdown + mobile bottom sheet identical
-- Now importable by Series, Author, Collection detail pages (used in 10.0C)
-
-### Fixed
-
-#### Rating Type Bug
-- Changed `rating` field from `Optional[int]` to `Optional[float]` in four Pydantic models: `TitleSummary`, `TitleDetail`, `FanficTitleDetail`, `BookRatingUpdate`
-- Was causing 500 errors on Browse screen when any book had a half-star rating (e.g., 4.5)
-- Bug had been active since ~March 20 in `backend/routers/titles.py`
-
-### Removed
-- Wishlist dashed card border (bookmark badge is sufficient)
-- showActivityBar prop from BookCard (replaced by ProgressBar)
-
----
-
-## [0.33.0] - 2026-03-20
+## [0.34.0] - 2026-03-27
 
 ### Added
 
-#### Phase 10.0.10: BookCard Redesign (mockup v4 approved)
-Design-only -- implementation pending.
+#### NNG Usability Audit
+Comprehensive usability audit of the entire app based on Nielsen Norman Group heuristics, WCAG AA compliance checks, and 10 interactive user flows tested tap-by-tap.
 
-**Grid view badges:**
-- Opaque dark bg (#1a1918 @ 88%) + white icon for all types
-- ~7:1 contrast on any gradient cover
+- 141 total findings: 4 critical, 29 major, 75 minor, 33 positive
+- 8 screenshot groups covering all screens
+- 10 user flows tested interactively with real tasks
+- Full report: `liminal-ux-audit.md`
+- Fix plan: `UX_FIX_SESSIONS.md` (10 sessions, ordered by severity)
 
-**List view:**
-- Cover overlays for Finished/DNF, text labels for In Progress
-- Est. read time (clock icon + ~Xh)
+### Fixed
+- Pydantic `rating` field type: `Optional[int]` → `Optional[float]` in `TitleSummary`, `TitleDetail`, `FanficTitleDetail`, `BookRatingUpdate` (was causing 500 errors for half-star ratings)
+- File: `backend/routers/titles.py`
 
-**Design decisions confirmed:**
-- Single `variant` prop (standard/compact/list) replaces boolean soup
-- No left-edge stripe, no backdrop-blur, no text DNF badge
+---
 
-### Changed
+## [0.33.0] - 2026-03-26
 
-#### Phase 10.0A: Design Tokens
-- Added Warm A color tokens to `tailwind.config.js`
-- Background tokens: base, surface, elevated
-- Text tokens: primary, secondary, muted
-- Action tokens: primary (teal), success (green), danger (red), secondary (gray)
-- Chip tokens: category, status, fandom, ship, character
-- Custom typography utilities: text-h1 through text-h4, text-body, text-body-sm, text-caption, text-label
+### Added
 
 #### Phase 10.0B: Core Components
-- Created `components/ui/Button.jsx` (primary/secondary/ghost/danger, sm/md/lg, loading/disabled)
-- Created `components/ui/IconButton.jsx` (default/accent, sm/default, optional tooltip)
-- Created `components/ui/Badge.jsx` (status/category/metadata chips)
-- Created `components/ui/SearchInput.jsx` (clear button, loading state)
-- Created `components/ui/Modal.jsx` (Header/Body/Footer, sm/md/lg/fullscreen, backdrop close, Escape)
-- Created `components/ui/FormField.jsx` (label + input/textarea, controlled, error states)
-- Extracted `UnifiedNavBar` to `components/ui/`
-- Extracted `Toast` to `components/ui/`
-- Extracted `CollapsibleSection` to `components/ui/`
-- Extracted `BottomSheet` to `components/ui/`
+9 reusable UI components built as the design system foundation.
+
+- `Button` -- primary/secondary/ghost/danger, sm/md/lg, loading/disabled, 44px touch targets
+- `IconButton` -- 44px default, 36px small, optional tooltip
+- `Badge` -- Status, category, metadata chips
+- `SearchInput` -- Clear button, loading state
+- `Modal` -- Header/Body/Footer, ✕ on right, sm/md/lg/fullscreen
+- `FormField` -- Label + input/textarea, error state, forwardRef
+- `CollapsibleSection` -- Expandable with gradient fade, three content variants
+- `Toast` -- Notification system extracted from BookDetail
+- `ThreeDotMenu` -- Desktop dropdown + mobile bottom sheet
+
+### Changed
+- `BookCard` v4: `variant` prop (standard/compact/list), grid badges (opaque dark bg), progress bar
+- `UnifiedNavBar` moved to `components/ui/`
 
 ---
 
-## [0.30.0] - 2026-02-02
+## [0.32.0] - 2026-03-25
 
 ### Added
 
-#### Phase 9.5 Sessions A-C: Menu + Modal + Navigation
-
-**Three-Dot Menu Consolidation:**
-- Consolidated 8 scattered icon buttons into single 3-dot menu on BookDetail
-- Desktop: click-triggered dropdown with hover states
-- Mobile: bottom sheet with backdrop
-- Click-outside dismissal on desktop, backdrop tap on mobile
-
-**Toast Notification System:**
-- New toast component for feedback messages
-- Three states: loading (spinner), success (checkmark), error (X icon)
-- Auto-dismiss after 3 seconds (except loading state)
-
-**Component Architecture:**
-- Extracted `Toast` component outside BookDetail (prevents remount on parent re-render)
-- Extracted `ThreeDotMenu` component outside BookDetail (stable event listeners)
-
-### Removed
-- 8 scattered icon buttons consolidated into menu (tag, merge, pencil, add format, add session ×2, add collection, rescan)
-- `rescanResult` state variable (replaced by toast system)
-
-### Fixed
-- Nested component definition causing menu to unmount on parent re-render
-- Toast timeout memory leak (now tracked via `useRef`)
-- Null safety guard on `handleRescanMetadata`
-- Dead code removal in rescan handler
+#### Phase 10.0A: Design Tokens
+- Color tokens in `tailwind.config.js`: bg (base/surface/elevated), text (primary/secondary/muted), action (primary/success/danger/secondary), chip colors, border tokens
+- Typography classes in `tokens.css`: h1-h4, body, body-sm, label, caption
+- Warm A palette: charcoal/off-white/muted teal, desaturated dusty chip colors
 
 ---
 
-## [0.27.0] - 2026-01-25
+## [0.31.0] - 2026-02-02
+
+### Changed
+
+#### Phase 9.5C: Navigation Redesign
+- Bottom nav redesign with 5 tabs (Home, Browse, Add, Collections, Authors)
+- UnifiedNavBar with scroll-to-hide behavior and collapsible header
+- Script L integration for header phrases
+- Smart back navigation via returnUrl pattern
+
+---
+
+## [0.30.0] - 2026-02-01
 
 ### Added
 
-#### Phase 9F: Book Detail Page Overhaul 📖
-Complete redesign of book detail page with flattened structure and new components.
+#### Phase 9.5A-B: Consolidation
+- 3-dot menu system with desktop dropdown + mobile bottom sheet
+- Toast notification system
+- Unified Edit Modal with tabbed interface (Details/About/Metadata)
+- Change Cover Modal for cover management
 
-**New Components:**
-- `SortDropdown` -- Reusable sort with localStorage persistence, desktop dropdown + mobile bottom sheet
-- `CollapsibleSection` -- Expandable sections with gradient fade, three variants (text/tags/grid)
-- `ReadingStatusCard` -- Status-aware display with blue (reading) and green (finished) themes
-- `CompactSessionRow` -- Single-row session display with smart date formatting
+---
 
-**Page Structure Overhaul:**
-- Removed "Book Details" card wrapper
-- Flattened About/Tags/Metadata/History/Collections/Notes/Backlinks sections with border-t separators
-- Series section retains card background (related content treatment)
-- Wishlist TBR card retains background
+## [0.29.0] - 2026-01-25
 
-**Series Section Polish:**
-- Clickable series line above title
-- Leading zeros on series numbers (01, 02, 03)
-- Green checkmark for finished books, "You are here" indicator
+### Added
+
+#### Phase 9F: Book Detail Foundation
+- CollapsibleSection, ReadingStatusCard, CompactSessionRow components
+- Book Detail page structure overhaul (flat sections, border separators)
+- Series section with numbered list and status indicators
 
 ### Fixed
 - Storage key: `liminal_sort_tbr` → `liminal_sort_wishlist`

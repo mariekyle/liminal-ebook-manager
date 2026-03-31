@@ -12,12 +12,14 @@ import os
 import json
 import shutil
 import re
+import logging
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 
 from database import get_db
+import aiosqlite
 from services.covers import generate_cover_colors
 from services.metadata import extract_metadata
 from pathlib import Path
@@ -44,6 +46,8 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 
 # Configure your NAS books directory
 BOOKS_DIR = os.environ.get("BOOKS_DIR", "/books")
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -878,24 +882,58 @@ async def link_files_to_title(
                 dest_path = dest_folder / uploaded_file.original_name
                 shutil.move(uploaded_file.temp_path, str(dest_path))
                 moved_files.append(str(dest_path))
-        
-        # Create edition record
+
         file_path = moved_files[0] if moved_files else None
-        await db.execute("""
-            INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
-            VALUES (?, 'ebook', ?, ?, DATE('now'))
-        """, [request.title_id, file_path, str(dest_folder)])
-        
-        # Convert from TBR to library
-        await db.execute("""
-            UPDATE titles 
-            SET is_tbr = 0, 
-                status = 'Unread',
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """, [request.title_id])
-        
-        await db.commit()
+
+        # Atomically (a) create edition if needed, (b) convert wishlist -> owned if needed.
+        await db.execute("BEGIN")
+        try:
+            try:
+                await db.execute(
+                    """
+                    INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                    VALUES (?, 'ebook', ?, ?, DATE('now'))
+                    """,
+                    [request.title_id, file_path, str(dest_folder)],
+                )
+            except aiosqlite.IntegrityError:
+                logger.info(
+                    f"Edition already exists for title {request.title_id} format ebook, skipping insert"
+                )
+
+            cursor = await db.execute(
+                "SELECT is_tbr, acquisition_status, status FROM titles WHERE id = ?",
+                [request.title_id],
+            )
+            state = await cursor.fetchone()
+            if state:
+                is_tbr = bool(state["is_tbr"]) if "is_tbr" in state.keys() else bool(state[0])
+                acquisition_status = (
+                    state["acquisition_status"]
+                    if "acquisition_status" in state.keys()
+                    else state[1]
+                )
+                should_convert = is_tbr or acquisition_status == "wishlist"
+                if should_convert:
+                    await db.execute(
+                        """
+                        UPDATE titles
+                        SET is_tbr = 0,
+                            acquisition_status = 'owned',
+                            status = COALESCE(NULLIF(status, ''), 'Unread'),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        [request.title_id],
+                    )
+                    logger.info(
+                        f"Auto-converted TBR title {request.title_id} to library during file link"
+                    )
+
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
         
         # Clean up session
         cleanup_session(request.session_id)
@@ -912,7 +950,11 @@ async def link_files_to_title(
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Link-to-title failed for title {request.title_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Something went wrong linking these files. Please try again.",
+        )
 
 
 @router.get("/health")

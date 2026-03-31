@@ -1141,8 +1141,11 @@ function BookDetail() {
       setShowAcquireModal(false)
       // Reset to library defaults
       setSelectedStatus(updatedBook.status || 'Unread')
+      showToast('Moved to your library', 'success')
     } catch (err) {
       console.error('Failed to acquire book:', err)
+      setShowAcquireModal(false)
+      showToast('Something went wrong. Try again?', 'error')
     } finally {
       setAcquireLoading(false)
     }
@@ -2416,8 +2419,11 @@ function BookDetail() {
                     setBook(updatedBook)
                     setShowAcquireModal(false)
                     setSelectedStatus(updatedBook.status || 'Unread')
+                    showToast('Moved to your library', 'success')
                   } catch (err) {
                     console.error('Failed to acquire book:', err)
+                    setShowAcquireModal(false)
+                    showToast('Something went wrong. Try again?', 'error')
                   } finally {
                     setAcquireLoading(false)
                   }
@@ -2439,8 +2445,11 @@ function BookDetail() {
                     setBook(updatedBook)
                     setShowAcquireModal(false)
                     setSelectedStatus(updatedBook.status || 'Unread')
+                    showToast('Moved to your library', 'success')
                   } catch (err) {
                     console.error('Failed to acquire book:', err)
+                    setShowAcquireModal(false)
+                    showToast('Something went wrong. Try again?', 'error')
                   } finally {
                     setAcquireLoading(false)
                   }
@@ -2462,8 +2471,11 @@ function BookDetail() {
                     setBook(updatedBook)
                     setShowAcquireModal(false)
                     setSelectedStatus(updatedBook.status || 'Unread')
+                    showToast('Moved to your library', 'success')
                   } catch (err) {
                     console.error('Failed to acquire book:', err)
+                    setShowAcquireModal(false)
+                    showToast('Something went wrong. Try again?', 'error')
                   } finally {
                     setAcquireLoading(false)
                   }
