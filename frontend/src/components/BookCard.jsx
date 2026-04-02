@@ -214,7 +214,35 @@ function BookCard({
 
   return (
     <Wrapper>
-      <div className={isChecklistCompleted ? 'opacity-75' : ''}>
+      <div
+        className={isChecklistCompleted ? 'opacity-75' : ''}
+        onContextMenu={(e) => {
+          if (onLongPress) {
+            e.preventDefault()
+            onLongPress(book, { x: e.clientX, y: e.clientY })
+          }
+        }}
+        onTouchStart={(e) => {
+          if (!onLongPress) return
+          const touch = e.touches[0]
+          const timer = setTimeout(() => {
+            onLongPress(book, { x: touch.clientX, y: touch.clientY })
+          }, 500)
+          e.currentTarget._longPressTimer = timer
+        }}
+        onTouchEnd={(e) => {
+          if (e.currentTarget._longPressTimer) {
+            clearTimeout(e.currentTarget._longPressTimer)
+            e.currentTarget._longPressTimer = null
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.currentTarget._longPressTimer) {
+            clearTimeout(e.currentTarget._longPressTimer)
+            e.currentTarget._longPressTimer = null
+          }
+        }}
+      >
         <div className="relative">
           <GradientCover
             book={coverBook}

@@ -1468,7 +1468,7 @@ export default function CollectionDetail() {
       </Modal>
 
       {removeMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-bg-elevated border-t border-border-default px-4 py-3 flex items-center justify-between pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-elevated border-t border-border-default px-4 py-3 flex items-center justify-between pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
           <button
             type="button"
             onClick={() => { setRemoveMode(false); setSelectedForRemoval(new Set()) }}

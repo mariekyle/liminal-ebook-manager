@@ -12,7 +12,7 @@ function PriorityBadge({ priority }) {
   if (priority !== 'high') return null
 
   return (
-    <span className="absolute top-2 left-2 bg-action-warning text-text-inverse text-caption px-2 py-0.5 rounded-full font-medium">
+    <span className="absolute top-1.5 left-1.5 bg-action-warning text-text-inverse text-[0.625rem] leading-tight px-1.5 py-0.5 rounded-full font-medium">
       High
     </span>
   )
@@ -63,7 +63,7 @@ function WishlistCard({ book, onClick, variant = 'compact' }) {
           book={coverBook}
           showTitle={true}
           showAuthor={true}
-          className="border-2 border-dashed border-border-default"
+          className=""
         />
         <PriorityBadge priority={book.tbr_priority} />
         {/* Wishlist bookmark badge */}
