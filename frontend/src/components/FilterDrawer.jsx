@@ -26,7 +26,7 @@ function FilterDrawer({
   categories = ['All', 'FanFiction', 'Fiction', 'Non-Fiction', 'Uncategorized'],
   selectedCategory,
   onCategoryChange,
-  statuses = ['Any', 'Unread', 'In Progress', 'Finished', 'DNF'],
+  statuses = ['Any', 'Unread', 'In Progress', 'Finished', 'Abandoned'],
   selectedStatus,
   onStatusChange,
   readTimeTiers = [],

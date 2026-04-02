@@ -34,16 +34,18 @@ import { getCollection, deleteCollection, removeBookFromCollection, updateCollec
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
-import GradientCover from './GradientCover'
+import { useGridColumns } from '../hooks/useGridColumns'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import FormField from './ui/FormField'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
 import UnifiedNavBar from './ui/UnifiedNavBar'
+import MarkFinishedModal from './MarkFinishedModal'
+import ChangeStatusModal from './ChangeStatusModal'
+import BookContextMenu from './BookContextMenu'
 
-// LocalStorage key for view mode preference
-const VIEW_MODE_KEY = 'collection_detail_view_mode'
+const VIEW_MODE_KEY = 'liminal-view-collection-detail'
 
 // Icons
 const BackIcon = () => (
@@ -80,31 +82,6 @@ const XIcon = () => (
   </svg>
 )
 
-const CheckCircleIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-    <path d="M9 12l2 2 4-4" />
-    <circle cx="12" cy="12" r="10" />
-  </svg>
-)
-
-const UndoIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-    <path d="M3 10h10a5 5 0 0 1 5 5v2M3 10l4-4M3 10l4 4" />
-  </svg>
-)
-
-const GridIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-    <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
-  </svg>
-)
-
-const ListIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
-  </svg>
-)
-
 const DragHandleIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-text-muted">
     <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
@@ -123,73 +100,6 @@ const CopyIcon = () => (
     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
   </svg>
 )
-
-// ============================================
-// BookListItem - List view for individual books
-// ============================================
-function BookListItem({ book, onClick, isChecklistCompleted, readingSpeed = 180 }) {
-  // Format series info
-  const seriesInfo = book.series 
-    ? ` (${book.series}${book.series_number ? ` #${book.series_number}` : ''})`
-    : ''
-  
-  // Format author(s)
-  const authorDisplay = Array.isArray(book.authors) 
-    ? book.authors.join(', ')
-    : book.authors || 'Unknown Author'
-  
-  // Calculate estimated reading time
-  const getReadingTime = () => {
-    if (!book.word_count) return null
-    const minutes = Math.round(book.word_count / readingSpeed)
-    if (minutes < 60) return `${minutes}m`
-    const hours = Math.floor(minutes / 60)
-    const remainingMins = minutes % 60
-    if (remainingMins === 0) return `${hours}h`
-    return `${hours}h ${remainingMins}m`
-  }
-  
-  const readingTime = getReadingTime()
-  
-  return (
-    <div 
-      onClick={onClick}
-      className={`flex items-center gap-3 p-3 bg-bg-elevated/60 hover:bg-bg-elevated rounded-lg transition-colors cursor-pointer ${
-        isChecklistCompleted ? 'opacity-45' : ''
-      }`}
-    >
-      {/* Book cover thumbnail - hide text overlay for gradient covers */}
-      <div className="flex-shrink-0 w-12 h-[72px] rounded overflow-hidden [&_span]:opacity-0 [&_p]:opacity-0 [&_h1]:opacity-0 [&_h2]:opacity-0 [&_h3]:opacity-0 [&_.truncate]:opacity-0">
-        <GradientCover book={book} size="sm" />
-      </div>
-      
-      {/* Book info */}
-      <div className="flex-1 min-w-0">
-        {/* Line 1: Title (Series #N) */}
-        <p className="text-text-primary font-medium truncate">
-          {book.title}{seriesInfo}
-        </p>
-        
-        {/* Line 2: By Author • Year • Est. read time */}
-        <p className="text-body-sm text-text-secondary truncate">
-          By {authorDisplay}
-          {book.publication_year ? ` • ${book.publication_year}` : ''}
-          {readingTime ? ` • Est. read time ${readingTime}` : ''}
-        </p>
-      </div>
-      
-      {/* Checkmark for completed items */}
-      {isChecklistCompleted && (
-        <div className="flex-shrink-0 text-action-success">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-            <path d="M9 12l2 2 4-4" />
-            <circle cx="12" cy="12" r="10" />
-          </svg>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ============================================
 // SortableBookItem - Wrapper for drag-and-drop reordering
@@ -254,17 +164,13 @@ export default function CollectionDetail() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
-  const [showTitleBelow, setShowTitleBelow] = useState(false)
-  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
-  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
+  const [selectedForRemoval, setSelectedForRemoval] = useState(new Set())
+  const { gridClasses: settingsGridClasses } = useGridColumns()
   
   // View mode: 'grid' or 'list'
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem(VIEW_MODE_KEY) || 'grid'
   })
-  
-  // Grid columns from settings (default to 2 for mobile, matching original layout)
-  const [gridColumns, setGridColumns] = useState(2)
   
   // Reading speed from settings (for estimated read time)
   const [readingSpeed, setReadingSpeed] = useState(180)
@@ -647,19 +553,6 @@ export default function CollectionDetail() {
   useEffect(() => {
     getSettings()
       .then(settings => {
-        if (settings.show_title_below !== undefined) {
-          setShowTitleBelow(settings.show_title_below === 'true')
-        }
-        if (settings.show_author_below !== undefined) {
-          setShowAuthorBelow(settings.show_author_below === 'true')
-        }
-        if (settings.show_series_below !== undefined) {
-          setShowSeriesBelow(settings.show_series_below === 'true')
-        }
-        // Load grid columns setting
-        if (settings.grid_columns) {
-          setGridColumns(parseInt(settings.grid_columns, 10) || 3)
-        }
         // Load reading speed
         if (settings.reading_speed) {
           setReadingSpeed(parseInt(settings.reading_speed, 10) || 180)
@@ -678,18 +571,6 @@ export default function CollectionDetail() {
   // Listen for display setting changes
   useEffect(() => {
     const handleSettingsChange = (event) => {
-      if (event.detail.show_title_below !== undefined) {
-        setShowTitleBelow(event.detail.show_title_below)
-      }
-      if (event.detail.show_author_below !== undefined) {
-        setShowAuthorBelow(event.detail.show_author_below)
-      }
-      if (event.detail.show_series_below !== undefined) {
-        setShowSeriesBelow(event.detail.show_series_below)
-      }
-      if (event.detail.grid_columns !== undefined) {
-        setGridColumns(parseInt(event.detail.grid_columns, 10) || 3)
-      }
       if (event.detail.reading_speed !== undefined) {
         setReadingSpeed(parseInt(event.detail.reading_speed, 10) || 180)
       }
@@ -725,54 +606,32 @@ export default function CollectionDetail() {
     }
   }
   
-  const handleRemoveBook = async (titleId) => {
+  const handleBatchRemove = async () => {
+    if (selectedForRemoval.size === 0) return
     try {
-      await removeBookFromCollection(id, titleId)
-      
-      // Update local state based on collection type
-      if (collection?.collection_type === 'checklist') {
-        // Check which section the book is in
-        const inIncomplete = incompleteBooks.some(b => b.id === titleId)
-        if (inIncomplete) {
-          setIncompleteBooks(prev => prev.filter(b => b.id !== titleId))
-          setIncompleteTotal(prev => prev - 1)
-        } else {
-          setCompletedBooks(prev => prev.filter(b => b.id !== titleId))
-          setCompletedTotal(prev => prev - 1)
-        }
-      } else {
-        setBooks(prev => prev.filter(b => b.id !== titleId))
+      for (const titleId of selectedForRemoval) {
+        await removeBookFromCollection(id, titleId)
       }
-      
-      setTotalBooks(prev => prev - 1)
+      if (collection?.collection_type === 'checklist') {
+        const removedIncomplete = incompleteBooks.filter(b => selectedForRemoval.has(b.id)).length
+        const removedCompleted = completedBooks.filter(b => selectedForRemoval.has(b.id)).length
+        setIncompleteBooks(prev => prev.filter(b => !selectedForRemoval.has(b.id)))
+        setCompletedBooks(prev => prev.filter(b => !selectedForRemoval.has(b.id)))
+        setIncompleteTotal(prev => prev - removedIncomplete)
+        setCompletedTotal(prev => prev - removedCompleted)
+      } else {
+        setBooks(prev => prev.filter(b => !selectedForRemoval.has(b.id)))
+      }
+      setTotalBooks(prev => prev - selectedForRemoval.size)
       setCollection(prev => ({
         ...prev,
-        book_count: prev.book_count - 1
+        book_count: prev.book_count - selectedForRemoval.size
       }))
+      setSelectedForRemoval(new Set())
+      setRemoveMode(false)
     } catch (err) {
-      console.error('Failed to remove book:', err)
-      alert('Failed to remove book')
-    }
-  }
-
-  // Phase 9E: Open appropriate modal based on book status
-  const handleChecklistAction = (book) => {
-    // For checklist, look in both arrays
-    const currentBook = incompleteBooks?.find(b => b.id === book.id) || 
-                       completedBooks?.find(b => b.id === book.id) ||
-                       books?.find(b => b.id === book.id)
-    if (!currentBook) {
-      setContextMenu({ show: false, book: null, x: 0, y: 0 })
-      return
-    }
-    
-    setSelectedBook(currentBook)
-    setContextMenu({ show: false, book: null, x: 0, y: 0 })
-    
-    if (currentBook.status === 'Finished') {
-      setShowChangeStatusModal(true)
-    } else {
-      setShowMarkFinishedModal(true)
+      console.error('Failed to remove books:', err)
+      alert('Failed to remove some books')
     }
   }
 
@@ -862,9 +721,8 @@ export default function CollectionDetail() {
     setSelectedBook(null)
   }
 
-  // Handle long press / right click for checklist context menu
+  // Handle long press / right click for quick status menu
   const handleBookContextMenu = (e, book) => {
-    if (collection?.collection_type !== 'checklist') return
     e.preventDefault()
     e.stopPropagation()
     
@@ -928,23 +786,12 @@ export default function CollectionDetail() {
     if (viewMode === 'list') {
       return 'flex flex-col gap-2'
     }
-    // Mobile uses gridColumns, desktop expands
-    const mobileColsMap = {
-      2: 'grid-cols-2',
-      3: 'grid-cols-3', 
-      4: 'grid-cols-4'
-    }
-    const mobileCols = mobileColsMap[gridColumns] || 'grid-cols-3'
-    return `grid ${mobileCols} sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4`
+    return settingsGridClasses
   }
 
-  // Navigate to book detail
+  // Navigate to book detail (list view; remove mode uses selection on BookCard instead)
   const handleBookClick = (book) => {
-    if (removeMode) {
-      handleRemoveBook(book.id)
-    } else {
-      navigate(`/book/${book.id}`)
-    }
+    navigate(`/book/${book.id}`)
   }
 
   // For non-checklist collections, use books array directly
@@ -982,7 +829,7 @@ export default function CollectionDetail() {
   // Render a single book (grid or list)
   // canSort: whether this book should be wrapped in SortableBookItem (only true for incomplete in reorder mode)
   const renderBook = (book, isChecklistCompleted = false, canSort = true) => {
-    // In reorder mode (list view), use SortableBookItem wrapper - but ONLY if canSort is true
+    // In reorder mode, use SortableBookItem wrapper — only if canSort is true
     if (isReorderMode && canSort) {
       return (
         <SortableBookItem 
@@ -991,11 +838,13 @@ export default function CollectionDetail() {
           isReorderMode={true}
           disabled={isSavingReorder}
         >
-          <BookListItem 
-            book={book} 
-            onClick={() => {}} // Disable click during reorder
+          <BookCard
+            book={book}
+            variant="list"
+            wpm={readingSpeed}
             isChecklistCompleted={isChecklistCompleted}
-            readingSpeed={readingSpeed}
+            linkTo={null}
+            onClick={() => {}}
           />
         </SortableBookItem>
       )
@@ -1007,7 +856,6 @@ export default function CollectionDetail() {
           key={book.id}
           onContextMenu={(e) => handleBookContextMenu(e, book)}
           onTouchStart={(e) => {
-            if (collection?.collection_type !== 'checklist') return
             const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
             e.currentTarget._longPressTimer = timer
           }}
@@ -1025,39 +873,56 @@ export default function CollectionDetail() {
           }}
         >
           {removeMode ? (
-            <div className="relative group">
-              <BookListItem 
-                book={book} 
-                onClick={() => handleRemoveBook(book.id)}
+            <div className="relative">
+              <BookCard
+                book={book}
+                variant="list"
+                wpm={readingSpeed}
                 isChecklistCompleted={isChecklistCompleted}
-                readingSpeed={readingSpeed}
+                linkTo={null}
+                onClick={() => {
+                  setSelectedForRemoval(prev => {
+                    const next = new Set(prev)
+                    if (next.has(book.id)) {
+                      next.delete(book.id)
+                    } else {
+                      next.add(book.id)
+                    }
+                    return next
+                  })
+                }}
               />
-              <div className="absolute inset-0 bg-action-danger/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <div className="bg-action-danger text-text-primary rounded-full p-2">
-                  <XIcon />
+              {selectedForRemoval.has(book.id) && (
+                <div className="absolute inset-0 bg-action-danger/25 rounded-lg flex items-end justify-end p-2 pointer-events-none">
+                  <div className="bg-action-danger text-text-primary rounded-full p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
-            <BookListItem 
-              book={book} 
-              onClick={() => handleBookClick(book)}
+            <BookCard
+              book={book}
+              variant="list"
+              wpm={readingSpeed}
               isChecklistCompleted={isChecklistCompleted}
-              readingSpeed={readingSpeed}
+              linkTo={`/book/${book.id}`}
+              onClick={() => handleBookClick(book)}
             />
           )}
         </div>
       )
     }
     
-    // Grid view
+    // Grid view — unchanged
     return (
       <div 
         key={book.id} 
         className="relative"
         onContextMenu={(e) => handleBookContextMenu(e, book)}
         onTouchStart={(e) => {
-          if (collection?.collection_type !== 'checklist') return
           const timer = setTimeout(() => handleBookContextMenu(e, book), 500)
           e.currentTarget._longPressTimer = timer
         }}
@@ -1075,31 +940,38 @@ export default function CollectionDetail() {
         }}
       >
         {removeMode ? (
-          <button
-            onClick={() => handleRemoveBook(book.id)}
-            className="w-full text-left group"
-          >
-            <div className="relative">
-              <BookCard 
-                book={book} 
-                showTitleBelow={showTitleBelow} 
-                showAuthorBelow={showAuthorBelow} 
-                showSeriesBelow={showSeriesBelow}
-                isChecklistCompleted={isChecklistCompleted}
-              />
-              <div className="absolute inset-0 bg-action-danger/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="bg-action-danger text-text-primary rounded-full p-2">
-                  <XIcon />
+          <div className="relative cursor-pointer">
+            <BookCard
+              book={book}
+              variant="compact"
+              isChecklistCompleted={isChecklistCompleted}
+              linkTo={null}
+              onClick={() => {
+                setSelectedForRemoval(prev => {
+                  const next = new Set(prev)
+                  if (next.has(book.id)) {
+                    next.delete(book.id)
+                  } else {
+                    next.add(book.id)
+                  }
+                  return next
+                })
+              }}
+            />
+            {selectedForRemoval.has(book.id) && (
+              <div className="absolute inset-0 bg-action-danger/25 rounded-lg flex items-end justify-end p-2 pointer-events-none">
+                <div className="bg-action-danger text-text-primary rounded-full p-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
               </div>
-            </div>
-          </button>
+            )}
+          </div>
         ) : (
           <BookCard 
             book={book} 
-            showTitleBelow={showTitleBelow} 
-            showAuthorBelow={showAuthorBelow} 
-            showSeriesBelow={showSeriesBelow}
+            variant="compact"
             isChecklistCompleted={isChecklistCompleted}
           />
         )}
@@ -1108,7 +980,7 @@ export default function CollectionDetail() {
   }
   
   return (
-    <div className="max-w-4xl mx-auto pb-24">
+    <div className={`max-w-4xl mx-auto ${removeMode ? 'pb-40' : 'pb-24'}`}>
       {/* Header */}
       <UnifiedNavBar backLabel="Collections" backTo="/collections">
         {/* Menu button */}
@@ -1152,16 +1024,18 @@ export default function CollectionDetail() {
                 </button>
                 
                 {/* Remove Books - only for manual/checklist with books, not in reorder mode */}
-                {!isAutomatic && totalBooks > 0 && !isReorderMode && (
+                {!isAutomatic && totalBooks > 0 && !isReorderMode && !removeMode && (
                   <button
+                    type="button"
                     onClick={() => {
                       setShowMenu(false)
-                      setRemoveMode(!removeMode)
+                      setRemoveMode(true)
+                      setSelectedForRemoval(new Set())
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
                   >
                     <XIcon />
-                    {removeMode ? 'Done Removing' : 'Remove Books'}
+                    Remove Books
                   </button>
                 )}
                 
@@ -1194,20 +1068,6 @@ export default function CollectionDetail() {
                   >
                     <ReorderIcon />
                     {isReorderMode ? 'Done Reordering' : 'Reorder Books'}
-                  </button>
-                )}
-                
-                {/* View toggle - not in reorder mode */}
-                {!isReorderMode && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-                  >
-                    {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
-                    View: {viewMode === 'grid' ? 'List' : 'Grid'}
                   </button>
                 )}
                 
@@ -1302,17 +1162,45 @@ export default function CollectionDetail() {
           </p>
         </div>
       )}
+
+      {/* Grid/List toggle */}
+      {!isReorderMode && !removeMode && books.length + incompleteBooks.length + completedBooks.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                viewMode === 'grid'
+                  ? 'bg-bg-elevated text-text-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              aria-pressed={viewMode === 'grid'}
+              aria-label="Grid view"
+            >
+              Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                viewMode === 'list'
+                  ? 'bg-bg-elevated text-text-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+              aria-pressed={viewMode === 'list'}
+              aria-label="List view"
+            >
+              List
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Remove mode banner */}
       {removeMode && (
-        <div className="mb-4 px-4 py-3 bg-action-danger/10 border border-action-danger/30 rounded-lg flex items-center justify-between">
-          <span className="text-action-danger">Tap a book to remove it from this collection</span>
-          <button
-            onClick={() => setRemoveMode(false)}
-            className="text-action-primary hover:opacity-90 font-medium"
-          >
-            Done
-          </button>
+        <div className="mb-4 px-4 py-3 bg-action-danger/10 border border-action-danger/30 rounded-lg">
+          <p className="text-body-sm text-text-secondary">Select titles to remove</p>
         </div>
       )}
 
@@ -1395,34 +1283,32 @@ export default function CollectionDetail() {
               </div>
             )}
 
-            {/* Completed section divider */}
+            {/* Completed section */}
             {(completedBooks.length > 0 || completedHasMore) && (
-              <div className="flex items-center gap-4 my-8">
-                <div className="flex-1 h-px bg-border-default" />
-                <span className="text-caption text-text-muted font-medium">
+              <div className="mt-8 bg-bg-surface border border-border-default rounded-lg p-4">
+                <p className="text-caption text-text-muted font-medium mb-4">
                   Completed · {completedTotal}
-                </span>
-                <div className="flex-1 h-px bg-border-default" />
-              </div>
-            )}
+                </p>
 
-            {/* Completed books section - canSort=false since completed section isn't sortable */}
-            {completedBooks.length > 0 && (
-              <div className={getGridClasses()}>
-                {completedBooks.map(book => renderBook(book, true, false))}
-              </div>
-            )}
-            
-            {/* Completed section loader - only render when there are more books to load */}
-            {completedHasMore && (
-              <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
-                {loadingSection === 'completed' && (
-                  <div className="inline-flex items-center gap-2 text-text-muted">
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="text-sm">Loading more books...</span>
+                {/* Completed books - canSort=false since completed section isn't sortable */}
+                {completedBooks.length > 0 && (
+                  <div className={getGridClasses()}>
+                    {completedBooks.map(book => renderBook(book, true, false))}
+                  </div>
+                )}
+                
+                {/* Completed section loader */}
+                {completedHasMore && (
+                  <div ref={completedLoaderRef} className="w-full py-8 flex justify-center">
+                    {loadingSection === 'completed' && (
+                      <div className="inline-flex items-center gap-2 text-text-muted">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-sm">Loading more books...</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1499,39 +1385,20 @@ export default function CollectionDetail() {
         )
       )}
 
-      {/* Context menu for checklist actions */}
       {contextMenu.show && contextMenu.book && (
-        <>
-          <div 
-            className="fixed inset-0 z-40"
-            onClick={() => setContextMenu({ show: false, book: null, x: 0, y: 0 })}
-          />
-          <div 
-            className="fixed z-50 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default overflow-hidden"
-            style={{ 
-              left: Math.min(contextMenu.x, window.innerWidth - 200),
-              top: Math.min(contextMenu.y, window.innerHeight - 100)
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => handleChecklistAction(contextMenu.book)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-            >
-              {contextMenu.book.status === 'Finished' ? (
-                <>
-                  <UndoIcon />
-                  Update Status
-                </>
-              ) : (
-                <>
-                  <CheckCircleIcon />
-                  Mark Finished
-                </>
-              )}
-            </button>
-          </div>
-        </>
+        <BookContextMenu
+          book={contextMenu.book}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onMarkFinished={() => {
+            setSelectedBook(contextMenu.book)
+            setShowMarkFinishedModal(true)
+          }}
+          onChangeStatus={() => {
+            setSelectedBook(contextMenu.book)
+            setShowChangeStatusModal(true)
+          }}
+          onClose={() => setContextMenu({ show: false, book: null, x: 0, y: 0 })}
+        />
       )}
       
       {/* Edit Modal */}
@@ -1559,7 +1426,6 @@ export default function CollectionDetail() {
       {showMarkFinishedModal && selectedBook && (
         <MarkFinishedModal
           book={selectedBook}
-          statusLabel={statusLabels.finished}
           onConfirm={handleMarkFinished}
           onClose={() => {
             setShowMarkFinishedModal(false)
@@ -1568,11 +1434,9 @@ export default function CollectionDetail() {
         />
       )}
 
-      {/* Change Status Modal */}
       {showChangeStatusModal && selectedBook && (
         <ChangeStatusModal
           book={selectedBook}
-          statusLabels={statusLabels}
           onConfirm={handleChangeStatus}
           onClose={() => {
             setShowChangeStatusModal(false)
@@ -1602,153 +1466,33 @@ export default function CollectionDetail() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {removeMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-bg-elevated border-t border-border-default px-4 py-3 flex items-center justify-between pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+          <button
+            type="button"
+            onClick={() => { setRemoveMode(false); setSelectedForRemoval(new Set()) }}
+            className="text-body-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px] px-3"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleBatchRemove}
+            disabled={selectedForRemoval.size === 0}
+            className={`text-body-sm font-medium min-h-[44px] px-4 rounded-lg transition-colors ${
+              selectedForRemoval.size > 0
+                ? 'bg-action-danger text-text-primary hover:bg-action-danger-hover'
+                : 'bg-bg-surface text-text-muted cursor-not-allowed'
+            }`}
+          >
+            {selectedForRemoval.size > 0
+              ? `Remove ${selectedForRemoval.size}`
+              : 'Remove'}
+          </button>
+        </div>
+      )}
       </div>
     </div>
-  )
-}
-
-// ============================================
-// Mark Finished Modal Component
-// ============================================
-function MarkFinishedModal({ book, statusLabel: _statusLabel, onConfirm, onClose }) {
-  const [dateFinished, setDateFinished] = useState(() => {
-    if (book.date_finished) {
-      return book.date_finished.split('T')[0]
-    }
-    return new Date().toISOString().split('T')[0]
-  })
-  const [rating, setRating] = useState(book.rating || 0)
-  const [hoveredRating, setHoveredRating] = useState(0)
-
-  const handleSubmit = () => {
-    onConfirm(dateFinished, rating || null)
-  }
-
-  return (
-    <Modal isOpen onClose={onClose} size="md">
-      <Modal.Header onClose={onClose}>Mark as Finished</Modal.Header>
-      <Modal.Body>
-        <div className="space-y-4">
-          <FormField label="Date finished">
-            <input
-              type="date"
-              value={dateFinished}
-              onChange={(e) => setDateFinished(e.target.value)}
-              className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary"
-            />
-          </FormField>
-          <FormField label="Rating (optional)">
-            <div className="flex flex-wrap items-center gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(rating === star ? 0 : star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="p-1 transition-colors"
-                >
-                  <svg
-                    className={`w-7 h-7 ${
-                      star <= (hoveredRating || rating)
-                        ? 'text-action-warning fill-current'
-                        : 'text-text-muted'
-                    }`}
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                </button>
-              ))}
-              {rating > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setRating(0)}
-                  className="ml-2 text-caption text-text-muted hover:text-text-secondary"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </FormField>
-        </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="ghost" type="button" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="primary" type="button" onClick={handleSubmit}>
-          Mark Finished
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  )
-}
-
-// ============================================
-// Change Status Modal Component
-// ============================================
-function ChangeStatusModal({ book, statusLabels, onConfirm, onClose }) {
-  const [selectedStatus, setSelectedStatus] = useState('')
-
-  const statusOptions = [
-    { value: 'Unread', label: statusLabels.unread },
-    { value: 'In Progress', label: statusLabels.in_progress },
-    { value: 'Abandoned', label: statusLabels.dnf },
-  ]
-
-  const handleSubmit = () => {
-    if (selectedStatus) {
-      onConfirm(selectedStatus)
-    }
-  }
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return null
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  return (
-    <Modal isOpen onClose={onClose} size="md">
-      <Modal.Header onClose={onClose}>Change Status</Modal.Header>
-      <Modal.Body>
-        <FormField label="Status">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary"
-          >
-            <option value="">Select status…</option>
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        {book.date_finished && (
-          <div className="mt-4 p-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
-            <p className="text-body-sm text-text-secondary">
-              Finish date will be cleared ({formatDate(book.date_finished)})
-            </p>
-          </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="ghost" type="button" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="primary" type="button" onClick={handleSubmit} disabled={!selectedStatus}>
-          Apply
-        </Button>
-      </Modal.Footer>
-    </Modal>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { listBooks, getCategories, listSeries, getSettings } from '../api'
+import { listBooks, getCategories, listSeries, getSettings, updateBookStatus, updateBookDates, updateBookRating } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
 import TagsModal from './TagsModal'
@@ -15,22 +15,26 @@ import SortDropdown from './SortDropdown'
 import WishlistTab from './WishlistTab'
 import SettingsDrawer from './SettingsDrawer'
 import UnifiedNavBar from './ui/UnifiedNavBar'
+import BookContextMenu from './BookContextMenu'
+import MarkFinishedModal from './MarkFinishedModal'
+import ChangeStatusModal from './ChangeStatusModal'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
+import { useGridColumns } from '../hooks/useGridColumns'
 
-const VIEW_PREF_KEY = 'liminal-view-preference'
-
-function readViewPreference() {
+function readPageView(pageKey) {
   try {
-    const raw = localStorage.getItem(VIEW_PREF_KEY)
-    if (!raw) return { view: 'grid', gridVariant: 'compact' }
-    const p = JSON.parse(raw)
-    return {
-      view: p.view === 'list' ? 'list' : 'grid',
-      gridVariant: p.gridVariant === 'standard' ? 'standard' : 'compact',
-    }
+    return localStorage.getItem(`liminal-view-${pageKey}`) === 'list' ? 'list' : 'grid'
   } catch {
-    return { view: 'grid', gridVariant: 'compact' }
+    return 'grid'
+  }
+}
+
+function readGridVariant() {
+  try {
+    return localStorage.getItem('liminal-grid-variant') === 'standard' ? 'standard' : 'compact'
+  } catch {
+    return 'compact'
   }
 }
 
@@ -71,10 +75,7 @@ function Library() {
   const [categories, setCategories] = useState([])
   const [readTimeFilter, setReadTimeFilter] = useState(searchParams.get('readTime') || '')
   const [wpm, setWpm] = useState(250)
-  const [gridColumns, setGridColumns] = useState('2')
-  const [showTitleBelow, setShowTitleBelow] = useState(false)
-  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
-  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
+  const { gridClasses: settingsGridClasses } = useGridColumns()
   
   // Enhanced metadata filters (Phase 7.2)
   const [fandom, setFandom] = useState(searchParams.get('fandom') || '')
@@ -106,18 +107,34 @@ function Library() {
   const [phraseKey, setPhraseKey] = useState(0)
 
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false)
-  const [viewPreference, setViewPreference] = useState(readViewPreference)
 
-  const updateViewPreference = useCallback((partial) => {
-    setViewPreference((prev) => {
-      const next = { ...prev, ...partial }
-      try {
-        localStorage.setItem(VIEW_PREF_KEY, JSON.stringify(next))
-      } catch {
-        /* ignore */
+  const [contextMenu, setContextMenu] = useState({ show: false, book: null, x: 0, y: 0 })
+  const [selectedBook, setSelectedBook] = useState(null)
+  const [showMarkFinished, setShowMarkFinished] = useState(false)
+  const [showChangeStatus, setShowChangeStatus] = useState(false)
+
+  const [browseView, setBrowseView] = useState(() => readPageView('browse'))
+  const [seriesView, setSeriesView] = useState(() => readPageView('series'))
+  const [gridVariant, setGridVariant] = useState(readGridVariant)
+
+  const currentView = activeView === 'series' ? seriesView : browseView
+
+  const setCurrentView = useCallback((value) => {
+    const key = activeView === 'series' ? 'series' : 'browse'
+    const setter = activeView === 'series' ? setSeriesView : setBrowseView
+    setter(value)
+    try { localStorage.setItem(`liminal-view-${key}`, value) } catch {}
+  }, [activeView])
+
+  // Listen for grid variant changes from Settings
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail?.gridVariant) {
+        setGridVariant(event.detail.gridVariant)
       }
-      return next
-    })
+    }
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
   const libraryNavTitle = useMemo(() => {
@@ -128,16 +145,14 @@ function Library() {
   }, [activeView, acquisition])
 
   const bookCardVariant = useMemo(() => {
-    if (viewPreference.view === 'list') return 'list'
-    return viewPreference.gridVariant === 'compact' ? 'compact' : 'standard'
-  }, [viewPreference])
+    if (currentView === 'list') return 'list'
+    return gridVariant === 'compact' ? 'compact' : 'standard'
+  }, [currentView, gridVariant])
 
   const manifestGridClass = useMemo(() => {
-    if (viewPreference.view === 'list') return ''
-    return viewPreference.gridVariant === 'compact'
-      ? 'grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-      : 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 xl:grid-cols-6'
-  }, [viewPreference])
+    if (currentView === 'list') return ''
+    return settingsGridClasses
+  }, [currentView, settingsGridClasses])
 
   // Filters that apply to current view
   const hasActiveFilters = activeView === 'library'
@@ -176,48 +191,15 @@ function Library() {
       .catch(err => console.error('Failed to load categories:', err))
   }, [])
 
-  // Load settings (WPM, grid columns)
+  // Load settings (WPM)
   useEffect(() => {
     getSettings()
       .then(settings => {
         if (settings.reading_wpm) {
           setWpm(parseInt(settings.reading_wpm, 10) || 250)
         }
-        if (settings.grid_columns) {
-          setGridColumns(settings.grid_columns)
-        }
-        if (settings.show_title_below !== undefined) {
-          setShowTitleBelow(settings.show_title_below === 'true')
-        }
-        if (settings.show_author_below !== undefined) {
-          setShowAuthorBelow(settings.show_author_below === 'true')
-        }
-        if (settings.show_series_below !== undefined) {
-          setShowSeriesBelow(settings.show_series_below === 'true')
-        }
       })
       .catch(err => console.error('Failed to load settings:', err))
-  }, [])
-
-  // Listen for settings changes from SettingsDrawer
-  useEffect(() => {
-    const handleSettingsChange = (event) => {
-      if (event.detail.grid_columns) {
-        setGridColumns(event.detail.grid_columns)
-      }
-      if (event.detail.show_title_below !== undefined) {
-        setShowTitleBelow(event.detail.show_title_below)
-      }
-      if (event.detail.show_author_below !== undefined) {
-        setShowAuthorBelow(event.detail.show_author_below)
-      }
-      if (event.detail.show_series_below !== undefined) {
-        setShowSeriesBelow(event.detail.show_series_below)
-      }
-    }
-    
-    window.addEventListener('settingsChanged', handleSettingsChange)
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
   // Load books when filters change (wishlist tab uses WishlistTab + listTBR)
@@ -379,6 +361,41 @@ function Library() {
   setSearchParams(params, { replace: true })
 }, [setSearchParams, sort, sortDir, acquisition, activeView])
 
+  const handleBookLongPress = (book, position) => {
+    setContextMenu({ show: true, book, x: position.x, y: position.y })
+  }
+
+  const handleMarkFinished = async (dateFinished, rating) => {
+    if (!selectedBook) return
+    try {
+      await updateBookStatus(selectedBook.id, 'Finished')
+      if (dateFinished) await updateBookDates(selectedBook.id, selectedBook.date_started, dateFinished)
+      if (rating) await updateBookRating(selectedBook.id, rating)
+      setBooks(prev => prev.map(b =>
+        b.id === selectedBook.id ? { ...b, status: 'Finished', date_finished: dateFinished, rating: rating ?? b.rating } : b
+      ))
+    } catch (err) {
+      console.error('Failed to mark finished:', err)
+    }
+    setShowMarkFinished(false)
+    setSelectedBook(null)
+  }
+
+  const handleChangeStatus = async (newStatus) => {
+    if (!selectedBook) return
+    try {
+      await updateBookStatus(selectedBook.id, newStatus)
+      await updateBookDates(selectedBook.id, selectedBook.date_started, null)
+      setBooks(prev => prev.map(b =>
+        b.id === selectedBook.id ? { ...b, status: newStatus, date_finished: null } : b
+      ))
+    } catch (err) {
+      console.error('Failed to change status:', err)
+    }
+    setShowChangeStatus(false)
+    setSelectedBook(null)
+  }
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)]">
       <UnifiedNavBar
@@ -514,68 +531,36 @@ function Library() {
             </p>
 
             <div className="flex flex-wrap items-center gap-2 ml-auto">
-              {/* Grid / list + compact / standard — Browse and Series */}
+              {/* Grid / List toggle — Browse and Series */}
               {(activeView === 'library' && acquisition === 'browse') || activeView === 'series' ? (
-                <>
-                  <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
-                    <button
-                      type="button"
-                      onClick={() => updateViewPreference({ view: 'grid' })}
-                      className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                        viewPreference.view === 'grid'
-                          ? 'bg-bg-elevated text-text-primary'
-                          : 'text-text-secondary hover:text-text-primary'
-                      }`}
-                      aria-pressed={viewPreference.view === 'grid'}
-                      aria-label="Grid view"
-                    >
-                      Grid
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateViewPreference({ view: 'list' })}
-                      className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                        viewPreference.view === 'list'
-                          ? 'bg-bg-elevated text-text-primary'
-                          : 'text-text-secondary hover:text-text-primary'
-                      }`}
-                      aria-pressed={viewPreference.view === 'list'}
-                      aria-label="List view"
-                    >
-                      List
-                    </button>
-                  </div>
-                  {viewPreference.view === 'grid' && (
-                    <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
-                      <button
-                        type="button"
-                        onClick={() => updateViewPreference({ gridVariant: 'compact' })}
-                        className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                          viewPreference.gridVariant === 'compact'
-                            ? 'bg-bg-elevated text-text-primary'
-                            : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                        aria-pressed={viewPreference.gridVariant === 'compact'}
-                        aria-label="Compact covers"
-                      >
-                        Compact
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateViewPreference({ gridVariant: 'standard' })}
-                        className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                          viewPreference.gridVariant === 'standard'
-                            ? 'bg-bg-elevated text-text-primary'
-                            : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                        aria-pressed={viewPreference.gridVariant === 'standard'}
-                        aria-label="Standard covers"
-                      >
-                        Standard
-                      </button>
-                    </div>
-                  )}
-                </>
+                <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('grid')}
+                    className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                      currentView === 'grid'
+                        ? 'bg-bg-elevated text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                    aria-pressed={currentView === 'grid'}
+                    aria-label="Grid view"
+                  >
+                    Grid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('list')}
+                    className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                      currentView === 'list'
+                        ? 'bg-bg-elevated text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                    aria-pressed={currentView === 'list'}
+                    aria-label="List view"
+                  >
+                    List
+                  </button>
+                </div>
               ) : null}
 
               {activeView === 'library' && acquisition === 'browse' && (
@@ -870,16 +855,15 @@ function Library() {
           !loading &&
           !error &&
           filteredBooks.length > 0 &&
-          (viewPreference.view === 'list' ? (
+          (currentView === 'list' ? (
             <div className="flex flex-col gap-4">
               {filteredBooks.map(book => (
                 <BookCard
                   key={book.id}
                   book={book}
                   variant={bookCardVariant}
-                  showTitleBelow={showTitleBelow}
-                  showAuthorBelow={showAuthorBelow}
-                  showSeriesBelow={showSeriesBelow}
+                  wpm={wpm}
+                  onLongPress={handleBookLongPress}
                 />
               ))}
             </div>
@@ -890,9 +874,8 @@ function Library() {
                   key={book.id}
                   book={book}
                   variant={bookCardVariant}
-                  showTitleBelow={showTitleBelow}
-                  showAuthorBelow={showAuthorBelow}
-                  showSeriesBelow={showSeriesBelow}
+                  wpm={wpm}
+                  onLongPress={handleBookLongPress}
                 />
               ))}
             </div>
@@ -953,16 +936,16 @@ function Library() {
 
         {/* Series grid / list */}
         {activeView === 'series' && !seriesLoading && !seriesError && seriesList.length > 0 && (
-          viewPreference.view === 'list' ? (
+          currentView === 'list' ? (
             <div className="flex flex-col gap-4">
               {seriesList.map(series => (
-                <SeriesCard key={series.name} series={series} />
+                <SeriesCard key={series.name} series={series} variant={bookCardVariant} />
               ))}
             </div>
           ) : (
             <div className={manifestGridClass}>
               {seriesList.map(series => (
-                <SeriesCard key={series.name} series={series} />
+                <SeriesCard key={series.name} series={series} variant={bookCardVariant} />
               ))}
             </div>
           )
@@ -979,7 +962,7 @@ function Library() {
           setCategory(cat)
           updateUrlParams({ category: cat })
         }}
-        statuses={['Any', 'Unread', 'In Progress', 'Finished', 'DNF']}
+        statuses={['Any', 'Unread', 'In Progress', 'Finished', 'Abandoned']}
         selectedStatus={status}
         onStatusChange={(s) => {
           setStatus(s)
@@ -1062,6 +1045,38 @@ function Library() {
         }}
         category={category}
       />
+
+      {contextMenu.show && (
+        <BookContextMenu
+          book={contextMenu.book}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onMarkFinished={() => {
+            setSelectedBook(contextMenu.book)
+            setShowMarkFinished(true)
+          }}
+          onChangeStatus={() => {
+            setSelectedBook(contextMenu.book)
+            setShowChangeStatus(true)
+          }}
+          onClose={() => setContextMenu({ show: false, book: null, x: 0, y: 0 })}
+        />
+      )}
+
+      {showMarkFinished && selectedBook && (
+        <MarkFinishedModal
+          book={selectedBook}
+          onConfirm={handleMarkFinished}
+          onClose={() => { setShowMarkFinished(false); setSelectedBook(null); }}
+        />
+      )}
+
+      {showChangeStatus && selectedBook && (
+        <ChangeStatusModal
+          book={selectedBook}
+          onConfirm={handleChangeStatus}
+          onClose={() => { setShowChangeStatus(false); setSelectedBook(null); }}
+        />
+      )}
 
       <SettingsDrawer isOpen={settingsDrawerOpen} onClose={() => setSettingsDrawerOpen(false)} />
     </div>

@@ -152,7 +152,8 @@ class SeriesSummary(BaseModel):
     name: str
     author: str  # Primary author (from first book)
     book_count: int
-    books_read: int  # Count of books with status 'Finished'
+    books_read: int  # Count of books with status 'Finished' (same as finished_count)
+    finished_count: int  # Alias for list clients (SeriesCard); equals books_read
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
@@ -1205,7 +1206,7 @@ async def list_series(
             s.name,
             s.author,
             s.book_count,
-            s.books_read
+            s.finished_count
         FROM (
             SELECT 
                 t.series as name,
@@ -1214,7 +1215,7 @@ async def list_series(
                  ORDER BY CAST(t2.series_number AS FLOAT) ASC, t2.id ASC 
                  LIMIT 1) as author,
                 COUNT(*) as book_count,
-                SUM(CASE WHEN t.status = 'Finished' THEN 1 ELSE 0 END) as books_read
+                SUM(CASE WHEN t.status = 'Finished' THEN 1 ELSE 0 END) as finished_count
             FROM titles t
             WHERE t.series IS NOT NULL AND t.series != '' AND t.acquisition_status = 'owned'
     """
@@ -1254,12 +1255,14 @@ async def list_series(
         primary_author = authors[0] if authors else "Unknown Author"
         
         cover_style = get_cover_style(row["name"], primary_author, Theme.DARK)
+        finished = int(row["finished_count"] or 0)
         
         series_list.append(SeriesSummary(
             name=row["name"],
             author=primary_author,
             book_count=row["book_count"],
-            books_read=row["books_read"] or 0,
+            books_read=finished,
+            finished_count=finished,
             cover_gradient=cover_style.css_gradient,
             cover_bg_color=cover_style.background_color,
             cover_text_color=cover_style.text_color

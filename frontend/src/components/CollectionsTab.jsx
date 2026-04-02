@@ -2,7 +2,7 @@
  * CollectionsTab - Grid/list view of all user collections with reorder support
  * 
  * Features:
- * - 3-dot menu with Add, Reorder, View toggle options
+ * - 3-dot menu with Add, Reorder options (Grid/List toggle is inline)
  * - Grid/list view toggle with localStorage persistence
  * - Drag-to-reorder mode using @dnd-kit (user collections only)
  * - Default collections (TBR, Reading History) pinned at top without drag handles
@@ -32,8 +32,8 @@ import Modal from './ui/Modal'
 import Button from './ui/Button'
 import { listCollections, reorderCollections, deleteCollection } from '../api'
 
-// LocalStorage key for view mode preference
-const VIEW_MODE_KEY = 'collections_view_mode'
+// Per-page localStorage key
+const VIEW_MODE_KEY = 'liminal-view-collections'
 
 // Icons
 const DotsIcon = () => (
@@ -156,11 +156,6 @@ export default function CollectionsTab() {
           enterReorderMode()
         }
         break
-      case 'toggle_view':
-        if (!isReorderMode) {
-          setViewMode(prev => prev === 'grid' ? 'list' : 'grid')
-        }
-        break
     }
   }
   
@@ -274,33 +269,65 @@ export default function CollectionsTab() {
             {collections.length} {collections.length === 1 ? 'collection' : 'collections'}
           </p>
           
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors duration-200 ease-out"
-            >
-              <DotsIcon />
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Grid/List toggle */}
+            {!isReorderMode && (
+              <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                    viewMode === 'grid'
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  aria-pressed={viewMode === 'grid'}
+                  aria-label="Grid view"
+                >
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                    viewMode === 'list'
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  aria-pressed={viewMode === 'list'}
+                  aria-label="List view"
+                >
+                  List
+                </button>
+              </div>
+            )}
             
-            {showMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setShowMenu(false)}
-                />
-                
-                <div className="absolute right-0 mt-1 py-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50">
-                  <button
-                    type="button"
-                    onClick={() => handleMenuAction('add')}
-                    className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
-                  >
-                    Add Collection
-                  </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors duration-200 ease-out"
+              >
+                <DotsIcon />
+              </button>
+              
+              {showMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowMenu(false)}
+                  />
                   
-                  {!isReorderMode && (
-                    <>
+                  <div className="absolute right-0 mt-1 py-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50">
+                    <button
+                      type="button"
+                      onClick={() => handleMenuAction('add')}
+                      className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
+                    >
+                      Add Collection
+                    </button>
+                    
+                    {!isReorderMode && (
                       <button
                         type="button"
                         onClick={() => handleMenuAction('reorder')}
@@ -308,18 +335,11 @@ export default function CollectionsTab() {
                       >
                         Reorder Collections
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMenuAction('toggle_view')}
-                        className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
-                      >
-                        View: {viewMode === 'grid' ? 'List' : 'Grid'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       

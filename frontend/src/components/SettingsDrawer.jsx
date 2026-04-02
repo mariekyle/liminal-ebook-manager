@@ -21,6 +21,13 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
   const [gridColumns, setGridColumns] = useState('2')
+  const [gridCardVariant, setGridCardVariant] = useState(() => {
+    try {
+      return localStorage.getItem('liminal-grid-variant') === 'standard' ? 'standard' : 'compact'
+    } catch {
+      return 'compact'
+    }
+  })
   const [statusLabels, setStatusLabels] = useState({
     unread: 'Unread',
     in_progress: 'In Progress',
@@ -38,9 +45,6 @@ function SettingsDrawer({ isOpen, onClose }) {
   const [rescanLoading, setRescanLoading] = useState(false)
   const [rescanResults, setRescanResults] = useState(null)
   const drawerRef = useRef(null)
-  const [showTitleBelow, setShowTitleBelow] = useState(false)
-  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
-  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
   
   // Phase 9A: Backup settings state
   const [backupSettings, setBackupSettings] = useState(null)
@@ -71,6 +75,11 @@ function SettingsDrawer({ isOpen, onClose }) {
           if (data.grid_columns) {
             setGridColumns(data.grid_columns)
           }
+          try {
+            setGridCardVariant(localStorage.getItem('liminal-grid-variant') === 'standard' ? 'standard' : 'compact')
+          } catch {
+            setGridCardVariant('compact')
+          }
           // Load status labels
           setStatusLabels({
             unread: data.status_label_unread || 'Unread',
@@ -86,10 +95,6 @@ function SettingsDrawer({ isOpen, onClose }) {
             4: data.rating_label_4 || 'Better than Good',
             5: data.rating_label_5 || 'All-time Fav'
           })
-          // Load display settings
-          setShowTitleBelow(data.show_title_below === 'true')
-          setShowAuthorBelow(data.show_author_below === 'true')
-          setShowSeriesBelow(data.show_series_below === 'true')
         })
         .catch(err => console.error('Failed to load settings:', err))
         .finally(() => setLoading(false))
@@ -101,6 +106,16 @@ function SettingsDrawer({ isOpen, onClose }) {
       loadBackupSettings()
     }
   }, [isOpen])
+
+  useEffect(() => {
+    const handleGridVariantEvent = (event) => {
+      if (event.detail?.gridVariant) {
+        setGridCardVariant(event.detail.gridVariant)
+      }
+    }
+    window.addEventListener('settingsChanged', handleGridVariantEvent)
+    return () => window.removeEventListener('settingsChanged', handleGridVariantEvent)
+  }, [])
   
   const loadRescanPreview = async () => {
     try {
@@ -360,13 +375,21 @@ function SettingsDrawer({ isOpen, onClose }) {
     const value = statusLabels[key]
     const defaults = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'Abandoned' }
     
+    let updatedLabels
     if (!value.trim()) {
       // Reset to default if empty
-      setStatusLabels(prev => ({ ...prev, [key]: defaults[key] }))
+      updatedLabels = { ...statusLabels, [key]: defaults[key] }
+      setStatusLabels(updatedLabels)
       await updateSetting(`status_label_${key}`, defaults[key])
     } else {
+      updatedLabels = { ...statusLabels, [key]: value.trim() }
+      setStatusLabels(prev => ({ ...prev, [key]: value.trim() }))
       await updateSetting(`status_label_${key}`, value.trim())
     }
+    // Notify other components (useStatusLabels hook) of the change
+    window.dispatchEvent(new CustomEvent('settingsChanged', {
+      detail: { statusLabels: updatedLabels }
+    }))
   }
 
   // Rating label handlers (similar to status labels)
@@ -390,22 +413,6 @@ function SettingsDrawer({ isOpen, onClose }) {
       window.dispatchEvent(new Event('settingsChanged'))
     } catch (err) {
       console.error('Failed to save rating label:', err)
-    }
-  }
-
-  const handleDisplayToggle = async (setting, currentValue, setter) => {
-    const newValue = !currentValue
-    setter(newValue)
-    try {
-      await updateSetting(setting, newValue.toString())
-      // Notify other components of the change
-      window.dispatchEvent(new CustomEvent('settingsChanged', { 
-        detail: { [setting]: newValue } 
-      }))
-    } catch (err) {
-      console.error('Failed to save display setting:', err)
-      // Revert on failure
-      setter(!newValue)
     }
   }
 
@@ -537,77 +544,45 @@ function SettingsDrawer({ isOpen, onClose }) {
             {/* Divider */}
             <hr className="border-border-default" />
 
-            {/* Display Section */}
+            {/* Grid Card Style Setting */}
             <section>
-              <h3 className="text-h4 mb-2 text-text-primary">Display</h3>
-              <p className="text-body-sm text-text-secondary text-sm mb-4">
-                Choose what to show below book covers.
+              <h3 className="text-h4 mb-2 text-text-primary">Grid card style</h3>
+              <p className="text-body-sm text-text-secondary text-sm mb-3">
+                Choose how book and series cards look in grid view.
               </p>
               
-              <div className="space-y-4">
-                {/* Title toggle */}
-                <div className="flex items-center justify-between">
-                  <span className="text-text-secondary text-sm">Show title</span>
+              <div className="flex gap-2">
+                {[
+                  { value: 'compact', label: 'Compact', desc: 'Cover only' },
+                  { value: 'standard', label: 'Standard', desc: 'Cover + title below' },
+                ].map(({ value, label }) => (
                   <button
-                    onClick={() => handleDisplayToggle('show_title_below', showTitleBelow, setShowTitleBelow)}
-                    className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showTitleBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
-                    `}
-                    role="switch"
-                    aria-checked={showTitleBelow}
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('liminal-grid-variant', value)
+                      } catch {
+                        /* ignore */
+                      }
+                      setGridCardVariant(value)
+                      window.dispatchEvent(new CustomEvent('settingsChanged', {
+                        detail: { gridVariant: value }
+                      }))
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      gridCardVariant === value
+                        ? 'bg-action-primary text-white'
+                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-elevated'
+                    }`}
                   >
-                    <span
-                      className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${showTitleBelow ? 'translate-x-6' : 'translate-x-1'}
-                      `}
-                    />
+                    {label}
                   </button>
-                </div>
-                
-                {/* Author toggle */}
-                <div className="flex items-center justify-between">
-                  <span className="text-text-secondary text-sm">Show author</span>
-                  <button
-                    onClick={() => handleDisplayToggle('show_author_below', showAuthorBelow, setShowAuthorBelow)}
-                    className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showAuthorBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
-                    `}
-                    role="switch"
-                    aria-checked={showAuthorBelow}
-                  >
-                    <span
-                      className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${showAuthorBelow ? 'translate-x-6' : 'translate-x-1'}
-                      `}
-                    />
-                  </button>
-                </div>
-                
-                {/* Series toggle */}
-                <div className="flex items-center justify-between">
-                  <span className="text-text-secondary text-sm">Show series</span>
-                  <button
-                    onClick={() => handleDisplayToggle('show_series_below', showSeriesBelow, setShowSeriesBelow)}
-                    className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${showSeriesBelow ? 'bg-action-primary' : 'bg-bg-elevated'}
-                    `}
-                    role="switch"
-                    aria-checked={showSeriesBelow}
-                  >
-                    <span
-                      className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${showSeriesBelow ? 'translate-x-6' : 'translate-x-1'}
-                      `}
-                    />
-                  </button>
-                </div>
+                ))}
               </div>
+              <p className="text-text-muted text-xs mt-2">
+                Compact shows covers only. Standard adds title and author below.
+              </p>
             </section>
 
             {/* Divider */}

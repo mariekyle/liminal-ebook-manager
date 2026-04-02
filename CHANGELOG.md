@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.39.0] - 2026-04-01
+
+### Added
+
+#### Fix Session 2: Cards, Grids, and Context Menus
+Comprehensive card system overhaul, per-page view preferences, shared status modals, long-press context menus, and batch collection management. Twelve Cursor prompts across two sub-sessions (2.1 and 2.2).
+
+**New shared components:**
+- `MarkFinishedModal.jsx` -- Date picker + optional rating, extracted from CollectionDetail and now shared across Library, AuthorDetail, CollectionDetail
+- `ChangeStatusModal.jsx` -- Status dropdown via `useStatusLabels()`, same sharing pattern
+- `BookContextMenu.jsx` -- Floating menu on long-press/right-click with "Mark Finished" and "Update Status" actions
+
+**Long-press context menu (Library, AuthorDetail, CollectionDetail):**
+- BookCard list rows support `onLongPress(book, {x, y})` via 500ms touch timer + right-click
+- Opens BookContextMenu at touch/click coordinates
+- Mark Finished and Change Status actions update local state without page reload
+
+**Batch remove mode (CollectionDetail):**
+- Select-then-confirm pattern replaces single-tap instant delete
+- "Select titles to remove" banner with multi-select toggles
+- Fixed bottom bar with Cancel and Remove N button (disabled when nothing selected)
+- Safe area inset padding for home indicator
+- Check badge overlay on selected items in both grid and list views
+
+**WishlistCard compact/standard awareness:**
+- Compact: cover-only with priority badge (top-left) and wishlist bookmark (top-right)
+- Standard: cover row plus italic "why this one" note when present, no duplicate title/author
+- Responds to global `liminal-grid-variant` setting via `settingsChanged` event
+
+**Inline Grid/List toggle (CollectionsTab, CollectionDetail):**
+- Moved out of overflow menu into visible toolbar (NNG Heuristic #4: consistency)
+- Per-page localStorage keys: `liminal-view-collections`, `liminal-view-collection-detail`
+
+**Backend: `finished_count` on series list endpoint:**
+- `SeriesSummary` Pydantic model gains `finished_count` field
+- SQL subquery in `list_series` uses `SUM(CASE WHEN status = 'Finished')` (replaces misaligned `books_read` alias)
+- Both `books_read` and `finished_count` populated from same value for backward compatibility
+
+### Changed
+
+**BookCard overhaul (Prompts 1, 3, 7, 10):**
+- Checklist completed dimming: `opacity-45` to `opacity-75` (better readability while still visually distinct)
+- `linkTo` prop (default `/book/{id}`, `null` for div wrapper) and `onClick` prop for universal use
+- `onLongPress` prop for context menu integration (list variant only)
+- List thumbnails: 64x96px (up from 44x66)
+- Status badges: solid `bg-bg-base/65` scrim
+- Custom status labels via `useStatusLabels` hook
+
+**SeriesCard rewrite:**
+- Warm fallback gradients (`#8a6e5e` to `#5e7a6e`, replacing cold indigo `#667eea`/`#764ba2`)
+- Compact: top-right count badge, first author on cover bottom, no external text
+- List: 64x96 thumbnail consistent with BookCard
+
+**GradientCover title (frozen file unlock, font size only):**
+- `.875rem` to `1rem` (16px), `line-clamp-3` to `line-clamp-4`, `lineHeight` to `1.2`
+
+**View preference restructure:**
+- Per-page localStorage keys: `liminal-view-browse`, `liminal-view-series`, `liminal-view-author`
+- Compact/Standard toggle removed from toolbar, moved to SettingsDrawer as "Grid card style"
+- Global `liminal-grid-variant` key, dispatched via `settingsChanged` event
+
+**CollectionDetail completed section:**
+- Wrapped in `bg-bg-surface` container with border and rounded corners (visual grouping)
+- "Completed * N" caption inside the card
+
+**CollectionCard:**
+- `CollectionIcon` removed from grid and list views (zero imports remain)
+
+**SeriesDetail:**
+- DNF label uses `getLabel('Abandoned')` from `useStatusLabels` hook (respects custom labels)
+
+### Fixed
+- **DNF status filter silently returned zero results:** FilterDrawer and Library passed `'DNF'` as the status value to the API, but the database stores `'Abandoned'`. Changed both `statuses` arrays to use `'Abandoned'`; `getLabel('Abandoned')` already handles display. Filter now correctly returns abandoned books.
+- **Series cards showed 0 finished count:** The SQL subquery exposed `books_read` but `SeriesCard` read `finished_count`. Added `finished_count` alias to the query and Pydantic model.
+- **CollectionDetail inline modals replaced with shared components:** Removed local `MarkFinishedModal`/`ChangeStatusModal` definitions and unused `CheckCircleIcon`/`UndoIcon`; imports shared versions.
+- **Old view preference keys orphaned:** `liminal-view-preference` (global), `collections_view_mode`, `collection_detail_view_mode` no longer read. Users may need to re-select Grid/List once.
+
+### Technical
+
+#### New Files
+- `frontend/src/hooks/useStatusLabels.js` -- Shared hook: `{ labels, getLabel, getStatusOptions }`
+- `frontend/src/components/MarkFinishedModal.jsx`
+- `frontend/src/components/ChangeStatusModal.jsx`
+- `frontend/src/components/BookContextMenu.jsx`
+
+#### Files Modified
+- `backend/routers/titles.py` -- `SeriesSummary` model + `list_series` SQL (finished_count)
+- `frontend/src/components/BookCard.jsx` -- Full rewrite: variants, 64x96, linkTo/onClick, onLongPress, opacity-75
+- `frontend/src/components/SeriesCard.jsx` -- Full rewrite: warm gradients, compact redesign
+- `frontend/src/components/GradientCover.jsx` -- Title font size only (frozen file)
+- `frontend/src/components/Library.jsx` -- Per-page view keys, gridVariant, long-press wiring, shared modals, status filter fix
+- `frontend/src/components/AuthorDetail.jsx` -- Per-page view key, gridVariant, long-press wiring, shared modals
+- `frontend/src/components/CollectionDetail.jsx` -- Completed container, inline toggle, shared modals, batch remove, BookCard adoption
+- `frontend/src/components/CollectionsTab.jsx` -- Inline toggle, per-page key
+- `frontend/src/components/WishlistTab.jsx` -- WishlistCard compact/standard, gridVariant listener
+- `frontend/src/components/HomeTab.jsx` -- variant="compact" + wpm
+- `frontend/src/components/SettingsDrawer.jsx` -- Grid card style section, statusLabel event dispatch
+- `frontend/src/components/FilterDrawer.jsx` -- Status filter fix (DNF to Abandoned)
+- `frontend/src/components/SeriesDetail.jsx` -- useStatusLabels for DNF label
+- `frontend/src/components/CollectionCard.jsx` -- CollectionIcon removed
+- `frontend/tailwind.config.js` -- text-muted token value
+
+#### Requires Docker Rebuild
+Backend change to `titles.py` (finished_count on series endpoint).
+
+---
+
 ## [0.38.0] - 2026-03-31
 
 ### Fixed

@@ -30,9 +30,6 @@ function HomeTab() {
   const [stats, setStats] = useState(null)
   const [statsPeriod, setStatsPeriod] = useState('month')
   const [wpm, setWpm] = useState(250)
-  const [showTitleBelow, setShowTitleBelow] = useState(false)
-  const [showAuthorBelow, setShowAuthorBelow] = useState(false)
-  const [showSeriesBelow, setShowSeriesBelow] = useState(false)
 
   const [loadingInProgress, setLoadingInProgress] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(true)
@@ -54,35 +51,8 @@ function HomeTab() {
         if (settings.reading_wpm) {
           setWpm(parseInt(settings.reading_wpm, 10) || 250)
         }
-        if (settings.show_title_below !== undefined) {
-          setShowTitleBelow(settings.show_title_below === 'true')
-        }
-        if (settings.show_author_below !== undefined) {
-          setShowAuthorBelow(settings.show_author_below === 'true')
-        }
-        if (settings.show_series_below !== undefined) {
-          setShowSeriesBelow(settings.show_series_below === 'true')
-        }
       })
       .catch(err => console.error('Failed to load settings:', err))
-  }, [])
-
-  // Listen for display setting changes
-  useEffect(() => {
-    const handleSettingsChange = event => {
-      if (event.detail.show_title_below !== undefined) {
-        setShowTitleBelow(event.detail.show_title_below)
-      }
-      if (event.detail.show_author_below !== undefined) {
-        setShowAuthorBelow(event.detail.show_author_below)
-      }
-      if (event.detail.show_series_below !== undefined) {
-        setShowSeriesBelow(event.detail.show_series_below)
-      }
-    }
-
-    window.addEventListener('settingsChanged', handleSettingsChange)
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
   }, [])
 
   const loadInProgress = useCallback(() => {
@@ -230,10 +200,8 @@ function HomeTab() {
               <div key={book.id} className="flex-shrink-0 w-32">
                 <BookCard
                   book={book}
-                  showActivityBar={true}
-                  showTitleBelow={showTitleBelow}
-                  showAuthorBelow={showAuthorBelow}
-                  showSeriesBelow={showSeriesBelow}
+                  variant="compact"
+                  wpm={wpm}
                 />
               </div>
             ))}
@@ -263,9 +231,8 @@ function HomeTab() {
                 <div key={book.id} className="flex-shrink-0 w-32">
                   <BookCard
                     book={book}
-                    showTitleBelow={showTitleBelow}
-                    showAuthorBelow={showAuthorBelow}
-                    showSeriesBelow={showSeriesBelow}
+                    variant="compact"
+                    wpm={wpm}
                   />
                 </div>
               ))}
@@ -321,9 +288,8 @@ function HomeTab() {
                 <div key={book.id} className="flex-shrink-0 w-32">
                   <BookCard
                     book={book}
-                    showTitleBelow={showTitleBelow}
-                    showAuthorBelow={showAuthorBelow}
-                    showSeriesBelow={showSeriesBelow}
+                    variant="compact"
+                    wpm={wpm}
                   />
                 </div>
               ))}
@@ -357,9 +323,8 @@ function HomeTab() {
                 <div key={book.id} className="flex-shrink-0 w-32">
                   <BookCard
                     book={book}
-                    showTitleBelow={showTitleBelow}
-                    showAuthorBelow={showAuthorBelow}
-                    showSeriesBelow={showSeriesBelow}
+                    variant="compact"
+                    wpm={wpm}
                   />
                 </div>
               ))}

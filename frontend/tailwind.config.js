@@ -36,7 +36,7 @@ export default {
         text: {
           primary: '#e8e4df',
           secondary: '#9a958e',
-          muted: '#6e6962',
+          muted: '#918b84',
           inverse: '#1a1918',
           body: '#cdc8c1',
         },

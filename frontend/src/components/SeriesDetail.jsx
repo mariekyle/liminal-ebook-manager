@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getSeriesDetail } from '../api'
+import { useStatusLabels } from '../hooks/useStatusLabels'
 import UnifiedNavBar from './ui/UnifiedNavBar'
 
 /** Display series order as 01, 02, 03; supports decimals (e.g. 02.5). */
@@ -18,6 +19,7 @@ function SeriesDetail() {
   const { name } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const { getLabel } = useStatusLabels()
   
   const currentUrl = location.pathname + location.search
   const [series, setSeries] = useState(null)
@@ -105,7 +107,7 @@ function SeriesDetail() {
                   <span className="text-action-warning text-sm" aria-hidden>📖</span>
                 )}
                 {(book.status === 'DNF' || book.status === 'Abandoned') && (
-                  <span className="text-caption text-text-muted">DNF</span>
+                  <span className="text-caption text-text-muted">{getLabel('Abandoned')}</span>
                 )}
                 
                 {book.rating && (

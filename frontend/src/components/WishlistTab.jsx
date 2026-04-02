@@ -5,13 +5,14 @@ import GradientCover from './GradientCover'
 import SortDropdown from './SortDropdown'
 import { useSort } from '../hooks/useSort'
 import Button from './ui/Button'
+import { useGridColumns } from '../hooks/useGridColumns'
 
 // Priority badge component
 function PriorityBadge({ priority }) {
   if (priority !== 'high') return null
 
   return (
-    <span className="absolute top-2 right-2 bg-action-warning text-text-inverse text-caption px-2 py-0.5 rounded-full font-medium">
+    <span className="absolute top-2 left-2 bg-action-warning text-text-inverse text-caption px-2 py-0.5 rounded-full font-medium">
       High
     </span>
   )
@@ -36,35 +37,53 @@ function EmptyState() {
 }
 
 // Wishlist card component
-function WishlistCard({ book, onClick }) {
+// Sibling to BookCard — check for visual parity when BookCard changes
+function WishlistCard({ book, onClick, variant = 'compact' }) {
+  const coverBook = {
+    id: book.id,
+    title: book.title,
+    author: book.authors?.[0] || 'Unknown Author',
+    has_cover: book.has_cover || false,
+    cover_path: book.cover_path || null,
+    cover_source: book.cover_source || null,
+    cover_gradient: book.cover_gradient,
+    cover_color_1: book.cover_color_1,
+    cover_color_2: book.cover_color_2,
+    cover_bg_color: book.cover_bg_color,
+    cover_text_color: book.cover_text_color,
+  }
+
   return (
     <div
       onClick={onClick}
-      className="bg-bg-surface rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-action-primary transition-all duration-200 ease-out"
+      className="cursor-pointer group"
     >
-      <div className="relative aspect-[2/3]">
+      <div className="relative">
         <GradientCover
-          title={book.title}
-          author={book.authors?.[0] || 'Unknown'}
-          cssGradient={book.cover_gradient}
-          textColor={book.cover_text_color}
+          book={coverBook}
+          showTitle={true}
+          showAuthor={true}
+          className="border-2 border-dashed border-border-default"
         />
         <PriorityBadge priority={book.tbr_priority} />
+        {/* Wishlist bookmark badge */}
+        <div
+          className="absolute top-2 right-2 w-6 h-6 bg-bg-base/[0.88] rounded flex items-center justify-center"
+          title="Wishlist"
+        >
+          <svg className="w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </div>
       </div>
 
-      <div className="p-3">
-        <h3 className="text-label text-text-primary line-clamp-2 mb-1">
-          {book.title}
-        </h3>
-        <p className="text-body-sm text-text-secondary line-clamp-1">
-          {book.authors?.join(', ') || 'Unknown Author'}
-        </p>
-        {book.tbr_reason && (
-          <p className="text-caption text-text-muted mt-2 line-clamp-2 italic">
+      {variant === 'standard' && book.tbr_reason && (
+        <div className="mt-2 px-1">
+          <p className="text-caption text-text-muted line-clamp-2 italic">
             &quot;{book.tbr_reason}&quot;
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -75,6 +94,23 @@ function WishlistTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all') // 'all', 'high', 'normal'
+  const { gridClasses } = useGridColumns()
+  const [gridVariant, setGridVariant] = useState(() => {
+    try {
+      return localStorage.getItem('liminal-grid-variant') === 'standard' ? 'standard' : 'compact'
+    } catch { return 'compact' }
+  })
+
+  // Listen for grid variant changes from Settings
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail?.gridVariant) {
+        setGridVariant(event.detail.gridVariant)
+      }
+    }
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
+  }, [])
 
   // Sort state with localStorage persistence
   const { sortField, sortDirection, setSort } = useSort(
@@ -221,11 +257,12 @@ function WishlistTab() {
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className={gridClasses}>
             {sortedBooks.map(book => (
               <WishlistCard
                 key={book.id}
                 book={book}
+                variant={gridVariant}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
             ))}

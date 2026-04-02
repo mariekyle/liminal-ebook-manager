@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** March 31, 2026 (v0.38.0)  
+> **Last Updated:** April 1, 2026 (v0.39.0)  
 > **Current Focus:** Phase 10.0D — UX Audit Fix Sessions  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.38.0)
+## Current State (v0.39.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
-| UX fix sessions | 🔄 In progress — 1/10 sessions complete |
+| UX fix sessions | 🔄 In progress — 2/10 sessions complete |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -235,14 +235,13 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 **Known stragglers (batch later):**
 - `text-[#e0e0e0]` wrapper in AddPage.jsx
 - CriteriaBuilder.jsx still has legacy gray classes (embedded in collection create/edit)
-- BookCard `variant` prop enforcement deferred (component doesn't define variant yet in main BookCard.jsx)
 
 ---
 
 ### 10.0D: UX Audit Fix Sessions ← CURRENT
 
 **Priority:** P0 — Fix What's Broken Before Building What's New  
-**Status:** 🔄 In Progress (Session 1 complete, 9 remaining)  
+**Status:** 🔄 In Progress (Sessions 1-2 complete, 8 remaining)  
 **Sessions:** 10  
 **Based on:** `liminal-ux-audit.md` (141 findings, NNG heuristic + WCAG AA + user flows pass)
 
@@ -259,7 +258,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 | # | Name | Scope | Findings | Status |
 |---|------|-------|----------|--------|
 | 1 | Emergency: Broken Wishlist Conversion | Silent failure, fake success screen, raw SQL error, half-state data | UF-14, UF-15, UF-16 | ✅ v0.38.0 |
-| 2 | One-Line Wins: Contrast + Grid | Lighten text-caption token, fix grid settings across pages | G1-02, G2-03, UF-32, G1-03, G4-02 | ⬜ |
+| 2 | One-Line Wins: Contrast + Grid | Lighten text-caption token, fix grid settings across pages | G1-02, G2-03, UF-32, G1-03, G4-02 | ✅ v0.39.0 |
 | 3 | BookDetail Action Architecture | Make metadata blocks tappable, add Mark Finished shortcut, inline section actions | UF-01, UF-02, UF-05, UF-06, UF-20, UF-24, G2-11, G2-12 | ⬜ |
 | 4 | Edit Modal Reorganization | Fix tab visibility, reorganize fields, unsaved changes guard | UF-25, UF-26, UF-27, G3-02, G3-03 | ⬜ |
 | 5 | Form Input Guards | Auto-commit author chips, default start date, category control, rating visibility | UF-11, UF-07, UF-12, UF-03, G3-07 | ⬜ |
@@ -681,8 +680,12 @@ Items to address when time permits:
 ### Minor Design System Stragglers
 - `text-[#e0e0e0]` wrapper in `AddPage.jsx` (should be `text-text-primary`)
 - `CriteriaBuilder.jsx` still has legacy gray classes (embedded in collection create/edit automatic mode)
-- BookCard `variant` prop enforcement deferred (main BookCard.jsx doesn't define variant yet)
 **Priority:** Low — batch in a future cleanup pass
+
+### Batch Collection Removal Error Handling
+**Symptom:** If one API call fails during batch remove in CollectionDetail, the sequential `for` loop throws to `catch` and local state stays unchanged — but earlier calls in the batch already succeeded on the backend. UI shows all books present; some are already gone server-side.  
+**Workaround:** Refresh the page to get true state from backend.  
+**Priority:** Low (local NAS, partial failure extremely unlikely) — revisit if Liminal moves to a remote server
 
 ---
 
@@ -819,4 +822,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: March 31, 2026 (v0.38.0)*
+*Last updated: April 1, 2026 (v0.39.0)*

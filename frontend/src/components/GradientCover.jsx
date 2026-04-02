@@ -136,12 +136,12 @@ export default function GradientCover({
         {showTitle && displayTitle && (
           <div className="flex-1 flex items-center justify-center px-3">
             <p 
-              className="text-white text-center line-clamp-3 drop-shadow-lg"
+              className="text-white text-center line-clamp-4 drop-shadow-lg"
               style={{ 
                 fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-                fontSize: '.875rem',
+                fontSize: '1rem',
                 fontWeight: 700,
-                lineHeight: '.875rem'
+                lineHeight: '1.2'
               }}
             >
               {displayTitle}

@@ -1,94 +1,87 @@
 import { useState, useEffect } from 'react'
 import { getSettings } from '../api'
 
-// Internal status keys (never change - used for DB storage and logic)
-export const STATUS_KEYS = ['unread', 'in_progress', 'finished', 'dnf']
+/**
+ * Shared hook for custom status labels from Settings.
+ * Maps internal status values → user-configured display labels.
+ * Listens for live changes via the settingsChanged custom event.
+ *
+ * Returns:
+ *   labels          — raw map keyed by DB status: { Unread, 'In Progress', Finished, Abandoned }
+ *   getLabel(status) — lookup function: getLabel('Abandoned') → 'DNF' (or custom label)
+ *   getStatusOptions() — array of { value, label } for dropdowns
+ *
+ * Usage (BookCard):
+ *   const { labels } = useStatusLabels()
+ *   const dnfLabel = labels['Abandoned']
+ *
+ * Usage (BookDetail / FilterDrawer):
+ *   const { getLabel, getStatusOptions } = useStatusLabels()
+ *   getLabel('Finished') → 'Finished' (or custom label)
+ */
 
-// Map from internal key to default display label
 const DEFAULT_LABELS = {
-  unread: 'Unread',
-  in_progress: 'In Progress',
-  finished: 'Finished',
-  dnf: 'Abandoned'
+  Unread: 'Unread',
+  'In Progress': 'In Progress',
+  Finished: 'Finished',
+  Abandoned: 'DNF',
 }
 
-// Map from display value to internal key (for backwards compatibility)
-const VALUE_TO_KEY = {
-  'Unread': 'unread',
-  'In Progress': 'in_progress',
-  'Finished': 'finished',
-  'DNF': 'dnf',
-  'Abandoned': 'dnf'
-}
+let cachedLabels = null
 
 export function useStatusLabels() {
-  const [labels, setLabels] = useState(DEFAULT_LABELS)
-  const [loading, setLoading] = useState(true)
+  const [labels, setLabels] = useState(cachedLabels || DEFAULT_LABELS)
 
   useEffect(() => {
-    let cancelled = false
-    
+    if (cachedLabels) {
+      setLabels(cachedLabels)
+      return
+    }
     getSettings()
-      .then(settings => {
-        if (cancelled) return
-        
-        setLabels({
-          unread: settings.status_label_unread || DEFAULT_LABELS.unread,
-          in_progress: settings.status_label_in_progress || DEFAULT_LABELS.in_progress,
-          finished: settings.status_label_finished || DEFAULT_LABELS.finished,
-          dnf: settings.status_label_dnf || DEFAULT_LABELS.dnf
-        })
+      .then(data => {
+        const resolved = {
+          Unread: data.status_label_unread || 'Unread',
+          'In Progress': data.status_label_in_progress || 'In Progress',
+          Finished: data.status_label_finished || 'Finished',
+          Abandoned: data.status_label_dnf || 'DNF',
+        }
+        cachedLabels = resolved
+        setLabels(resolved)
       })
-      .catch(err => {
-        console.error('Failed to load status labels:', err)
+      .catch(() => {
+        // Fail silently, defaults are fine
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    
-    return () => { cancelled = true }
   }, [])
 
-  // Get display label for a status value (handles both old format like "Finished" and new format)
-  const getLabel = (statusValue) => {
-    if (!statusValue) return labels.unread
-    
-    // Check if it's an internal key
-    if (labels[statusValue]) {
-      return labels[statusValue]
+  // Listen for live changes from SettingsDrawer
+  useEffect(() => {
+    const handleSettingsChange = (event) => {
+      if (event.detail?.statusLabels) {
+        const sl = event.detail.statusLabels
+        const resolved = {
+          Unread: sl.unread || 'Unread',
+          'In Progress': sl.in_progress || 'In Progress',
+          Finished: sl.finished || 'Finished',
+          Abandoned: sl.dnf || 'DNF',
+        }
+        cachedLabels = resolved
+        setLabels(resolved)
+      }
     }
-    
-    // Check if it's a legacy display value
-    const key = VALUE_TO_KEY[statusValue]
-    if (key) {
-      return labels[key]
-    }
-    
-    // Fallback to the value itself
-    return statusValue
-  }
+    window.addEventListener('settingsChanged', handleSettingsChange)
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange)
+  }, [])
 
-  // Get internal key from display value
-  const getKey = (displayValue) => {
-    return VALUE_TO_KEY[displayValue] || displayValue
-  }
+  // Helper: look up a status label, fallback to the raw status string
+  const getLabel = (status) => labels[status] || status
 
-  // Get all statuses as array of { key, value, label } for dropdowns
-  const getStatusOptions = (includeAny = false) => {
-    const options = STATUS_KEYS.map(key => ({
-      key,
-      value: DEFAULT_LABELS[key], // Use original value for API compatibility
-      label: labels[key]
-    }))
-    
-    if (includeAny) {
-      return [{ key: '', value: 'Any', label: 'Any' }, ...options]
-    }
-    return options
-  }
+  // Helper: return status options array for dropdowns
+  const getStatusOptions = () => [
+    { value: 'Unread', label: labels['Unread'] },
+    { value: 'In Progress', label: labels['In Progress'] },
+    { value: 'Finished', label: labels['Finished'] },
+    { value: 'Abandoned', label: labels['Abandoned'] },
+  ]
 
-  return { labels, getLabel, getKey, getStatusOptions, loading }
+  return { labels, getLabel, getStatusOptions }
 }
-
-export default useStatusLabels
-

@@ -15,12 +15,6 @@ import { useNavigate } from 'react-router-dom'
 import CollectionGradient from './CollectionGradient'
 import MosaicCover from './MosaicCover'
 
-const CollectionIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-text-muted shrink-0 mt-0.5" aria-hidden>
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-  </svg>
-)
-
 const DragHandleIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-text-muted">
     <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
@@ -173,9 +167,8 @@ export default function CollectionCard({
             {renderCover('w-full h-full')}
           </div>
           
-          <div className="flex-1 min-w-0 flex items-start gap-2">
-            <CollectionIcon />
-            <div className="min-w-0 flex-1">
+          <div className="flex-1 min-w-0">
+            <div className="min-w-0">
               <h3 className="text-body-sm text-text-primary font-medium truncate">
                 {collection.name}
               </h3>
@@ -228,9 +221,8 @@ export default function CollectionCard({
             {renderCover('w-full h-full')}
           </div>
           
-          <div className="mt-2 flex items-start gap-1.5 px-0.5">
-            <CollectionIcon />
-            <div className="min-w-0 flex-1">
+          <div className="mt-2 px-0.5">
+            <div className="min-w-0">
               <h3 className="text-body-sm text-text-primary font-medium truncate group-hover:text-action-primary transition-colors">
                 {collection.name}
               </h3>
