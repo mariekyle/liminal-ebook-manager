@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.0] - 2026-04-18
+
+### Added
+
+#### Fix Session 3: BookDetail Action Architecture
+Structural rework of the most-visited page. Actions moved from the buried 3-dot menu into the primary flow; metadata blocks became actionable; wishlist acquire CTA hoisted above the fold. Addresses audit findings UF-01, UF-02, UF-05, UF-06, UF-20, UF-24, G2-11, G2-12.
+
+**ReadingStatusCard action surface:**
+- New props: `onMarkFinished`, `onChangeStatus`, `onAcquire`, `isWishlist`
+- Inline "Mark Finished" primary button + "Status ▾" secondary when status ∈ {unread, not_prioritized, in_progress}
+- Inline "I Got This Book!" button when `isWishlist && onAcquire`
+- Outer card wraps the existing icon/label/subtitle row plus the new action row; download/edit affordances on the inner row unchanged
+
+**BookDetail modal wiring (reuses Library.jsx pattern):**
+- `MarkFinishedModal` and `ChangeStatusModal` now triggered from BookDetail
+- `handleMarkFinishedConfirm`: updates status to Finished, optionally sets `date_finished` and `rating`, then refreshes book + sessions
+- `handleChangeStatusFromModal`: updates status, clears `date_finished`, refreshes book + sessions
+- Status pill (hero metadata) opens `ChangeStatusModal` instead of scrolling to history
+- Category pill opens `UnifiedEditModal` (user scrolls to Classification section)
+
+**Inline section actions (pencil icons, stroke `#5c5752`, 36px hit target):**
+- Notes section → opens note editor (replaces previous `IconButton` edit control; save/error status stays on the right)
+- Reading History section (mobile + desktop headers) → `openAddSession()`
+- Collections section → opens `CollectionPicker`
+
+**Wishlist layout:**
+- `ReadingStatusCard` with `isWishlist` and `onAcquire` now sits above the fold, directly under the book header
+- Duplicate "I Got This Book!" block removed from the bottom of the TBR card — single acquire CTA lives in the card above the fold
+
+### Changed
+
+**Hero metadata as text links (not chips):**
+- Author names: plain teal links (`text-action-primary hover:underline`), still route to `/author/:name`
+- Hero series line: same treatment, still routes to `/series/:name`
+- Read time + category: `bg-bg-surface`, `rounded-lg`, `border` stripped — flat metadata
+- Status + rating pills: card styling preserved (still the only interactive pills)
+
+**Collections rendering:**
+- Replaced chip-style boxes (`px-3 py-1.5 bg-bg-surface rounded-full border` + hamburger SVG) with plain teal text links in a `flex flex-wrap gap-x-4 gap-y-1` row
+- Navigation now client-side via React Router `<Link>` (was `<a href>`)
+- Route corrected to `/collections/:id` (matches `App.jsx` routing; prompt's original `/collection/:id` would 404)
+
+### Fixed
+
+- **Misleading Reading History pencil labels (a11y):** Both pencil buttons (mobile + desktop) had `title="Edit"` despite opening the Add Session flow. Now `title="Add reading session"` with matching `aria-label`.
+- **Raw `tbr_priority` values in wishlist subtitle:** `ReadingStatusCard` subtitle rendered "Priority: high" / "Priority: normal". Now humanized to "High priority" / "Normal priority" / "Low priority". Still `null` when `tbr_priority` is absent.
+
+### Technical
+- Files modified: `frontend/src/components/BookDetail.jsx`, `frontend/src/components/ReadingStatusCard.jsx`
+- Frontend only — no Docker rebuild required.
+- Pencil stroke color (`#5c5752`) is a deliberate hardcoded override per locked Session 3 decision (2026-04-13); `.cursorrules` token-preference flag is expected for these specific instances.
+
+### Parked (not addressed in this session)
+- **Modal-closes-on-failure UX** for both `MarkFinishedModal` and `ChangeStatusModal`: matches `Library.jsx` pattern. Deferred to Session 10 (Destructive Action Guards) for consistent treatment across all modal error paths.
+- **`handleChangeStatusFromModal` always clears `date_finished`:** identical to `Library.jsx`. If this is a bug, it's a bug in both places — not a Session 3 scope item.
+
+---
+
+## [0.39.1] - 2026-04-02
+
+### Fixed
+
+#### Post-Session-2 Visual & Interaction Bugs
+Three issues found during visual testing after v0.39.0 shipped.
+
+- **WishlistCard dotted border removed:** `GradientCover` in WishlistCard had `border-2 border-dashed border-border-default`, giving wishlist covers a dashed outline that BookCard grid covers don't have. Removed.
+- **WishlistCard priority badge oversized:** "High" badge was `text-caption` with `px-2` padding — visually heavy on small covers. Shrunk to `text-[0.625rem]` with `px-1.5` and tighter positioning (`top-1.5 left-1.5`), now proportional to author text on covers.
+- **Collection remove bar hidden behind BottomNav:** Bottom bar was `z-30`, BottomNav is `z-40`. Bar was invisible on mobile. Bumped to `z-50`.
+- **Long-press context menu missing on grid views:** `onLongPress` handlers (contextmenu, touch timer) were only wired on the list variant. Added same handlers to the grid variant's outer div. Browse and Author grid cards now open the context menu on long-press.
+
+### Technical
+- Files modified: `WishlistTab.jsx`, `CollectionDetail.jsx`, `BookCard.jsx`
+- Frontend only — no Docker rebuild required.
+
+---
+
 ## [0.39.0] - 2026-04-01
 
 ### Added

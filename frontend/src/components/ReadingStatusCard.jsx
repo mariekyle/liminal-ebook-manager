@@ -75,6 +75,10 @@ export default function ReadingStatusCard({
   fileUrl = null,
   hasFile = false,
   onEditSession,
+  onMarkFinished = null,
+  onChangeStatus = null,
+  onAcquire = null,
+  isWishlist = false,
   className = ''
 }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.unread
@@ -93,42 +97,82 @@ export default function ReadingStatusCard({
   const showDownloadAction = config.showDownload && hasFile && fileUrl
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border border-border-default bg-bg-surface ${config.bgClass} ${className}`}>
-      <div className={`flex-shrink-0 ${config.iconClass}`}>
-        <IconComponent />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-text-primary">
-          {config.label}
+    <div className={`p-3 rounded-xl border border-border-default bg-bg-surface ${config.bgClass} ${className}`}>
+      <div className="flex items-center gap-3">
+        <div className={`flex-shrink-0 ${config.iconClass}`}>
+          <IconComponent />
         </div>
-        {subtitle && (
-          <div className="text-body-sm text-text-secondary truncate">
-            {subtitle}
+
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-text-primary">
+            {config.label}
           </div>
+          {subtitle && (
+            <div className="text-body-sm text-text-secondary truncate">
+              {subtitle}
+            </div>
+          )}
+        </div>
+
+        {showDownloadAction && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            title="Download"
+          >
+            <DownloadIcon />
+          </button>
+        )}
+
+        {config.showEdit && (
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            title="Edit reading session"
+          >
+            <EditIcon />
+          </button>
         )}
       </div>
 
-      {showDownloadAction && (
-        <button
-          type="button"
-          onClick={handleDownload}
-          className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          title="Download"
-        >
-          <DownloadIcon />
-        </button>
+      {/* Inline action buttons — only for statuses where finishing is relevant */}
+      {onMarkFinished && !['finished', 'dnf'].includes(status) && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-border-default">
+          <button
+            type="button"
+            onClick={onMarkFinished}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-white font-medium text-sm transition-colors hover:opacity-90"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            Mark Finished
+          </button>
+          {onChangeStatus && (
+            <button
+              type="button"
+              onClick={onChangeStatus}
+              className="px-4 py-2.5 rounded-lg border border-border-default bg-bg-elevated text-text-secondary text-sm transition-colors hover:bg-bg-surface"
+            >
+              Status ▾
+            </button>
+          )}
+        </div>
       )}
 
-      {config.showEdit && (
-        <button
-          type="button"
-          onClick={handleEdit}
-          className="flex-shrink-0 p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-          title="Edit reading session"
-        >
-          <EditIcon />
-        </button>
+      {/* Wishlist acquire button — above the fold */}
+      {isWishlist && onAcquire && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-border-default">
+          <button
+            type="button"
+            onClick={onAcquire}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-white font-medium text-sm transition-colors hover:opacity-90"
+          >
+            🎉 I Got This Book!
+          </button>
+        </div>
       )}
     </div>
   )

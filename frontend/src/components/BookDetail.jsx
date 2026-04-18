@@ -7,6 +7,8 @@ import IconButton from './ui/IconButton'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import UnifiedEditModal from './UnifiedEditModal'
+import MarkFinishedModal from './MarkFinishedModal'
+import ChangeStatusModal from './ChangeStatusModal'
 import ChangeCoverModal from './ChangeCoverModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
@@ -313,6 +315,9 @@ function BookDetail() {
   const [showAcquireModal, setShowAcquireModal] = useState(false)
   const [acquireLoading, setAcquireLoading] = useState(false)
   const [acquireFormat, setAcquireFormat] = useState('ebook')
+
+  const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
+  const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
 
   // Mobile tab state
   const [activeTab, setActiveTab] = useState('details')
@@ -1022,6 +1027,42 @@ function BookDetail() {
     }
   }
 
+  const handleMarkFinishedConfirm = async (dateFinished, rating) => {
+    if (!book || !id) return
+    try {
+      await updateBookStatus(id, 'Finished')
+      if (dateFinished) await updateBookDates(id, book.date_started, dateFinished)
+      if (rating) await updateBookRating(id, rating)
+      const bookData = await getBook(id)
+      setBook(bookData)
+      setSelectedStatus(bookData.status || 'Unread')
+      setSelectedRating(bookData.rating ?? null)
+      setDateStarted(bookData.date_started || '')
+      setDateFinished(bookData.date_finished || '')
+      await fetchSessions()
+    } catch (err) {
+      console.error('Failed to mark finished:', err)
+    }
+    setShowMarkFinishedModal(false)
+  }
+
+  const handleChangeStatusFromModal = async (newStatus) => {
+    if (!book || !id) return
+    try {
+      await updateBookStatus(id, newStatus)
+      await updateBookDates(id, book.date_started, null)
+      const bookData = await getBook(id)
+      setBook(bookData)
+      setSelectedStatus(bookData.status || 'Unread')
+      setDateStarted(bookData.date_started || '')
+      setDateFinished(bookData.date_finished || '')
+      await fetchSessions()
+    } catch (err) {
+      console.error('Failed to change status:', err)
+    }
+    setShowChangeStatusModal(false)
+  }
+
   const handleRatingChange = async (newRating) => {
     // Convert to number or null
     const ratingValue = newRating === '' ? null : parseInt(newRating, 10)
@@ -1455,7 +1496,7 @@ function BookDetail() {
           {book.series && (
             <Link 
               to={`/series/${encodeURIComponent(book.series)}`}
-              className="text-text-secondary hover:text-action-primary text-sm mb-1 text-center md:text-left block transition-colors"
+              className="text-action-primary hover:underline text-sm mb-1 text-center md:text-left block transition-colors"
             >
               {book.series} #{book.series_number || '?'}
             </Link>
@@ -1479,7 +1520,7 @@ function BookDetail() {
                   <span key={`${author}-${index}`}>
                     <Link
                       to={`/author/${encodeURIComponent(author)}`}
-                      className="hover:text-action-primary transition-colors"
+                      className="text-action-primary hover:underline transition-colors"
                     >
                       {author}
                     </Link>
@@ -1503,18 +1544,16 @@ function BookDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               {/* Read Time */}
               {readTimeData && (
-                <div className="bg-bg-surface rounded-lg px-3 py-2 text-center border border-border-default">
+                <div className="px-3 py-2 text-center">
                   <div className="text-text-primary font-semibold">{readTimeData.display}</div>
                   <div className="text-caption">{readTimeData.microcopy}</div>
                 </div>
               )}
               
-              {/* Status - clickable to jump to reading history */}
+              {/* Status — opens change status modal */}
               <button
-                onClick={() => {
-                  const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
-                  target?.scrollIntoView({ behavior: 'smooth' })
-                }}
+                type="button"
+                onClick={() => setShowChangeStatusModal(true)}
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
                 <div className="text-text-primary font-semibold">{getLabel(selectedStatus)}</div>
@@ -1537,11 +1576,15 @@ function BookDetail() {
                 </div>
               </button>
               
-              {/* Category */}
-              <div className="bg-bg-surface rounded-lg px-3 py-2 text-center border border-border-default">
+              {/* Category — opens edit modal */}
+              <button
+                type="button"
+                onClick={() => setShowUnifiedEditModal(true)}
+                className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
+              >
                 <div className="text-text-primary font-semibold">{selectedCategory || 'Uncategorized'}</div>
                 <div className="text-caption">category</div>
-              </div>
+              </button>
             </div>
           )}
           
@@ -1600,6 +1643,17 @@ function BookDetail() {
           )}
         </div>
       </div>
+
+      {isWishlist && (
+        <div className="py-3">
+          <ReadingStatusCard
+            status="unread"
+            subtitle={book.tbr_priority ? `${book.tbr_priority.charAt(0).toUpperCase() + book.tbr_priority.slice(1)} priority` : null}
+            isWishlist
+            onAcquire={() => setShowAcquireModal(true)}
+          />
+        </div>
+      )}
 
       {/* Mobile Tab Navigation - only show on mobile for owned books */}
       {!isWishlist && (
@@ -1783,16 +1837,6 @@ function BookDetail() {
               </button>
             )}
             
-            {/* "I got this book" button */}
-            <div className="pt-3 border-t border-border-default">
-              <Button
-                variant="primary"
-                className="w-full"
-                onClick={() => setShowAcquireModal(true)}
-              >
-                I got this book!
-              </Button>
-            </div>
           </div>
         ) : (
           /* Library Reading Tracker UI - Reading History Only */
@@ -1801,10 +1845,22 @@ function BookDetail() {
             <div className={`mt-4 pt-4 border-t border-border-default ${activeTab !== 'history' ? 'hidden md:block' : ''}`}>
               <div className="space-y-4">
                 {/* Header */}
-                <div className="mb-3">
+                <div className="flex items-center justify-between mb-3">
                   <h3 id="reading-history" className="text-label uppercase tracking-wide">
                     Reading History
                   </h3>
+                  <button
+                    type="button"
+                    onClick={() => openAddSession()}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
+                    title="Add reading session"
+                    aria-label="Add reading session"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                      <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                      <path d="m15 5 4 4"/>
+                    </svg>
+                  </button>
                 </div>
 
                 {/* Sessions List */}
@@ -1866,6 +1922,8 @@ function BookDetail() {
                 openAddSession()
               }
             }}
+            onMarkFinished={() => setShowMarkFinishedModal(true)}
+            onChangeStatus={() => setShowChangeStatusModal(true)}
           />
         </div>
       )}
@@ -2042,10 +2100,22 @@ function BookDetail() {
         <div className="hidden md:block border-t border-border-default pt-4 mt-4">
           <div className="space-y-4">
             {/* Header */}
-            <div className="mb-3">
+            <div className="flex items-center justify-between mb-3">
               <h3 id="reading-history-desktop" className="text-label uppercase tracking-wide">
                 Reading History
               </h3>
+              <button
+                type="button"
+                onClick={() => openAddSession()}
+                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
+                title="Add reading session"
+                aria-label="Add reading session"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                  <path d="m15 5 4 4"/>
+                </svg>
+              </button>
             </div>
 
             {/* Sessions List */}
@@ -2092,30 +2162,33 @@ function BookDetail() {
       {/* Collections Section - show for owned books */}
       {!isWishlist && (
         <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
-          <div className="mb-3">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-label uppercase tracking-wide">Collections</h2>
+            <button
+              type="button"
+              onClick={() => setShowCollectionPicker(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
+              title="Edit"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                <path d="m15 5 4 4"/>
+              </svg>
+            </button>
           </div>
           
           {collectionsLoading ? (
             <div className="text-text-secondary text-sm">Loading...</div>
           ) : bookCollections.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
               {bookCollections.map(collection => (
-                <a
+                <Link
                   key={collection.id}
-                  href={`/collections/${collection.id}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-surface hover:bg-bg-elevated rounded-full text-sm text-text-body border border-border-default transition-colors"
+                  to={`/collections/${collection.id}`}
+                  className="text-action-primary hover:underline text-sm"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
                   {collection.name}
-                </a>
+                </Link>
               ))}
             </div>
           ) : (
@@ -2128,8 +2201,21 @@ function BookDetail() {
       {/* On mobile: only show in Notes tab (or always for wishlist). On desktop: always show */}
       <div className={`border-t border-border-default pt-4 mt-4 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-label uppercase tracking-wide">Notes</h2>
-          
+          <div className="flex items-center gap-2">
+            <h2 className="text-label uppercase tracking-wide">Notes</h2>
+            <button
+              type="button"
+              onClick={() => setIsEditingNotes(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
+              title="Edit"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                <path d="m15 5 4 4"/>
+              </svg>
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             {saveStatus === 'saved' && (
               <span className="text-action-success text-sm">✓ Saved</span>
@@ -2137,16 +2223,6 @@ function BookDetail() {
             {saveStatus === 'error' && (
               <span className="text-action-danger text-sm">Failed to save</span>
             )}
-            
-            <IconButton
-              size="sm"
-              onClick={() => setIsEditingNotes(true)}
-              aria-label="Edit notes"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </IconButton>
           </div>
         </div>
         
@@ -2907,6 +2983,22 @@ function BookDetail() {
           setBook(updatedBook)
         }}
       />
+
+      {showMarkFinishedModal && book && (
+        <MarkFinishedModal
+          book={book}
+          onConfirm={handleMarkFinishedConfirm}
+          onClose={() => setShowMarkFinishedModal(false)}
+        />
+      )}
+
+      {showChangeStatusModal && book && (
+        <ChangeStatusModal
+          book={book}
+          onConfirm={handleChangeStatusFromModal}
+          onClose={() => setShowChangeStatusModal(false)}
+        />
+      )}
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       <Modal
