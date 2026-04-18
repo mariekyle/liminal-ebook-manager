@@ -113,7 +113,7 @@ frontend/src/
   components/
     BookCard.jsx       - Book card (v4: variant prop, grid badges, progress bar)
     GradientCover.jsx  - CSS gradient covers ⚠️ PROTECTED
-    UnifiedEditModal.jsx - Tabbed edit modal
+    UnifiedEditModal.jsx - single-scroll edit modal
     ChangeCoverModal.jsx - Cover management modal
     BottomNav.jsx      - Bottom tab navigation
   components/ui/       - Shared design system components

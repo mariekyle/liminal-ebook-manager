@@ -442,11 +442,11 @@ function BookDetail() {
   const openAddSession = () => {
     setEditingSession(null)
     setSessionForm({
-      date_started: '',
+      date_started: new Date().toISOString().split('T')[0],
       date_finished: '',
       session_status: 'in_progress',
       rating: null,
-      format: ''
+      format: 'ebook'
     })
     setSessionError(null)
     setSessionModalOpen(true)
@@ -2647,18 +2647,15 @@ function BookDetail() {
               </div>
             </FormField>
 
-            {/* Rating */}
-            <FormField label="Rating">
-              <StarRating
-                value={sessionForm.rating}
-                onChange={(val) => setSessionForm({ ...sessionForm, rating: val })}
-                size="lg"
-                disabled={sessionForm.session_status === 'in_progress'}
-              />
-              {sessionForm.session_status === 'in_progress' && (
-                <p className="text-xs text-text-secondary mt-1">Rating available after marking Finished or DNF</p>
-              )}
-            </FormField>
+            {sessionForm.session_status !== 'in_progress' && (
+              <FormField label="Rating">
+                <StarRating
+                  value={sessionForm.rating}
+                  onChange={(val) => setSessionForm({ ...sessionForm, rating: val })}
+                  size="lg"
+                />
+              </FormField>
+            )}
           </div>
         </Modal.Body>
         <Modal.Footer>

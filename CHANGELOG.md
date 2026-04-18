@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.42.0] - 2026-04-18
+
+### Changed
+
+#### Fix Session 5: Form Input Guards
+Eliminated silent data loss and reduced friction across category, author, date, format, and rating inputs. Two new reusable primitives extracted; three form consumers and the session editor modal migrated. Addresses audit findings UF-11, UF-07, UF-12, UF-03, G3-07.
+
+**Author fields standardized (UF-11):**
+- Killed the ad-hoc chip + Enter-to-commit pattern in WishlistForm and ManualEntryForm
+- All three author-entry surfaces (UnifiedEditModal, WishlistForm, ManualEntryForm) now use a single `<AuthorInput>` primitive: plain text input with comma separation, shared autocomplete
+- "Press Enter to add" is gone; save always commits whatever is in the field
+- UnifiedEditModal previously had no author autocomplete — now does, for consistency
+
+**Category selector is a segmented control (UF-12):**
+- Replaced `<select>` dropdowns with a new `<SegmentedControl>` primitive in all three forms
+- Four options visible at once: Uncategorized / Fiction / Non-Fiction / FanFiction
+- 11px text (`size="sm"`) fits the row on mobile widths
+- WishlistForm and ManualEntryForm now default to `'Uncategorized'` (was `'FanFiction'`) — honest "I don't know" beats a confident wrong default; gives a natural triage workflow via filter-by-Uncategorized
+
+**New reading session smart defaults (UF-07):**
+- `date_started` pre-filled with today's date (user still has a calendar picker for backdating)
+- `format` pre-selected to `'ebook'` (matches the library composition; still editable)
+- Common path: zero taps to log a session starting today in the default format
+
+**Rating visibility fixed (UF-03, G3-07):**
+- StarRating component + label + help text are hidden entirely when session status is In Progress — no more disabled/grayed stars as a false affordance
+- Renders only when status is Finished or DNF
+- Rating value preserved across status toggles (pick 4 stars on Finished → flip to In Progress and back → 4 stars still there)
+
+### Added
+
+- **`frontend/src/components/ui/SegmentedControl.jsx`** — NEW primitive. `role="group"`, `aria-pressed` on each option, `size` prop (`sm` for dense 4-option rows at 11px, `md` for default at text-body-sm). 44px total touch target (40px button inside 44px container). Full labels, no truncation, `flex-1` width distribution.
+- **`frontend/src/components/ui/AuthorInput.jsx`** — NEW primitive. Single-line text input for comma-separated authors with built-in autocomplete. Fetches `listAuthors()` once on mount and caches client-side. Debounced (150ms) suggestion filter on the last comma-delimited fragment. Committed names excluded from suggestions. Suggestions sorted starts-with first, then alphabetical, capped at 8. `onMouseDown` + `preventDefault` on suggestion buttons prevents input blur before the click registers. Dropdown `z-[70]` works in both modal and page contexts.
+
+### Fixed
+
+- **`WishlistForm` / `ManualEntryForm` validate() falsely accepted comma-only strings:** strings like `", , "` passed the simple `.trim()` check, then split to `[]`, producing a silent-failure submit. Both validators now mirror the submit logic — split by comma, trim, filter empty, require `length > 0`. Caught by Cursor review agent.
+- **`openAddSession` introduced invalid `rating: 0` default:** the Session 5 prompt wrote `rating: 0`, but the API validator only accepts `1-5` or `null`. Would have thrown 422 on any Finished/DNF session saved without tapping a star. Restored to `rating: null`. `StarRating` already treats null as "no rating set" (shows 0 lit stars, clickable). Caught by Cursor review agent.
+
+### Technical
+- Files created: `frontend/src/components/ui/SegmentedControl.jsx`, `frontend/src/components/ui/AuthorInput.jsx`
+- Files modified: `frontend/src/components/UnifiedEditModal.jsx`, `frontend/src/components/add/WishlistForm.jsx`, `frontend/src/components/add/ManualEntryForm.jsx`, `frontend/src/components/BookDetail.jsx`
+- Frontend only — no Docker rebuild required.
+- `listAuthors` import moved from the two forms into `AuthorInput`; `useRef` removed from forms where no longer referenced.
+- `selectClasses` constant in UnifiedEditModal preserved — still used by Pairing Type, Completion Status, Content Rating, Warnings selects.
+- Priority segmented (WishlistForm), Format segmented (ManualEntryForm), Completion Status segmented (both), and Status segmented (BookDetail session modal) deliberately left as their existing Button-based pseudo-segmented patterns — out of Session 5 scope.
+
+### Parked (not addressed in this session)
+- **AuthorInput cursor-mid-string limitation:** if the user positions their cursor mid-string and types, fragment detection still reads the last comma-delimited segment. Matches `SearchableInput` behavior. Most users edit author lists at end; defer unless this causes real friction.
+- **Optional: show full author list on empty focus:** currently the dropdown only opens after typing. "Show me what's available" preview could help discoverability but risks noise. Revisit if testing surfaces the need.
+
+---
+
+## [0.41.0] - 2026-04-18
+
+### Changed
+
+#### Fix Session 4: Edit Modal Reorganization
+Restructured UnifiedEditModal from a three-tab layout into a single scrollable form with labeled section dividers. Addresses audit findings UF-25, UF-26, UF-27, G3-02, G3-03.
+
+**Tabs killed.** `activeTab` state, `tabs` array, `showMetadataTab` flag, and `tabBtn` helper removed. No more tab navigation UI — users scroll through one continuous form.
+
+**Three labeled sections:**
+- **Identity** — Title, Author(s), Series + Number, Year, Source URL
+- **Classification** (divider above) — Category, Tags, Pairing Type (conditional on Fiction/FanFiction), Summary / "Why this one?"
+- **Fandom Details** (conditional on FanFiction + non-wishlist) — Completion Status, Fandom, Ships, Content Rating, Warnings. Wrapped in a subtle teal-tinted card (`bg-action-primary/5` + `border-action-primary/20`) to visually group the fandom-only fields.
+
+**Category now lives in Classification** alongside Tags, fixing UF-26 (previously split across Details and About tabs).
+
+### Added
+
+- **Scroll reset on open (G3-02):** `bodyRef` + `requestAnimationFrame` sets `scrollTop = 0` when modal opens. No more mid-form start position.
+- **Unsaved changes guard (G3-03):** dirty-flag comparison via `JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)`. When the user attempts to close (Cancel / X / backdrop / Escape) with unsaved edits, the form body is replaced by a centered confirmation view — "Discard unsaved changes?" with Keep Editing (ghost) and Discard (danger) buttons. Keep Editing restores the form and scroll position via `savedScrollTopRef`. Footer hidden during confirmation. While confirmation is showing, X/backdrop/Escape behave as Keep Editing (no double-loss).
+- `initialFormDataRef` refreshed after successful save, so edit → save → edit again → Cancel correctly re-triggers confirmation.
+
+### Technical
+- Files modified: `frontend/src/components/UnifiedEditModal.jsx`, `.cursorrules` (description updated from "Tabbed edit modal" to "Single-scroll edit modal with section dividers")
+- Frontend only — no Docker rebuild required.
+- `Button` component supports `variant="danger"` natively; no className fallback needed.
+
+### Parked (not addressed in this session)
+- **Book prop change during editing:** if the parent re-renders the modal with a different `book` prop while `isOpen` is true, the initialization `useEffect` resets `formData` and silently discards in-progress edits. This is pre-existing behavior inherited from the tabbed version, not a Session 4 regression. No current flow triggers it (BookDetail does not refetch or swap `book` while the modal is open). Defer until a refetch/polling mechanism makes the failure mode reachable.
+
+---
+
 ## [0.40.0] - 2026-04-18
 
 ### Added

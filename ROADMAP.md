@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** April 18, 2026 (v0.40.0)  
+> **Last Updated:** April 18, 2026 (v0.42.0)  
 > **Current Focus:** Phase 10.0D — UX Audit Fix Sessions  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.40.0)
+## Current State (v0.42.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
-| UX fix sessions | 🔄 In progress — 3/10 shipped, 4-10 decisions locked, +11 final audit |
+| UX fix sessions | 🔄 In progress — 5/10 shipped, 6-10 decisions locked, +11 final audit |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -241,7 +241,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 ### 10.0D: UX Audit Fix Sessions ← CURRENT
 
 **Priority:** P0 — Fix What's Broken Before Building What's New  
-**Status:** 🔄 In Progress (Sessions 1-3 shipped, Sessions 4-10 decisions locked, Session 11 planned)  
+**Status:** 🔄 In Progress (Sessions 1-5 shipped, Sessions 6-10 decisions locked, Session 11 planned)  
 **Sessions:** 10 + 1 (final audit)  
 **Based on:** `liminal-ux-audit.md` (141 findings, NNG heuristic + WCAG AA + user flows pass)
 
@@ -260,8 +260,8 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 | 1 | Emergency: Broken Wishlist Conversion | Silent failure, fake success screen, raw SQL error, half-state data | UF-14, UF-15, UF-16 | ✅ v0.38.0 |
 | 2 | One-Line Wins: Contrast + Grid | Lighten text-caption token, fix grid settings across pages | G1-02, G2-03, UF-32, G1-03, G4-02 | ✅ v0.39.1 |
 | 3 | BookDetail Action Architecture | Make metadata blocks tappable, add Mark Finished shortcut, inline section actions | UF-01, UF-02, UF-05, UF-06, UF-20, UF-24, G2-11, G2-12 | ✅ v0.40.0 |
-| 4 | Edit Modal Reorganization | Kill tabs → single scroll form, section dividers, unsaved changes guard | UF-25, UF-26, UF-27, G3-02, G3-03 | 🟡 Decisions locked |
-| 5 | Form Input Guards | Plain text authors, default date+format, segmented category, hide rating | UF-11, UF-07, UF-12, UF-03, G3-07 | 🟡 Decisions locked |
+| 4 | Edit Modal Reorganization | Kill tabs → single scroll form, section dividers, unsaved changes guard | UF-25, UF-26, UF-27, G3-02, G3-03 | ✅ v0.41.0 |
+| 5 | Form Input Guards | Plain text authors, default date+format, segmented category, hide rating | UF-11, UF-07, UF-12, UF-03, G3-07 | ✅ v0.42.0 |
 | 6 | Search and Sort Everywhere | CollectionPicker search+create, author sort+series grouping, collection search | UF-21, UF-30, UF-31, G3-08, G5-13 | 🟡 Decisions locked |
 | 7 | Settings Consolidation | SettingsDrawer → /settings page, NNG goal-based sections, kill gear icon | G1-11, G6-08, G1-07 | 🟡 Decisions locked |
 | 8 | Status Label + Voice/Tone | DNF defaults, useStatusLabels everywhere, microcopy fixes | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | 🟡 Decisions locked |
@@ -825,4 +825,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: April 18, 2026 (v0.40.0)*
+*Last updated: April 18, 2026 (v0.42.0)*

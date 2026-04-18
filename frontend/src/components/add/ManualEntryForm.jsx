@@ -5,33 +5,37 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { listAuthors, listBooks } from '../../api'
+import { listBooks } from '../../api'
 import Button from '../ui/Button'
 import FormField from '../ui/FormField'
+import SegmentedControl from '../ui/SegmentedControl'
+import AuthorInput from '../ui/AuthorInput'
 
 const inputClass = (hasError) =>
   `w-full bg-bg-elevated border rounded-lg px-4 py-3 text-text-primary text-sm font-[inherit] placeholder:text-text-muted transition-[border-color] duration-200 ease-out focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus ${
     hasError ? 'border-action-danger' : 'border-border-default'
   }`
 
+const CATEGORY_OPTIONS = [
+  { value: 'Uncategorized', label: 'Uncategorized' },
+  { value: 'Fiction', label: 'Fiction' },
+  { value: 'Non-Fiction', label: 'Non-Fiction' },
+  { value: 'FanFiction', label: 'FanFiction' },
+]
+
 export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, initialFormat = 'physical' }) {
   const [form, setForm] = useState({
     title: '',
-    authors: [],
-    authorInput: '',
+    authors: '',
     series: '',
     seriesNumber: '',
-    category: 'FanFiction',
+    category: 'Uncategorized',
     format: initialFormat,
     sourceUrl: '',
     completionStatus: '',
   })
   
   const [errors, setErrors] = useState({})
-  const [allAuthors, setAllAuthors] = useState([])
-  const [filteredAuthors, setFilteredAuthors] = useState([])
-  const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
-  const authorInputRef = useRef(null)
 
   // Title autocomplete state
   const [titleSuggestions, setTitleSuggestions] = useState([])
@@ -46,29 +50,6 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   const isAddingFormat = selectedExistingTitle !== null
   const showUrlField = form.format === 'web' || showFanficFields
   
-  // Fetch all authors on mount
-  useEffect(() => {
-    listAuthors().then(data => {
-      setAllAuthors((data.authors || []).map(a => a.name))
-    }).catch(console.error)
-  }, [])
-  
-  // Filter authors as user types
-  useEffect(() => {
-    if (form.authorInput.trim()) {
-      const query = form.authorInput.toLowerCase()
-      const filtered = allAuthors
-        .filter(a => a.toLowerCase().includes(query))
-        .filter(a => !form.authors.includes(a))
-        .slice(0, 8)
-      setFilteredAuthors(filtered)
-      setShowAuthorDropdown(filtered.length > 0)
-    } else {
-      setFilteredAuthors([])
-      setShowAuthorDropdown(false)
-    }
-  }, [form.authorInput, allAuthors, form.authors])
-
   // Search titles as user types (debounced)
   useEffect(() => {
     // Clear previous timeout
@@ -112,7 +93,8 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   const validate = () => {
     const newErrors = {}
     if (!form.title.trim()) newErrors.title = 'Title is required'
-    if (form.authors.length === 0 && !form.authorInput.trim()) {
+    const parsedAuthors = form.authors.split(',').map((a) => a.trim()).filter((a) => a.length > 0)
+    if (parsedAuthors.length === 0) {
       newErrors.author = 'At least one author is required'
     }
     if (form.format === 'web' && !form.sourceUrl.trim()) {
@@ -124,13 +106,9 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    // Add any pending author input
-    let finalAuthors = [...form.authors]
-    if (form.authorInput.trim() && !finalAuthors.includes(form.authorInput.trim())) {
-      finalAuthors.push(form.authorInput.trim())
-    }
-    
+
+    const finalAuthors = form.authors.split(',').map((a) => a.trim()).filter((a) => a.length > 0)
+
     if (!form.title.trim() || finalAuthors.length === 0) {
       const newErrors = {}
       if (!form.title.trim()) newErrors.title = 'Title is required'
@@ -159,25 +137,9 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }))
     }
-  }
-  
-  const addAuthor = (author) => {
-    if (author && !form.authors.includes(author)) {
-      setForm(prev => ({
-        ...prev,
-        authors: [...prev.authors, author],
-        authorInput: ''
-      }))
-      setShowAuthorDropdown(false)
+    if (field === 'authors' && errors.author) {
       setErrors(prev => ({ ...prev, author: null }))
     }
-  }
-  
-  const removeAuthor = (author) => {
-    setForm(prev => ({
-      ...prev,
-      authors: prev.authors.filter(a => a !== author)
-    }))
   }
 
   const selectTitleSuggestion = (book) => {
@@ -192,8 +154,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
     setForm(prev => ({
       ...prev,
       title: book.title,
-      authors: book.authors || [],
-      authorInput: '',
+      authors: Array.isArray(book.authors) ? book.authors.join(', ') : (book.authors || ''),
       series: book.series || '',
       seriesNumber: book.series_number || '',
       category: book.category || prev.category,
@@ -205,26 +166,6 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
 
   const clearExistingSelection = () => {
     setSelectedExistingTitle(null)
-  }
-  
-  // FIXED: Mobile-friendly Enter key handling
-  const handleAuthorKeyDown = (e) => {
-    // Check both e.key and e.keyCode for mobile compatibility
-    const isEnterKey = e.key === 'Enter' || e.keyCode === 13
-    const isBackspace = e.key === 'Backspace' || e.keyCode === 8
-    
-    if (isEnterKey) {
-      // ALWAYS prevent default first to stop form submission / field navigation
-      e.preventDefault()
-      e.stopPropagation()
-      
-      if (form.authorInput.trim()) {
-        addAuthor(form.authorInput.trim())
-      }
-    } else if (isBackspace && !form.authorInput && form.authors.length > 0) {
-      // Remove last author if input is empty
-      removeAuthor(form.authors[form.authors.length - 1])
-    }
   }
   
   return (
@@ -324,57 +265,13 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           </div>
         )}
 
-        <div className="relative">
-          <span className="block text-label mb-2">Author *</span>
-          {form.authors.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {form.authors.map((author) => (
-                <span
-                  key={author}
-                  className="bg-action-primary/15 text-action-primary px-3 py-1 rounded-full text-body-sm inline-flex items-center gap-2"
-                >
-                  {author}
-                  <button
-                    type="button"
-                    onClick={() => removeAuthor(author)}
-                    className="hover:text-text-primary transition-colors"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <input
-            ref={authorInputRef}
-            type="text"
-            value={form.authorInput}
-            onChange={(e) => updateForm('authorInput', e.target.value)}
-            onKeyDown={handleAuthorKeyDown}
-            onFocus={() => form.authorInput.trim() && setShowAuthorDropdown(filteredAuthors.length > 0)}
-            onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
-            placeholder={form.authors.length > 0 ? 'Add another author...' : 'Who wrote it?'}
-            enterKeyHint="done"
-            autoComplete="off"
+        <FormField label="Author *" error={errors.author}>
+          <AuthorInput
+            value={form.authors}
+            onChange={(v) => updateForm('authors', v)}
             className={inputClass(!!errors.author)}
           />
-          {showAuthorDropdown && (
-            <div className="absolute z-10 w-full mt-1 bg-bg-elevated border border-border-default rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {filteredAuthors.map((author) => (
-                <button
-                  key={author}
-                  type="button"
-                  onClick={() => addAuthor(author)}
-                  className="w-full text-left px-4 py-2 min-h-[44px] text-body-sm text-text-secondary hover:bg-bg-surface"
-                >
-                  {author}
-                </button>
-              ))}
-            </div>
-          )}
-          {errors.author && <p className="mt-1.5 text-xs text-action-danger">{errors.author}</p>}
-          <p className="text-caption text-text-muted mt-1">Press Enter to add multiple authors</p>
-        </div>
+        </FormField>
 
         <div className="flex gap-3">
           <div className="flex-1">
@@ -391,15 +288,13 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
         </div>
 
         <FormField label="Category">
-          <select
+          <SegmentedControl
+            size="sm"
             value={form.category}
-            onChange={(e) => updateForm('category', e.target.value)}
-            className="w-full h-11 px-3 rounded-lg text-body-sm text-text-primary bg-bg-elevated border border-border-default focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus"
-          >
-            <option value="Fiction">Fiction</option>
-            <option value="Non-Fiction">Non-Fiction</option>
-            <option value="FanFiction">FanFiction</option>
-          </select>
+            onChange={(val) => updateForm('category', val)}
+            options={CATEGORY_OPTIONS}
+            ariaLabel="Category"
+          />
         </FormField>
 
         {showFanficFields && (

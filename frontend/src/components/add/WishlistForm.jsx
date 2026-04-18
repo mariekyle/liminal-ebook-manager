@@ -5,23 +5,32 @@
  * Features: Multi-author chips, autocomplete for title/author/series
  */
 
-import { useState, useEffect, useRef } from 'react'
-import { listBooks, listAuthors, listSeries } from '../../api'
+import { useState, useEffect } from 'react'
+import { listBooks, listSeries } from '../../api'
 import Button from '../ui/Button'
 import FormField from '../ui/FormField'
+import SegmentedControl from '../ui/SegmentedControl'
+import AuthorInput from '../ui/AuthorInput'
 
 const inputClass = (hasError) =>
   `w-full bg-bg-elevated border rounded-lg px-4 py-3 text-text-primary text-sm font-[inherit] placeholder:text-text-muted transition-[border-color] duration-200 ease-out focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus ${
     hasError ? 'border-action-danger' : 'border-border-default'
   }`
 
+const CATEGORY_OPTIONS = [
+  { value: 'Uncategorized', label: 'Uncategorized' },
+  { value: 'Fiction', label: 'Fiction' },
+  { value: 'Non-Fiction', label: 'Non-Fiction' },
+  { value: 'FanFiction', label: 'FanFiction' },
+]
+
 export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
   const [form, setForm] = useState({
     title: '',
-    authors: [],
+    authors: '',
     series: '',
     seriesNumber: '',
-    category: 'FanFiction',
+    category: 'Uncategorized',
     priority: 'normal',
     reason: '',
     completionStatus: '',
@@ -30,22 +39,14 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
   
   const [errors, setErrors] = useState({})
   
-  // Author input (separate from form.authors array)
-  const [authorInput, setAuthorInput] = useState('')
-  
   // Autocomplete states
   const [titleSuggestions, setTitleSuggestions] = useState([])
-  const [authorSuggestions, setAuthorSuggestions] = useState([])
   const [seriesSuggestions, setSeriesSuggestions] = useState([])
   const [showTitleDropdown, setShowTitleDropdown] = useState(false)
-  const [showAuthorDropdown, setShowAuthorDropdown] = useState(false)
   const [showSeriesDropdown, setShowSeriesDropdown] = useState(false)
   
   // Familiar title warning
   const [familiarTitle, setFamiliarTitle] = useState(null)
-  
-  // Refs for managing focus
-  const authorInputRef = useRef(null)
   
   const showFanficFields = form.category === 'FanFiction'
   
@@ -89,42 +90,6 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
     
     return () => clearTimeout(timer)
   }, [form.title])
-  
-  // Author autocomplete
-  useEffect(() => {
-    if (!authorInput || authorInput.length < 1) {
-      setAuthorSuggestions([])
-      return
-    }
-    
-    const timer = setTimeout(async () => {
-      try {
-        const data = await listAuthors()
-        // Extract author names from response object
-        const authorNames = (data.authors || []).map(a => a.name)
-        const filtered = authorNames
-          .filter(author => 
-            author.toLowerCase().includes(authorInput.toLowerCase()) &&
-            !form.authors.includes(author)
-          )
-          .sort((a, b) => {
-            // Prioritize starts-with matches
-            const aStarts = a.toLowerCase().startsWith(authorInput.toLowerCase())
-            const bStarts = b.toLowerCase().startsWith(authorInput.toLowerCase())
-            if (aStarts && !bStarts) return -1
-            if (!aStarts && bStarts) return 1
-            return a.localeCompare(b)
-          })
-          .slice(0, 5)
-        
-        setAuthorSuggestions(filtered)
-      } catch (err) {
-        console.error('Author autocomplete error:', err)
-      }
-    }, 200)
-    
-    return () => clearTimeout(timer)
-  }, [authorInput, form.authors])
   
   // Series autocomplete
   useEffect(() => {
@@ -199,7 +164,8 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
   const validate = () => {
     const newErrors = {}
     if (!form.title.trim()) newErrors.title = 'Title is required'
-    if (form.authors.length === 0) newErrors.authors = 'At least one author is required'
+    const parsedAuthors = form.authors.split(',').map((a) => a.trim()).filter((a) => a.length > 0)
+    if (parsedAuthors.length === 0) newErrors.authors = 'At least one author is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -210,7 +176,7 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
     
     onSubmit({
       title: form.title.trim(),
-      authors: form.authors,
+      authors: form.authors.split(',').map((a) => a.trim()).filter((a) => a.length > 0),
       series: form.series.trim() || null,
       series_number: form.seriesNumber.trim() || null,
       category: form.category,
@@ -225,58 +191,6 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
     setForm(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }))
-    }
-  }
-  
-  // Author management
-  const handleAddAuthor = (author) => {
-    const trimmed = author.trim()
-    if (!trimmed) return
-    
-    // Check if author already exists (case-insensitive)
-    const existingIndex = form.authors.findIndex(
-      a => a.toLowerCase() === trimmed.toLowerCase()
-    )
-    
-    if (existingIndex >= 0) {
-      // Replace existing with new version (better capitalization from autocomplete)
-      const updatedAuthors = [...form.authors]
-      updatedAuthors[existingIndex] = trimmed
-      setForm(prev => ({ ...prev, authors: updatedAuthors }))
-    } else {
-      // Add new author
-      setForm(prev => ({ ...prev, authors: [...prev.authors, trimmed] }))
-    }
-    
-    setAuthorInput('')
-    setShowAuthorDropdown(false)
-    if (errors.authors) {
-      setErrors(prev => ({ ...prev, authors: null }))
-    }
-  }
-  
-  const handleRemoveAuthor = (authorToRemove) => {
-    setForm(prev => ({
-      ...prev,
-      authors: prev.authors.filter(a => a !== authorToRemove)
-    }))
-  }
-  
-  // FIXED: Mobile-friendly Enter key handling
-  const handleAuthorKeyDown = (e) => {
-    // Check both e.key and e.keyCode for mobile compatibility
-    const isEnterKey = e.key === 'Enter' || e.keyCode === 13
-    
-    if (isEnterKey) {
-      // ALWAYS prevent default first to stop form submission / field navigation
-      e.preventDefault()
-      e.stopPropagation()
-      
-      if (authorSuggestions.length > 0) {
-        handleAddAuthor(authorSuggestions[0])
-      } else if (authorInput.trim()) {
-        handleAddAuthor(authorInput)
-      }
     }
   }
   
@@ -342,62 +256,13 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
           )}
         </div>
 
-        <div>
-          <span className="block text-label mb-2">Author(s) *</span>
-          {form.authors.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {form.authors.map((author, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-action-primary/15 text-action-primary rounded-full text-body-sm"
-                >
-                  {author}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAuthor(author)}
-                    className="hover:text-text-primary ml-1 min-w-[32px] min-h-[32px]"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="relative">
-            <input
-              ref={authorInputRef}
-              type="text"
-              value={authorInput}
-              onChange={(e) => {
-                setAuthorInput(e.target.value)
-                setShowAuthorDropdown(true)
-              }}
-              onKeyDown={handleAuthorKeyDown}
-              onFocus={() => setShowAuthorDropdown(true)}
-              onBlur={() => setTimeout(() => setShowAuthorDropdown(false), 200)}
-              placeholder={form.authors.length === 0 ? 'Who wrote it?' : 'Add another author...'}
-              enterKeyHint="done"
-              autoComplete="off"
-              className={inputClass(!!errors.authors)}
-            />
-            {showAuthorDropdown && authorSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-bg-elevated border border-border-default rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {authorSuggestions.map((author, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="w-full text-left px-4 py-2 min-h-[44px] text-body-sm text-text-secondary hover:bg-bg-surface"
-                    onClick={() => handleAddAuthor(author)}
-                  >
-                    {author}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {errors.authors && <p className="mt-1.5 text-xs text-action-danger">{errors.authors}</p>}
-          <p className="text-caption text-text-muted mt-1">Press Enter to add each author</p>
-        </div>
+        <FormField label="Author(s) *" error={errors.authors}>
+          <AuthorInput
+            value={form.authors}
+            onChange={(v) => updateForm('authors', v)}
+            className={inputClass(!!errors.authors)}
+          />
+        </FormField>
 
         <div className="flex gap-3">
           <div className="flex-1">
@@ -438,15 +303,13 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
         </div>
 
         <FormField label="Category">
-          <select
+          <SegmentedControl
+            size="sm"
             value={form.category}
-            onChange={(e) => updateForm('category', e.target.value)}
-            className="w-full h-11 px-3 rounded-lg text-body-sm text-text-primary bg-bg-elevated border border-border-default focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus"
-          >
-            <option value="Fiction">Fiction</option>
-            <option value="Non-Fiction">Non-Fiction</option>
-            <option value="FanFiction">FanFiction</option>
-          </select>
+            onChange={(val) => updateForm('category', val)}
+            options={CATEGORY_OPTIONS}
+            ariaLabel="Category"
+          />
         </FormField>
 
         {showFanficFields && (

@@ -4,11 +4,20 @@ import Modal from './ui/Modal'
 import Button from './ui/Button'
 import FormField from './ui/FormField'
 import ChipInput from './ui/ChipInput'
+import SegmentedControl from './ui/SegmentedControl'
+import AuthorInput from './ui/AuthorInput'
 
 const PAIRING_TYPES = ['None', 'M/M', 'F/F', 'M/F', 'Multi', 'Gen', 'Other']
 const COMPLETION_STATUSES = ['Complete', 'In Progress', 'Abandoned', 'Unknown']
 const CONTENT_RATINGS = ['Not Rated', 'General', 'Teen', 'Mature', 'Explicit']
 const WARNINGS_OPTIONS = ['None', 'Choose Not To Warn', 'Violence', 'Major Character Death']
+
+const CATEGORY_OPTIONS = [
+  { value: 'Uncategorized', label: 'Uncategorized' },
+  { value: 'Fiction', label: 'Fiction' },
+  { value: 'Non-Fiction', label: 'Non-Fiction' },
+  { value: 'FanFiction', label: 'FanFiction' },
+]
 
 const selectClasses =
   'w-full h-11 px-3 rounded-lg bg-bg-elevated border border-border-default text-text-primary text-body-sm font-[inherit] cursor-pointer focus:outline-none focus:border-action-primary focus:ring-[3px] focus:ring-action-primary/15'
@@ -305,12 +314,13 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                 onChange={(v) => handleInputChange('title', v)}
               />
 
-              <FormField
-                label="Author(s)"
-                value={formData.authors}
-                onChange={(v) => handleInputChange('authors', v)}
-                placeholder="Separate multiple authors with commas"
-              />
+              <FormField label="Author(s)">
+                <AuthorInput
+                  value={formData.authors}
+                  onChange={(v) => handleInputChange('authors', v)}
+                  className="w-full h-11 px-3 rounded-lg bg-bg-elevated border border-border-default text-text-primary text-body-sm font-[inherit] placeholder:text-text-muted focus:outline-none focus:border-action-primary focus:ring-[3px] focus:ring-action-primary/15"
+                />
+              </FormField>
 
               <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
                 <FormField label="Series">
@@ -352,16 +362,13 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
               <h3 className="text-label text-text-secondary uppercase tracking-wide">Classification</h3>
 
               <FormField label="Category">
-                <select
+                <SegmentedControl
+                  size="sm"
                   value={formData.category}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  className={selectClasses}
-                >
-                  <option value="Uncategorized">Uncategorized</option>
-                  <option value="Fiction">Fiction</option>
-                  <option value="Non-Fiction">Non-Fiction</option>
-                  <option value="FanFiction">FanFiction</option>
-                </select>
+                  onChange={(val) => handleInputChange('category', val)}
+                  options={CATEGORY_OPTIONS}
+                  ariaLabel="Category"
+                />
               </FormField>
 
               <ChipInput
