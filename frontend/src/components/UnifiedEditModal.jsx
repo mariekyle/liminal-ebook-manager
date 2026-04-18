@@ -128,13 +128,12 @@ const SeriesInput = ({ value, onChange, allSeries }) => {
 }
 
 export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWishlist }) {
-  const isFanFiction = book?.category === 'FanFiction'
-  const showMetadataTab = isFanFiction && !isWishlist
-  const tabs = showMetadataTab ? ['Details', 'About', 'Metadata'] : ['Details', 'About']
-
-  const [activeTab, setActiveTab] = useState('Details')
   const [allSeries, setAllSeries] = useState([])
   const [saving, setSaving] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const initialFormDataRef = useRef(null)
+  const bodyRef = useRef(null)
+  const savedScrollTopRef = useRef(0)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -156,7 +155,7 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
 
   useEffect(() => {
     if (book && isOpen) {
-      setFormData({
+      const initial = {
         title: book.title || '',
         authors: Array.isArray(book.authors) ? book.authors.join(', ') : book.authors || '',
         series: book.series || '',
@@ -172,8 +171,13 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
         ships: Array.isArray(book.relationships) ? book.relationships.join(', ') : book.ships || '',
         content_rating: book.content_rating || 'Not Rated',
         warnings: Array.isArray(book.ao3_warnings) && book.ao3_warnings.length > 0 ? book.ao3_warnings[0] : 'None',
+      }
+      setFormData(initial)
+      initialFormDataRef.current = initial
+      setShowDiscardConfirm(false)
+      requestAnimationFrame(() => {
+        if (bodyRef.current) bodyRef.current.scrollTop = 0
       })
-      setActiveTab('Details')
     }
   }, [book, isOpen])
 
@@ -188,6 +192,35 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const isDirty = () =>
+    initialFormDataRef.current !== null &&
+    JSON.stringify(formData) !== JSON.stringify(initialFormDataRef.current)
+
+  const handleKeepEditing = () => {
+    setShowDiscardConfirm(false)
+    requestAnimationFrame(() => {
+      if (bodyRef.current) bodyRef.current.scrollTop = savedScrollTopRef.current
+    })
+  }
+
+  const handleDiscard = () => {
+    setShowDiscardConfirm(false)
+    onClose()
+  }
+
+  const attemptClose = () => {
+    if (showDiscardConfirm) {
+      handleKeepEditing()
+      return
+    }
+    if (isDirty()) {
+      if (bodyRef.current) savedScrollTopRef.current = bodyRef.current.scrollTop
+      setShowDiscardConfirm(true)
+      return
+    }
+    onClose()
   }
 
   const handleSave = async () => {
@@ -226,6 +259,7 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
       }
 
       await onSave(updates)
+      initialFormDataRef.current = { ...formData }
       onClose()
     } catch (error) {
       console.error('Failed to save:', error)
@@ -237,30 +271,39 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
   if (!isOpen || !book) return null
 
   const showPairingType = formData.category === 'Fiction' || formData.category === 'FanFiction'
-
-  const tabBtn = (tab) =>
-    `flex-1 min-h-[44px] py-2 px-3 rounded-md text-body-sm font-medium transition-all duration-200 ease-out ${
-      activeTab === tab ? 'bg-bg-elevated text-text-primary shadow-sm' : 'text-text-muted hover:text-text-primary'
-    }`
+  const showFandomDetails = formData.category === 'FanFiction' && !isWishlist
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" fullscreenOnMobile>
-      <Modal.Header onClose={onClose}>Edit</Modal.Header>
+    <Modal isOpen={isOpen} onClose={attemptClose} size="lg" fullscreenOnMobile>
+      <Modal.Header onClose={attemptClose}>Edit</Modal.Header>
       <Modal.Body className="flex flex-col min-h-0">
-        <div className="px-1 pb-4 border-b border-border-subtle flex-shrink-0">
-          <div className="flex bg-bg-base rounded-lg p-0.5 border border-border-subtle">
-            {tabs.map((tab) => (
-              <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={tabBtn(tab)}>
-                {tab}
-              </button>
-            ))}
+        {showDiscardConfirm ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-8 gap-6">
+            <div className="space-y-2">
+              <h3 className="text-h4 text-text-primary">Discard unsaved changes?</h3>
+              <p className="text-body-sm text-text-secondary max-w-xs">
+                Your edits to this title will be lost.
+              </p>
+            </div>
+            <div className="flex gap-3 w-full max-w-xs">
+              <Button variant="ghost" size="md" onClick={handleKeepEditing} className="flex-1">
+                Keep Editing
+              </Button>
+              <Button variant="danger" size="md" onClick={handleDiscard} className="flex-1">
+                Discard
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div ref={bodyRef} className="flex-1 overflow-y-auto py-4 space-y-6">
+            <section className="space-y-5">
+              <h3 className="text-label text-text-secondary uppercase tracking-wide">Identity</h3>
 
-        <div className="flex-1 overflow-y-auto py-4 space-y-5">
-          {activeTab === 'Details' && (
-            <>
-              <FormField label="Title" value={formData.title} onChange={(v) => handleInputChange('title', v)} />
+              <FormField
+                label="Title"
+                value={formData.title}
+                onChange={(v) => handleInputChange('title', v)}
+              />
 
               <FormField
                 label="Author(s)"
@@ -271,7 +314,11 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
 
               <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
                 <FormField label="Series">
-                  <SeriesInput value={formData.series} onChange={(val) => handleInputChange('series', val)} allSeries={allSeries} />
+                  <SeriesInput
+                    value={formData.series}
+                    onChange={(val) => handleInputChange('series', val)}
+                    allSeries={allSeries}
+                  />
                 </FormField>
                 <div className="max-w-48">
                   <FormField
@@ -282,19 +329,6 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                   />
                 </div>
               </div>
-
-              <FormField label="Category">
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  className={selectClasses}
-                >
-                  <option value="Uncategorized">Uncategorized</option>
-                  <option value="Fiction">Fiction</option>
-                  <option value="Non-Fiction">Non-Fiction</option>
-                  <option value="FanFiction">FanFiction</option>
-                </select>
-              </FormField>
 
               <div className="max-w-48">
                 <FormField
@@ -312,21 +346,23 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                 onChange={(v) => handleInputChange('source_url', v)}
                 placeholder="https://..."
               />
-            </>
-          )}
+            </section>
 
-          {activeTab === 'About' && (
-            <>
-              <FormField
-                label={isWishlist ? 'Why this one?' : 'Summary'}
-                type="textarea"
-                rows={5}
-                value={formData.summary}
-                onChange={(v) => handleInputChange('summary', v)}
-                placeholder={
-                  isWishlist ? 'Why do you want to read this?' : 'Title summary or description...'
-                }
-              />
+            <section className="pt-6 border-t border-border-subtle space-y-5">
+              <h3 className="text-label text-text-secondary uppercase tracking-wide">Classification</h3>
+
+              <FormField label="Category">
+                <select
+                  value={formData.category}
+                  onChange={(e) => handleInputChange('category', e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="Uncategorized">Uncategorized</option>
+                  <option value="Fiction">Fiction</option>
+                  <option value="Non-Fiction">Non-Fiction</option>
+                  <option value="FanFiction">FanFiction</option>
+                </select>
+              </FormField>
 
               <ChipInput
                 label="Tags"
@@ -351,83 +387,98 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                   </select>
                 </FormField>
               )}
-            </>
-          )}
 
-          {activeTab === 'Metadata' && showMetadataTab && (
-            <>
-              <FormField label="Completion Status">
-                <select
-                  value={formData.completion_status}
-                  onChange={(e) => handleInputChange('completion_status', e.target.value)}
-                  className={selectClasses}
-                >
-                  {COMPLETION_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+              <FormField
+                label={isWishlist ? 'Why this one?' : 'Summary'}
+                type="textarea"
+                rows={5}
+                value={formData.summary}
+                onChange={(v) => handleInputChange('summary', v)}
+                placeholder={
+                  isWishlist ? 'Why do you want to read this?' : 'Title summary or description...'
+                }
+              />
+            </section>
 
-              <FormField label="Fandom">
-                <SearchableInput
-                  value={formData.fandom}
-                  onChange={(val) => handleInputChange('fandom', val)}
-                  placeholder="e.g., Harry Potter"
-                  fetchSuggestions={autocompleteFandoms}
-                />
-              </FormField>
+            {showFandomDetails && (
+              <section className="mt-6 bg-action-primary/5 border border-action-primary/20 rounded-lg p-4 space-y-5">
+                <h3 className="text-label text-text-secondary uppercase tracking-wide">Fandom Details</h3>
 
-              <FormField label="Ships">
-                <SearchableInput
-                  value={formData.ships}
-                  onChange={(val) => handleInputChange('ships', val)}
-                  placeholder="e.g., Hermione Granger/Draco Malfoy"
-                  fetchSuggestions={autocompleteShips}
-                />
-              </FormField>
-              <p className="text-caption text-text-muted -mt-2">Separate multiple ships with commas</p>
+                <FormField label="Completion Status">
+                  <select
+                    value={formData.completion_status}
+                    onChange={(e) => handleInputChange('completion_status', e.target.value)}
+                    className={selectClasses}
+                  >
+                    {COMPLETION_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
 
-              <FormField label="Content Rating">
-                <select
-                  value={formData.content_rating}
-                  onChange={(e) => handleInputChange('content_rating', e.target.value)}
-                  className={selectClasses}
-                >
-                  {CONTENT_RATINGS.map((rating) => (
-                    <option key={rating} value={rating}>
-                      {rating}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+                <FormField label="Fandom">
+                  <SearchableInput
+                    value={formData.fandom}
+                    onChange={(val) => handleInputChange('fandom', val)}
+                    placeholder="e.g., Harry Potter"
+                    fetchSuggestions={autocompleteFandoms}
+                  />
+                </FormField>
 
-              <FormField label="Warnings">
-                <select
-                  value={formData.warnings}
-                  onChange={(e) => handleInputChange('warnings', e.target.value)}
-                  className={selectClasses}
-                >
-                  {WARNINGS_OPTIONS.map((warning) => (
-                    <option key={warning} value={warning}>
-                      {warning}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </>
-          )}
-        </div>
+                <FormField label="Ships">
+                  <SearchableInput
+                    value={formData.ships}
+                    onChange={(val) => handleInputChange('ships', val)}
+                    placeholder="e.g., Hermione Granger/Draco Malfoy"
+                    fetchSuggestions={autocompleteShips}
+                  />
+                </FormField>
+                <p className="text-caption text-text-muted -mt-2">Separate multiple ships with commas</p>
+
+                <FormField label="Content Rating">
+                  <select
+                    value={formData.content_rating}
+                    onChange={(e) => handleInputChange('content_rating', e.target.value)}
+                    className={selectClasses}
+                  >
+                    {CONTENT_RATINGS.map((rating) => (
+                      <option key={rating} value={rating}>
+                        {rating}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Warnings">
+                  <select
+                    value={formData.warnings}
+                    onChange={(e) => handleInputChange('warnings', e.target.value)}
+                    className={selectClasses}
+                  >
+                    {WARNINGS_OPTIONS.map((warning) => (
+                      <option key={warning} value={warning}>
+                        {warning}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </section>
+            )}
+          </div>
+        )}
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="ghost" size="md" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="primary" size="md" onClick={handleSave} loading={saving} disabled={saving}>
-          Save
-        </Button>
-      </Modal.Footer>
+      {!showDiscardConfirm && (
+        <Modal.Footer>
+          <Button variant="ghost" size="md" onClick={attemptClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" size="md" onClick={handleSave} loading={saving} disabled={saving}>
+            Save
+          </Button>
+        </Modal.Footer>
+      )}
     </Modal>
   )
 }
