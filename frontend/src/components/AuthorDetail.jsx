@@ -9,6 +9,7 @@ import BookCard from './BookCard'
 import BookContextMenu from './BookContextMenu'
 import MarkFinishedModal from './MarkFinishedModal'
 import ChangeStatusModal from './ChangeStatusModal'
+import SortDropdown from './SortDropdown'
 
 function readPageView(key) {
   try {
@@ -24,6 +25,14 @@ function readGridVariant() {
   } catch {
     return 'compact'
   }
+}
+
+function readAuthorSort() {
+  try {
+    const stored = localStorage.getItem('liminal-author-sort')
+    if (['series', 'title', 'added', 'published'].includes(stored)) return stored
+  } catch {}
+  return 'series'
 }
 
 function AuthorDetail() {
@@ -48,10 +57,21 @@ function AuthorDetail() {
   const { gridClasses } = useGridColumns()
   const [currentView, setCurrentView] = useState(() => readPageView('author'))
   const [gridVariant, setGridVariant] = useState(readGridVariant)
+  const [sortField, setSortField] = useState(() => readAuthorSort())
+  const [sortDir, setSortDir] = useState(() => {
+    const field = readAuthorSort()
+    return ['added', 'published', 'finished'].includes(field) ? 'desc' : 'asc'
+  })
 
   const updateView = (value) => {
     setCurrentView(value)
     try { localStorage.setItem('liminal-view-author', value) } catch {}
+  }
+
+  const handleSortChange = (field, dir) => {
+    setSortField(field)
+    setSortDir(dir)
+    try { localStorage.setItem('liminal-author-sort', field) } catch {}
   }
 
   // Listen for grid variant changes from Settings
@@ -151,6 +171,143 @@ function AuthorDetail() {
     setSelectedBook(null)
   }
 
+  // --- Sort + grouping helpers (Track A) ---
+
+  const ChevronRightIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-text-muted">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  )
+
+  const renderBookCard = (book, options = {}) => {
+    const { seriesBadge = null } = options
+    const card = (
+      <BookCard
+        book={{ ...book, authors: book.authors || [author?.name].filter(Boolean) }}
+        variant={currentView === 'list' ? 'list' : bookCardVariant}
+        wpm={wpm}
+        onLongPress={handleBookLongPress}
+      />
+    )
+
+    if (seriesBadge && currentView === 'grid') {
+      return (
+        <div key={book.id} className="relative">
+          {card}
+          <span className="absolute top-2 left-2 bg-bg-base/85 text-text-primary text-caption px-1.5 py-0.5 rounded font-medium backdrop-blur-sm">
+            #{seriesBadge}
+          </span>
+        </div>
+      )
+    }
+
+    return <div key={book.id}>{card}</div>
+  }
+
+  const renderBookList = (books, withSeriesBadge = false) => {
+    if (currentView === 'list') {
+      return (
+        <div className="flex flex-col">
+          {books.map(b => renderBookCard(b, { seriesBadge: withSeriesBadge ? b.series_number : null }))}
+        </div>
+      )
+    }
+    return (
+      <div className={gridClasses}>
+        {books.map(b => renderBookCard(b, { seriesBadge: withSeriesBadge ? b.series_number : null }))}
+      </div>
+    )
+  }
+
+  const renderBooksSection = () => {
+    if (!author?.books) return null
+
+    // --- Series grouping mode ---
+    if (sortField === 'series') {
+      const seriesMap = new Map()
+      const standalone = []
+
+      author.books.forEach(book => {
+        if (book.series) {
+          if (!seriesMap.has(book.series)) seriesMap.set(book.series, [])
+          seriesMap.get(book.series).push(book)
+        } else {
+          standalone.push(book)
+        }
+      })
+
+      const sortedSeriesNames = Array.from(seriesMap.keys()).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' })
+      )
+
+      sortedSeriesNames.forEach(name => {
+        seriesMap.get(name).sort((a, b) => {
+          const aNum = parseFloat(a.series_number)
+          const bNum = parseFloat(b.series_number)
+          if (Number.isNaN(aNum) && Number.isNaN(bNum)) return 0
+          if (Number.isNaN(aNum)) return 1
+          if (Number.isNaN(bNum)) return -1
+          return aNum - bNum
+        })
+      })
+
+      standalone.sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+      )
+
+      return (
+        <div className="space-y-8">
+          {sortedSeriesNames.map(seriesName => {
+            const books = seriesMap.get(seriesName)
+            return (
+              <div key={seriesName}>
+                <Link
+                  to={`/series/${encodeURIComponent(seriesName)}`}
+                  state={{ returnUrl: location.pathname + location.search }}
+                  className="flex items-center justify-between mb-3 px-2 py-2 -mx-2 rounded-lg hover:bg-bg-elevated transition-colors duration-200 ease-out min-h-[44px]"
+                >
+                  <span className="text-label text-text-primary">
+                    Series: {seriesName} · {books.length} {books.length === 1 ? 'title' : 'titles'}
+                  </span>
+                  <ChevronRightIcon />
+                </Link>
+                {renderBookList(books, true)}
+              </div>
+            )
+          })}
+
+          {standalone.length > 0 && (
+            <div>
+              <div className="flex items-center mb-3 px-2 py-2 -mx-2 min-h-[44px]">
+                <span className="text-label text-text-primary">
+                  Standalone · {standalone.length} {standalone.length === 1 ? 'title' : 'titles'}
+                </span>
+              </div>
+              {renderBookList(standalone, false)}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // --- Flat sort mode (title / added / published) ---
+    const sorted = [...author.books].sort((a, b) => {
+      let cmp = 0
+      if (sortField === 'title') {
+        cmp = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+      } else if (sortField === 'added') {
+        const aVal = a.date_added || ''
+        const bVal = b.date_added || ''
+        cmp = aVal.localeCompare(bVal)
+      } else if (sortField === 'published') {
+        cmp = (a.publication_year || 0) - (b.publication_year || 0)
+      }
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+
+    return renderBookList(sorted, false)
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -220,11 +377,17 @@ function AuthorDetail() {
       </div>
 
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 className="text-label text-text-secondary">
             Books by {author.name}
           </h2>
           <div className="flex items-center gap-2">
+            <SortDropdown
+              value={sortField}
+              direction={sortDir}
+              onChange={handleSortChange}
+              options={['series', 'title', 'added', 'published']}
+            />
             <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[36px]">
               <button
                 type="button"
@@ -256,31 +419,7 @@ function AuthorDetail() {
           </div>
         </div>
 
-        {currentView === 'list' ? (
-          <div className="flex flex-col">
-            {author.books.map(book => (
-              <BookCard
-                key={book.id}
-                book={{ ...book, authors: book.authors || [author.name] }}
-                variant="list"
-                wpm={wpm}
-                onLongPress={handleBookLongPress}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className={gridClasses}>
-            {author.books.map(book => (
-              <BookCard
-                key={book.id}
-                book={{ ...book, authors: book.authors || [author.name] }}
-                variant={bookCardVariant}
-                wpm={wpm}
-                onLongPress={handleBookLongPress}
-              />
-            ))}
-          </div>
-        )}
+        {renderBooksSection()}
       </div>
       </div>
 

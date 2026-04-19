@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Button from './ui/Button'
 
 const SORT_OPTIONS = {
+  series: { label: 'Series', ascLabel: 'Grouped', descLabel: 'Grouped' },
   title: { label: 'Title', ascLabel: 'A → Z', descLabel: 'Z → A' },
   read_time: { label: 'Est. Read Time', ascLabel: 'Shortest', descLabel: 'Longest' },
   added: { label: 'Recently Added', ascLabel: 'Oldest', descLabel: 'Newest' },
@@ -23,6 +24,12 @@ const ChevronUpIcon = () => (
 const ChevronDownIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+)
+
+const SortIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16l4 4 4-4M7 8l4-4 4 4" />
   </svg>
 )
 
@@ -98,6 +105,7 @@ export default function SortDropdown({
       onClick={() => setIsOpen(!isOpen)}
       className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-surface rounded-lg text-body-sm text-text-secondary transition-all duration-200 ease-out ${className}`}
     >
+      <SortIcon />
       <span>{currentOption.label}</span>
       {direction === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />}
     </button>

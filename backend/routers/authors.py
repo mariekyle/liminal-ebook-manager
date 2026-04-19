@@ -35,6 +35,7 @@ class AuthorBookItem(BaseModel):
     status: Optional[str] = None
     rating: Optional[int] = None
     publication_year: Optional[int] = None
+    date_added: Optional[str] = None
     cover_gradient: Optional[str] = None
     cover_bg_color: Optional[str] = None
     cover_text_color: Optional[str] = None
@@ -119,7 +120,7 @@ async def get_author(author_name: str, db=Depends(get_db)):
     escaped_name = author_name.replace('"', '\\"')
     cursor = await db.execute("""
         SELECT id, title, authors, series, series_number, category, status, rating,
-               publication_year, cover_color_1, cover_color_2,
+               publication_year, created_at, cover_color_1, cover_color_2,
                has_cover, cover_path, cover_source
         FROM titles 
         WHERE authors LIKE ? AND is_tbr = 0
@@ -154,6 +155,7 @@ async def get_author(author_name: str, db=Depends(get_db)):
                 status=book['status'],
                 rating=book['rating'],
                 publication_year=book['publication_year'],
+                date_added=book.get('created_at'),
                 cover_gradient=cover_style.css_gradient,
                 cover_bg_color=cover_style.background_color,
                 cover_text_color=cover_style.text_color,
