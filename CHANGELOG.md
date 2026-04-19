@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.43.0] - 2026-04-19
+
+### Added
+
+#### Fix Session 7: Settings Consolidation
+Killed the 5-screen `SettingsDrawer` overlay and rebuilt `/settings` as a proper goal-grouped page. The bottom-nav Settings tab (previously a placeholder dead end) is now the primary entry point; desktop `Header` keeps a persistent top-right NavLink. All settings action buttons unified under primary teal — no more four-color rainbow. Addresses audit findings G1-11, G6-08, G1-07, and G6-09.
+
+**New Settings page layout** (`pages/Settings.jsx`) — four sections, grouped by user goal per NNG H4:
+- **Appearance** — Books per row (segmented 2/3/4), Card style (segmented Compact/Standard), Status Labels (preview + Edit), Rating Labels (preview + Edit)
+- **Reading** — Reading Speed (WPM input with blur-save, 50-2000 clamp, leading-zero normalization)
+- **Library Tools** — Sync Library, Find Duplicates, Rescan Metadata, Extract Covers (all single-purpose primary-teal actions with one-line descriptions)
+- **Backups** — Automated backups toggle, Schedule select + daily time, Backup location (inline test + save), Retention (preview + Edit), stats card (last backup / storage / total), Create backup now button
+
+**Five sub-modals lift fussy editors and multi-step actions out of the page flow:**
+- `StatusLabelsModal` — blur-saves each of four status labels with default-on-empty reset; dispatches `CustomEvent('settingsChanged', { detail: { statusLabels } })`
+- `RatingLabelsModal` — same pattern for five rating labels
+- `BackupRetentionModal` — three number inputs (daily/weekly/monthly) with min/max clamps, explicit Save + Cancel, error banner on load failure
+- `RescanMetadataModal` — preview stats → confirm → run → results breakdown in one modal, with inline error handling
+- `ExtractCoversModal` — Fiction / Non-Fiction category checkboxes → run → results breakdown
+
+**New shared primitive:** `components/settings/SettingsRow.jsx` — single row component with three modes (`navigation`, `toggle`, `display`), 56px minimum height, optional value/description/loading props, chevron-right for navigation, token-styled toggle switch.
+
+**Gear icon removed from `Library.jsx`** — `SettingsDrawer` import, `SettingsGearIcon` component, `settingsDrawerOpen` state, and the gear `IconButton` inside `UnifiedNavBar` all deleted. Nav reduces to `<UnifiedNavBar title={libraryNavTitle} />`. `SeriesDetail.jsx` confirmed gear-free on review — no changes needed there.
+
+**Desktop `Header.jsx` settings control** converted from drawer-opener to `NavLink to="/settings"` — mobile uses bottom nav, desktop uses Header NavLink, both route to the same page. One destination, two platform-appropriate entry points. Consistent with the 2026-03-28 decision that kept the desktop settings affordance separate from mobile.
+
+**`SettingsDrawer.jsx` deleted** — project-wide grep for `SettingsDrawer` and `SettingsGearIcon` returns zero results.
+
+### Changed
+
+- All settings action buttons use `variant="primary"` (teal). No more orange/amber/sage/purple variants — G6-09 resolved.
+- `useGridColumns.js` and `useStatusLabels.js` doc comments updated to reference the Settings page + modals as the event source (was `SettingsDrawer`). No behavior change.
+
+### Fixed
+
+- **Silent backup-load failure loop:** when `getBackupSettings()` failed, the catch block only logged to console and `backupSettings` stayed `null`, leaving the UI permanently at "Loading backup settings…" with no error visible. Added `backupError` state, set on catch, rendered as a `bg-action-danger/10` banner with a "Try again" ghost button that re-runs `loadBackupSettings`. NNG H1 (visibility of system status). Caught by Cursor review agent.
+- **WPM early-return short-circuit broken by type mismatch:** `handleWpmBlur` compared `finalValue` (always a string) to `settings.reading_wpm` (arrives as a number from the API), so the `===` check never matched and saved unnecessarily on every blur. Fixed by normalizing with `String(settings.reading_wpm ?? '')`. Caught by Cursor review agent.
+- **WPM leading-zero round-trip:** typing `0250` passed clamp validation untouched and would have persisted as the literal string `"0250"`. `handleWpmBlur` now normalizes valid inputs through `String(parseInt(...))`, stripping leading zeros before save. Bundled into the type-mismatch fix.
+- **Plain `Event` dispatches would have crashed `useGridColumns`:** `RatingLabelsModal` and `BackupRetentionModal` dispatched `new Event('settingsChanged')` with no `detail`, while `useGridColumns` accessed `event.detail.grid_columns` directly (no optional chaining). First grid column change after editing a rating/retention would have thrown `TypeError: Cannot read properties of undefined`. Defense-in-depth fix: both modals now dispatch `new CustomEvent('settingsChanged', { detail: { ... } })`, and `useGridColumns` gained optional chaining (`event.detail?.grid_columns`). Project-wide grep for `new Event('settingsChanged')` returns zero results. Caught by Cursor review agent.
+- **Grid columns default drift:** `Settings.jsx` initialized `gridColumns` to `'2'` while `useGridColumns` defaults to `'3'`, so a first-time user with no `grid_columns` setting in the DB would have seen the Settings UI show 2-column selected while the app rendered 3 columns. Settings.jsx now initializes to `'3'`, matching the hook. API-loaded value still overrides the default as before. Caught by Cursor review agent.
+
+### Removed
+
+- `frontend/src/components/SettingsDrawer.jsx` — full 5-screen drawer implementation.
+- `SettingsGearIcon` component and `settingsDrawerOpen` state from `Library.jsx`.
+
+### Technical
+
+#### Files Created
+- `frontend/src/components/settings/SettingsRow.jsx` — NEW primitive (navigation/toggle/display modes)
+- `frontend/src/components/settings/StatusLabelsModal.jsx`
+- `frontend/src/components/settings/RatingLabelsModal.jsx`
+- `frontend/src/components/settings/BackupRetentionModal.jsx`
+- `frontend/src/components/settings/RescanMetadataModal.jsx`
+- `frontend/src/components/settings/ExtractCoversModal.jsx`
+
+#### Files Modified
+- `frontend/src/pages/Settings.jsx` — full rewrite from placeholder
+- `frontend/src/components/Library.jsx` — gear / drawer removal
+- `frontend/src/components/Header.jsx` — desktop settings control → NavLink
+- `frontend/src/hooks/useGridColumns.js` — optional chaining + doc comment update
+- `frontend/src/hooks/useStatusLabels.js` — doc comment update only
+
+#### Files Deleted
+- `frontend/src/components/SettingsDrawer.jsx`
+
+#### Requires Docker Rebuild
+No. Frontend-only changes; backup/sync/rescan/extract endpoints unchanged.
+
+### Parked (not addressed in this session)
+- **Manual `loadBackupSettings` refresh on retention modal close:** current implementation calls `loadBackupSettings` from the modal's `onClose`. If the save succeeds but the close is skipped (e.g. navigate away), stats won't refresh. Acceptable trade-off; user returns to Settings and sees current state.
+- **Test button → Save button workflow for backup path:** path must be manually saved after a successful Test — no auto-save on Test success. Kept deliberate to avoid committing a path without the user's intent.
+
+---
+
 ## [0.42.0] - 2026-04-18
 
 ### Changed

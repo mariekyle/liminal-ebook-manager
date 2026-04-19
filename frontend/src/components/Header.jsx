@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import SettingsDrawer from './SettingsDrawer'
 
 // Icons for desktop nav
 const BookIcon = () => (
@@ -59,7 +57,6 @@ const navItems = [
 ]
 
 function Header() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const location = useLocation()
 
   const isActive = (item) => {
@@ -108,21 +105,22 @@ function Header() {
             ))}
           </nav>
           
-          {/* Settings Button */}
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="text-text-secondary hover:text-text-primary p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-            aria-label="Open settings"
+          {/* Settings — full page */}
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all duration-200 ease-out ${
+                isActive
+                  ? 'text-text-primary bg-bg-elevated'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+              }`
+            }
+            aria-label="Settings"
           >
             <SettingsIcon />
-          </button>
+          </NavLink>
         </div>
       </header>
-
-      <SettingsDrawer 
-        isOpen={settingsOpen} 
-        onClose={() => setSettingsOpen(false)} 
-      />
     </>
   )
 }

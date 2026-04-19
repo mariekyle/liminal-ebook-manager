@@ -4,7 +4,7 @@ import { getSettings } from '../api'
 /**
  * Shared hook for grid column preference from Settings.
  * Reads the grid_columns setting on mount, listens for live changes
- * via the settingsChanged custom event from SettingsDrawer.
+ * via the settingsChanged custom event from the Settings page.
  *
  * Returns:
  *   gridColumns — raw setting value ('2', '3', or '4')
@@ -28,10 +28,10 @@ export function useGridColumns() {
       .catch(err => console.error('useGridColumns: failed to load settings:', err))
   }, [])
 
-  // Listen for live changes from SettingsDrawer
+  // Listen for live changes from Settings
   useEffect(() => {
     const handleSettingsChange = (event) => {
-      if (event.detail.grid_columns !== undefined) {
+      if (event.detail?.grid_columns !== undefined) {
         setGridColumns(String(event.detail.grid_columns))
       }
     }

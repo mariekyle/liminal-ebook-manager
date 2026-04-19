@@ -13,7 +13,6 @@ import FandomModal from './FandomModal'
 import ShipModal from './ShipModal'
 import SortDropdown from './SortDropdown'
 import WishlistTab from './WishlistTab'
-import SettingsDrawer from './SettingsDrawer'
 import UnifiedNavBar from './ui/UnifiedNavBar'
 import BookContextMenu from './BookContextMenu'
 import MarkFinishedModal from './MarkFinishedModal'
@@ -37,18 +36,6 @@ function readGridVariant() {
     return 'compact'
   }
 }
-
-const SettingsGearIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-    />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-)
 
 function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -105,8 +92,6 @@ function Library() {
   
   // Phrase state - regenerates on filter/search changes
   const [phraseKey, setPhraseKey] = useState(0)
-
-  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false)
 
   const [contextMenu, setContextMenu] = useState({ show: false, book: null, x: 0, y: 0 })
   const [selectedBook, setSelectedBook] = useState(null)
@@ -398,23 +383,7 @@ function Library() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)]">
-      <UnifiedNavBar
-        title={
-          <div className="flex w-full max-w-[100vw] items-center justify-between gap-3">
-            <span className="text-h3">{libraryNavTitle}</span>
-            <IconButton
-              type="button"
-              variant="default"
-              size="md"
-              tooltip="Settings"
-              aria-label="Open settings"
-              onClick={() => setSettingsDrawerOpen(true)}
-            >
-              <SettingsGearIcon />
-            </IconButton>
-          </div>
-        }
-      />
+      <UnifiedNavBar title={libraryNavTitle} />
 
       {/* Tab Bar */}
       <div className="sticky top-0 z-30 bg-bg-base border-b border-border-subtle">
@@ -1078,7 +1047,6 @@ function Library() {
         />
       )}
 
-      <SettingsDrawer isOpen={settingsDrawerOpen} onClose={() => setSettingsDrawerOpen(false)} />
     </div>
   )
 }

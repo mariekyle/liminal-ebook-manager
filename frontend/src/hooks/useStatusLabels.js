@@ -53,7 +53,7 @@ export function useStatusLabels() {
       })
   }, [])
 
-  // Listen for live changes from SettingsDrawer
+  // Listen for live changes from Settings (modals / page)
   useEffect(() => {
     const handleSettingsChange = (event) => {
       if (event.detail?.statusLabels) {
