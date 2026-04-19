@@ -250,16 +250,17 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
         description: description.trim()  // Send empty string, not null - backend converts to NULL
       }
       
+      let result = null
       if (isEditing) {
         // When editing, update name/description
         // For automatic collections, also update criteria (if not a default collection)
         if (collection.collection_type === 'automatic' && !collection.is_default) {
           data.auto_criteria = criteria
         }
-        await updateCollection(collection.id, data)
+        result = await updateCollection(collection.id, data)
       } else {
         // When creating, include type and criteria
-        await createCollection({ 
+        result = await createCollection({ 
           ...data, 
           cover_type: coverType,
           collection_type: collectionType,
@@ -267,7 +268,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
         })
       }
       
-      onSuccess()
+      onSuccess(result)
     } catch (err) {
       console.error('Failed to save collection:', err)
       setError('Failed to save collection')

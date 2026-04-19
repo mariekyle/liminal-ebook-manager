@@ -40,6 +40,7 @@ import Button from './ui/Button'
 import FormField from './ui/FormField'
 import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
+import SearchInput from './ui/SearchInput'
 import UnifiedNavBar from './ui/UnifiedNavBar'
 import MarkFinishedModal from './MarkFinishedModal'
 import ChangeStatusModal from './ChangeStatusModal'
@@ -165,6 +166,7 @@ export default function CollectionDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [removeMode, setRemoveMode] = useState(false)
   const [selectedForRemoval, setSelectedForRemoval] = useState(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
   const { gridClasses: settingsGridClasses } = useGridColumns()
   
   // View mode: 'grid' or 'list'
@@ -183,6 +185,7 @@ export default function CollectionDetail() {
   // Reorder mode state
   const [isReorderMode, setIsReorderMode] = useState(false)
   const [preReorderViewMode, setPreReorderViewMode] = useState(null) // Track view mode before reorder
+  const [preReorderSearchQuery, setPreReorderSearchQuery] = useState('')
   const [isSavingReorder, setIsSavingReorder] = useState(false) // Prevent race conditions during save
   
   // Configure drag sensors with activation constraint
@@ -242,6 +245,22 @@ export default function CollectionDetail() {
     finished: 'Done',
     dnf: 'DNF'
   })
+
+  // Client-side search filter (G5-13). Applies to currently-loaded books only —
+  // for large paginated collections, search narrows the loaded set; scrolling
+  // to load more will expand the searchable pool.
+  const filterBySearch = (list) => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return list
+    return list.filter(b => {
+      const titleMatch = b.title && b.title.toLowerCase().includes(q)
+      const authors = Array.isArray(b.authors) ? b.authors : []
+      const authorMatch = authors.some(a => a && a.toLowerCase().includes(q))
+      return titleMatch || authorMatch
+    })
+  }
+
+  const showSearchInput = (collection?.book_count ?? 0) >= 15 && !isReorderMode
   
   // sortOverride: undefined = use sortOption state, null = force backend default, string = use that sort
   const fetchCollection = async (sortOverride = undefined) => {
@@ -1056,11 +1075,18 @@ export default function CollectionDetail() {
                           localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
                         }
                         setPreReorderViewMode(null)
+                        // Restore search query if one was active pre-reorder
+                        setSearchQuery(preReorderSearchQuery)
+                        setPreReorderSearchQuery('')
                         setIsReorderMode(false)
                       } else {
                         // Save current view mode and switch to list for reordering
                         setPreReorderViewMode(viewMode)
                         setViewMode('list') // Force list view for reordering (don't save to localStorage)
+                        // Save + clear search — reorder must operate on the full book set
+                        // so SortableContext items match the rendered DOM
+                        setPreReorderSearchQuery(searchQuery)
+                        setSearchQuery('')
                         setIsReorderMode(true)
                       }
                     }}
@@ -1119,6 +1145,15 @@ export default function CollectionDetail() {
             </span>
           )}
         </div>
+        {showSearchInput && (
+          <div className="mb-3">
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search this collection..."
+            />
+          </div>
+        )}
         {/* Book count row with sort (for automatic collections) */}
         <div className="flex items-center justify-between mb-2">
           <p className="text-text-secondary">
@@ -1222,6 +1257,8 @@ export default function CollectionDetail() {
                 localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
               }
               setPreReorderViewMode(null)
+              setSearchQuery(preReorderSearchQuery)
+              setPreReorderSearchQuery('')
               setIsReorderMode(false)
             }}
           >
@@ -1257,13 +1294,13 @@ export default function CollectionDetail() {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className={getGridClasses()}>
-                      {incompleteBooks.map(book => renderBook(book, false))}
+                      {filterBySearch(incompleteBooks).map(book => renderBook(book, false))}
                     </div>
                   </SortableContext>
                 </DndContext>
               ) : (
                 <div className={getGridClasses()}>
-                  {incompleteBooks.map(book => renderBook(book, false))}
+                  {filterBySearch(incompleteBooks).map(book => renderBook(book, false))}
                 </div>
               )
             )}
@@ -1293,7 +1330,7 @@ export default function CollectionDetail() {
                 {/* Completed books - canSort=false since completed section isn't sortable */}
                 {completedBooks.length > 0 && (
                   <div className={getGridClasses()}>
-                    {completedBooks.map(book => renderBook(book, true, false))}
+                    {filterBySearch(completedBooks).map(book => renderBook(book, true, false))}
                   </div>
                 )}
                 
@@ -1315,7 +1352,7 @@ export default function CollectionDetail() {
             )}
 
             {/* "All books loaded" message - show when both sections are done */}
-            {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
+            {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && !searchQuery && (
               <div className="w-full py-8 flex justify-center">
                 <span className="text-caption text-text-muted">
                   All {totalBooks} books loaded
@@ -1344,13 +1381,13 @@ export default function CollectionDetail() {
                   strategy={verticalListSortingStrategy}
                 >
                   <div className={getGridClasses()}>
-                    {books.map(book => renderBook(book, false))}
+                    {filterBySearch(books).map(book => renderBook(book, false))}
                   </div>
                 </SortableContext>
               </DndContext>
             ) : (
               <div className={getGridClasses()}>
-                {books.map(book => renderBook(book, false))}
+                {filterBySearch(books).map(book => renderBook(book, false))}
               </div>
             )}
 
@@ -1365,7 +1402,7 @@ export default function CollectionDetail() {
                   <span className="text-sm">Loading more books...</span>
                 </div>
               )}
-              {!hasMore && books.length > 0 && (
+              {!hasMore && books.length > 0 && !searchQuery && (
                 <span className="text-caption text-text-muted">
                   All {totalBooks} books loaded
                 </span>
