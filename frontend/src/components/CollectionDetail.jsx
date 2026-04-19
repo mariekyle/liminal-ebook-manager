@@ -260,8 +260,6 @@ export default function CollectionDetail() {
     })
   }
 
-  const showSearchInput = (collection?.book_count ?? 0) >= 15 && !isReorderMode
-  
   // sortOverride: undefined = use sortOption state, null = force backend default, string = use that sort
   const fetchCollection = async (sortOverride = undefined) => {
     // Capture version before async call to detect stale responses
@@ -1145,24 +1143,14 @@ export default function CollectionDetail() {
             </span>
           )}
         </div>
-        {showSearchInput && (
-          <div className="mb-3">
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search this collection..."
-            />
-          </div>
-        )}
-        {/* Book count row with sort (for automatic collections) */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Row 1: book count + sort dropdown (automatic collections) */}
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <p className="text-text-secondary">
             {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
             {isChecklist && completedTotal > 0 && (
               <span className="text-action-success"> · {completedTotal} completed</span>
             )}
           </p>
-          
           {/* Sort controls - automatic collections only */}
           {isAutomatic && !loading && (
             <SortDropdown
@@ -1182,6 +1170,50 @@ export default function CollectionDetail() {
             />
           )}
         </div>
+
+        {/* Row 2: search + grid/list toggle.
+            Hidden in reorder mode so SortableContext operates on the full list. */}
+        {!isReorderMode && (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex-1 min-w-0">
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search this collection..."
+              />
+            </div>
+            {!removeMode && books.length + incompleteBooks.length + completedBooks.length > 0 && (
+              <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                    viewMode === 'grid'
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  aria-pressed={viewMode === 'grid'}
+                  aria-label="Grid view"
+                >
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
+                    viewMode === 'list'
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  aria-pressed={viewMode === 'list'}
+                  aria-label="List view"
+                >
+                  List
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {collection.description && (
           <p className="text-body-sm text-text-secondary whitespace-pre-wrap">
             {collection.description}
@@ -1195,40 +1227,6 @@ export default function CollectionDetail() {
           <p className="text-body-sm text-text-secondary">
             Long-press or right-click a book to mark it complete
           </p>
-        </div>
-      )}
-
-      {/* Grid/List toggle */}
-      {!isReorderMode && !removeMode && books.length + incompleteBooks.length + completedBooks.length > 0 && (
-        <div className="flex justify-end mb-4">
-          <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                viewMode === 'grid'
-                  ? 'bg-bg-elevated text-text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-              aria-pressed={viewMode === 'grid'}
-              aria-label="Grid view"
-            >
-              Grid
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`min-h-[40px] px-2.5 rounded-md text-caption transition-all duration-200 ease-out ${
-                viewMode === 'list'
-                  ? 'bg-bg-elevated text-text-primary'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-              aria-pressed={viewMode === 'list'}
-              aria-label="List view"
-            >
-              List
-            </button>
-          </div>
         </div>
       )}
       
