@@ -88,7 +88,7 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search books..."
+          placeholder="Search your library…"
           loading={loading}
           autoFocus
           onKeyDown={handleKeyDown}

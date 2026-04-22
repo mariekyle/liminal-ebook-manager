@@ -7,6 +7,155 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.45.0] - 2026-04-22
+
+### Changed
+
+#### Fix Session 8: Status Label + Voice/Tone Cleanup
+Closed the gap left by Session 2.1 — status display strings that were still hardcoded in individual components now route through `useStatusLabels.getLabel()`, so custom labels from Settings propagate everywhere automatically. Reading-session UI (snake_case values) bridged to the hook via a local translation map. Microcopy warmed in two places, one technical-status footer removed entirely. Addresses audit findings G6-04, UF-10, G6-13, G5-14.
+
+**Note on pre-audit findings already resolved:** G3-06 (`Paused indefinitely` default) and G4-04 (StatusLabelsModal default mismatch) were found to be already correct at session start — `useStatusLabels.DEFAULT_LABELS.Abandoned` already returned `'DNF'`, and `StatusLabelsModal.DEFAULTS.dnf` was already `'DNF'` with soft-guidance copy already present in the modal intro. No change needed; flagged in session audit before prompting to prevent double-fixing. Decisions.md was ahead of the code review.
+
+**Title status — `getLabel()` applied to all remaining display surfaces (G6-04):**
+- `FilterDrawer.jsx` — fanfic completion pill for backend `Abandoned` now uses `getLabel('Abandoned')`
+- `Badge.jsx` — status dots route through `getLabel()` via `STATUS_BACKEND_KEY` map (Unread / In Progress / Finished / Abandoned)
+- `ReadingStatusCard.jsx` — `finished` and `dnf` section headings use `getLabel('Finished')` / `getLabel('Abandoned')`
+- `BookCard.jsx` — Finished overlay `title` attribute and DNF tooltip both use `getLabel()`
+- `ImportPage.jsx` — `StatusBadge` renders `getLabel()`; color map supports both `DNF` and `Abandoned` keys as a defensive safety net
+- `UnifiedEditModal.jsx` — completion `<option>` text for `In Progress` and `Abandoned` uses `getLabel()`; `value` attributes unchanged (backend canonical)
+- `ManualEntryForm.jsx`, `WishlistForm.jsx` — fanfic completion `Abandoned` button label uses `getLabel()`
+
+**Reading-session status — snake_case → title-case translation via local map (G6-04 follow-up):**
+- `BookDetail.jsx` gained a module-level `SESSION_STATUS_TO_BACKEND` map: `{ in_progress: 'In Progress', finished: 'Finished', dnf: 'Abandoned' }`
+- Edit Reading Session modal buttons previously rendered raw enum values (`in_progress`, `dnf`) — now render `getLabel(SESSION_STATUS_TO_BACKEND[value])`
+- Reading History row chip on the Details tab had the same bug (out-of-scope flagged by Cursor in the follow-up pass, caught in user testing) — now uses the same translation
+- Session status values saved to DB remain snake_case (`in_progress`, `finished`, `dnf`); only display text changed
+- Harden: `getLabel(SESSION_STATUS_TO_BACKEND[session.session_status] || session.session_status)` — unknown values fall through to raw display instead of rendering a silent empty chip
+
+**Already-hooked consumers verified, no re-migration needed:** BookCard (prior use), SeriesDetail, FilterDrawer, anywhere touched by Session 2.1.
+
+**Non-display contexts deliberately left alone:** equality comparisons (`book.status === 'Abandoned'`), filter-payload arrays (`{ statuses: ['Abandoned', 'Finished'] }`), API request bodies, and object keys in backend-keyed maps. Backend canonical values (`Abandoned`, `In Progress`, `Finished`, `Unread` for titles; `in_progress`, `finished`, `dnf` for sessions) unchanged everywhere in state, payloads, and DB.
+
+**Microcopy warmed (UF-10, G6-13):**
+- `Add Story` → `Add to Library`: grep confirmed zero remaining instances at session start — already resolved in prior work (`AddPage.jsx`, `AddChoice.jsx`, `ManualEntryForm.jsx` all use "Add to Library"). Verified and documented, no edit required.
+- `SearchModal.jsx`: `Search books...` → `Search your library…` (single-char ellipsis, matches rest of app's placeholder style). Scoped placeholders (`Search titles…`, `Search tags…`, `Search collections…`, `Search authors…`) deliberately left unchanged — only the generic surface swapped.
+
+### Removed
+
+- **End-of-list footer on collection pages (G5-14).** `All {totalBooks} books loaded` was system-state language rendered as content — minimalist design (NNG H8) says end-of-list is visually self-evident. Removed from `CollectionDetail.jsx` entirely: both the checklist branch (`totalBooks >= 20`) and the non-checklist infinite-scroll branch (`!hasMore && books.length >= 20`). No threshold, no fallback copy, no "That's the full list." The initial Session 8 plan called for a ≥20 threshold fallback; user review flagged that as unjustified — defending "why 20?" is harder than just removing the footer. `totalBooks` retained (still used elsewhere for header / sort messaging).
+
+### Technical
+
+#### Files Created
+None. Session 8 is all modifications to existing files + one module-level const.
+
+#### Files Modified
+- `frontend/src/components/BookDetail.jsx` — `SESSION_STATUS_TO_BACKEND` const at module scope; reading-session edit modal buttons and Reading History row chip both route through `getLabel(SESSION_STATUS_TO_BACKEND[status])`
+- `frontend/src/components/Badge.jsx` — status dots use `getLabel()` via `STATUS_BACKEND_KEY`
+- `frontend/src/components/FilterDrawer.jsx` — fanfic completion pill uses `getLabel('Abandoned')`
+- `frontend/src/components/ReadingStatusCard.jsx` — section headings use `getLabel('Finished')` / `getLabel('Abandoned')`
+- `frontend/src/components/BookCard.jsx` — Finished overlay title + DNF tooltip use `getLabel()`
+- `frontend/src/components/ImportPage.jsx` — `StatusBadge` uses `getLabel()`; color map dual-keyed
+- `frontend/src/components/UnifiedEditModal.jsx` — completion option text uses `getLabel()`
+- `frontend/src/components/add/ManualEntryForm.jsx` — abandoned button uses `getLabel('Abandoned')`
+- `frontend/src/components/add/WishlistForm.jsx` — same
+- `frontend/src/components/SearchModal.jsx` — placeholder swapped to `Search your library…`
+- `frontend/src/components/CollectionDetail.jsx` — both end-of-list footer blocks removed; comment scrubbed so `books loaded` no longer appears in source
+
+#### Files Verified, No Changes
+- `frontend/src/hooks/useStatusLabels.js` — defaults already correct (`Abandoned: 'DNF'`)
+- `frontend/src/components/settings/StatusLabelsModal.jsx` — default already correct (`dnf: 'DNF'`); soft-guidance copy already in intro
+- `ChangeStatusModal.jsx` — already uses its own `labels` source, correctly
+- `CriteriaBuilder.jsx` — builds labels from settings for smart lists, correctly
+- `Library.jsx` — `statuses` prop correctly passes API values, not display strings
+- `AddPage.jsx`, `AddChoice.jsx`, `ManualEntryForm.jsx` — "Add Story" grep returned zero; already use "Add to Library"
+
+#### Requires Docker Rebuild
+No. Frontend-only changes.
+
+### Parked (not addressed in this session)
+
+- **BookDetail status pill redesign (`Reading` block in metadata grid).** The current `ChangeStatusModal` flow is multi-line and multi-button — overkill for a single-value change. Proposed alternative: make the status block (under title/author/year) a tappable dropdown directly, alongside the existing tappable category block. NNG H7 (flexibility) + fewer taps. Not addressed here — reopens a Session 3 locked decision ("Status pill opens ChangeStatusModal") and requires a fresh decision sprint. Logged in Open Questions.
+- **Status pill ↔ reading-session one-way sync.** Changing status from the BookDetail status area does not create or update a reading session, but editing the most recent reading session's status does update the pill. Data-model work, not microcopy. Should be decided together with the pill redesign above — they're the same feature. Logged in Open Questions.
+- **ImportPage `StatusBadge` dual-keyed color map.** Color map supports both `DNF` and `Abandoned` as keys. Backend canonical is `Abandoned`; the `DNF` key is either a defensive safety net against an upstream rendering bug, or dead code. Worth an hour of investigation before Session 11's final audit — not blocking.
+- **Desktop navigation.** Desktop rendering has no navigation affordance (cannot move between pages). Surfaced during Session 8 testing; not an S8 finding. Triage separately.
+
+---
+
+## [0.44.0] - 2026-04-19
+
+### Added
+
+#### Fix Session 6: Search and Sort Everywhere
+Two independent tracks landed in one release: (A) author pages gained a sort dropdown with default series grouping; (B) collection pickers and large collection detail pages gained search. The `SortDropdown` primitive also picked up a left-side sort icon so it reads as a sort control at a glance, everywhere it's used. Addresses audit findings UF-21, UF-30, UF-31, G3-08, G5-13.
+
+**Track A — Author sort + series grouping:**
+- `AuthorDetail.jsx` gains a `<SortDropdown>` beside the Grid/List toggle with four options: `Series` (default), `Title A-Z`, `Recently Added`, `Year Published`. Sort choice persists to `localStorage` under `liminal-author-sort`.
+- When sort is `Series`, books are grouped by series with tappable section headers rendered as `Series: {name} · N titles` with a right chevron. Tap a header → navigates to `/series/{encodeURIComponent(name)}` with `returnUrl` state so back returns to the author page.
+- Within a series, books sort by `series_number` (parseFloat, NaN entries sort to end). Standalone books appear below all series in a `Standalone · N titles` section, alphabetized by title.
+- Grid view displays a `#N` badge overlay (top-left, `bg-bg-base/85` + backdrop blur) on each series book. List view omits the badge — the series group header provides context.
+- Selecting any non-`series` sort flattens groups into a single grid/list.
+- Controls row uses `flex-wrap gap-2` so SortDropdown + Grid/List toggle wrap cleanly on narrow mobile.
+
+**Track A — `SortDropdown` primitive enhancement:**
+- New `SortIcon` component (small, bi-directional arrows) prepended to the trigger button: `[sort icon] [label] [chevron]`. Every consumer (Library, CollectionDetail, AuthorDetail) inherits the change — sort controls are now immediately recognizable as sort controls. Addresses a minor discoverability gap flagged during Session 6 decisions.
+- `series` added as the first entry in `SORT_OPTIONS` with `Grouped`/`Grouped` direction labels (direction is semantically irrelevant for series grouping). `DesktopDropdown` and `MobileBottomSheet` render paths unchanged.
+
+**Track A — Backend `authors.py`:**
+- `AuthorBookItem` Pydantic model extended with `date_added: Optional[str] = None`.
+- `get_author` SELECT now includes `created_at` from the `titles` table. There is no `date_added` column on `titles` — `created_at` is the canonical "when did this enter the library" field; the `AuthorBookItem` JSON field name stays `date_added` for frontend consistency.
+- `AuthorBookItem(...)` constructor passes `date_added=book.get('created_at')`.
+
+**Track B — CollectionPicker search + inline create (UF-21, G3-08):**
+- `CollectionPicker.jsx` gains a `<SearchInput>` at the top of the list. Collections render alphabetized (case-insensitive `localeCompare` with `sensitivity: 'base'`), filtered client-side by trimmed lowercase name match.
+- Empty-state copy distinguishes "no collections yet" from "no match for '{query}'".
+- Dashed `+ New Collection` footer button (44px minimum touch target, `border-dashed border-border-default`) opens `CollectionModal` stacked on top of the picker.
+- On successful creation: the new collection auto-pre-selects (book is added via `addBooksToCollection`), the picker list reloads with the new entry in its alphabetical slot, and the checkbox is already checked. `onUpdate` fires on both success and error paths so the parent `BookDetail` page always reflects current state.
+- If the API returns no `id` (shouldn't happen — defensive): fall back to list reload only, still call `onUpdate`.
+
+**Track B — `CollectionModal` contract (minor, additive):**
+- `handleSubmit` now captures the return value of `createCollection` / `updateCollection` into a local `result` and calls `onSuccess(result)`. Existing callers in `CollectionsTab.jsx` and `CollectionDetail.jsx` ignore the new positional arg — backward compatible.
+- Both `createCollection` and `updateCollection` in `api.js` already `return response.json()`, so `result` is the full collection object including `id`.
+
+**Track B — CollectionDetail search (G5-13):**
+- `CollectionDetail.jsx` gains a `<SearchInput>` between the book-count row and the Grid/List toggle. Filter is client-side on title + any author substring match (case-insensitive, trimmed).
+- Placeholder: `Search this collection...`.
+- `SortableContext items={...}` in reorder mode always uses the full, unfiltered book array to preserve DnD integrity — the filter applies only to the `.map(...)` rendering book cards.
+- `All {totalBooks} books loaded` footer is hidden when a search query is active (inaccurate message against a filtered view; wording rewrite deferred to Session 8 per Decisions.md).
+
+### Changed
+
+- **Search input placement in CollectionDetail (design iteration during testing):** The locked Session 6 decision was to show search only on collections with 15+ books. Testing revealed this was confusing in practice — users would open a small collection, miss the search that wasn't there, and wonder why the behavior changed. Also repositioned from a standalone row above the book count to share a row with the Grid/List toggle. Final state: search is always visible on all collection types, sits on the same row as the Grid/List toggle with `flex-1 min-w-0` sizing, and is hidden only in reorder mode.
+
+### Fixed
+
+- **CollectionPicker: missing parent notification on creation error paths.** The `handleNewCollectionSuccess` callback only called `onUpdate()` on the happy path. If `createCollection` returned without an id, or if `addBooksToCollection` threw, the parent `BookDetail` page never got told its collection landscape had changed. Both error branches now call `onUpdate()` after `loadCollections()`. Caught by Cursor review agent.
+- **CollectionDetail: `SortableContext` drift when entering reorder with an active search.** The search input is hidden when reorder mode activates, but `searchQuery` state stays populated — the filtered `.map(...)` would render fewer DOM elements than `SortableContext`'s `items` prop, breaking DnD. Entering reorder mode now clears `searchQuery` and saves the previous value to `preReorderSearchQuery`. Caught by Cursor review agent.
+- **CollectionDetail: search query lost after reorder.** Follow-up to the above fix: entering reorder cleared the query, but exiting didn't restore it. Mirroring the existing `preReorderViewMode` save/restore pattern, both exit paths (3-dot menu toggle and the reorder banner's Done button) now restore `searchQuery` from `preReorderSearchQuery` and clear the save slot. Caught by Cursor review agent.
+
+### Technical
+
+#### Files Created
+None. Session 6 is all modifications to existing files.
+
+#### Files Modified
+- `backend/routers/authors.py` — `AuthorBookItem.date_added` field, SELECT includes `created_at`, constructor maps `date_added=book.get('created_at')`
+- `frontend/src/components/SortDropdown.jsx` — `SortIcon` component, `series` option in `SORT_OPTIONS`, icon prepended to trigger button
+- `frontend/src/components/AuthorDetail.jsx` — `SortDropdown` import, `readAuthorSort()` helper, `sortField`/`sortDir`/`handleSortChange` state, `renderBooksSection()` with series grouping and flat-sort branches, `#N` grid badge overlay
+- `frontend/src/components/CollectionModal.jsx` — `handleSubmit` captures API result, `onSuccess(result)` passes the created/updated collection
+- `frontend/src/components/CollectionPicker.jsx` — `useMemo`, `SearchInput`, `CollectionModal`, `AddIcon` imports; `searchQuery` + `showCreateModal` state; `visibleCollections` memo (alphabetical + filtered); `handleNewCollectionSuccess` handler; dashed `+ New Collection` footer; nested `CollectionModal` stacking
+- `frontend/src/components/CollectionDetail.jsx` — `SearchInput` import; `searchQuery` + `preReorderSearchQuery` state; `filterBySearch` helper; search input positioned in controls row beside Grid/List toggle; reorder-mode entry clears and saves search, exit restores; `All N books loaded` footer gated on `!searchQuery`
+
+#### Requires Docker Rebuild
+Yes. Backend change on `authors.py` (`AuthorBookItem.date_added` field + SELECT column addition).
+
+### Parked (not addressed in this session)
+- **Large-collection search only filters loaded books.** For a 408-book automatic collection like Reading History, client-side search narrows the currently-paginated set. Books not yet loaded via infinite scroll aren't searchable until the user scrolls them in. Acceptable trade-off for Session 6 scope — server-side search would require a backend endpoint change and a new API surface. Revisit if this causes real friction.
+- **Backend `date_added` column rename.** `titles` stores `created_at`, not `date_added`. Frontend requests `date_added` from the author endpoint — the name mismatch is intentional compatibility bridging. A broader schema alignment (either rename the column or rename the API field) is out of Session 6 scope.
+- **"All N books loaded" end-of-list wording.** The message reads like a technical status. Flagged by audit finding G5-14, scoped for Session 8 (Status Label + Voice/Tone) — not rewritten here.
+
+---
+
 ## [0.43.0] - 2026-04-19
 
 ### Added

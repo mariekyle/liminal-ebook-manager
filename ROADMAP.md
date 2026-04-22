@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** April 19, 2026 (v0.43.0)  
+> **Last Updated:** April 22, 2026 (v0.45.0)  
 > **Current Focus:** Phase 10.0D — UX Audit Fix Sessions  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.43.0)
+## Current State (v0.45.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
-| UX fix sessions | 🔄 In progress — 6/10 shipped, 6+8-10 decisions locked, +11 final audit |
+| UX fix sessions | 🔄 In progress — 8/10 shipped, 9-10 decisions locked, +11 final audit |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -241,7 +241,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 ### 10.0D: UX Audit Fix Sessions ← CURRENT
 
 **Priority:** P0 — Fix What's Broken Before Building What's New  
-**Status:** 🔄 In Progress (Sessions 1-5 + 7 shipped, Sessions 6, 8-10 decisions locked, Session 11 planned)  
+**Status:** 🔄 In Progress (Sessions 1-8 shipped, Sessions 9-10 decisions locked, Session 11 planned)  
 **Sessions:** 10 + 1 (final audit)  
 **Based on:** `liminal-ux-audit.md` (141 findings, NNG heuristic + WCAG AA + user flows pass)
 
@@ -262,9 +262,9 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 | 3 | BookDetail Action Architecture | Make metadata blocks tappable, add Mark Finished shortcut, inline section actions | UF-01, UF-02, UF-05, UF-06, UF-20, UF-24, G2-11, G2-12 | ✅ v0.40.0 |
 | 4 | Edit Modal Reorganization | Kill tabs → single scroll form, section dividers, unsaved changes guard | UF-25, UF-26, UF-27, G3-02, G3-03 | ✅ v0.41.0 |
 | 5 | Form Input Guards | Plain text authors, default date+format, segmented category, hide rating | UF-11, UF-07, UF-12, UF-03, G3-07 | ✅ v0.42.0 |
-| 6 | Search and Sort Everywhere | CollectionPicker search+create, author sort+series grouping, collection search | UF-21, UF-30, UF-31, G3-08, G5-13 | 🟡 Decisions locked |
+| 6 | Search and Sort Everywhere | CollectionPicker search+create, author sort+series grouping, collection search | UF-21, UF-30, UF-31, G3-08, G5-13 | ✅ v0.44.0 |
 | 7 | Settings Consolidation | SettingsDrawer → /settings page, NNG goal-based sections, kill gear icon | G1-11, G6-08, G1-07 | ✅ v0.43.0 |
-| 8 | Status Label + Voice/Tone | DNF defaults, useStatusLabels everywhere, microcopy fixes | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | 🟡 Decisions locked |
+| 8 | Status Label + Voice/Tone | DNF defaults, useStatusLabels everywhere, microcopy fixes | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | ✅ v0.45.0 |
 | 9 | Mobile-First Polish | Edition badges display-only, collection cover cap, add choice nav | G2-14, G5-10, G5-03, G7-01, G7-15 | 🟡 Decisions locked |
 | 10 | Destructive Action Guards | DuplicatesPage inline confirm, session delete in-app confirm | G8-02, G3-13 | 🟡 Decisions locked |
 | 11 | Final Audit | Re-audit all changed areas, tap through 10 user flows, regression check | — | ⬜ Planned |
@@ -273,8 +273,8 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 
 **Priority tiers:**
 - **Fix now (Sessions 1-2):** Broken flow + accessibility failure + quick wins ✅
-- **Batch A (Sessions 3-5):** Core interaction quality (BookDetail + forms)
-- **Batch B (Sessions 6-8):** Structural improvements (search/sort, settings, terminology)
+- **Batch A (Sessions 3-5):** Core interaction quality (BookDetail + forms) ✅
+- **Batch B (Sessions 6-8):** Structural improvements (search/sort, settings, terminology) ✅
 - **Batch C (Sessions 9-11):** Polish, guards, final re-audit
 
 **Acceptance Criteria:**
@@ -401,12 +401,10 @@ Search external APIs and one-tap import.
 AI features (analysis, photo lookup) would require expensive cloud API calls. Infrastructure for local inference doesn't exist.
 
 **The Solution:**  
-Set up Ollama on Beelink as a local AI server.
+Set up Ollama on self hosted NAS as a local AI server.
 
 **Hardware:**
-- Beelink SER8: Ryzen 7 8845HS, 32GB RAM, 1TB SSD
-- Running TrueNAS Scale
-- Connected to Synology via local network
+- Separate compute host on local network (sufficient RAM + SSD for model inference)
 
 **Tasks:**
 - [ ] 10.4.1 **Install Ollama** — Docker container on TrueNAS or native install
@@ -417,7 +415,7 @@ Set up Ollama on Beelink as a local AI server.
 - [ ] 10.4.6 **Document Setup** — Add to ARCHITECTURE.md for future reference
 
 **Acceptance Criteria:**
-- `curl http://beelink:11434/api/generate` returns model response
+- Ollama endpoint returns a valid model response over the local network
 - Liminal backend can call Ollama successfully
 - Vision model can describe an image
 
@@ -601,7 +599,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
 | 10.0C | Full Conversion | 8 | ✅ Complete |
-| **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress** |
+| **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (8/10 shipped)** |
 | 10.1 | Download & Share | 1-2 | ⏸ On hold |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
@@ -690,6 +688,16 @@ Items to address when time permits:
 **Workaround:** Refresh the page to get true state from backend.  
 **Priority:** Low (local NAS, partial failure extremely unlikely) — revisit if Liminal moves to a remote server
 
+### Author Endpoint Field Name Mismatch (Known from v0.44.0)
+**Symptom:** `AuthorBookItem` exposes `date_added` (for frontend consistency with other list views), but the underlying `titles` column is `created_at`. The backend maps `created_at → date_added` inside `get_author`.  
+**Workaround:** None needed — frontend works as expected; mismatch is documentation-only.  
+**Priority:** Low — either rename the column or rename the API field in a future schema pass; out of Session 6 scope
+
+### Client-Side Search on Paginated Collections (Known from v0.44.0)
+**Symptom:** CollectionDetail search filters only books already loaded via infinite scroll. For a 408-book automatic collection, a query won't surface matches from un-paginated books until the user scrolls them in.  
+**Workaround:** Scroll to load more, then search; or wait on backend search endpoint.  
+**Priority:** Low — revisit if daily use surfaces real friction. Server-side search would require a new endpoint.
+
 ---
 
 ## Future: Phase 11 — Smart Features
@@ -761,28 +769,11 @@ Items to address when time permits:
 ### Current Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Tailscale Network                        │
-│                                                              │
-│   ┌─────────────┐         ┌─────────────────────┐           │
-│   │  Your Phone │◄───────►│      Beelink        │           │
-│   │             │         │   (TrueNAS Scale)   │           │
-│   └─────────────┘         │                     │           │
-│                           │  • Plex             │           │
-│                           │  • Ollama (10.4)    │           │
-│                           │  • Other apps       │           │
-│                           └──────────┬──────────┘           │
-│                                      │                      │
-│   ┌─────────────┐         ┌──────────▼──────────┐           │
-│   │   Synology  │◄───────►│    Synology NAS     │           │
-│   │  (Liminal)  │         │    (Storage)        │           │
-│   │             │         │                     │           │
-│   │  • Backend  │         │  • Book files       │           │
-│   │  • Frontend │         │  • SQLite DB        │           │
-│   │  • Docker   │         │  • Obsidian vault   │           │
-│   └─────────────┘         └─────────────────────┘           │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+## Infrastructure
+
+**Deployment:** 
+Docker container on a self-hosted NAS. FastAPI backend + React frontend served from the same container. SQLite database and book files on mounted volumes.
+
 ```
 
 ### Future with Moon Reader Sync
@@ -802,7 +793,7 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 1. **Solve real friction first** — Features that save time daily beat polish that looks nice
 2. **Ship incrementally** — Each sub-phase delivers value independently
 3. **Connect, don't rebuild** — Integrate with existing tools (Moon Reader, Obsidian, Google Books) instead of replacing them
-4. **Local-first AI** — Use Ollama on Beelink to avoid API costs and keep data private
+4. **Local-first AI** — Use Ollama on self hosted NAS to avoid API costs and keep data private
 5. **Mobile-first** — Every feature works great on Android
 6. **Data integrity** — Never lose user's notes or reading history
 7. **Measure, then optimize** — Analytics before UI redesign
@@ -825,4 +816,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: April 19, 2026 (v0.43.0)*
+*Last updated: April 22, 2026 (v0.45.0)*

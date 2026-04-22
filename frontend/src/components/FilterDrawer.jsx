@@ -175,7 +175,7 @@ function FilterContent({
   const completionStatusOptions = [
     { value: 'Complete', label: 'Complete' },
     { value: 'WIP', label: 'WIP' },
-    { value: 'Abandoned', label: 'Abandoned' },
+    { value: 'Abandoned', label: getLabel('Abandoned') },
     { value: 'Hiatus', label: 'Hiatus' },
   ]
 

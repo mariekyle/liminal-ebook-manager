@@ -30,6 +30,11 @@ function decodeHtmlEntities(text) {
   return textarea.value
 }
 
+const SESSION_STATUS_TO_BACKEND = {
+  in_progress: 'In Progress',
+  finished: 'Finished',
+  dnf: 'Abandoned',
+}
 
 // Helper component for displaying labeled metadata (Phase 7.0)
 const MetadataRow = ({ label, children, show = true }) => {
@@ -1410,7 +1415,7 @@ function BookDetail() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
               </svg>
             ) : null}
-            {getLabel(session.session_status)}
+            {getLabel(SESSION_STATUS_TO_BACKEND[session.session_status] || session.session_status)}
           </span>
           {session.rating && (
             <StarRating value={session.rating} readOnly size="sm" />
@@ -2641,7 +2646,7 @@ function BookDetail() {
                         : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
                     }`}
                   >
-                    {getLabel(status)}
+                    {getLabel(SESSION_STATUS_TO_BACKEND[status])}
                   </button>
                 ))}
               </div>

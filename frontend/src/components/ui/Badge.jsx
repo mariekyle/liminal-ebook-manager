@@ -1,3 +1,5 @@
+import { useStatusLabels } from '../../hooks/useStatusLabels'
+
 /**
  * Badge — Status indicators, category labels, metadata chips
  *
@@ -12,27 +14,30 @@
  *   <Badge chip="ship" label="Draco/Harry" />
  *   <Badge chip="tag" label="slow burn" />
  */
+const STATUS_BACKEND_KEY = {
+  unread: 'Unread',
+  reading: 'In Progress',
+  finished: 'Finished',
+  dnf: 'Abandoned',
+}
+
 const STATUS_CONFIG = {
   unread: {
-    label: 'Unread',
     dotColor: 'bg-status-unread',
     bgClass: 'bg-status-unread/20',
     textClass: 'text-text-secondary',
   },
   reading: {
-    label: 'In Progress',
     dotColor: 'bg-status-reading',
     bgClass: 'bg-status-reading/[0.18]',
     textColor: '#85b5b5',
   },
   finished: {
-    label: 'Finished',
     dotColor: 'bg-status-finished',
     bgClass: 'bg-status-finished/[0.18]',
     textColor: '#9dbd8c',
   },
   dnf: {
-    label: 'DNF',
     dotColor: 'bg-status-dnf',
     bgClass: 'bg-status-dnf/20',
     textClass: 'text-text-secondary',
@@ -65,17 +70,20 @@ const CHIP_CONFIG = {
 }
 
 export default function Badge({ status, category, chip, label, className = '' }) {
+  const { getLabel } = useStatusLabels()
+
   // Status badge (with dot indicator)
   if (status) {
     const config = STATUS_CONFIG[status]
     if (!config) return null
+    const labelText = getLabel(STATUS_BACKEND_KEY[status] || status)
     return (
       <span
         className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${config.bgClass} ${config.textClass || ''} ${className}`}
         style={config.textColor ? { color: config.textColor } : undefined}
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dotColor}`} />
-        {config.label}
+        {labelText}
       </span>
     )
   }

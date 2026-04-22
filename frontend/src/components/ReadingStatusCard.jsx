@@ -1,3 +1,5 @@
+import { useStatusLabels } from '../hooks/useStatusLabels'
+
 /**
  * ReadingStatusCard - Displays current reading status with contextual action
  */
@@ -52,7 +54,6 @@ const STATUS_CONFIG = {
     showEdit: false
   },
   finished: {
-    label: 'Finished',
     icon: CheckIcon,
     bgClass: 'bg-action-success/15',
     iconClass: 'text-action-success',
@@ -60,7 +61,6 @@ const STATUS_CONFIG = {
     showEdit: true
   },
   dnf: {
-    label: 'Abandoned',
     icon: CheckIcon,
     bgClass: 'bg-bg-elevated/50',
     iconClass: 'text-text-muted',
@@ -81,8 +81,16 @@ export default function ReadingStatusCard({
   isWishlist = false,
   className = ''
 }) {
+  const { getLabel } = useStatusLabels()
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.unread
   const IconComponent = config.icon
+
+  const displayLabel =
+    status === 'finished'
+      ? getLabel('Finished')
+      : status === 'dnf'
+        ? getLabel('Abandoned')
+        : config.label
 
   const handleDownload = () => {
     if (fileUrl) {
@@ -105,7 +113,7 @@ export default function ReadingStatusCard({
 
         <div className="flex-1 min-w-0">
           <div className="font-medium text-text-primary">
-            {config.label}
+            {displayLabel}
           </div>
           {subtitle && (
             <div className="text-body-sm text-text-secondary truncate">

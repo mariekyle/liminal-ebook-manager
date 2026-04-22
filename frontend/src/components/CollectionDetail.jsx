@@ -1056,7 +1056,7 @@ export default function CollectionDetail() {
                   </button>
                 )}
                 
-                {/* Reorder Books - only for manual/checklist with sortable books, not in remove mode, and ALL books loaded */}
+                {/* Reorder Books - only for manual/checklist with sortable books, not in remove mode, and full pagination done */}
                 {/* For checklists: need 2+ incomplete books. For manual: need 2+ total books */}
                 {!isAutomatic && !removeMode && 
                  (isChecklist 
@@ -1348,15 +1348,6 @@ export default function CollectionDetail() {
                 )}
               </div>
             )}
-
-            {/* "All books loaded" message - show when both sections are done */}
-            {!incompleteHasMore && !completedHasMore && (incompleteBooks.length > 0 || completedBooks.length > 0) && !searchQuery && (
-              <div className="w-full py-8 flex justify-center">
-                <span className="text-caption text-text-muted">
-                  All {totalBooks} books loaded
-                </span>
-              </div>
-            )}
           </>
         ) : (
           <div className="text-center py-12">
@@ -1399,11 +1390,6 @@ export default function CollectionDetail() {
                   </svg>
                   <span className="text-sm">Loading more books...</span>
                 </div>
-              )}
-              {!hasMore && books.length > 0 && !searchQuery && (
-                <span className="text-caption text-text-muted">
-                  All {totalBooks} books loaded
-                </span>
               )}
             </div>
           </>

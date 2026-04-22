@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UnifiedNavBar from '../components/ui/UnifiedNavBar';
 import Button from '../components/ui/Button';
+import { useStatusLabels } from '../hooks/useStatusLabels';
 
 const API_BASE = '/api';
 
@@ -15,15 +16,19 @@ function Stars({ rating }) {
 }
 
 function StatusBadge({ status }) {
+  const { getLabel } = useStatusLabels();
   const colors = {
     'Finished': 'bg-status-finished/20 text-status-finished',
     'In Progress': 'bg-status-reading/20 text-status-reading',
     'DNF': 'bg-status-dnf/20 text-status-dnf',
+    'Abandoned': 'bg-status-dnf/20 text-status-dnf',
     'Unread': 'bg-bg-elevated text-text-muted',
   };
+  const colorKey = status === 'Abandoned' ? 'Abandoned' : status === 'DNF' ? 'DNF' : status;
+  const labelKey = status === 'DNF' ? 'Abandoned' : status;
   return (
-    <span className={`px-2 py-0.5 rounded text-caption font-medium ${colors[status] || colors['Unread']}`}>
-      {status}
+    <span className={`px-2 py-0.5 rounded text-caption font-medium ${colors[colorKey] || colors['Unread']}`}>
+      {getLabel(labelKey)}
     </span>
   );
 }

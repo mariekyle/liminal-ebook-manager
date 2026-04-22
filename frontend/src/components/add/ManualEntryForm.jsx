@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { listBooks } from '../../api'
+import { useStatusLabels } from '../../hooks/useStatusLabels'
 import Button from '../ui/Button'
 import FormField from '../ui/FormField'
 import SegmentedControl from '../ui/SegmentedControl'
@@ -24,6 +25,7 @@ const CATEGORY_OPTIONS = [
 ]
 
 export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, initialFormat = 'physical' }) {
+  const { getLabel } = useStatusLabels()
   const [form, setForm] = useState({
     title: '',
     authors: '',
@@ -309,7 +311,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
                   variant={form.completionStatus === status ? 'primary' : 'secondary'}
                   onClick={() => updateForm('completionStatus', form.completionStatus === status ? '' : status)}
                 >
-                  {status}
+                  {status === 'Abandoned' ? getLabel('Abandoned') : status}
                 </Button>
               ))}
             </div>

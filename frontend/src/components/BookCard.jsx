@@ -23,7 +23,7 @@ function BookCard({
   onClick,
   onLongPress,
 }) {
-  const { labels: statusLabels } = useStatusLabels()
+  const { getLabel } = useStatusLabels()
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   const isWishlist = book.acquisition_status === 'wishlist'
 
@@ -45,8 +45,7 @@ function BookCard({
   const isInProgress = status === 'In Progress'
   const isDNF = status === 'Abandoned' || status === 'DNF'
 
-  // Custom label for DNF status
-  const dnfLabel = statusLabels['Abandoned'] || 'DNF'
+  const dnfLabel = getLabel('Abandoned')
 
   const coverBook = {
     id: book.id,
@@ -269,7 +268,7 @@ function BookCard({
               {!isWishlist && isFinished && (
                 <div
                   className="absolute top-2 right-2 w-6 h-6 bg-bg-base/[0.88] rounded flex items-center justify-center"
-                  title="Finished"
+                  title={getLabel('Finished')}
                 >
                   <span className="text-text-primary"><CheckIcon size={16} /></span>
                 </div>

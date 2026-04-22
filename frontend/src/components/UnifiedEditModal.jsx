@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { autocompleteFandoms, autocompleteShips, autocompleteTags, listSeries } from '../api'
+import { useStatusLabels } from '../hooks/useStatusLabels'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import FormField from './ui/FormField'
@@ -137,6 +138,7 @@ const SeriesInput = ({ value, onChange, allSeries }) => {
 }
 
 export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWishlist }) {
+  const { getLabel } = useStatusLabels()
   const [allSeries, setAllSeries] = useState([])
   const [saving, setSaving] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
@@ -419,7 +421,7 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                   >
                     {COMPLETION_STATUSES.map((status) => (
                       <option key={status} value={status}>
-                        {status}
+                        {status === 'Abandoned' || status === 'In Progress' ? getLabel(status) : status}
                       </option>
                     ))}
                   </select>
