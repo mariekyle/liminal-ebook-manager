@@ -474,7 +474,7 @@ export default function AddPage() {
     
     switch (currentScreen) {
       case SCREENS.MAIN_CHOICE:
-        return { title: '', showBack: false }
+        return { title: '', showBack: true }
       case SCREENS.WISHLIST_FORM:
         return { title: 'Save to Wishlist', showBack: true }
       case SCREENS.MANUAL_FORM:
@@ -505,7 +505,10 @@ export default function AddPage() {
     <div className="text-[#e0e0e0]">
       {/* Page Header - sticky nav with multi-step back */}
       {showNavBar && (
-        <UnifiedNavBar backLabel="Back" onBack={handleBack} />
+        <UnifiedNavBar
+          backLabel={currentScreen === SCREENS.MAIN_CHOICE ? "Library" : "Back"}
+          onBack={currentScreen === SCREENS.MAIN_CHOICE ? () => navigate('/') : handleBack}
+        />
       )}
 
       {/* Screen title - shown below nav bar when there's a title */}

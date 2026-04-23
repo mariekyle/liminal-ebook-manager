@@ -59,11 +59,11 @@ export default function MosaicCover({
     )
   }
 
-  // Banner variant - cropped header style (taller for visual impact)
+  // Banner variant - cropped header style (height-capped for mobile)
   if (variant === 'banner') {
     if (coverType === 'custom' && collectionId) {
       return (
-        <div className={`w-full h-96 md:h-[28rem] rounded-lg overflow-hidden ${className}`}>
+        <div className={`w-full h-[200px] rounded-lg overflow-hidden ${className}`}>
           <img 
             src={`/api/collections/${collectionId}/cover`}
             alt="Collection cover"
@@ -86,7 +86,7 @@ export default function MosaicCover({
     
     // Gradient banner - use CollectionGradient (no icon)
     return (
-      <div className={`w-full h-96 md:h-[28rem] rounded-lg overflow-hidden ${className}`}>
+      <div className={`w-full h-[200px] rounded-lg overflow-hidden ${className}`}>
         <CollectionGradient 
           collectionId={collectionId} 
           collectionName={collectionName}

@@ -348,6 +348,7 @@ function BookDetail() {
   // Edition delete state (Phase 8.7g)
   const [editionToDelete, setEditionToDelete] = useState(null)
   const [editionDeleting, setEditionDeleting] = useState(false)
+  const [showEditionPicker, setShowEditionPicker] = useState(false)
   
   // Merge modal state (Phase 8.7d)
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
@@ -1445,6 +1446,7 @@ function BookDetail() {
     { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
     { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
     { label: 'Add Format', onClick: () => { openAddEdition(); setMenuOpen(false) }, show: !isWishlist },
+    { label: 'Remove Format', onClick: () => { setShowEditionPicker(true); setMenuOpen(false) }, show: !isWishlist && book?.editions?.length > 1 },
     { type: 'divider', show: !isWishlist },
     { label: 'Merge', onClick: () => { openMergeModal(); setMenuOpen(false) } },
     { label: 'Rescan Metadata', onClick: () => { handleRescanMetadata(); setMenuOpen(false) }, show: !isWishlist && !!book?.folder_path },
@@ -1598,37 +1600,20 @@ function BookDetail() {
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
               {book.editions?.map((edition) => {
                 const formatConfig = {
-                  ebook: { label: 'Ebook', color: 'bg-chip-fiction/20 text-chip-fiction border-chip-fiction/30', hoverX: 'hover:bg-bg-elevated' },
-                  physical: { label: 'Physical', color: 'bg-action-warning/20 text-action-warning border-action-warning/30', hoverX: 'hover:bg-bg-elevated' },
-                  audiobook: { label: 'Audiobook', color: 'bg-chip-fandom/20 text-chip-fandom border-chip-fandom/30', hoverX: 'hover:bg-bg-elevated' },
-                  web: { label: 'Web', color: 'bg-chip-nonfiction/20 text-chip-nonfiction border-chip-nonfiction/30', hoverX: 'hover:bg-bg-elevated' }
+                  ebook: { label: 'Ebook', color: 'bg-chip-fiction/20 text-chip-fiction border-chip-fiction/30' },
+                  physical: { label: 'Physical', color: 'bg-action-warning/20 text-action-warning border-action-warning/30' },
+                  audiobook: { label: 'Audiobook', color: 'bg-chip-fandom/20 text-chip-fandom border-chip-fandom/30' },
+                  web: { label: 'Web', color: 'bg-chip-nonfiction/20 text-chip-nonfiction border-chip-nonfiction/30' }
                 }
-                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default', hoverX: 'hover:bg-bg-surface' }
-                const canDelete = book.editions?.length > 1
-                
+                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default' }
+
                 return (
                   <span
                     key={edition.id}
-                    className={`group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
                     title={edition.file_path || edition.folder_path || `${config.label} edition`}
                   >
                     {config.label}
-                    {canDelete && (
-                      <IconButton
-                        type="button"
-                        size="sm"
-                        className={`ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full !w-7 !h-7 min-h-0 ${config.hoverX}`}
-                        aria-label={`Remove ${config.label} edition`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditionToDelete({ ...edition, label: config.label })
-                        }}
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </IconButton>
-                    )}
                   </span>
                 )
               })}
@@ -3001,6 +2986,51 @@ function BookDetail() {
           onClose={() => setShowChangeStatusModal(false)}
         />
       )}
+
+      {/* Edition Picker for Remove (Session 9) */}
+      <Modal
+        isOpen={showEditionPicker}
+        onClose={() => setShowEditionPicker(false)}
+        size="sm"
+      >
+        <Modal.Header onClose={() => setShowEditionPicker(false)}>
+          Remove Format
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-body-sm text-text-secondary mb-4">
+            Which format would you like to remove?
+          </p>
+          <div className="space-y-2">
+            {book?.editions?.map((edition) => {
+              const formatLabels = {
+                ebook: 'Ebook',
+                physical: 'Physical',
+                audiobook: 'Audiobook',
+                web: 'Web'
+              }
+              const label = formatLabels[edition.format] || edition.format
+              return (
+                <button
+                  key={edition.id}
+                  type="button"
+                  onClick={() => {
+                    setShowEditionPicker(false)
+                    setEditionToDelete({ ...edition, label })
+                  }}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-bg-elevated hover:bg-bg-surface transition-colors text-body-sm text-text-primary"
+                >
+                  {label}
+                  {edition.file_path && (
+                    <span className="block text-xs text-text-muted mt-0.5 truncate">
+                      {edition.file_path.split('/').pop()}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </Modal.Body>
+      </Modal>
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       <Modal

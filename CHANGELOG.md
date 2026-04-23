@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.46.0] - 2026-04-23
+
+### Changed
+
+#### Fix Session 9: Mobile-First Polish
+Four fixes that remove desktop-oriented patterns and plug navigation gaps. The common thread: things that were invisible, confusing, or wasted screen space on mobile. Addresses audit findings G2-14, G5-10, G5-03, G7-01, G7-15.
+
+**Edition badges display-only, "Remove Format" moved to 3-dot menu (G2-14):**
+- Edition format badges on BookDetail are now pure display chips — the inline ✕ button (`opacity-0 group-hover:opacity-100`) is gone. That pattern was invisible on mobile and violated the page's established "all edits go through modals" architecture.
+- New `Remove Format` menu item in the 3-dot menu, gated on `!isWishlist && book.editions.length > 1`. Tapping it opens an edition picker modal listing all formats with filename context. Selecting a format closes the picker and triggers the existing `editionToDelete` → confirmation modal → `handleDeleteEdition` flow. Zero changes to the delete logic itself.
+- `showEditionPicker` state added. Picker buttons use `type="button"` to prevent accidental form submits.
+
+**Checklist hint drops desktop language (G5-10):**
+- CollectionDetail checklist instruction changed from "Long-press or right-click a book to mark it complete" to "Long-press a book to mark it complete." On a 95%-mobile app, "or right-click" is noise. Desktop users discover right-click without instruction.
+
+**Collection banner cover capped at 200px (G5-03):**
+- MosaicCover banner variant reduced from `h-96 md:h-[28rem]` (384px mobile / 448px desktop) to `h-[200px]` on both custom-image and gradient paths. The old height consumed the entire phone screen before any books were visible. Card and square variants unchanged.
+
+**AddChoice gets back navigation and context (G7-01, G7-15):**
+- AddPage's header config now returns `showBack: true` for MAIN_CHOICE, rendering "← Library" that navigates to `/`. All other screens keep "← Back" routing through `handleBack`. This follows AddPage's existing nav ownership pattern — AddChoice stays a content component like WishlistForm and ManualEntryForm.
+- AddChoice gains a dynamic book count subtitle ("N titles and counting") via `listBooks({ limit: 1, acquisition: 'all' })`. Count includes both library and wishlist items. Graceful fallback: if the fetch fails, the subtitle is omitted and spacing preserved via a fixed `mb-8` placeholder.
+- Initial implementation gave AddChoice its own `UnifiedNavBar` + `min-h-screen` wrapper, creating a nested page shell inside AddPage's `<main>`. Caught by Cursor review agent; fixed in a follow-up pass that moved nav ownership to AddPage and reverted AddChoice to content-only.
+
+### Technical
+
+#### Files Created
+None. Session 9 is all modifications to existing files.
+
+#### Files Modified
+- `frontend/src/components/BookDetail.jsx` — Edition badges stripped of `group`, `gap-1`, `hoverX`, `canDelete`, and entire `IconButton` block; `showEditionPicker` state added; `Remove Format` menu item added after `Add Format`; edition picker modal added before existing delete confirmation modal
+- `frontend/src/components/CollectionDetail.jsx` — Checklist hint text: removed "or right-click"
+- `frontend/src/components/MosaicCover.jsx` — Banner variant (both custom and gradient paths): `h-96 md:h-[28rem]` → `h-[200px]`
+- `frontend/src/components/add/AddChoice.jsx` — Removed `UnifiedNavBar`, `min-h-screen`, `bg-bg-base` wrapper; added `listBooks` import, `bookCount` state, dynamic subtitle with loading placeholder
+- `frontend/src/pages/AddPage.jsx` — `getHeaderConfig()` MAIN_CHOICE returns `showBack: true`; `UnifiedNavBar` renders "← Library" with `navigate('/')` for MAIN_CHOICE, "← Back" with `handleBack` for all other screens
+
+#### Files Verified, No Changes
+- `editionToDelete` / `editionDeleting` state, `handleDeleteEdition` function, `deleteEdition` import, Delete Edition Confirmation Modal — all unchanged, reused by new 3-dot menu → picker → confirmation flow
+- MosaicCover card and square variants — unchanged
+- No backend or frozen files modified
+
+#### Requires Docker Rebuild
+No. Frontend-only changes.
+
+---
+
 ## [0.45.0] - 2026-04-22
 
 ### Changed

@@ -1225,7 +1225,7 @@ export default function CollectionDetail() {
       {isChecklist && !removeMode && (incompleteBooks.length > 0 || completedBooks.length > 0) && (
         <div className="mb-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
           <p className="text-body-sm text-text-secondary">
-            Long-press or right-click a book to mark it complete
+            Long-press a book to mark it complete
           </p>
         </div>
       )}
