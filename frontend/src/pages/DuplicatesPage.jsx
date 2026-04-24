@@ -4,6 +4,15 @@ import { findDuplicates, mergeTitles } from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
 
+// Stable client-side group ID. Prefers crypto.randomUUID (modern browsers, Android
+// WebView ≥ recent) with a math-based fallback so we never crash on older contexts.
+const makeGroupKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 // Simple color generator based on string hash (no text display)
 function getColorFromString(str) {
   let hash = 0
@@ -25,6 +34,8 @@ function DuplicatesPage() {
   const [merging, setMerging] = useState({})
   const [mergeSuccess, setMergeSuccess] = useState({})
   const [mergeError, setMergeError] = useState({})
+  // Track which groups are showing the merge confirmation (one extra tap before merge)
+  const [confirmingMerge, setConfirmingMerge] = useState({})
 
   useEffect(() => {
     scanForDuplicates()
@@ -34,16 +45,25 @@ function DuplicatesPage() {
     setLoading(true)
     setError(null)
     setSelections({})
+    setMerging({})
     setMergeSuccess({})
     setMergeError({})
+    setConfirmingMerge({})
     try {
       const data = await findDuplicates()
-      setResults(data)
+      // Assign a stable client-side key to every group so all per-group state maps
+      // (selections, merging, mergeSuccess, mergeError, confirmingMerge) and React's
+      // reconciliation key stay correct across mutations (merge-and-remove, rescan).
+      const groupsWithKeys = (data.groups || []).map((group) => ({
+        ...group,
+        _key: makeGroupKey(),
+      }))
+      setResults({ ...data, groups: groupsWithKeys })
       // Pre-select first book in each group as default "keep"
       const initialSelections = {}
-      data.groups.forEach((group, idx) => {
+      groupsWithKeys.forEach((group) => {
         if (group.books.length > 0) {
-          initialSelections[idx] = group.books[0].id
+          initialSelections[group._key] = group.books[0].id
         }
       })
       setSelections(initialSelections)
@@ -55,51 +75,64 @@ function DuplicatesPage() {
     }
   }
 
-  const handleSelectionChange = (groupIndex, bookId) => {
-    setSelections(prev => ({ ...prev, [groupIndex]: bookId }))
+  const handleSelectionChange = (groupKey, bookId) => {
+    setSelections(prev => ({ ...prev, [groupKey]: bookId }))
   }
 
-  const handleMergeGroup = async (groupIndex) => {
-    const group = results.groups[groupIndex]
-    const keepId = selections[groupIndex]
-    
+  const handleMergeGroup = async (groupKey) => {
+    const group = results.groups.find(g => g._key === groupKey)
+    if (!group) return
+    const keepId = selections[groupKey]
+
     if (!keepId) {
-      setMergeError(prev => ({ ...prev, [groupIndex]: 'Please select a book to keep' }))
+      setMergeError(prev => ({ ...prev, [groupKey]: 'Please select a book to keep' }))
       return
     }
-    
+
     // Get IDs of books to merge (all except the one we're keeping)
     const toMerge = group.books.filter(b => b.id !== keepId).map(b => b.id)
-    
+
     if (toMerge.length === 0) {
       return
     }
-    
-    setMerging(prev => ({ ...prev, [groupIndex]: true }))
-    setMergeError(prev => ({ ...prev, [groupIndex]: null }))
-    
+
+    setMerging(prev => ({ ...prev, [groupKey]: true }))
+    setMergeError(prev => ({ ...prev, [groupKey]: null }))
+    setConfirmingMerge(prev => ({ ...prev, [groupKey]: false }))
+
     try {
       // Merge each book into the target sequentially
       for (const sourceId of toMerge) {
         await mergeTitles(keepId, sourceId)
       }
-      
-      setMergeSuccess(prev => ({ ...prev, [groupIndex]: true }))
-      
-      // Remove this group from results after short delay
+
+      setMergeSuccess(prev => ({ ...prev, [groupKey]: true }))
+
+      // Remove this group from results after short delay, and drop its entries
+      // from every per-group state map. Using _key means we never have to care
+      // about array index shifts — each map is a dictionary, not a positional list.
       setTimeout(() => {
         setResults(prev => ({
           ...prev,
-          groups: prev.groups.filter((_, idx) => idx !== groupIndex),
+          groups: prev.groups.filter(g => g._key !== groupKey),
           total_duplicates: prev.total_duplicates - group.books.length
         }))
+        const drop = (obj) => {
+          const { [groupKey]: _, ...rest } = obj
+          return rest
+        }
+        setSelections(drop)
+        setMerging(drop)
+        setMergeSuccess(drop)
+        setMergeError(drop)
+        setConfirmingMerge(drop)
       }, 1500)
-      
+
     } catch (err) {
       console.error('Failed to merge:', err)
-      setMergeError(prev => ({ ...prev, [groupIndex]: err.message || 'Failed to merge' }))
+      setMergeError(prev => ({ ...prev, [groupKey]: err.message || 'Failed to merge' }))
     } finally {
-      setMerging(prev => ({ ...prev, [groupIndex]: false }))
+      setMerging(prev => ({ ...prev, [groupKey]: false }))
     }
   }
 
@@ -176,11 +209,11 @@ function DuplicatesPage() {
                 </div>
 
                 {/* Groups */}
-                {results.groups.map((group, groupIndex) => (
-                  <div 
-                    key={groupIndex}
+                {results.groups.map((group) => (
+                  <div
+                    key={group._key}
                     className={`bg-bg-surface rounded-lg overflow-hidden border border-border-default transition-opacity ${
-                      mergeSuccess[groupIndex] ? 'opacity-50' : ''
+                      mergeSuccess[group._key] ? 'opacity-50' : ''
                     }`}
                   >
                     {/* Group Header */}
@@ -203,16 +236,16 @@ function DuplicatesPage() {
                         </span>
                       </div>
                       
-                      {/* Merge button */}
-                      {!mergeSuccess[groupIndex] && (
+                      {/* Merge button — hidden during confirmation */}
+                      {!mergeSuccess[group._key] && !confirmingMerge[group._key] && (
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => handleMergeGroup(groupIndex)}
-                          disabled={merging[groupIndex] || !selections[groupIndex]}
+                          onClick={() => setConfirmingMerge(prev => ({ ...prev, [group._key]: true }))}
+                          disabled={merging[group._key] || !selections[group._key]}
                           className="flex items-center gap-2"
                         >
-                          {merging[groupIndex] ? (
+                          {merging[group._key] ? (
                             <>
                               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -226,7 +259,7 @@ function DuplicatesPage() {
                         </Button>
                       )}
                       
-                      {mergeSuccess[groupIndex] && (
+                      {mergeSuccess[group._key] && (
                         <span className="text-action-success text-body-sm flex items-center gap-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -237,9 +270,9 @@ function DuplicatesPage() {
                     </div>
 
                     {/* Error */}
-                    {mergeError[groupIndex] && (
+                    {mergeError[group._key] && (
                       <div className="px-4 py-2 bg-action-danger/10 text-action-danger text-body-sm border-b border-border-subtle">
-                        {mergeError[groupIndex]}
+                        {mergeError[group._key]}
                       </div>
                     )}
 
@@ -249,16 +282,16 @@ function DuplicatesPage() {
                         <label
                           key={book.id}
                           className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-bg-elevated/50 transition-colors ${
-                            selections[groupIndex] === book.id ? 'bg-action-primary/10' : ''
+                            selections[group._key] === book.id ? 'bg-action-primary/10' : ''
                           }`}
                         >
                           {/* Radio button */}
                           <input
                             type="radio"
-                            name={`group-${groupIndex}`}
-                            checked={selections[groupIndex] === book.id}
-                            onChange={() => handleSelectionChange(groupIndex, book.id)}
-                            disabled={merging[groupIndex] || mergeSuccess[groupIndex]}
+                            name={`group-${group._key}`}
+                            checked={selections[group._key] === book.id}
+                            onChange={() => handleSelectionChange(group._key, book.id)}
+                            disabled={merging[group._key] || mergeSuccess[group._key]}
                             className="w-4 h-4 text-action-primary bg-bg-elevated border-border-default focus:ring-action-primary focus:ring-offset-bg-surface"
                           />
                           
@@ -294,7 +327,7 @@ function DuplicatesPage() {
                           </div>
 
                           {/* Keep indicator */}
-                          {selections[groupIndex] === book.id && (
+                          {selections[group._key] === book.id && (
                             <span className="px-2 py-1 bg-action-success/15 text-action-success text-caption rounded">
                               Keep
                             </span>
@@ -315,12 +348,44 @@ function DuplicatesPage() {
                       ))}
                     </div>
 
-                    {/* Help text */}
-                    {!mergeSuccess[groupIndex] && (
+                    {/* Help text — default state (hide during active merge so it doesn't duel with the "Merging..." button) */}
+                    {!mergeSuccess[group._key] && !confirmingMerge[group._key] && !merging[group._key] && (
                       <div className="px-4 py-3 bg-bg-elevated/50 text-text-muted text-caption border-t border-border-subtle">
                         💡 Select the book to keep, then click &quot;Merge into Selected&quot;. Other books will be merged into it.
                       </div>
                     )}
+
+                    {/* Confirmation row — replaces help text when user taps Merge into Selected */}
+                    {!mergeSuccess[group._key] && confirmingMerge[group._key] && (() => {
+                      const keptBook = group.books.find(b => b.id === selections[group._key])
+                      const mergeCount = group.books.length - 1
+                      const keptTitle = keptBook?.title || 'the selected title'
+                      return (
+                        <div className="px-4 py-3 bg-action-danger/5 border-t border-action-danger/20 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-body-sm text-text-primary">
+                            Merge {mergeCount} {mergeCount === 1 ? 'title' : 'titles'} into &quot;{keptTitle}&quot;? This can&apos;t be undone.
+                          </p>
+                          <div className="flex gap-2 sm:flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setConfirmingMerge(prev => ({ ...prev, [group._key]: false }))}
+                              disabled={merging[group._key]}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleMergeGroup(group._key)}
+                              disabled={merging[group._key]}
+                            >
+                              Merge &amp; Delete
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>

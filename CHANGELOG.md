@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.47.0] - 2026-04-23
+
+### Changed
+
+#### Fix Session 10: Destructive Action Guards
+Three tracks replaced silent-failure and browser-native destructive paths with in-app confirmations and consistent error surfaces. Also cleared the last-remaining `window.confirm` call in the app. Addresses audit findings G8-02, G3-13, plus the modal-closes-on-failure item parked from Session 3 (v0.40.0 CHANGELOG).
+
+**Track 1 — DuplicatesPage inline merge confirmation (G8-02):**
+- Tapping "Merge into Selected" on a duplicate group no longer merges immediately. The button hides and a confirmation row appears at the bottom of the group card: `Merge N titles into "KeptTitle"? This can't be undone.` with Cancel (ghost) and Merge & Delete (danger) buttons. Cancel returns the card to default state; Merge & Delete performs the actual merge.
+- Pluralization handled: `1 title` vs `N titles`. Kept title pulled from the current radio selection; graceful fallback to `the selected title` if selection is somehow missing.
+- Layout stacks vertical on narrow mobile (`flex-col`) and goes horizontal at the `sm:` breakpoint so long fanfic titles don't crowd the buttons.
+- Help text (`💡 Select the book to keep...`) hidden during the in-flight merge and during confirmation, so only one signal is ever visible at a time.
+
+**Track 1 follow-up — Group state keyed by stable UUIDs, not array indices:**
+- Discovered during mobile testing: after a successful merge's 1.5s post-success `setTimeout` removed the group from `results.groups`, the group that slid up into its place inherited stale `mergeSuccess`/`merging`/etc. flags from the removed group's old index — rendering as dimmed with a phantom "Merged!" chip until the next rescan.
+- Root cause was pre-existing: every per-group state map (`selections`, `merging`, `mergeSuccess`, `mergeError`, the new `confirmingMerge`) was keyed by array position, and filtering `groups` didn't shift the indices in the state maps.
+- Fixed by assigning each group a stable client-side UUID (`group._key`, via `crypto.randomUUID()` with a math-based fallback for older contexts) on load in `scanForDuplicates`. All per-group state maps, the React list `key` prop, and the radio-button `name` attribute now key on `group._key` instead of array index. Post-merge cleanup is a single `delete` per map — no more index arithmetic.
+- `scanForDuplicates` also now resets `setMerging({})` alongside the other state maps — previously missed, which could have left stale in-flight flags across a rescan mid-merge. Small correctness drive-by.
+- Picks up a latent React reconciliation benefit: DOM nodes no longer reused across groups after array mutations, because the `key` prop is now identity-stable.
+- Project-wide grep for `groupIndex` in `DuplicatesPage.jsx` returns zero matches — entire index-based keying pattern eliminated.
+
+**Track 2 — Session delete inline confirmation (G3-13):**
+- `window.confirm()` in `handleDeleteSession` replaced with an in-app confirmation view inside the session edit modal, matching the Session 4 "Discard unsaved changes?" pattern in `UnifiedEditModal`.
+- Tapping Delete in the footer swaps the form body for a centered confirmation view titled `Delete Read #N?` with subtext `This can't be undone.` and Cancel (ghost) / Delete (danger) buttons. Footer hidden during confirmation (no stray buttons).
+- Cancel returns to the form with all field values preserved. X / backdrop / Escape while confirming dismiss only the confirm view (same no-double-loss behavior as Session 4), not the whole modal.
+- On delete API failure, the confirmation dismisses and the form reappears with the existing `sessionError` banner showing the message — errors have a consistent surface instead of a dead-end confirmation.
+- `handleDeleteSession` split into two functions: `handleDeleteSession` now only opens the confirmation; `handleConfirmDeleteSession` runs the actual `deleteSession` call + refresh flow.
+- `closeSessionModal` clears the new `showSessionDeleteConfirm` state so reopening the modal always starts in the form view.
+- `window.confirm` grep in `BookDetail.jsx` returns zero matches.
+
+**Track 3 — Modal-closes-on-failure for MarkFinishedModal and ChangeStatusModal (parked from Session 3):**
+- Both modals previously closed unconditionally — on success AND on API failure, with the failure silently swallowed. Deferred from v0.40.0 with a note pointing to Session 10 for consistent treatment.
+- `MarkFinishedModal` and `ChangeStatusModal` now accept optional `error` and `saving` props. When `error` is truthy, the modal renders a non-blocking danger banner at the top of the body (same visual style as the existing `sessionError` banner in the session editor modal, for consistency).
+- Primary action buttons (`Mark Finished`, `Apply`) support `loading={saving}` and `disabled={saving}`. Ghost Cancel button also disabled during the in-flight call to prevent mid-save cancels.
+- `BookDetail.jsx` handlers `handleMarkFinishedConfirm` and `handleChangeStatusFromModal` rewritten: `setXSaving(true)` at start, `setXError(null)` to clear prior, move `setShowXModal(false)` into the `try` block so close only fires on success. `catch` sets the error state, leaves the modal open. `finally` clears saving.
+- Both modals' `onClose` handlers now clear the corresponding error state so a fresh open never renders a stale banner.
+- Props are optional on both modal components — no breaking changes for call sites that don't pass them (`Library.jsx`, `CollectionDetail.jsx`, `AuthorDetail.jsx`).
+
+### Fixed
+
+- **`await` missing on `fetchSessions()` in `handleConfirmDeleteSession`.** Flagged by Cursor review agent after initial implementation. The finally block's `setSessionSaving(false)` was racing the un-awaited `fetchSessions()`, marking the operation complete before the reading-history list finished reloading. Now awaited, matching the pattern already in `handleMarkFinishedConfirm` and `handleChangeStatusFromModal`.
+- **`||` instead of `??` for rating in `handleConfirmDeleteSession`.** Flagged by Cursor review agent. A rating of `0` was being coerced to `null` by the `||` operator, wiping a legitimate zero rating on delete refresh. Switched to `??`, which only substitutes null/undefined.
+- **`||` vs `??` swept across entire `BookDetail.jsx` (drive-by during the review-agent fix).** `handleSaveSession` had the same `||` + un-awaited `fetchSessions()` pattern; fixed both. The initial `getBook` effect in the book-load `useEffect` used `||` for rating; fixed. `handleChangeStatusFromModal` gained a `setSelectedRating(bookData.rating ?? null)` after status refresh so all four `bookData`-consuming handlers align on `??` and awaited session refetches. `grep "bookData.rating || null"` returns zero matches in `BookDetail.jsx`.
+
+### Technical
+
+#### Files Created
+None. Session 10 is all modifications to existing files.
+
+#### Files Modified
+- `frontend/src/pages/DuplicatesPage.jsx` — `makeGroupKey()` helper (UUID + fallback); `scanForDuplicates` builds `groupsWithKeys` with `_key` and initializes selections by `_key`; added `setMerging({})` reset; `handleSelectionChange(groupKey, bookId)`; `handleMergeGroup(groupKey)` with `find(g => g._key === groupKey)` lookup and `drop()` cleanup across all five maps; JSX `key={group._key}`; all state lookups on `group._key`; confirmation row with pluralization + mobile-stacked layout; help text gated on `!mergeSuccess && !confirmingMerge && !merging`
+- `frontend/src/components/BookDetail.jsx` — `showSessionDeleteConfirm` state; `closeSessionModal` clears it; `handleDeleteSession` split into opener + `handleConfirmDeleteSession` executor; session-editor Modal `onClose` and header X intercept when confirming (dismiss confirm, not modal); Modal.Body conditional renders confirmation view or form; Modal.Footer hidden during confirmation; MarkFinished/ChangeStatus error + saving state (`markFinishedError`/`markFinishedSaving`/`changeStatusError`/`changeStatusSaving`); parent handlers rewritten to close-on-success-only; modal render blocks pass `error` + `saving` props, `onClose` clears error; `await fetchSessions()` + `bookData.rating ?? null` sweep
+- `frontend/src/components/MarkFinishedModal.jsx` — optional `error` + `saving` props; danger error banner at top of body; primary button `loading` + `disabled`; ghost Cancel disabled while saving; JSDoc updated
+- `frontend/src/components/ChangeStatusModal.jsx` — same pattern as MarkFinishedModal; primary button adds `|| saving` to existing `disabled` condition; JSDoc updated
+
+#### Files Verified, No Changes
+- `frontend/src/components/UnifiedEditModal.jsx` — reference pattern for the session-delete confirmation view; not edited
+- `mergeTitles`, `deleteSession`, `updateBookStatus`, `updateBookDates`, `updateBookRating`, `getBook`, `fetchSessions`, `findDuplicates` — API surface unchanged
+- `Library.jsx`, `CollectionDetail.jsx`, `AuthorDetail.jsx` — still render `MarkFinishedModal`/`ChangeStatusModal` without `error`/`saving` props; new props are optional, call sites unaffected
+- BookDetail merge modal (G3-10 already had confirmation; unchanged)
+- No backend or frozen files modified
+
+#### Requires Docker Rebuild
+No. Frontend-only changes.
+
+### Parked (not addressed in this session)
+
+- **Reading session / status architecture cluster.** Four interdependent questions surfaced during Session 8 and Session 10 testing: (1) Status pill should probably be an inline dropdown, not a modal; (2) Status pill ↔ reading-session sync is one-way; (3) Is MarkFinished modal still necessary if every status change becomes a session? (4) `handleChangeStatusFromModal` (and its identical sibling in `Library.jsx`) unconditionally clears `date_finished`, wiping the finish date on Finished → Abandoned. All four are symptoms of the same unresolved architectural question: is the `Title` cache the source of truth with sessions as journal entries, or are sessions the source of truth with Title fields as a materialized view? A one-off fix to #4 would just move the drift elsewhere. Consolidated in Open Questions, scoped for a dedicated decision sprint after Session 11 ships. Not Session 10 scope.
+- **ImportPage `StatusBadge` dual-keyed color map.** Still worth an hour of investigation before Session 11. Noted.
+- **Desktop navigation.** Still no nav on desktop. Triaged separately.
+- **G8-04: post-merge dimmed-group state in DuplicatesPage.** The 1.5s window where a merged group stays visible with a "Merged!" chip creates visual noise in batch processing. Separate audit finding, not Session 10 scope, flagged during testing.
+
+---
+
 ## [0.46.0] - 2026-04-23
 
 ### Changed

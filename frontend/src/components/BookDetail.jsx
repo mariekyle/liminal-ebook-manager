@@ -322,7 +322,11 @@ function BookDetail() {
   const [acquireFormat, setAcquireFormat] = useState('ebook')
 
   const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
+  const [markFinishedError, setMarkFinishedError] = useState(null)
+  const [markFinishedSaving, setMarkFinishedSaving] = useState(false)
   const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
+  const [changeStatusError, setChangeStatusError] = useState(null)
+  const [changeStatusSaving, setChangeStatusSaving] = useState(false)
 
   // Mobile tab state
   const [activeTab, setActiveTab] = useState('details')
@@ -338,7 +342,8 @@ function BookDetail() {
   // Session editor modal state
   const [sessionModalOpen, setSessionModalOpen] = useState(false)
   const [editingSession, setEditingSession] = useState(null) // null = creating new, object = editing existing
-  
+  const [showSessionDeleteConfirm, setShowSessionDeleteConfirm] = useState(false)
+
   // Edition modal state (Phase 8.7b)
   const [editionModalOpen, setEditionModalOpen] = useState(false)
   const [editionForm, setEditionForm] = useState({ format: '', acquired_date: '' })
@@ -473,6 +478,7 @@ function BookDetail() {
 
   const closeSessionModal = () => {
     setSessionModalOpen(false)
+    setShowSessionDeleteConfirm(false)
     setEditingSession(null)
     setSessionError(null)
   }
@@ -571,12 +577,12 @@ function BookDetail() {
       }
       
       closeSessionModal()
-      fetchSessions() // Refresh the list
+      await fetchSessions() // Refresh the list
       // Also refresh book data to get updated cached status/rating
       const bookData = await getBook(id)
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
-      setSelectedRating(bookData.rating || null)
+      setSelectedRating(bookData.rating ?? null)
       setDateStarted(bookData.date_started || '')
       setDateFinished(bookData.date_finished || '')
     } catch (err) {
@@ -586,30 +592,30 @@ function BookDetail() {
     }
   }
   
-  const handleDeleteSession = async () => {
+  const handleDeleteSession = () => {
     if (!editingSession) return
-    
-    const confirmDelete = window.confirm(
-      `Delete Read #${editingSession.session_number}? This cannot be undone.`
-    )
-    if (!confirmDelete) return
-    
+    setSessionError(null)
+    setShowSessionDeleteConfirm(true)
+  }
+
+  const handleConfirmDeleteSession = async () => {
+    if (!editingSession) return
     setSessionSaving(true)
     setSessionError(null)
-    
     try {
       await deleteSession(editingSession.id)
       closeSessionModal()
-      fetchSessions()
+      await fetchSessions()
       // Refresh book data to get updated cached status/rating
       const bookData = await getBook(id)
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
-      setSelectedRating(bookData.rating || null)
+      setSelectedRating(bookData.rating ?? null)
       setDateStarted(bookData.date_started || '')
       setDateFinished(bookData.date_finished || '')
     } catch (err) {
       setSessionError(err.message)
+      setShowSessionDeleteConfirm(false) // return to form so user sees the error banner
     } finally {
       setSessionSaving(false)
     }
@@ -751,7 +757,7 @@ function BookDetail() {
         setNotes(notesData)
         setSelectedCategory(bookData.category || '')
         setSelectedStatus(bookData.status || 'Unread')
-        setSelectedRating(bookData.rating || null)
+        setSelectedRating(bookData.rating ?? null)
         setDateStarted(bookData.date_started || '')
         setDateFinished(bookData.date_finished || '')
         setSelectedPriority(bookData.tbr_priority || 'normal')
@@ -1035,6 +1041,8 @@ function BookDetail() {
 
   const handleMarkFinishedConfirm = async (dateFinished, rating) => {
     if (!book || !id) return
+    setMarkFinishedSaving(true)
+    setMarkFinishedError(null)
     try {
       await updateBookStatus(id, 'Finished')
       if (dateFinished) await updateBookDates(id, book.date_started, dateFinished)
@@ -1046,27 +1054,36 @@ function BookDetail() {
       setDateStarted(bookData.date_started || '')
       setDateFinished(bookData.date_finished || '')
       await fetchSessions()
+      setShowMarkFinishedModal(false)
     } catch (err) {
       console.error('Failed to mark finished:', err)
+      setMarkFinishedError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setMarkFinishedSaving(false)
     }
-    setShowMarkFinishedModal(false)
   }
 
   const handleChangeStatusFromModal = async (newStatus) => {
     if (!book || !id) return
+    setChangeStatusSaving(true)
+    setChangeStatusError(null)
     try {
       await updateBookStatus(id, newStatus)
       await updateBookDates(id, book.date_started, null)
       const bookData = await getBook(id)
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
+      setSelectedRating(bookData.rating ?? null)
       setDateStarted(bookData.date_started || '')
       setDateFinished(bookData.date_finished || '')
       await fetchSessions()
+      setShowChangeStatusModal(false)
     } catch (err) {
       console.error('Failed to change status:', err)
+      setChangeStatusError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setChangeStatusSaving(false)
     }
-    setShowChangeStatusModal(false)
   }
 
   const handleRatingChange = async (newRating) => {
@@ -2563,118 +2580,168 @@ function BookDetail() {
       {/* Session Editor Modal */}
       <Modal
         isOpen={sessionModalOpen}
-        onClose={closeSessionModal}
+        onClose={() => {
+          if (showSessionDeleteConfirm) {
+            setShowSessionDeleteConfirm(false)
+            return
+          }
+          closeSessionModal()
+        }}
         size="md"
       >
-        <Modal.Header onClose={closeSessionModal}>
+        <Modal.Header onClose={() => {
+          if (showSessionDeleteConfirm) {
+            setShowSessionDeleteConfirm(false)
+            return
+          }
+          closeSessionModal()
+        }}>
           {editingSession ? `Edit Read #${editingSession.session_number}` : 'Add Reading Session'}
         </Modal.Header>
         <Modal.Body>
-          {/* Error banner */}
-          {sessionError && (
-            <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
-              {sessionError}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {/* Start Date */}
-            <FormField label="Start Date">
-              <input
-                type="date"
-                value={sessionForm.date_started}
-                onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
-                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
-              />
-            </FormField>
-
-            {/* End Date */}
-            <FormField label="End Date">
-              <input
-                type="date"
-                value={sessionForm.date_finished}
-                onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
-                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
-              />
-            </FormField>
-
-            {/* Format */}
-            <FormField label="Format">
-              <select
-                value={sessionForm.format}
-                onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
-                className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus h-11"
-              >
-                <option value="">— Not specified</option>
-                <option value="ebook">Ebook</option>
-                <option value="physical">Physical</option>
-                <option value="audiobook">Audiobook</option>
-                <option value="web">Web</option>
-              </select>
-            </FormField>
-
-            {/* Status */}
-            <FormField label="Status">
-              <div className="flex gap-2">
-                {['in_progress', 'finished', 'dnf'].map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setSessionForm({ ...sessionForm, session_status: status })}
-                    className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
-                      sessionForm.session_status === status
-                        ? status === 'finished'
-                          ? 'bg-action-success text-text-inverse'
-                          : status === 'dnf'
-                          ? 'bg-chip-ship/40 text-chip-ship'
-                          : 'bg-action-secondary text-text-primary'
-                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
-                    }`}
-                  >
-                    {getLabel(SESSION_STATUS_TO_BACKEND[status])}
-                  </button>
-                ))}
+          {showSessionDeleteConfirm ? (
+            <div className="flex flex-col items-center justify-center text-center px-6 py-8 gap-6">
+              <div className="space-y-2">
+                <h3 className="text-h4 text-text-primary">
+                  Delete Read #{editingSession?.session_number}?
+                </h3>
+                <p className="text-body-sm text-text-secondary max-w-xs">
+                  This can&apos;t be undone.
+                </p>
               </div>
-            </FormField>
+              <div className="flex gap-3 w-full max-w-xs">
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => setShowSessionDeleteConfirm(false)}
+                  disabled={sessionSaving}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={handleConfirmDeleteSession}
+                  disabled={sessionSaving}
+                  loading={sessionSaving}
+                  className="flex-1"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Error banner */}
+              {sessionError && (
+                <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
+                  {sessionError}
+                </div>
+              )}
 
-            {sessionForm.session_status !== 'in_progress' && (
-              <FormField label="Rating">
-                <StarRating
-                  value={sessionForm.rating}
-                  onChange={(val) => setSessionForm({ ...sessionForm, rating: val })}
-                  size="lg"
-                />
-              </FormField>
-            )}
-          </div>
+              <div className="space-y-4">
+                {/* Start Date */}
+                <FormField label="Start Date">
+                  <input
+                    type="date"
+                    value={sessionForm.date_started}
+                    onChange={(e) => setSessionForm({ ...sessionForm, date_started: e.target.value })}
+                    className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+                  />
+                </FormField>
+
+                {/* End Date */}
+                <FormField label="End Date">
+                  <input
+                    type="date"
+                    value={sessionForm.date_finished}
+                    onChange={(e) => setSessionForm({ ...sessionForm, date_finished: e.target.value })}
+                    className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus"
+                  />
+                </FormField>
+
+                {/* Format */}
+                <FormField label="Format">
+                  <select
+                    value={sessionForm.format}
+                    onChange={(e) => setSessionForm({ ...sessionForm, format: e.target.value })}
+                    className="w-full bg-bg-elevated border border-border-default rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-border-focus h-11"
+                  >
+                    <option value="">— Not specified</option>
+                    <option value="ebook">Ebook</option>
+                    <option value="physical">Physical</option>
+                    <option value="audiobook">Audiobook</option>
+                    <option value="web">Web</option>
+                  </select>
+                </FormField>
+
+                {/* Status */}
+                <FormField label="Status">
+                  <div className="flex gap-2">
+                    {['in_progress', 'finished', 'dnf'].map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setSessionForm({ ...sessionForm, session_status: status })}
+                        className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${
+                          sessionForm.session_status === status
+                            ? status === 'finished'
+                              ? 'bg-action-success text-text-inverse'
+                              : status === 'dnf'
+                              ? 'bg-chip-ship/40 text-chip-ship'
+                              : 'bg-action-secondary text-text-primary'
+                            : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
+                        }`}
+                      >
+                        {getLabel(SESSION_STATUS_TO_BACKEND[status])}
+                      </button>
+                    ))}
+                  </div>
+                </FormField>
+
+                {sessionForm.session_status !== 'in_progress' && (
+                  <FormField label="Rating">
+                    <StarRating
+                      value={sessionForm.rating}
+                      onChange={(val) => setSessionForm({ ...sessionForm, rating: val })}
+                      size="lg"
+                    />
+                  </FormField>
+                )}
+              </div>
+            </>
+          )}
         </Modal.Body>
-        <Modal.Footer>
-          {/* Footer as slot: danger left, standard right */}
-          <div className="flex gap-3 w-full">
-            {editingSession && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDeleteSession}
-                disabled={sessionSaving}
-              >
-                Delete
+        {!showSessionDeleteConfirm && (
+          <Modal.Footer>
+            {/* Footer as slot: danger left, standard right */}
+            <div className="flex gap-3 w-full">
+              {editingSession && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleDeleteSession}
+                  disabled={sessionSaving}
+                >
+                  Delete
+                </Button>
+              )}
+              <div className="flex-1" />
+              <Button variant="ghost" onClick={closeSessionModal} disabled={sessionSaving}>
+                Cancel
               </Button>
-            )}
-            <div className="flex-1" />
-            <Button variant="ghost" onClick={closeSessionModal} disabled={sessionSaving}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveSession}
-              disabled={sessionSaving}
-              loading={sessionSaving}
-            >
-              Save
-            </Button>
-          </div>
-        </Modal.Footer>
+              <Button
+                variant="primary"
+                onClick={handleSaveSession}
+                disabled={sessionSaving}
+                loading={sessionSaving}
+              >
+                Save
+              </Button>
+            </div>
+          </Modal.Footer>
+        )}
       </Modal>
 
       {/* Add Edition Modal (Phase 8.7b) */}
@@ -2975,7 +3042,12 @@ function BookDetail() {
         <MarkFinishedModal
           book={book}
           onConfirm={handleMarkFinishedConfirm}
-          onClose={() => setShowMarkFinishedModal(false)}
+          onClose={() => {
+            setShowMarkFinishedModal(false)
+            setMarkFinishedError(null)
+          }}
+          error={markFinishedError}
+          saving={markFinishedSaving}
         />
       )}
 
@@ -2983,7 +3055,12 @@ function BookDetail() {
         <ChangeStatusModal
           book={book}
           onConfirm={handleChangeStatusFromModal}
-          onClose={() => setShowChangeStatusModal(false)}
+          onClose={() => {
+            setShowChangeStatusModal(false)
+            setChangeStatusError(null)
+          }}
+          error={changeStatusError}
+          saving={changeStatusSaving}
         />
       )}
 

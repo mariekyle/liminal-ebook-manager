@@ -11,8 +11,11 @@ import { useStatusLabels } from '../hooks/useStatusLabels'
  *   book      — the book object (expects .date_finished for info display)
  *   onConfirm — (newStatus: string) => void
  *   onClose   — () => void
+ *   error     — optional string; renders an error banner at the top of the body
+ *               so the user sees why a prior submit failed.
+ *   saving    — optional boolean; disables apply button and shows loading state.
  */
-export default function ChangeStatusModal({ book, onConfirm, onClose }) {
+export default function ChangeStatusModal({ book, onConfirm, onClose, error, saving }) {
   const { labels } = useStatusLabels()
   const [selectedStatus, setSelectedStatus] = useState('')
 
@@ -32,6 +35,11 @@ export default function ChangeStatusModal({ book, onConfirm, onClose }) {
     <Modal isOpen onClose={onClose} size="md">
       <Modal.Header onClose={onClose}>Change Status</Modal.Header>
       <Modal.Body>
+        {error && (
+          <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
+            {error}
+          </div>
+        )}
         <FormField label="Status">
           <select
             value={selectedStatus}
@@ -53,8 +61,8 @@ export default function ChangeStatusModal({ book, onConfirm, onClose }) {
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" type="button" onClick={() => selectedStatus && onConfirm(selectedStatus)} disabled={!selectedStatus}>Apply</Button>
+        <Button variant="ghost" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" type="button" onClick={() => selectedStatus && onConfirm(selectedStatus)} disabled={!selectedStatus || saving} loading={saving}>Apply</Button>
       </Modal.Footer>
     </Modal>
   )

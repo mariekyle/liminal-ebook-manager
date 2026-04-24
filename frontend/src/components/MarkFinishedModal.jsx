@@ -11,8 +11,11 @@ import FormField from './ui/FormField'
  *   book      — the book object
  *   onConfirm — (dateFinished: string, rating: number|null) => void
  *   onClose   — () => void
+ *   error     — optional string; when set, renders a non-blocking error banner
+ *               at the top of the body so the user sees why a prior submit failed.
+ *   saving    — optional boolean; disables submit button and shows loading state.
  */
-export default function MarkFinishedModal({ book, onConfirm, onClose }) {
+export default function MarkFinishedModal({ book, onConfirm, onClose, error, saving }) {
   const [dateFinished, setDateFinished] = useState(() => {
     if (book.date_finished) {
       return book.date_finished.split('T')[0]
@@ -30,6 +33,11 @@ export default function MarkFinishedModal({ book, onConfirm, onClose }) {
     <Modal isOpen onClose={onClose} size="md">
       <Modal.Header onClose={onClose}>Mark as Finished</Modal.Header>
       <Modal.Body>
+        {error && (
+          <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4">
+            {error}
+          </div>
+        )}
         <div className="space-y-4">
           <FormField label="Date finished">
             <input
@@ -78,8 +86,8 @@ export default function MarkFinishedModal({ book, onConfirm, onClose }) {
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" type="button" onClick={handleSubmit}>Mark Finished</Button>
+        <Button variant="ghost" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" type="button" onClick={handleSubmit} disabled={saving} loading={saving}>Mark Finished</Button>
       </Modal.Footer>
     </Modal>
   )

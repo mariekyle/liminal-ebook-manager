@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** April 23, 2026 (v0.46.0)  
-> **Current Focus:** Phase 10.0D — UX Audit Fix Sessions  
+> **Last Updated:** April 23, 2026 (v0.47.0)  
+> **Current Focus:** Phase 10.0D — UX Audit Fix Sessions (10/10 shipped, Session 11 Final Audit next)  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.46.0)
+## Current State (v0.47.0)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
-| UX fix sessions | 🔄 In progress — 9/10 shipped, 10 decisions locked, +11 final audit |
+| UX fix sessions | 🔄 In progress — 10/10 shipped, Session 11 Final Audit next |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -266,7 +266,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 | 7 | Settings Consolidation | SettingsDrawer → /settings page, NNG goal-based sections, kill gear icon | G1-11, G6-08, G1-07 | ✅ v0.43.0 |
 | 8 | Status Label + Voice/Tone | DNF defaults, useStatusLabels everywhere, microcopy fixes | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | ✅ v0.45.0 |
 | 9 | Mobile-First Polish | Edition badges display-only, collection cover cap, add choice nav | G2-14, G5-10, G5-03, G7-01, G7-15 | ✅ v0.46.0 |
-| 10 | Destructive Action Guards | DuplicatesPage inline confirm, session delete in-app confirm | G8-02, G3-13 | 🟡 Decisions locked |
+| 10 | Destructive Action Guards | DuplicatesPage inline confirm, session delete in-app confirm, modal-closes-on-failure | G8-02, G3-13, parked Session 3 modal error path | ✅ v0.47.0 |
 | 11 | Final Audit | Re-audit all changed areas, tap through 10 user flows, regression check | — | ⬜ Planned |
 
 **Already resolved (scratched from original sessions):** G3-10 (merge confirm — already in BookDetail), UF-33 (author view toggle — already exists).
@@ -599,7 +599,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
 | 10.0C | Full Conversion | 8 | ✅ Complete |
-| **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (8/10 shipped)** |
+| **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
 | 10.1 | Download & Share | 1-2 | ⏸ On hold |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
@@ -816,4 +816,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: April 23, 2026 (v0.46.0)*
+*Last updated: April 23, 2026 (v0.47.0)*
