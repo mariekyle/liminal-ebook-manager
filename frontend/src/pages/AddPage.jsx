@@ -108,7 +108,7 @@ export default function AddPage() {
   // Manual entry format choice
   const [manualEntryFormat, setManualEntryFormat] = useState('physical')
   
-  // ========== UPLOAD STATE (from original UploadPage) ==========
+  // ========== UPLOAD STATE ==========
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
@@ -117,6 +117,8 @@ export default function AddPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResults, setUploadResults] = useState(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  /** Per-file analyze-batch rejections `{ filename, reason }` from API */
+  const [analyzeRejections, setAnalyzeRejections] = useState([])
 
   // ========== NAVIGATION ==========
   
@@ -165,6 +167,7 @@ export default function AddPage() {
     setBooks([])
     setUploadResults(null)
     setManualEntryFormat('physical')
+    setAnalyzeRejections([])
   }
 
   // ========== TBR FORM SUBMISSION ==========
@@ -218,12 +221,13 @@ export default function AddPage() {
     }
   }
 
-  // ========== UPLOAD FLOW (from original UploadPage) ==========
+  // ========== UPLOAD FLOW ==========
 
   // Handler for AddToLibrary component
   const handleFilesChange = useCallback((files) => {
     setSelectedFiles(files)
     setError(null)
+    setAnalyzeRejections([])
   }, [])
 
   // Handler for manual entry format selection
@@ -243,11 +247,26 @@ export default function AddPage() {
     setIsAnalyzing(true)
     setAnalyzeProgress(0)
     setError(null)
+    setAnalyzeRejections([])
 
     try {
       const response = await analyzeUploadedFiles(selectedFiles, (progress) => {
         setAnalyzeProgress(progress)
       })
+
+      const rejected = response.rejected_files || []
+      setAnalyzeRejections(rejected)
+
+      if (!response.books?.length) {
+        setIsAnalyzing(false)
+        setSessionId(null)
+        setBooks([])
+        if (rejected.length > 0) {
+          return
+        }
+        setError('Something went wrong')
+        return
+      }
 
       setSessionId(response.session_id)
       setBooks(response.books.map(book => ({
@@ -303,10 +322,11 @@ export default function AddPage() {
         setCurrentScreen(SCREENS.UPLOAD_REVIEW)
       }
     } catch (err) {
+      setAnalyzeRejections([])
       setError(err.message)
       setIsAnalyzing(false)
     }
-  }, [selectedFiles, linkToId, linkedBook, navigate])
+  }, [selectedFiles, linkToId, linkedBook])
 
   const handleBookUpdate = useCallback((bookId, updates) => {
     setBooks(prev => prev.map(book => 
@@ -442,6 +462,7 @@ export default function AddPage() {
     setBooks([])
     setUploadResults(null)
     setError(null)
+    setAnalyzeRejections([])
     setCurrentScreen(SCREENS.ADD_TO_LIBRARY)
   }, [])
 
@@ -518,13 +539,32 @@ export default function AddPage() {
         </div>
       )}
 
-      {/* Error Banner */}
-      {error && (
+      {/* Error / analyze rejection banner */}
+      {(error || analyzeRejections.length > 0) && (
         <div className="bg-action-danger/10 border-b border-action-danger/30 px-4 py-3 text-center">
-          <p className="text-action-danger">{error}</p>
-          <button 
-            onClick={() => setError(null)}
-            className="text-action-danger/70 underline text-body-sm mt-1"
+          {error && <p className="text-action-danger">{error}</p>}
+          {analyzeRejections.length > 0 && (
+            <div className={error ? 'mt-3 text-left max-w-xl mx-auto' : 'text-left max-w-xl mx-auto'}>
+              <p className="text-action-danger text-body-sm font-medium mb-2">
+                {analyzeRejections.length}{' '}
+                {analyzeRejections.length === 1 ? "file couldn't" : "files couldn't"} be analyzed
+              </p>
+              <ul className="space-y-1">
+                {analyzeRejections.map((r, i) => (
+                  <li key={`${r.filename}-${i}`} className="text-caption text-text-secondary">
+                    <span className="text-text-primary">{r.filename}</span> — {r.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setAnalyzeRejections([])
+            }}
+            className="text-action-danger/70 underline text-body-sm mt-2"
           >
             Dismiss
           </button>
@@ -592,6 +632,7 @@ export default function AddPage() {
             booksToUpload={booksToUpload}
             filesToUpload={filesToUpload}
             canUpload={allDuplicatesResolved}
+            rejectedFiles={analyzeRejections}
           />
         )}
 

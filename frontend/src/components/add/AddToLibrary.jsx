@@ -13,6 +13,7 @@
  *   analyzeProgress: number - Progress percentage (0-100)
  */
 
+import { useEffect, useState } from 'react'
 import StepIndicator from './StepIndicator'
 import AnalyzingModal from './AnalyzingModal'
 import FileDropZone from '../ui/FileDropZone'
@@ -27,12 +28,40 @@ export default function AddToLibrary({
   analyzeProgress,
 }) {
   const hasFiles = files.length > 0
+  const [maxFileSize, setMaxFileSize] = useState(null)
+  const [allowedExtensions, setAllowedExtensions] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/upload/limits')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        if (data.max_file_size) setMaxFileSize(data.max_file_size)
+        if (Array.isArray(data.allowed_extensions)) {
+          setAllowedExtensions(data.allowed_extensions)
+        }
+      })
+      .catch(() => {
+        // If /limits fails, FileDropZone runs without client-side validation;
+        // server still enforces both limits, so this is degraded, not broken.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div>
       <StepIndicator steps={['Add', 'Review', 'Done']} currentStep={0} />
 
-      <FileDropZone files={files} onFilesChange={onFilesChange} disabled={isAnalyzing} />
+      <FileDropZone
+        files={files}
+        onFilesChange={onFilesChange}
+        disabled={isAnalyzing}
+        maxFileSize={maxFileSize}
+        allowedExtensions={allowedExtensions}
+      />
 
       {hasFiles && (
         <Button

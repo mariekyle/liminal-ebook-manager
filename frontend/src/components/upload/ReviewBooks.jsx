@@ -18,6 +18,7 @@ export default function ReviewBooks({
   booksToUpload,
   filesToUpload = 0,
   canUpload,
+  rejectedFiles = [],
 }) {
   const [expandedBookId, setExpandedBookId] = useState(
     books.length > 0 ? books[0].id : null,
@@ -34,6 +35,22 @@ export default function ReviewBooks({
   return (
     <div>
       <StepIndicator steps={['Add', 'Review', 'Done']} currentStep={1} />
+
+      {rejectedFiles.length > 0 && (
+        <div className="mb-4 p-3 rounded-lg border border-action-danger/30 bg-action-danger/5">
+          <p className="text-body-sm text-action-danger mb-2">
+            {rejectedFiles.length}{' '}
+            {rejectedFiles.length === 1 ? 'file was' : 'files were'} not added (see below)
+          </p>
+          <ul className="space-y-1">
+            {rejectedFiles.map((r, i) => (
+              <li key={`${r.filename}-${i}`} className="text-caption text-text-secondary">
+                <span className="text-text-primary">{r.filename}</span> — {r.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {needsAttention > 0 && (
         <div className="mb-4 p-3 bg-bg-elevated border border-border-focus rounded-lg text-body-sm text-text-primary">

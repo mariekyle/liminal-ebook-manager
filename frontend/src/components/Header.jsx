@@ -73,7 +73,7 @@ function Header() {
       return location.pathname === '/collections' || location.pathname.startsWith('/collections/')
     }
     if (item.match === 'add') {
-      return location.pathname === '/add' || location.pathname === '/upload'
+      return location.pathname === '/add'
     }
     return false
   }

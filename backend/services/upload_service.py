@@ -137,8 +137,7 @@ def cleanup_expired_sessions():
 # =============================================================================
 
 ALLOWED_EXTENSIONS = {'.epub', '.pdf', '.mobi', '.azw', '.azw3', '.html', '.htm'}
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
-MAX_BATCH_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_FILE_SIZE = 250 * 1024 * 1024  # 250 MB
 
 
 def validate_file(filename: str, size: int) -> tuple[bool, str]:
@@ -149,7 +148,8 @@ def validate_file(filename: str, size: int) -> tuple[bool, str]:
         return False, f"Unsupported file type: {ext}"
     
     if size > MAX_FILE_SIZE:
-        return False, f"File too large: {size / 1024 / 1024:.1f} MB (max 100 MB)"
+        max_mb = MAX_FILE_SIZE // (1024 * 1024)
+        return False, f"File too large: {size / 1024 / 1024:.1f} MB (max {max_mb} MB)"
     
     return True, ""
 

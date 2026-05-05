@@ -35,7 +35,8 @@ from services.upload_service import (
     check_duplicates,
     finalize_batch,
     validate_file,
-    MAX_BATCH_SIZE,
+    MAX_FILE_SIZE,
+    ALLOWED_EXTENSIONS,
     BookGroup,
 )
 
@@ -90,11 +91,19 @@ class BookInfo(BaseModel):
     familiar_title: Optional[FamiliarTitle] = None  # Matching title from database
 
 
+class RejectedFile(BaseModel):
+    filename: str
+    reason: str
+
+
 class AnalyzeResponse(BaseModel):
-    session_id: str
+    # None when all files were rejected during validation; otherwise the
+    # temp-session ID used by /finalize-batch.
+    session_id: Optional[str] = None
     books: list[BookInfo]
     total_files: int
     total_size: int
+    rejected_files: list[RejectedFile] = []
 
 
 class BookAction(BaseModel):
@@ -272,39 +281,36 @@ async def analyze_batch(
     if background_tasks:
         background_tasks.add_task(cleanup_expired_sessions)
     
-    # Validate batch size
-    total_size = sum(f.size for f in files if f.size)
-    if total_size > MAX_BATCH_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Batch too large: {total_size / 1024 / 1024:.1f} MB (max 500 MB)"
-        )
-    
     # Create session
     session = create_session()
     
     try:
-        # Save and validate each file
+        # Save and validate each file; collect rejections instead of silently skipping
         uploaded_files = []
+        rejected_files: list[RejectedFile] = []
         for upload_file in files:
-            # Validate
             is_valid, error = validate_file(upload_file.filename, upload_file.size or 0)
             if not is_valid:
-                # Skip invalid files but continue with valid ones
+                rejected_files.append(RejectedFile(
+                    filename=upload_file.filename or "",
+                    reason=error
+                ))
                 continue
             
-            # Read content
             content = await upload_file.read()
-            
-            # Save to temp
             uploaded = await save_uploaded_file(session, upload_file.filename, content)
             uploaded_files.append(uploaded)
         
+        # If everything was rejected, return 200 with empty books + rejection details
+        # so the frontend can show per-file errors instead of a generic banner
         if not uploaded_files:
             cleanup_session(session.id)
-            raise HTTPException(
-                status_code=400,
-                detail="No valid files uploaded"
+            return AnalyzeResponse(
+                session_id=None,
+                books=[],
+                total_files=0,
+                total_size=0,
+                rejected_files=rejected_files,
             )
         
         # Extract metadata from each file (async for EPUB/PDF extraction)
@@ -345,7 +351,8 @@ async def analyze_batch(
             session_id=session.id,
             books=book_infos,
             total_files=len(uploaded_files),
-            total_size=sum(f.size for f in uploaded_files)
+            total_size=sum(f.size for f in uploaded_files),
+            rejected_files=rejected_files,
         )
         
     except HTTPException:
@@ -955,6 +962,16 @@ async def link_files_to_title(
             status_code=500,
             detail="Something went wrong linking these files. Please try again.",
         )
+
+
+@router.get("/limits")
+async def upload_limits():
+    """Return upload constraints so frontend can pre-validate before sending bytes."""
+    return {
+        "max_file_size": MAX_FILE_SIZE,
+        "max_file_size_mb": MAX_FILE_SIZE // (1024 * 1024),
+        "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
+    }
 
 
 @router.get("/health")

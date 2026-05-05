@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** April 23, 2026 (v0.47.0)  
+> **Last Updated:** May 4, 2026 (v0.47.1)
 > **Current Focus:** Phase 10.0D — UX Audit Fix Sessions (10/10 shipped, Session 11 Final Audit next)  
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.47.0)
+## Current State (v0.47.1)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -816,4 +816,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: April 23, 2026 (v0.47.0)*
+*Last updated: May 4, 2026 (v0.47.1)*

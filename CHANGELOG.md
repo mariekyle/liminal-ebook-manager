@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.47.1] - 2026-05-04
+
+### Changed
+
+- **Upload hotfix:** Per-file upload limit raised from 100 MB to 250 MB; removed the 500 MB batch total cap. `POST /api/upload/analyze-batch` no longer returns 400 for “all invalid”; it returns HTTP 200 with `rejected_files: [{ filename, reason }]` and empty `books` when every file fails validation, so the UI can list reasons per file. Successful responses include the same `rejected_files` array for partial failures (invalid files skipped, valid ones analyzed). New `GET /api/upload/limits` exposes `max_file_size`, `max_file_size_mb`, and `allowed_extensions` for client pre-checks.
+- **Frontend:** `AddToLibrary` loads limits and passes `maxFileSize` and `allowed_extensions` to `FileDropZone`, which rejects oversize and unsupported extensions before upload and shows a dismissible inline list. `AddPage` parses `rejected_files`, stays on the add step when there are no valid books but there are rejections, shows a per-file banner (and “Something went wrong” only when both lists are empty), and passes rejections into `ReviewBooks` when some files succeeded.
+- Per-file upload validation now uses a single source of truth: backend `ALLOWED_EXTENSIONS` is exposed via `GET /api/upload/limits` and consumed by `FileDropZone` for both the file picker `accept` attribute and client-side rejection. Removed duplicate extension lists (`DEFAULT_ACCEPT`, `DEFAULT_FORMAT_LABEL`, `UPLOAD_ALLOWED_EXTENSIONS`) from `FileDropZone.jsx`.
+- `AnalyzeResponse.session_id` is now `Optional[str]`; backend returns `None` (JSON `null`, not `""`) when all files were rejected during validation.
+
+#### Hotfix: Upload flow — file size limit, error surfacing, and SSOT cleanup
+
+Out-of-session hotfix triggered by a 104MB EPUB upload (cookbook with photo plates) failing with a generic "No valid files uploaded" banner. Investigation surfaced four problems compounding into one bad UX: an arbitrary 100MB per-file limit, silent rejection inside the analyze loop, no client-side pre-validation (so the user ate a 4-second upload before the server quietly threw the file away), and three duplicate hardcoded extension lists across backend and frontend.
+
+Shipped in two waves in the same session.
+
+**Wave 1 — limits and error surfacing:**
+- `MAX_FILE_SIZE` raised from 100MB to 250MB. Covers cookbooks, art books, and other image-heavy formats without re-opening this same hotfix in three months.
+- Redundant `MAX_BATCH_SIZE` constant removed entirely. Per-file validation runs on every file in the batch; the separate batch ceiling was dead defense and a second source of truth waiting to drift.
+- `analyze-batch` no longer silently skips invalid files. Each rejection now appends to a new `rejected_files: list[RejectedFile]` field on `AnalyzeResponse`, with `{filename, reason}` per entry. Reason strings come from `validate_file()` and are user-facing (`"File too large: 104.0 MB (max 250 MB)"`, `"Unsupported file type: .docx"`).
+- All-rejected branch returns 200 with empty `books` and populated `rejected_files` instead of 400 with a generic `detail`. Frontend can now show per-file errors with filenames instead of a banner that doesn't tell the user which file or why.
+- New `GET /api/upload/limits` endpoint returns `{max_file_size, max_file_size_mb, allowed_extensions}` so the frontend can pre-validate before sending bytes. Single source of truth for both constraints.
+- `FileDropZone.jsx` gained a `maxFileSize` prop. On file selection, files exceeding the limit are rejected client-side with a dismissible red panel listing each rejected filename and reason — no network request fired for files that would fail anyway.
+- `AddPage.jsx` and `UploadPage.jsx` (the analyze-batch callers) parse the new `rejected_files` field. Combined danger banner shows server-side rejections; cleared on file change, reset, upload-more, dismiss, and analyze error. `ReviewBooks.jsx` accepts an optional `rejectedFiles` prop and renders the list at the top when present, so the user sees what was excluded alongside what's queued for review.
+
+**Wave 2 — single source of truth cleanup, plus dead code purge:**
+- Three hardcoded extension lists in `FileDropZone.jsx` collapsed into one prop. `DEFAULT_ACCEPT` (input `accept` attribute), `DEFAULT_FORMAT_LABEL` (display string), and `UPLOAD_ALLOWED_EXTENSIONS` (validation set) all removed. Component now takes a single `allowedExtensions` array prop and derives all three values internally via `useMemo`. Backend's `ALLOWED_EXTENSIONS` is now the only place upload extensions are defined anywhere in the codebase.
+- `acceptedTypes` prop removed from `FileDropZone.jsx`. The `accept` attribute on the file input is now derived from `allowedExtensions` directly.
+- `formatHint` prop kept as an optional override for callers who want a curated label string instead of the auto-derived one.
+- `AddToLibrary.jsx` extended to fetch `allowed_extensions` alongside `max_file_size` from `/api/upload/limits` and pass both down. Both states default to `null` — if the limits fetch fails, FileDropZone falls back to no client-side validation; server still enforces both, so the failure mode is degradation, not breakage.
+- `AnalyzeResponse.session_id` typed as `Optional[str] = None`. Previously `str` with `""` returned on the all-rejected path — a contract hack to satisfy a non-optional field with no real value. Now returns `None` properly. Frontend never read the field on the rejection path, so this is invisible to users and visible only in the schema.
+- **Deleted `frontend/src/pages/UploadPage.jsx`.** The `/upload` route has been a redirect to `/add` since the AddPage merge; UploadPage was never being rendered. Cursor briefly maintained "parity" between AddPage and UploadPage in Wave 1 — work for a file no user has hit since the redirect shipped. Deleted outright. The redirect route in `App.jsx` stays so old bookmarks still land somewhere useful.
+- Dead `'/upload'` pathname check removed from `Header.jsx` active-tab logic. The redirect on the `/upload` route guarantees the Header can never observe `/upload` as the live pathname.
+
+### Fixed
+
+- **104MB cookbook EPUB no longer rejected as "No valid files uploaded".** Original symptom that triggered the whole hotfix. Now uploads cleanly, advances to Review.
+- **Silent rejection of invalid files.** Files failing `validate_file()` were being skipped without any user-facing signal — the batch loop just `continue`'d past them. Now every rejection produces a structured error visible in the UI with filename and reason.
+- **Wasted upload time on doomed requests.** Files exceeding the size limit or with the wrong extension were being uploaded in full (consuming bandwidth, blocking the UI for the duration) before the server validated them. Client-side pre-check now fails them at file-select time with no network round-trip.
+
+### Technical
+
+#### Files Created
+None.
+
+#### Files Modified
+- `backend/services/upload_service.py` — `MAX_FILE_SIZE` constant raised to `250 * 1024 * 1024`; `MAX_BATCH_SIZE` constant removed; `validate_file()` error string derives the limit from `MAX_FILE_SIZE` instead of hardcoding "100 MB"
+- `backend/routers/upload.py` — `Optional` import; `MAX_BATCH_SIZE` removed from `upload_service` import, `MAX_FILE_SIZE` and `ALLOWED_EXTENSIONS` added; `RejectedFile` Pydantic model added; `AnalyzeResponse.session_id` typed `Optional[str] = None` with docstring; `AnalyzeResponse.rejected_files: list[RejectedFile] = []` added; batch-size check in `analyze_batch` removed; per-file rejections collected into `rejected_files` instead of silent `continue`; all-rejected branch returns 200 with `session_id=None` instead of raising 400; success path includes `rejected_files`; new `GET /upload/limits` endpoint
+- `frontend/src/components/ui/FileDropZone.jsx` — `useMemo` added to imports; `DEFAULT_ACCEPT`, `DEFAULT_FORMAT_LABEL`, and `UPLOAD_ALLOWED_EXTENSIONS` constants removed; `acceptedTypes` prop removed; `allowedExtensions`, `maxFileSize` props added; `formatHint` prop kept as optional override; `rejections` state; `allowedSet` (memoized), `acceptAttr`, `derivedFormatLabel`, `displayLabel` derived from `allowedExtensions`; `handleFiles` validates size and extension client-side, populates `rejections`; `inputEl` `accept={acceptAttr}`; `rejectionSection` renders dismissible red panel above file list in both mobile and desktop branches; format hint label only renders when `displayLabel` is truthy; `handleClearAll` clears rejections
+- `frontend/src/components/add/AddToLibrary.jsx` — `useEffect`, `useState` imports added; `maxFileSize` and `allowedExtensions` state; effect fetches `/api/upload/limits` with `cancelled` cleanup flag and `Array.isArray` guard; both states passed into `<FileDropZone>` as props
+- `frontend/src/pages/AddPage.jsx` — `analyzeRejections` state; analyze-batch response branches on `response.books.length` + `response.rejected_files.length` (stays on Add step if no books accepted, advances to Review with rejection list passed down if some were); combined danger banner; cleared on file change, reset, upload-more, dismiss; cleared in `catch` on analyze error; UploadPage references removed from comments (mechanical comment cleanup, no logic change)
+- `frontend/src/components/upload/ReviewBooks.jsx` — optional `rejectedFiles` prop renders rejection list at top of view when populated
+- `frontend/src/components/Header.jsx` — `'/upload'` removed from `add`-tab `isActive` predicate; only `location.pathname === '/add'` remains
+
+#### Files Deleted
+- `frontend/src/pages/UploadPage.jsx` — never rendered since the `/upload → /add` redirect shipped; deleted outright. Confirmed via `grep -r "UploadPage" frontend/src/` returning empty.
+- `frontend/src/pages/UploadPage.jsx` — dead file. The `/upload` route has been a redirect to `/add` since the AddPage merge; `UploadPage` was never rendered.
+- Dead `'/upload'` pathname check in `Header.jsx`.
+
+#### Files Verified, No Changes
+- `App.jsx` — `/upload → /add` redirect route retained for legacy bookmarks
+- `GradientCover.jsx`, `BookCard.jsx`, `sync.py` — frozen, untouched
+- `database.py` — no schema changes
+- `validate_file()` signature unchanged; only the constant it references and its error message changed
+- `books`, `total_files`, `total_size` semantics on `AnalyzeResponse` unchanged for successful analyses; only additive `rejected_files` and the `Optional` re-typing of `session_id`
+
+#### Requires Docker Rebuild
+Yes. Backend changes to `upload_service.py` and `upload.py` require a container rebuild to pick up the new `MAX_FILE_SIZE` constant and the `/api/upload/limits` endpoint.
+
+### Parked (logged for later)
+
+- **FileDropZone format-hint label aesthetics.** Auto-derived from backend `allowed_extensions` produces `AZW • AZW3 • EPUB • HTM • HTML • MOBI • PDF`. Longer than the previous hardcoded `EPUB • PDF • MOBI • AZW3 • HTML` and includes formats (`.htm`, `.azw`) that were silently dropped from the old display. Accuracy beats brevity here, but if it reads as cluttered in production use, `AddToLibrary.jsx` can pass a curated `formatHint` override prop and FileDropZone will use it instead of the derived value. Skip unless actually annoying.
+- **Cursor scope drift watch.** Second hotfix in a row where Cursor edited files not on the explicit "Files to Modify" list. Wave 1: `AddPage.jsx` comment cleanup that wasn't requested. Wave 2: same. Both edits were comment-only and harmless, but the pattern is worth flagging in `CURSOR_PROMPT_GUIDE.md` if it happens a third time. No action this session.
+
+
+
+---
+
 ## [0.47.0] - 2026-04-23
 
 ### Changed
