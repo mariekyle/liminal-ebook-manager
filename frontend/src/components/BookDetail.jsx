@@ -1526,7 +1526,7 @@ function BookDetail() {
             </Link>
           )}
           
-          <h1 className="text-h2 mb-1 text-center md:text-left">
+          <h1 className="text-h2 text-text-primary mb-1 text-center md:text-left">
             {book.title}
           </h1>
           
@@ -1853,7 +1853,7 @@ function BookDetail() {
               <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
-                  <h3 id="reading-history" className="text-label uppercase tracking-wide">
+                  <h3 id="reading-history" className="text-label text-text-body uppercase tracking-wide">
                     Reading History
                   </h3>
                   <button
@@ -2108,7 +2108,7 @@ function BookDetail() {
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
-              <h3 id="reading-history-desktop" className="text-label uppercase tracking-wide">
+              <h3 id="reading-history-desktop" className="text-label text-text-body uppercase tracking-wide">
                 Reading History
               </h3>
               <button
@@ -2170,7 +2170,7 @@ function BookDetail() {
       {!isWishlist && (
         <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-label uppercase tracking-wide">Collections</h2>
+            <h2 className="text-label text-text-body uppercase tracking-wide">Collections</h2>
             <button
               type="button"
               onClick={() => setShowCollectionPicker(true)}
@@ -2209,7 +2209,7 @@ function BookDetail() {
       <div className={`border-t border-border-default pt-4 mt-4 ${!isWishlist && activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-label uppercase tracking-wide">Notes</h2>
+            <h2 className="text-label text-text-body uppercase tracking-wide">Notes</h2>
             <button
               type="button"
               onClick={() => setIsEditingNotes(true)}
@@ -2359,7 +2359,7 @@ function BookDetail() {
       {/* On mobile: only show in Notes tab. On desktop: always show */}
       {!isWishlist && (backlinks.length > 0 || backlinksLoading) && (
         <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'notes' ? 'hidden md:block' : ''}`}>
-          <h2 className="text-label uppercase tracking-wide mb-3">
+          <h2 className="text-label text-text-body uppercase tracking-wide mb-3">
             Referenced by {!backlinksLoading && <span className="text-text-secondary">({backlinks.length})</span>}
           </h2>
           

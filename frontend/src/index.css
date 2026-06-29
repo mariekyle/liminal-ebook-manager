@@ -8,6 +8,7 @@
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  color: #cdc8c1; /* text-body — base so unstyled/failed-token text is never near-black */
 }
 
 /* Custom scrollbar for library grid */

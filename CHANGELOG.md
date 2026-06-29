@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.47.2] - 2026-06-28
+
+### Fixed
+#### BookDetail readability (WCAG AA)
+- Raised `.text-caption` from #6e6962 (3.2:1, failed AA) to #918b84 (~5:1), matching the config `text-muted` token. Fixes stat sub-labels, metadata keys, and read-time microcopy across the app.
+- Added a base `body` text color (#cdc8c1) in index.css so any element whose token color fails to apply falls back to readable warm-gray instead of near-black.
+- Pinned the BookDetail title and section headers (Reading History, Collections, Notes) to config utility colors (`text-text-primary` / `text-text-body`), which render reliably, instead of relying solely on the tokens.css component-layer color.
+- Root cause: BookDetail was already fully tokenized (no hardcoded colors), but mixed two token systems — config utilities (reliable) and tokens.css component classes (unreliable) — and `text-caption` carried a failing value. Not a regression; a long-standing value + cascade issue.
+- Files: `frontend/src/styles/tokens.css`, `frontend/src/index.css`, `frontend/src/components/BookDetail.jsx`
+
+---
+
 ## [0.47.1] - 2026-05-04
 
 ### Changed
