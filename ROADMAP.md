@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** May 4, 2026 (v0.47.1)
-> **Current Focus:** Phase 10.0D — UX Audit Fix Sessions (10/10 shipped, Session 11 Final Audit next)  
+> **Last Updated:** July 1, 2026 (v0.47.2)
+> **Current Focus:** Phase 10.0D complete (11/11 + regression pass). Next: Session 12 design consistency sweep — decision sprint pending.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.47.1)
+## Current State (v0.47.2)
 
 The app is fully functional for daily use with 1,700+ books. Core systems are stable:
 
@@ -35,7 +35,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
-| UX fix sessions | 🔄 In progress — 10/10 shipped, Session 11 Final Audit next |
+| UX fix sessions | ✅ Complete — 11/11 shipped, Session 11 regression pass passed (findings logged to Open Questions) |
 
 **What's Missing:**
 - ❌ Can't download/open books from the app
@@ -241,7 +241,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 ### 10.0D: UX Audit Fix Sessions ← CURRENT
 
 **Priority:** P0 — Fix What's Broken Before Building What's New  
-**Status:** 🔄 In Progress (Sessions 1-9 shipped, Session 10 decisions locked, Session 11 planned)  
+**Status:** ✅ Complete — all 11 sessions shipped; Session 11 regression pass on Sessions 1–10 passed (non-regression findings logged to Open Questions backlog)  
 **Sessions:** 10 + 1 (final audit)  
 **Based on:** `liminal-ux-audit.md` (141 findings, NNG heuristic + WCAG AA + user flows pass)
 
