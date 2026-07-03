@@ -1,56 +1,47 @@
 /*
- * Liminal Design Tokens — Typography + Utilities
+ * Liminal Design Tokens — Typography compositions
  *
- * Warm A palette. Import in index.css after Tailwind directives.
+ * Warm A palette. MUST be imported in index.css BEFORE the
+ * @tailwind directives (CSS spec: @import precedes all rules).
+ *
+ * Single source of truth: all COLOR values live in
+ * tailwind.config.js. These classes compose size + weight +
+ * a semantic color utility. Never hardcode hex here.
  */
 
 @layer components {
-  /* =============================================
-     HEADINGS — warm off-white (#e8e4df)
-     ============================================= */
-
+  /* HEADINGS */
   .text-h1 {
-    @apply text-2xl font-bold;
-    color: #e8e4df;
+    @apply text-2xl font-bold text-text-primary;
   }
 
   .text-h2 {
-    @apply text-xl font-semibold;
-    color: #e8e4df;
+    @apply text-xl font-semibold text-text-primary;
   }
 
   .text-h3 {
-    @apply text-lg font-semibold;
-    color: #e8e4df;
+    @apply text-lg font-semibold text-text-primary;
   }
 
   .text-h4 {
-    @apply text-base font-medium;
-    color: #e8e4df;
+    @apply text-base font-medium text-text-primary;
   }
 
-  /* =============================================
-     BODY TEXT — warm grays
-     ============================================= */
-
+  /* BODY TEXT */
   .text-body {
-    @apply text-base;
-    color: #cdc8c1;
+    @apply text-base text-text-body;
   }
 
   .text-body-sm {
-    @apply text-sm;
-    color: #9a958e;
+    @apply text-sm text-text-secondary;
   }
 
   .text-caption {
-    @apply text-xs;
-    color: #918b84;
+    @apply text-xs text-text-muted;
   }
 
   .text-label {
-    @apply text-sm font-medium;
-    color: #cdc8c1;
+    @apply text-sm font-medium text-text-body;
   }
 }
 

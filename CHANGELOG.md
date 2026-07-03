@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.47.3] - 2026-07-03
+
+### Fixed
+#### BookDetail unreadable text — tokens.css was never in the build
+- Root cause: `@import './styles/tokens.css'` in `index.css` appeared AFTER the `@tailwind` directives. Per CSS spec, `@import` must precede all other rules, so the import was silently dropped from the build. Every typography token class (`text-h1`–`h4`, `text-body`, `text-body-sm`, `text-caption`, `text-label`) was absent from shipped CSS; elements using them rendered unstyled and inherited default black on the dark theme.
+- Moved the import above the Tailwind directives.
+- Rewrote `tokens.css` typography classes to `@apply` semantic color utilities from `tailwind.config.js` instead of duplicating hex values — config is now the single source of color truth. (Caption's WCAG AA fix — #6e6962 → text-muted #918b84, ~5:1 — already landed in 0.47.2; this change only moves the value's source of truth to the config.)
+- Converted `CollapsibleSection.jsx` header from hardcoded `text-gray-500` (dead cool-gray palette) to `text-label` / `text-caption`, matching sibling section headers.
+- Note: token typography now renders app-wide for the first time; headers on several screens gained their intended size/weight.
+- Files: `frontend/src/index.css`, `frontend/src/styles/tokens.css`, `frontend/src/components/ui/CollapsibleSection.jsx`
+
+---
+
 ## [0.47.2] - 2026-06-28
 
 ### Fixed
