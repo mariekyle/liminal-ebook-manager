@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Button from './ui/Button'
 
 const SORT_OPTIONS = {
-  series: { label: 'Series', ascLabel: 'Grouped', descLabel: 'Grouped' },
+  series: { label: 'Series', ascLabel: 'A → Z', descLabel: 'Z → A' },
   title: { label: 'Title', ascLabel: 'A → Z', descLabel: 'Z → A' },
   read_time: { label: 'Est. Read Time', ascLabel: 'Shortest', descLabel: 'Longest' },
   added: { label: 'Recently Added', ascLabel: 'Oldest', descLabel: 'Newest' },

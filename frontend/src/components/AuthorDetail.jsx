@@ -236,9 +236,10 @@ function AuthorDetail() {
         }
       })
 
-      const sortedSeriesNames = Array.from(seriesMap.keys()).sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: 'base' })
-      )
+      const sortedSeriesNames = Array.from(seriesMap.keys()).sort((a, b) => {
+        const cmp = a.localeCompare(b, undefined, { sensitivity: 'base' })
+        return sortDir === 'desc' ? -cmp : cmp
+      })
 
       sortedSeriesNames.forEach(name => {
         seriesMap.get(name).sort((a, b) => {
@@ -251,9 +252,10 @@ function AuthorDetail() {
         })
       })
 
-      standalone.sort((a, b) =>
-        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
-      )
+      standalone.sort((a, b) => {
+        const cmp = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+        return sortDir === 'desc' ? -cmp : cmp
+      })
 
       return (
         <div className="space-y-8">

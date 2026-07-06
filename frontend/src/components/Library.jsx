@@ -912,7 +912,8 @@ function Library() {
               ))}
             </div>
           ) : (
-            <div className={manifestGridClass}>
+            /* Series are groups — fixed grid like Collections, ignores the grid-columns setting */
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {seriesList.map(series => (
                 <SeriesCard key={series.name} series={series} variant={bookCardVariant} />
               ))}

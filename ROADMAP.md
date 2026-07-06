@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 6, 2026 (v0.48.0 in progress)
-> **Current Focus:** Phase 10.0E design consistency sweep (S12) — Batches 1–2 shipped; Batch 3 (S11 regression defects + close-out) next.
+> **Last Updated:** July 6, 2026 (v0.48.0)
+> **Current Focus:** Phase 10.0E complete (S12 shipped, 3 batches). Next: token migration session (10.0E follow-on), then S13 lint.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -34,6 +34,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Navigation | ✅ UnifiedNavBar, bottom nav redesign |
 | Design tokens & core components | ✅ Phase 10.0 complete |
 | Design system conversion | ✅ Phase 10.0C complete (C1-C8) |
+| Design consistency sweep | ✅ Phase 10.0E complete (S12, v0.48.0) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
 | UX fix sessions | ✅ Complete — 11/11 shipped, Session 11 regression pass passed (findings logged to Open Questions) |
 
@@ -287,17 +288,17 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 
 ---
 
-### 10.0E: Design Consistency Sweep (S12) ← CURRENT
+### 10.0E: Design Consistency Sweep (S12)
 
 **Priority:** P0 — finish the conversion before feature work resumes
-**Status:** 🔄 In progress — Batches 1–2 shipped (v0.48.0 in progress)
+**Status:** ✅ Complete — 3 batches shipped as v0.48.0 (2026-07-06); close-out verification in CHANGELOG
 **Based on:** `docs/FRONTEND_AUDIT_S12.md` (committed 6a25f82)
 
 | Batch | Scope | Status |
 |-------|-------|--------|
 | 1 | Straggler file conversions: DuplicateCollectionModal, BookLinkPopup, CriteriaBuilder — colors, ui/Modal, FormField, useStatusLabels (4th straggler DuplicateFinderModal found dead → deleted) | ✅ 2026-07-06 (A1–A5 = 0; pattern G = 0; zero `Abandoned` literals in CriteriaBuilder) |
 | 2 | Scattered mechanical cleanup: category A remainder (21), C overrides (Button success/warning variants, AuthorInput fold-in), D typography (21 fixed / BottomNav skipped), H2/H3, I1 (P1 DNF-renders-as-Not-Started fixed), scrollbar navy hexes, `library-*` alias deletion | ✅ 2026-07-06 (A1–A5 = 0; D outside ui/ = 0 + BottomNav exception; `library-` = 0, alias block deleted; zero bespoke label loaders) |
-| 3 | S11 regression defects: rating tappable, series sort asc/desc, grid setting leaking onto Series landing, MarkFinished date validation (close-out verification folds into this batch) | ⬜ |
+| 3 | S11 regression defects: rating tappable, series sort asc/desc, grid setting leaking onto Series landing, MarkFinished date validation (close-out verification folds into this batch) | ✅ 2026-07-06 (all 4 fixed; A/C/D/G/H/I + `library-*` verified at target — full table in CHANGELOG) |
 
 **Discovered in Batch 1:** `DuplicateFinderModal.jsx` was imported nowhere (dead since the DuplicatesPage rework) — verified repo-wide and **deleted** same session. Voice-pass candidates left as-is (out of scope): DuplicatesPage:183 "Your library is clean!" exclamation, :196 "books" in the duplicate-count string.
 
@@ -305,7 +306,8 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 - [ ] **Token migration session** (between S12 and S13): typography scale → tailwind.config fontSize, append colors at unpaired sites, delete tokens.css @layer components block. Enables S13 zero-target.
 - [ ] **Raw element conversion backlog** (post-S13, per-file): BookDetail (30) → Library (15) → CollectionDetail (10) → SortDropdown (9) → remainder (≤8 each). Whitelist intentionally-bare buttons per file for lint.
 - [ ] **AnalyzingModal → shared Modal** — decide dismiss semantics first (it's a progress surface).
-- [ ] **S13 additions:** delete unused .glass-panel; lint ignore-list seeds (BottomNav emoji sizing, wrapper-label patterns per §8, CollectionsTab fixed grid, SeriesCard indigo comment).
+- [ ] **S13 additions:** delete unused .glass-panel; lint ignore-list seeds (BottomNav emoji sizing, wrapper-label patterns per §8, CollectionsTab fixed grid, SeriesCard indigo comment; from Batch 3 close-out: Library Series-tab fixed grid, and the C-engine false positive on CriteriaBuilder's FormField `label`-prop span — nested JSX in a prop, not an override).
+- [x] **BookDetail dead code from the never-landed S3 rating popup** — deleted 2026-07-06 (same v0.48.0 tree): `ratingPopupOpen`, dead twin `statusPopupOpen`, `handleRatingChange`, and its private `ratingLoading`/`ratingStatus` state. `selectedRating` kept (write-only now; setters live in refresh paths — belongs to the parked status data-model sprint).
 - [ ] **Docs:** SKILL.md still lists BottomSheet/ThreeDotMenu under ui/ — remove ghosts.
 
 ---

@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.48.0] — in progress
+## [0.48.0] - 2026-07-06
 
-> Phase 10.0E design consistency sweep (S12). Batch 1 below; Batches 2–3 will append here.
+> Phase 10.0E design consistency sweep (S12), shipped in three batches: straggler conversions (Batch 1), scattered mechanical cleanup (Batch 2), S11 regression defects + close-out verification (Batch 3).
 
 ### Changed — Batch 1: Straggler File Conversions (2026-07-06)
 
@@ -118,6 +118,57 @@ Note on the "stat-value ×10" decision: 3 of BookDetail's 10 `font-semibold` hit
 - `frontend/src/components/settings/StatusLabelsModal.jsx` — row titles via `useStatusLabels`
 - `frontend/src/components/Header.jsx`, `SeriesCard.jsx`, `SortDropdown.jsx`, `upload/UploadProgress.jsx`, `pages/Settings.jsx`, `pages/AddPage.jsx`, `pages/ImportPage.jsx` — per the A/D tables above
 - Frozen files untouched. Batch 1's "no token typography classes" rule deliberately relaxed for Category-D fix sites only, always in paired `token + color utility` form.
+
+### Fixed — Batch 3: S11 Regression Defects (2026-07-06)
+
+The four behavioral defects logged to Open Questions during the Session 11 regression pass. Surgical fixes only — the status data-model cluster (Title cache vs sessions, pill↔session sync, `date_finished` clobbering) remains parked for its own decision sprint.
+
+#### BookDetail rating pill dead on mobile (from S3)
+- Root cause: Session 3 locked all three hero metadata blocks as tappable. Status and category got modal wiring; the rating pill kept a scroll-to-history handler targeting `reading-history-desktop` / `reading-history` — both anchors live in containers hidden on mobile outside the active tab (`hidden md:block` / tab-gated), so `scrollIntoView` silently no-ops where ~95% of usage happens. The S3-era popup cluster was left declared but never wired — removed in this batch: `ratingPopupOpen`, its dead twin `statusPopupOpen`, `handleRatingChange`, and the `ratingLoading`/`ratingStatus` state that existed only to serve it (verified zero references repo-wide; `selectedRating` kept — its setters still run in live refresh paths, parked with the status data-model cluster).
+- Fix: mirrors the category block — `type="button"` opening the existing rating-edit surface. Tap now opens the session editor on the most recent reading session (ratings live on sessions), falling back to `openAddSession()` when none exist — the same wiring ReadingStatusCard's `onEditSession` already uses. No new surface invented.
+
+#### Series sort direction dead (from S6)
+- Root cause: Session 6 shipped AuthorDetail's series-grouping sort with the comparators hardcoded ascending — series names and the standalone-titles section ignored `sortDir` while every flat sort (title/added/published) honors it. SortDropdown's `Grouped`/`Grouped` direction labels documented the wrong assumption ("direction is semantically irrelevant").
+- Fix: both comparators now apply the flat-mode idiom (`sortDir === 'desc' ? -cmp : cmp`). Within-series `series_number` order intentionally stays ascending — that's reading order, not a sort preference. SortDropdown's series direction labels now read `A → Z` / `Z → A`. Checked for duplicated logic: WishlistTab, CollectionDetail, and Library/backend sorts all honor direction; no other series comparator exists repo-wide.
+
+#### Grid-columns setting leaking onto the Series landing page (from S2)
+- Root cause: the Series tab in `Library.jsx` shared `manifestGridClass` (settings-driven `useGridColumns`) with the Browse book grid. Series represents *groups* — like Collections, which is intentionally exempt.
+- Fix: series grid now mirrors CollectionsTab's fixed grid (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4`) and ignores the setting entirely. Browse grid unchanged. Adds 3 sanctioned I2 raw matches (same treatment as the CollectionsTab precedent — S13 lint ignore-list seed).
+
+#### MarkFinishedModal saves silently with no date (from S10)
+- Root cause: `handleSubmit` passed `dateFinished` through unvalidated; every consumer guards `if (dateFinished)`, so an empty date silently skipped the date update while status/rating still saved — success theater with no date recorded.
+- Fix: inline validation per house pattern — empty date blocks the save, FormField error state ("Pick a date to mark this as finished") with danger border on the field, clearing as soon as a date is picked. No `window.alert`, no toast. Consumers untouched; the `date_finished`-on-status-change behavior stays parked (Status Knot).
+
+### S12 Close-Out Verification (finalizes 10.0E)
+
+Full Appendix A re-run (`docs/FRONTEND_AUDIT_S12.md`, same engine semantics) against the post-Batch-3 tree. Scope: 84 files (85 at baseline − deleted `DuplicateFinderModal.jsx`). **A1–A5 re-confirmed 0 repo-wide after the defect fixes.**
+
+| Pattern | Audit baseline (`6b9789c`) | Post-S12 (v0.48.0) | Verdict |
+|---------|---------------------------|--------------------|---------|
+| §1 token-class usages | 394 | 408 | **Parked** — token migration session; +14 by design (Batch 2's paired `token + color` D fixes) |
+| A1–A5 hardcoded colors | 112 | **0** | ✅ |
+| B raw elements outside ui/ | 182 | 175 | **Parked** — conversion backlog; −7 via Batch 1 conversions + dead-file deletion |
+| C ui/ className overrides | 3 | **0** | ✅ — 1 engine false positive: `<span>` nested in CriteriaBuilder's FormField `label` prop, not an override (ignore-list seed) |
+| D typography outside ui/ | 24 | **1** | ✅ — the sanctioned BottomNav emoji sizing (ignore-list seed) |
+| E routed pages missing UnifiedNavBar | 0 | **0** (12/12) | ✅ |
+| F bespoke modals | 3 | 1 | **Parked** — AnalyzingModal (dismiss-semantics decision first) |
+| G raw labeled fields | 6 | **0** | ✅ — 8 wrapper-labels remain sanctioned per audit §8 |
+| H1 indigo | 0 code (1 comment) | 0 code (1 comment) | ✅ — SeriesCard history comment (ignore-list seed) |
+| H2 red-on-DNF pairings | 1 | **0** | ✅ |
+| H3 "Abandoned" user-facing | 2 (+1 raw render) | **0** | ✅ — 40 raw occurrences all internal DB values/keys/`getLabel` routing |
+| I1 labels bypassing useStatusLabels | 3 (+2 loaders) | **0** | ✅ — 47 raw matches all internal; "Not Started" gone repo-wide |
+| I2 hardcoded grid-cols candidates | 1 (21 raw) | **0** (24 raw) | ✅ resolved — CollectionsTab + Series landing are intentional fixed group grids |
+| `library-*` aliases | 24 | **0** | ✅ — alias block deleted from config |
+
+### Technical — Batch 3
+
+#### Files Modified
+- `frontend/src/components/BookDetail.jsx` — rating pill onClick → session editor wiring; dead S3 popup cluster deleted (`ratingPopupOpen`, `statusPopupOpen`, `handleRatingChange`, `ratingLoading`, `ratingStatus`)
+- `frontend/src/components/AuthorDetail.jsx` — series-name + standalone comparators honor `sortDir`
+- `frontend/src/components/SortDropdown.jsx` — series direction labels `A → Z` / `Z → A`
+- `frontend/src/components/Library.jsx` — Series tab grid fixed (mirrors Collections), ignores `useGridColumns`
+- `frontend/src/components/MarkFinishedModal.jsx` — inline empty-date validation (FormField error state)
+- `backend/main.py` — FastAPI `version` constant `0.10.0` → `0.48.0` (had been stale since v0.10.0; the repo's only in-code version constant). **Backend change — Docker rebuild required.**
 
 ---
 

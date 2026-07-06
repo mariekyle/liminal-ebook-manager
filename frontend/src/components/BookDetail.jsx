@@ -267,9 +267,7 @@ function BookDetail() {
   
   // Rating editing state
   const [selectedRating, setSelectedRating] = useState(null)
-  const [ratingLoading, setRatingLoading] = useState(false)
-  const [ratingStatus, setRatingStatus] = useState(null)
-  
+
   // Date editing state
   const [dateStarted, setDateStarted] = useState('')
   const [dateFinished, setDateFinished] = useState('')
@@ -300,10 +298,6 @@ function BookDetail() {
   // Toast notification state
   const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' | 'loading' }
   const toastTimeoutRef = useRef(null)
-  
-  // Popup state for status and rating
-  const [statusPopupOpen, setStatusPopupOpen] = useState(false)
-  const [ratingPopupOpen, setRatingPopupOpen] = useState(false)
   
   // TBR priority state
   const [priorityPopupOpen, setPriorityPopupOpen] = useState(false)
@@ -1088,35 +1082,6 @@ function BookDetail() {
     }
   }
 
-  const handleRatingChange = async (newRating) => {
-    // Convert to number or null
-    const ratingValue = newRating === '' ? null : parseInt(newRating, 10)
-    
-    if (ratingLoading || ratingValue === selectedRating) return
-    
-    const previousRating = selectedRating
-    setRatingLoading(true)
-    setRatingStatus(null)
-    
-    // Optimistic update
-    setSelectedRating(ratingValue)
-    
-    try {
-      await updateBookRating(id, ratingValue)
-      setBook(prev => ({ ...prev, rating: ratingValue }))
-      setRatingStatus('saved')
-      setTimeout(() => setRatingStatus(null), 2000)
-    } catch (err) {
-      console.error('Failed to update rating:', err)
-      // Revert on failure
-      setSelectedRating(previousRating)
-      setRatingStatus('error')
-      setTimeout(() => setRatingStatus(null), 3000)
-    } finally {
-      setRatingLoading(false)
-    }
-  }
-
   const handleDateChange = async (field, value) => {
     if (datesLoading) return
     
@@ -1586,11 +1551,16 @@ function BookDetail() {
                 <div className="text-caption">status</div>
               </button>
               
-              {/* Rating - clickable to jump to reading history */}
+              {/* Rating — opens session editor (ratings live on reading sessions) */}
               <button
+                type="button"
                 onClick={() => {
-                  const target = document.getElementById('reading-history-desktop') || document.getElementById('reading-history')
-                  target?.scrollIntoView({ behavior: 'smooth' })
+                  const session = getMostRecentSession()
+                  if (session) {
+                    openEditSession(session)
+                  } else {
+                    openAddSession()
+                  }
                 }}
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >

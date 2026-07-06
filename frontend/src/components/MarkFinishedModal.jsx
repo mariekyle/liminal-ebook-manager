@@ -24,8 +24,13 @@ export default function MarkFinishedModal({ book, onConfirm, onClose, error, sav
   })
   const [rating, setRating] = useState(book.rating || 0)
   const [hoveredRating, setHoveredRating] = useState(0)
+  const [dateError, setDateError] = useState(null)
 
   const handleSubmit = () => {
+    if (!dateFinished) {
+      setDateError('Pick a date to mark this as finished')
+      return
+    }
     onConfirm(dateFinished, rating || null)
   }
 
@@ -39,12 +44,17 @@ export default function MarkFinishedModal({ book, onConfirm, onClose, error, sav
           </div>
         )}
         <div className="space-y-4">
-          <FormField label="Date finished">
+          <FormField label="Date finished" error={dateError}>
             <input
               type="date"
               value={dateFinished}
-              onChange={(e) => setDateFinished(e.target.value)}
-              className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary"
+              onChange={(e) => {
+                setDateFinished(e.target.value)
+                if (e.target.value) setDateError(null)
+              }}
+              className={`w-full px-3 py-2 bg-bg-elevated border rounded-lg text-text-primary text-sm focus:outline-none ${
+                dateError ? 'border-action-danger focus:border-action-danger' : 'border-border-default focus:border-action-primary'
+              }`}
             />
           </FormField>
           <FormField label="Rating (optional)">
