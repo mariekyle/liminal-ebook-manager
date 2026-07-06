@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.48.0] — in progress
+
+> Phase 10.0E design consistency sweep (S12). Batch 1 below; Batches 2–3 will append here.
+
+### Changed — Batch 1: Straggler File Conversions (2026-07-06)
+
+The four files that never received a C-series conversion (81% of remaining hardcoded colors, per `docs/FRONTEND_AUDIT_S12.md` §2) are now on the design system. Appendix A patterns A1–A5 return 0 matches across all four; no legacy `library-*` aliases remain in them.
+
+#### DuplicateCollectionModal — rebuilt on shared ui/Modal
+- Bespoke fixed overlay → `ui/Modal` (`size="md"`, fullscreen on mobile, matching sibling CollectionModal), with `Modal.Header`/`Body`/`Footer` and ✕ top-right.
+- Footer raw buttons → `<Button>` (Cancel = ghost, Duplicate = primary with loading state); right-aligned per the 16-modal precedent instead of full-width halves.
+- Name field → `FormField`; Collection Type and Rules headers follow the CollectionModal span-row pattern (FormField has no right-side slot for the Info toggle / preview count — same resolution as the precedent file, zero raw `<label>`s remain).
+- 35 hardcoded color instances → semantic tokens (type selector now `action-primary/15` selected state, info tooltip on `bg-elevated`, copy-info and counts on `text-muted`).
+
+#### BookLinkPopup — color conversion only
+- 15 hardcoded color instances + legacy `library-*` aliases → semantic tokens; `bg-black/60` backdrop → `bg-bg-overlay` (the token that exists to replace it). Search input moved to the standard `bg-elevated` input treatment.
+- Bespoke popup shell and raw buttons intentionally kept — sanctioned one-off per audit §7.
+
+#### CriteriaBuilder — FormField + useStatusLabels adoption
+- Three raw `<label>`+input fields (Tags, dropdowns, word-count inputs) → `FormField` children mode; labels lose bespoke `text-xs text-gray-400` styling.
+- 14 hardcoded color instances → semantic tokens; selects keep the custom chevron (stroke updated to warm `text-secondary`); Clear all → `action-danger`/`-hover`.
+
+### Fixed
+#### CriteriaBuilder status-label drift (audit H3 #2, I1)
+- Root cause: a bespoke settings loader duplicated `useStatusLabels` with the wrong fallback — the status dropdown showed **"Abandoned"** instead of "DNF" whenever the setting was absent. Loader deleted; the shared hook (with its live `settingsChanged` updates and caching) now supplies both internal DB values and display labels. Zero `Abandoned` literals remain in the file.
+- The date-finished dropdown was hard-labeled "Finished" while the status name is user-configurable in the same form — now uses the hook's Finished label (I1).
+- Status dropdown option order now matches the app-wide `getStatusOptions()` order (Unread, In Progress, Finished, DNF) used by BookDetail and friends, instead of the bespoke Finished-first order.
+
+### Removed
+#### DuplicateFinderModal.jsx — dead code deleted
+- Discovered during the Batch 1 conversion: the component was imported nowhere (only its own definition and export). It was superseded by `pages/DuplicatesPage.jsx`, which App.jsx routes at `/duplicates`. Verified repo-wide (no static, lazy, or string-based imports; the repo has no test files) and deleted. Its 27 hardcoded-color instances leave the audit baseline with it.
+
+### Technical
+#### Files Deleted
+- `frontend/src/components/DuplicateFinderModal.jsx` — dead since the DuplicatesPage rework; superseded by the routed page
+#### Files Modified
+- `frontend/src/components/DuplicateCollectionModal.jsx` — Modal/Button/FormField rebuild + tokens; XIcon component deleted (Modal.Header owns ✕)
+- `frontend/src/components/BookLinkPopup.jsx` — tokens only
+- `frontend/src/components/CriteriaBuilder.jsx` — FormField + useStatusLabels + tokens; `INTERNAL_STATUS_VALUES`/`DEFAULT_STATUS_LABELS` maps and settings fetch deleted
+- No shared `ui/` component, config, or tokens.css changes; no token typography classes (`text-h*`/`text-body*`/`text-caption`/`text-label`) added in converted code, per the S12→S13 migration rule.
+
+---
+
 ## [0.47.3] - 2026-07-03
 
 ### Fixed

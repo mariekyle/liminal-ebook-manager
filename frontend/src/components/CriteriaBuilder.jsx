@@ -1,36 +1,20 @@
 /**
  * CriteriaBuilder.jsx
- * 
+ *
  * Phase 9E Day 2: Criteria builder for automatic collections
- * 
+ *
  * IMPORTANT: Uses INTERNAL database values for queries, not display labels.
- * Database stores: 'Unread', 'In Progress', 'Finished', 'Abandoned'
- * User can customize display labels in settings.
- * 
+ * Both come from useStatusLabels — values match what's stored in titles.status,
+ * labels reflect the user's custom names from Settings.
+ *
  * All criteria are AND'd together.
- * 
+ *
  * Location: frontend/src/components/CriteriaBuilder.jsx
  */
 
-import { useState, useEffect } from 'react'
 import TagsMultiSelect from './TagsMultiSelect'
-import { getSettings } from '../api'
-
-// Internal database values - these MUST match what's stored in titles.status
-const INTERNAL_STATUS_VALUES = {
-  UNREAD: 'Unread',
-  IN_PROGRESS: 'In Progress',
-  FINISHED: 'Finished',
-  ABANDONED: 'Abandoned'
-}
-
-// Default labels (used if settings not loaded)
-const DEFAULT_STATUS_LABELS = {
-  'Unread': 'Unread',
-  'In Progress': 'In Progress',
-  'Finished': 'Finished',
-  'Abandoned': 'Abandoned'
-}
+import FormField from './ui/FormField'
+import { useStatusLabels } from '../hooks/useStatusLabels'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'Any category' },
@@ -58,16 +42,13 @@ const FINISHED_OPTIONS = [
 
 function CriteriaDropdown({ label, value, options, onChange }) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-gray-400 mb-1">
-        {label}
-      </label>
+    <FormField label={label}>
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
-        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-library-accent appearance-none cursor-pointer"
+        className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm focus:outline-none focus:border-action-primary appearance-none cursor-pointer"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239a958e' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
           backgroundPosition: 'right 0.5rem center',
           backgroundRepeat: 'no-repeat',
           backgroundSize: '1.5em 1.5em',
@@ -80,16 +61,13 @@ function CriteriaDropdown({ label, value, options, onChange }) {
           </option>
         ))}
       </select>
-    </div>
+    </FormField>
   )
 }
 
 function WordCountInput({ label, placeholder, value, onChange }) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-gray-400 mb-1">
-        {label}
-      </label>
+    <FormField label={label}>
       <input
         type="number"
         min="0"
@@ -100,52 +78,19 @@ function WordCountInput({ label, placeholder, value, onChange }) {
           onChange(val ? parseInt(val, 10) : null)
         }}
         placeholder={placeholder}
-        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-library-accent"
+        className="w-full px-3 py-2 bg-bg-elevated border border-border-default rounded-lg text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-action-primary"
       />
-    </div>
+    </FormField>
   )
 }
 
 export default function CriteriaBuilder({ criteria, onChange }) {
-  const [statusLabels, setStatusLabels] = useState(DEFAULT_STATUS_LABELS)
-  
-  // Fetch custom status labels from settings
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const settings = await getSettings()
-        // Settings come as array of {key, value} or object
-        const settingsMap = Array.isArray(settings) 
-          ? settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
-          : settings
-        
-        // Map settings keys to internal status values
-        // IMPORTANT: Settings keys are:
-        // - status_label_unread
-        // - status_label_in_progress
-        // - status_label_finished
-        // - status_label_dnf (NOT status_label_abandoned!)
-        setStatusLabels({
-          'Unread': settingsMap.status_label_unread || 'Unread',
-          'In Progress': settingsMap.status_label_in_progress || 'In Progress',
-          'Finished': settingsMap.status_label_finished || 'Finished',
-          'Abandoned': settingsMap.status_label_dnf || 'Abandoned'  // NOTE: key is 'dnf'
-        })
-      } catch (err) {
-        console.error('Failed to load status labels:', err)
-        // Keep defaults on error
-      }
-    }
-    loadSettings()
-  }, [])
+  const { labels, getStatusOptions } = useStatusLabels()
 
-  // Build status options using internal values but custom labels
+  // Internal DB values with the user's custom display labels, via the shared hook
   const statusOptions = [
     { value: '', label: 'Any status' },
-    { value: INTERNAL_STATUS_VALUES.FINISHED, label: statusLabels['Finished'] },
-    { value: INTERNAL_STATUS_VALUES.IN_PROGRESS, label: statusLabels['In Progress'] },
-    { value: INTERNAL_STATUS_VALUES.ABANDONED, label: statusLabels['Abandoned'] },
-    { value: INTERNAL_STATUS_VALUES.UNREAD, label: statusLabels['Unread'] }
+    ...getStatusOptions()
   ]
 
   const updateCriteria = (key, value) => {
@@ -163,15 +108,18 @@ export default function CriteriaBuilder({ criteria, onChange }) {
   return (
     <div className="space-y-3">
       {/* Tags FIRST - most commonly used for smart collections */}
-      <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">
-          Tags <span className="text-gray-500">(must have ALL selected)</span>
-        </label>
+      <FormField
+        label={
+          <>
+            Tags <span className="font-normal text-text-muted">(must have ALL selected)</span>
+          </>
+        }
+      >
         <TagsMultiSelect
           selectedTags={criteria.tags || []}
           onChange={(tags) => updateCriteria('tags', tags)}
         />
-      </div>
+      </FormField>
 
       {/* Row 1: Status & Category */}
       <div className="grid grid-cols-2 gap-3">
@@ -198,7 +146,7 @@ export default function CriteriaBuilder({ criteria, onChange }) {
           onChange={(v) => updateCriteria('rating_min', v ? parseInt(v, 10) : null)}
         />
         <CriteriaDropdown
-          label="Finished"
+          label={labels['Finished']}
           value={criteria.finished}
           options={FINISHED_OPTIONS}
           onChange={(v) => updateCriteria('finished', v)}
@@ -223,14 +171,14 @@ export default function CriteriaBuilder({ criteria, onChange }) {
 
       {/* Criteria summary */}
       {activeCount > 0 && (
-        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-          <span className="text-xs text-gray-500">
+        <div className="flex items-center justify-between pt-2 border-t border-border-default">
+          <span className="text-xs text-text-muted">
             {activeCount} rule{activeCount !== 1 ? 's' : ''} active
           </span>
           <button
             type="button"
             onClick={() => onChange({})}
-            className="text-xs text-red-400 hover:text-red-300 transition-colors"
+            className="text-xs text-action-danger hover:text-action-danger-hover transition-colors"
           >
             Clear all
           </button>
