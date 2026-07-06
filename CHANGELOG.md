@@ -48,6 +48,77 @@ The four files that never received a C-series conversion (81% of remaining hardc
 - `frontend/src/components/CriteriaBuilder.jsx` — FormField + useStatusLabels + tokens; `INTERNAL_STATUS_VALUES`/`DEFAULT_STATUS_LABELS` maps and settings fetch deleted
 - No shared `ui/` component, config, or tokens.css changes; no token typography classes (`text-h*`/`text-body*`/`text-caption`/`text-label`) added in converted code, per the S12→S13 migration rule.
 
+### Changed — Batch 2: Scattered Mechanical Cleanup (2026-07-06)
+
+Zeroes out audit categories A, C, and D (per `docs/FRONTEND_AUDIT_S12.md`), the H philosophy violations, the I1 hook-adoption gaps, and both out-of-category bonus finds. Appendix A patterns A1–A5 return 0 repo-wide outside frozen files; pattern D returns 0 outside `ui/` with one sanctioned exception (BottomNav emoji sizing — S13 lint ignore-list seed).
+
+#### Category A — the last 21 hardcoded color instances (7 files)
+- Batch 1 mapping table applied: `text-white` → `text-text-primary`, `text-gray-400/500` → `text-text-secondary`/`text-text-muted`, `border-gray-700` → `border-border-default`, `bg-zinc-700` → `bg-bg-elevated`, `bg-green-600`/`bg-red-600` → `bg-action-success`/`bg-action-danger`, `text-[#e0e0e0]` → `text-text-primary`.
+- Files: `App.jsx` (pre-connection screens), `ui/Toast.jsx`, `ui/UnifiedNavBar.jsx`, `ui/Button.jsx`, `ReadingStatusCard.jsx`, `pages/Settings.jsx`, `pages/AddPage.jsx`.
+
+#### Category C — shared-component className overrides (3 sites → 0)
+- `ui/Button` gains real `success` and `warning` variants on the `action-success`/`action-warning` tokens, matching the existing variant API. ManualEntryForm's and WishlistForm's `!bg-` force-overrides now use the variants. (`warning` hovers at `action-warning/85` — the config defines no `warning-hover` token; matches the former override.)
+- `ui/AuthorInput` now owns the standard input treatment (mirrors FormField's input styling, including error state via a new `error` prop). UnifiedEditModal's full-restyle override deleted; the add-form callers pass `error={...}` instead of `inputClass(...)`.
+
+#### Category D — typography drift (21 sites fixed, 1 skipped)
+All fixes written in paired form (`token class + config color utility`) so the sites survive the upcoming token migration zero-touch. Per-site mapping:
+
+| Site | Before | After |
+|------|--------|-------|
+| BookDetail stat values ×7 (metadata pills; Times Read / Average Rating ×2) | `text-text-primary font-semibold` (+`text-lg`) | `text-h4 text-text-primary` (stat values are h4-weight emphasis) |
+| BookDetail notes-markdown `h3` renderer | `text-body-sm font-semibold text-text-primary` | `text-label text-text-primary` |
+| BookDetail notes-markdown `strong` renderer | `text-text-primary font-semibold` | `text-label text-text-primary` |
+| BookDetail delete-edition name emphasis | `font-semibold text-text-primary` | `text-label text-text-primary` |
+| App.jsx "Connection Error" heading | `text-xl font-bold text-white` | `text-h3 text-text-primary` |
+| Header wordmark | `text-xl font-bold text-text-primary` | `text-h2 text-text-primary` (exact size match) |
+| UploadProgress status glyph | `text-xl` + status color | `text-h2` + status color (glyph sizing — S13 ignore-list candidate alongside BottomNav) |
+| SortDropdown "Drag to reorder" badge ×2 | `text-[10px] font-semibold` | `text-caption text-action-warning` (uppercase kept) |
+| AddPage linked-book title | `text-text-primary font-semibold` | `text-h4 text-text-primary` |
+| ImportPage "Import Complete" heading | `font-semibold text-action-success … text-h4` | `text-h4 text-action-success` (redundant weight dropped) |
+| SeriesCard cover lettering ×2 | `font-bold` utility | `fontWeight: 700` in the existing inline style (cover art — color/shadow already inline; a token class would repaint rendered covers) |
+| BottomNav emoji icon | `text-2xl` | **skipped** — sanctioned lint ignore-list seed |
+
+Note on the "stat-value ×10" decision: 3 of BookDetail's 10 `font-semibold` hits are inline emphasis inside 14px sentences (the markdown renderers and the delete-edition confirmation), not stat values — `text-h4` there would put 16px bold mid-sentence, so those map to `text-label` (nearest token, 14px/500) instead.
+
+#### Bonus finds
+- `index.css` scrollbar: the frontend's last navy hexes (slate `#1e293b`/`#475569`/`#64748b`) → warm values taken from `tailwind.config.js` (`bg.surface` `#242220` / `action.secondary` `#4a4541` / `action.secondary-hover` `#5e5954`), each commented with its config source (scrollbar CSS needs raw values).
+- Legacy `library-*` alias vocabulary deleted: the 9 remaining usages (App.jsx ×5, ui/UnifiedNavBar ×4; the rest died with Batch 1) migrated per the alias definitions — `bg-library-bg` → `bg-bg-base`, `bg-library-card` → `bg-bg-surface`, `library-accent` → `action-primary` — then the alias block removed from `tailwind.config.js`. `grep -rn "library-" frontend/src` → 0. The third color vocabulary is gone.
+
+### Fixed — Batch 2
+
+#### P1: DNF books rendered as "Not Started" on BookDetail (audit I1; S11 regression finding)
+- Root cause: BookDetail's `normalizeStatus` lowercases the DB value `'Abandoned'` to `'abandoned'`, which is not a `STATUS_CONFIG` key in ReadingStatusCard — the card fell back to the unread config and displayed its hardcoded `'Not Started'` label. `normalizeStatus` now maps `'abandoned'` → `'dnf'`, and ReadingStatusCard's hardcoded `'Not Started'` strings are deleted in favor of `useStatusLabels().getLabel('Unread')` (I1). DNF books now get the neutral dnf treatment and the user's configured DNF label. (`'Currently Reading'` kept — distinct copy, not a configurable status label.)
+
+#### H2: Abandoned fanfic completion badge no longer danger-red
+- BookDetail's completion-status badge (`Complete`/`WIP`/`Abandoned`) rendered `'Abandoned'` in `action-danger`; now the neutral `status-dnf` treatment, matching ImportPage's handling of the identical status. Setting aside ≠ failure.
+
+#### H3: "Abandoned" no longer rendered as display text
+- BookDetail's completion badge rendered the raw DB value; it now routes through `getLabel(SESSION_STATUS_TO_BACKEND[…] || value)` — the documented translation-map pattern (snake_case variants covered) — so abandoned fics display "DNF" (or the custom label). (`Complete`/`WIP` pass through unchanged.)
+- The Settings status-rename row was titled "Abandoned" (`StatusLabelsModal` `FIELDS`); row titles now render the live label for each status via `useStatusLabels`, so they track renames.
+
+#### I1: CollectionDetail bespoke status-label loader deleted
+- The duplicated settings loader (with drifted `'Reading'`/`'Done'` fallbacks — the same drift class that produced Batch 1's CriteriaBuilder bug) fed a `statusLabels` state that was **never read**: ChangeStatusModal and MarkFinishedModal self-serve via the shared hook. Dead state + loader portion removed outright; nothing in the file renders status labels, so no hook import was needed. Zero bespoke label loaders remain repo-wide.
+
+### Technical — Batch 2
+
+#### Files Modified
+- `frontend/tailwind.config.js` — `library` alias block deleted (only change)
+- `frontend/src/index.css` — scrollbar colors → warm palette values with config-source comments
+- `frontend/src/App.jsx` — tokens (colors + `text-h3` heading), `library-*` migration
+- `frontend/src/components/ui/Button.jsx` — `success`/`warning` variants added; `text-white` → `text-text-primary` in primary/danger; JSDoc variant list updated
+- `frontend/src/components/ui/AuthorInput.jsx` — owns FormField-standard input styling; new `error` prop; `className` now appends to the base
+- `frontend/src/components/ui/Toast.jsx` — semantic tokens (success/danger/elevated + text-primary)
+- `frontend/src/components/ui/UnifiedNavBar.jsx` — tokens + `library-*` migration
+- `frontend/src/components/BookDetail.jsx` — D ×10, H2 badge, H3 label translation, `normalizeStatus` `'abandoned'` → `'dnf'`
+- `frontend/src/components/ReadingStatusCard.jsx` — `'Not Started'` literals deleted (hook Unread label), `text-white` ×2
+- `frontend/src/components/CollectionDetail.jsx` — dead `statusLabels` state + loader removed
+- `frontend/src/components/UnifiedEditModal.jsx` — AuthorInput override removed
+- `frontend/src/components/add/ManualEntryForm.jsx` — Button `success` variant; AuthorInput `error` prop
+- `frontend/src/components/add/WishlistForm.jsx` — Button `warning` variant; AuthorInput `error` prop
+- `frontend/src/components/settings/StatusLabelsModal.jsx` — row titles via `useStatusLabels`
+- `frontend/src/components/Header.jsx`, `SeriesCard.jsx`, `SortDropdown.jsx`, `upload/UploadProgress.jsx`, `pages/Settings.jsx`, `pages/AddPage.jsx`, `pages/ImportPage.jsx` — per the A/D tables above
+- Frozen files untouched. Batch 1's "no token typography classes" rule deliberately relaxed for Category-D fix sites only, always in paired `token + color utility` form.
+
 ---
 
 ## [0.47.3] - 2026-07-03

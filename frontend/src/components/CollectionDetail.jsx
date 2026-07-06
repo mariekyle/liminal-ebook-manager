@@ -239,12 +239,6 @@ export default function CollectionDetail() {
   const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
   const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
   const [selectedBook, setSelectedBook] = useState(null)
-  const [statusLabels, setStatusLabels] = useState({
-    unread: 'Unread',
-    in_progress: 'Reading', 
-    finished: 'Done',
-    dnf: 'DNF'
-  })
 
   // Client-side search filter (G5-13). Applies to currently-loaded books only —
   // for large paginated collections, search narrows the loaded set; scrolling
@@ -566,7 +560,7 @@ export default function CollectionDetail() {
     return () => observer.disconnect()
   }, [completedHasMore, loadMoreCompleted, collection?.collection_type])
 
-  // Load display settings and custom status labels
+  // Load display settings
   useEffect(() => {
     getSettings()
       .then(settings => {
@@ -574,13 +568,6 @@ export default function CollectionDetail() {
         if (settings.reading_speed) {
           setReadingSpeed(parseInt(settings.reading_speed, 10) || 180)
         }
-        // Load custom status labels
-        setStatusLabels({
-          unread: settings.status_label_unread || 'Unread',
-          in_progress: settings.status_label_in_progress || 'Reading',
-          finished: settings.status_label_finished || 'Done',
-          dnf: settings.status_label_dnf || 'DNF'
-        })
       })
       .catch(err => console.error('Failed to load settings:', err))
   }, [])

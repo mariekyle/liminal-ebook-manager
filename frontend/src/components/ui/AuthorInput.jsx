@@ -5,6 +5,7 @@ export default function AuthorInput({
   value,
   onChange,
   placeholder = 'Separate multiple authors with commas',
+  error = false,
   className = '',
   autoFocus = false,
 }) {
@@ -75,6 +76,13 @@ export default function AuthorInput({
     if (inputRef.current) inputRef.current.focus()
   }
 
+  // Standard input treatment — mirrors FormField's own input styling
+  const inputClasses = `w-full h-11 px-3 bg-bg-elevated border rounded-lg text-text-primary text-sm font-[inherit] transition-[border-color] duration-[200ms] ease-out placeholder:text-text-muted focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 ${
+    error
+      ? 'border-action-danger focus:border-action-danger focus:ring-action-danger/15'
+      : 'border-border-default focus:border-border-focus'
+  }`
+
   return (
     <div className="relative">
       <input
@@ -87,7 +95,7 @@ export default function AuthorInput({
         placeholder={placeholder}
         autoComplete="off"
         autoFocus={autoFocus}
-        className={className}
+        className={`${inputClasses} ${className}`}
       />
       {showDropdown && suggestions.length > 0 && (
         <div className="absolute z-[70] left-0 right-0 top-full mt-1 bg-bg-elevated border border-border-default rounded-lg shadow-lg max-h-48 overflow-y-auto">

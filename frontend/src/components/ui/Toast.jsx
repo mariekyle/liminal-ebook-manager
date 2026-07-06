@@ -8,15 +8,15 @@ export default function Toast({ toast }) {
   if (!toast) return null
 
   const bgColor = {
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    loading: 'bg-zinc-700',
-  }[toast.type] || 'bg-zinc-700'
+    success: 'bg-action-success',
+    error: 'bg-action-danger',
+    loading: 'bg-bg-elevated',
+  }[toast.type] || 'bg-bg-elevated'
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-200">
       <div
-        className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[200px] max-w-[90vw]`}
+        className={`${bgColor} text-text-primary px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[200px] max-w-[90vw]`}
       >
         {toast.type === 'loading' && (
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

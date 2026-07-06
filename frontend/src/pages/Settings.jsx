@@ -288,7 +288,7 @@ export default function Settings() {
                     onClick={() => handleGridColumnsChange(cols)}
                     className={`flex-1 min-h-[44px] px-4 rounded-lg text-sm font-medium transition-colors ${
                       gridColumns === cols
-                        ? 'bg-action-primary text-white'
+                        ? 'bg-action-primary text-text-primary'
                         : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
                     }`}
                   >
@@ -317,7 +317,7 @@ export default function Settings() {
                     onClick={() => handleGridVariantChange(value)}
                     className={`flex-1 min-h-[44px] px-4 rounded-lg text-sm font-medium transition-colors ${
                       gridCardVariant === value
-                        ? 'bg-action-primary text-white'
+                        ? 'bg-action-primary text-text-primary'
                         : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
                     }`}
                   >

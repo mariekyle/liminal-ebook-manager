@@ -34,10 +34,10 @@ function ConnectedApp() {
 
   if (connected === null) {
     return (
-      <div className="min-h-screen bg-library-bg flex items-center justify-center">
-        <div className="text-white text-center">
+      <div className="min-h-screen bg-bg-base flex items-center justify-center">
+        <div className="text-text-primary text-center">
           <div className="animate-pulse-slow text-4xl mb-4">📚</div>
-          <p className="text-gray-400">Connecting to library...</p>
+          <p className="text-text-secondary">Connecting to library...</p>
         </div>
       </div>
     )
@@ -45,15 +45,15 @@ function ConnectedApp() {
 
   if (connected === false) {
     return (
-      <div className="min-h-screen bg-library-bg flex items-center justify-center p-4">
-        <div className="bg-library-card rounded-lg p-6 max-w-md text-center">
+      <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
+        <div className="bg-bg-surface rounded-lg p-6 max-w-md text-center">
           <div className="text-4xl mb-4">⚠️</div>
-          <h1 className="text-xl font-bold text-white mb-2">Connection Error</h1>
-          <p className="text-gray-400 mb-4">Could not connect to the library backend.</p>
-          <p className="text-gray-500 text-sm mb-4">{error}</p>
+          <h1 className="text-h3 text-text-primary mb-2">Connection Error</h1>
+          <p className="text-text-secondary mb-4">Could not connect to the library backend.</p>
+          <p className="text-text-muted text-sm mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-library-accent text-white px-4 py-2 rounded hover:opacity-90"
+            className="bg-action-primary text-text-primary px-4 py-2 rounded hover:opacity-90"
           >
             Retry
           </button>
@@ -63,7 +63,7 @@ function ConnectedApp() {
   }
 
   return (
-    <div className="min-h-screen bg-library-bg pb-16 md:pb-0">
+    <div className="min-h-screen bg-bg-base pb-16 md:pb-0">
       <main>
         <Routes>
           <Route path="/" element={<Library />} />

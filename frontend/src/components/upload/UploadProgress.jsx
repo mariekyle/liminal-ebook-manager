@@ -69,7 +69,7 @@ export default function UploadProgress({ books, progress }) {
           return (
             <div key={book.id} className="bg-bg-surface rounded-lg p-4 border border-border-subtle">
               <div className="flex items-center gap-3 mb-3">
-                <span className={`text-xl ${iconClass}`}>{icon}</span>
+                <span className={`text-h2 ${iconClass}`}>{icon}</span>
                 <div className="flex-1 min-w-0">
                   <div
                     className={`text-body-sm font-medium ${

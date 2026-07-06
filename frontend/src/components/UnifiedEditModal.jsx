@@ -320,7 +320,6 @@ export default function UnifiedEditModal({ isOpen, onClose, book, onSave, isWish
                 <AuthorInput
                   value={formData.authors}
                   onChange={(v) => handleInputChange('authors', v)}
-                  className="w-full h-11 px-3 rounded-lg bg-bg-elevated border border-border-default text-text-primary text-body-sm font-[inherit] placeholder:text-text-muted focus:outline-none focus:border-action-primary focus:ring-[3px] focus:ring-action-primary/15"
                 />
               </FormField>
 

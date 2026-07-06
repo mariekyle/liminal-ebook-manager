@@ -30,7 +30,6 @@ const EditIcon = () => (
 
 const STATUS_CONFIG = {
   unread: {
-    label: 'Not Started',
     icon: BookIcon,
     bgClass: 'bg-action-primary/15',
     iconClass: 'text-action-primary',
@@ -38,7 +37,6 @@ const STATUS_CONFIG = {
     showEdit: false
   },
   not_prioritized: {
-    label: 'Not Started',
     icon: BookIcon,
     bgClass: 'bg-action-primary/15',
     iconClass: 'text-action-primary',
@@ -90,7 +88,7 @@ export default function ReadingStatusCard({
       ? getLabel('Finished')
       : status === 'dnf'
         ? getLabel('Abandoned')
-        : config.label
+        : config.label || getLabel('Unread')
 
   const handleDownload = () => {
     if (fileUrl) {
@@ -151,7 +149,7 @@ export default function ReadingStatusCard({
           <button
             type="button"
             onClick={onMarkFinished}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-white font-medium text-sm transition-colors hover:opacity-90"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-text-primary font-medium text-sm transition-colors hover:opacity-90"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
@@ -176,7 +174,7 @@ export default function ReadingStatusCard({
           <button
             type="button"
             onClick={onAcquire}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-white font-medium text-sm transition-colors hover:opacity-90"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-text-primary font-medium text-sm transition-colors hover:opacity-90"
           >
             🎉 I Got This Book!
           </button>

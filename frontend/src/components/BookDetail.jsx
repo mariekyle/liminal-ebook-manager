@@ -537,6 +537,8 @@ function BookDetail() {
     const normalized = status.toLowerCase().replace(/\s+/g, '_')
     // Map any variations
     if (normalized === 'not_prioritized') return 'unread'
+    // DB stores 'Abandoned'; the component vocabulary is 'dnf'
+    if (normalized === 'abandoned') return 'dnf'
     // Handle "in progress" → "in_progress"
     return normalized
   }
@@ -1569,7 +1571,7 @@ function BookDetail() {
               {/* Read Time */}
               {readTimeData && (
                 <div className="px-3 py-2 text-center">
-                  <div className="text-text-primary font-semibold">{readTimeData.display}</div>
+                  <div className="text-h4 text-text-primary">{readTimeData.display}</div>
                   <div className="text-caption">{readTimeData.microcopy}</div>
                 </div>
               )}
@@ -1580,7 +1582,7 @@ function BookDetail() {
                 onClick={() => setShowChangeStatusModal(true)}
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
-                <div className="text-text-primary font-semibold">{getLabel(selectedStatus)}</div>
+                <div className="text-h4 text-text-primary">{getLabel(selectedStatus)}</div>
                 <div className="text-caption">status</div>
               </button>
               
@@ -1606,7 +1608,7 @@ function BookDetail() {
                 onClick={() => setShowUnifiedEditModal(true)}
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
-                <div className="text-text-primary font-semibold">{selectedCategory || 'Uncategorized'}</div>
+                <div className="text-h4 text-text-primary">{selectedCategory || 'Uncategorized'}</div>
                 <div className="text-caption">category</div>
               </button>
             </div>
@@ -1893,12 +1895,12 @@ function BookDetail() {
                     <div className="flex justify-between text-sm">
                       <div>
                         <div className="text-text-secondary">Times Read</div>
-                        <div className="text-text-primary font-semibold text-lg">{sessionsStats.times_read}</div>
+                        <div className="text-h4 text-text-primary">{sessionsStats.times_read}</div>
                       </div>
                       {sessionsStats.average_rating && (
                         <div className="text-right">
                           <div className="text-text-secondary">Average Rating</div>
-                          <div className="text-text-primary font-semibold text-lg flex items-center justify-end gap-1">
+                          <div className="text-h4 text-text-primary flex items-center justify-end gap-1">
                             {sessionsStats.average_rating}
                             <span className="text-action-warning">★</span>
                           </div>
@@ -1996,10 +1998,10 @@ function BookDetail() {
                   <span className={`text-xs px-2 py-0.5 rounded ${
                     book.completion_status === 'Complete' ? 'bg-action-success/20 text-action-success' :
                     book.completion_status === 'WIP' ? 'bg-action-warning/20 text-action-warning' :
-                    book.completion_status === 'Abandoned' ? 'bg-action-danger/20 text-action-danger' :
+                    book.completion_status === 'Abandoned' ? 'bg-status-dnf/20 text-status-dnf' :
                     'bg-chip-default/20 text-text-muted'
                   }`}>
-                    {book.completion_status}
+                    {getLabel(SESSION_STATUS_TO_BACKEND[book.completion_status] || book.completion_status)}
                   </span>
                 )
               })
@@ -2148,12 +2150,12 @@ function BookDetail() {
                 <div className="flex justify-between text-sm">
                   <div>
                     <div className="text-text-secondary">Times Read</div>
-                    <div className="text-text-primary font-semibold text-lg">{sessionsStats.times_read}</div>
+                    <div className="text-h4 text-text-primary">{sessionsStats.times_read}</div>
                   </div>
                   {sessionsStats.average_rating && (
                     <div className="text-right">
                       <div className="text-text-secondary">Average Rating</div>
-                      <div className="text-text-primary font-semibold text-lg flex items-center justify-end gap-1">
+                      <div className="text-h4 text-text-primary flex items-center justify-end gap-1">
                         {sessionsStats.average_rating}
                         <span className="text-action-warning">★</span>
                       </div>
@@ -2239,7 +2241,7 @@ function BookDetail() {
             <ReactMarkdown
               components={{
                 h2: ({children}) => <h2 className="text-h4 mt-4 mb-2 first:mt-0">{children}</h2>,
-                h3: ({children}) => <h3 className="text-body-sm font-semibold text-text-primary mt-3 mb-1">{children}</h3>,
+                h3: ({children}) => <h3 className="text-label text-text-primary mt-3 mb-1">{children}</h3>,
                 p: ({children}) => {
                   // Process children to handle [[Book Title]] links
                   const processChildren = (child, childIndex) => {
@@ -2256,7 +2258,7 @@ function BookDetail() {
                   return <p className="text-body-sm mb-2">{processed}</p>
                 },
                 hr: () => <hr className="border-border-default my-4" />,
-                strong: ({children}) => <strong className="text-text-primary font-semibold">{children}</strong>,
+                strong: ({children}) => <strong className="text-label text-text-primary">{children}</strong>,
                 em: ({children}) => <em className="text-text-body">{children}</em>,
                 ul: ({children}) => <ul className="list-disc list-inside text-sm text-text-body mb-2">{children}</ul>,
                 ol: ({children}) => <ol className="list-decimal list-inside text-sm text-text-body mb-2">{children}</ol>,
@@ -3120,7 +3122,7 @@ function BookDetail() {
         </Modal.Header>
         <Modal.Body>
           <p className="text-body-sm">
-            Remove the <span className="font-semibold text-text-primary">{editionToDelete?.label}</span> edition from this title?
+            Remove the <span className="text-label text-text-primary">{editionToDelete?.label}</span> edition from this title?
           </p>
           <p className="text-text-secondary text-sm mt-2">
             This won't delete any reading sessions associated with this format.

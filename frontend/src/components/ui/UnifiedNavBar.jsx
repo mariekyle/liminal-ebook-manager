@@ -18,9 +18,9 @@ export default function UnifiedNavBar({
   // Title-only variant (for Settings)
   if (title) {
     return (
-      <div className="sticky top-0 z-20 bg-library-bg border-b border-gray-700">
+      <div className="sticky top-0 z-20 bg-bg-base border-b border-border-default">
         <div className="px-4 md:px-8 py-4">
-          <h1 className="text-xl font-semibold text-white">{title}</h1>
+          <h1 className="text-xl font-semibold text-text-primary">{title}</h1>
         </div>
       </div>
     )
@@ -38,20 +38,20 @@ export default function UnifiedNavBar({
 
   // Back link/button variant (for detail pages)
   return (
-    <div className="sticky top-0 z-20 bg-library-bg border-b border-gray-700">
+    <div className="sticky top-0 z-20 bg-bg-base border-b border-border-default">
       <div className="flex justify-between items-center px-4 md:px-8 py-3">
         {/* Back - render as button if onBack provided, otherwise as Link */}
         {onBack ? (
           <button 
             onClick={onBack}
-            className="flex items-center gap-1 text-library-accent text-sm hover:underline"
+            className="flex items-center gap-1 text-action-primary text-sm hover:underline"
           >
             {backContent}
           </button>
         ) : (
           <Link 
             to={backTo}
-            className="flex items-center gap-1 text-library-accent text-sm hover:underline"
+            className="flex items-center gap-1 text-action-primary text-sm hover:underline"
           >
             {backContent}
           </Link>

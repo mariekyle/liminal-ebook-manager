@@ -1,7 +1,7 @@
 /**
  * Button — Primary UI action component
  *
- * Variants: primary (muted teal), secondary, ghost, danger
+ * Variants: primary (muted teal), secondary, ghost, danger, success, warning
  * Sizes: sm (36px), md (44px), lg (48px)
  * States: loading, disabled
  *
@@ -24,11 +24,14 @@ export default function Button({
     'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-[200ms] ease-out whitespace-nowrap select-none'
 
   const variantClasses = {
-    primary: 'bg-action-primary text-white hover:bg-action-primary-hover active:scale-[0.97]',
+    primary: 'bg-action-primary text-text-primary hover:bg-action-primary-hover active:scale-[0.97]',
     secondary:
       'bg-action-secondary text-text-primary hover:bg-action-secondary-hover active:scale-[0.97]',
     ghost: 'bg-transparent text-text-secondary border border-border-default hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]',
-    danger: 'bg-action-danger text-white hover:bg-action-danger-hover active:scale-[0.97]',
+    danger: 'bg-action-danger text-text-primary hover:bg-action-danger-hover active:scale-[0.97]',
+    success: 'bg-action-success text-text-primary hover:bg-action-success-hover active:scale-[0.97]',
+    // action-warning has no -hover token in config; /85 matches the former call-site override
+    warning: 'bg-action-warning text-text-primary hover:bg-action-warning/85 active:scale-[0.97]',
   }
 
   const sizeClasses = {

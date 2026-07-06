@@ -523,7 +523,7 @@ export default function AddPage() {
   const showNavBar = headerConfig.showBack
 
   return (
-    <div className="text-[#e0e0e0]">
+    <div className="text-text-primary">
       {/* Page Header - sticky nav with multi-step back */}
       {showNavBar && (
         <UnifiedNavBar
@@ -607,7 +607,7 @@ export default function AddPage() {
                   <span className="text-action-success">📚</span>
                   <span className="text-action-success font-medium">Adding files for:</span>
                 </div>
-                <p className="text-text-primary font-semibold">{linkedBook.title}</p>
+                <p className="text-h4 text-text-primary">{linkedBook.title}</p>
                 <p className="text-text-secondary text-body-sm">by {linkedBook.authors?.join(', ')}</p>
               </div>
             )}

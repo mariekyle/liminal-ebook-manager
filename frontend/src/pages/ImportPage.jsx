@@ -231,7 +231,7 @@ export default function ImportPage() {
         {/* Import Results */}
         {importResults && (
           <div className="mb-6 p-4 bg-action-success/10 border border-action-success/30 rounded-lg">
-            <h2 className="font-semibold text-action-success mb-2 text-h4">
+            <h2 className="text-h4 text-action-success mb-2">
               ✅ Import Complete
             </h2>
             <p className="text-text-secondary text-body-sm">

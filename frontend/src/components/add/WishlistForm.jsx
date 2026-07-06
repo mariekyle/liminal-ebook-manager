@@ -262,7 +262,7 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
           <AuthorInput
             value={form.authors}
             onChange={(v) => updateForm('authors', v)}
-            className={inputClass(!!errors.authors)}
+            error={!!errors.authors}
           />
         </FormField>
 
@@ -355,8 +355,8 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
             </Button>
             <Button
               type="button"
-              variant={form.priority === 'high' ? 'primary' : 'secondary'}
-              className={form.priority === 'high' ? 'flex-1 !bg-action-warning hover:!bg-action-warning/85' : 'flex-1'}
+              variant={form.priority === 'high' ? 'warning' : 'secondary'}
+              className="flex-1"
               onClick={() => updateForm('priority', 'high')}
             >
               ⭐ High Priority

@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
 import { getSettings, updateSetting } from '../../api'
+import { useStatusLabels } from '../../hooks/useStatusLabels'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import FormField from '../ui/FormField'
 
 const DEFAULTS = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'DNF' }
+// Row titles render the live label for each status (DB-value keys for the hook)
 const FIELDS = [
-  { key: 'unread', label: 'Unread' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'finished', label: 'Finished' },
-  { key: 'dnf', label: 'Abandoned' },
+  { key: 'unread', status: 'Unread' },
+  { key: 'in_progress', status: 'In Progress' },
+  { key: 'finished', status: 'Finished' },
+  { key: 'dnf', status: 'Abandoned' },
 ]
 
 export default function StatusLabelsModal({ isOpen, onClose }) {
+  const { getLabel } = useStatusLabels()
   const [labels, setLabels] = useState(DEFAULTS)
 
   useEffect(() => {
@@ -56,8 +59,8 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
           Rename any reading status. Shorter labels fit better in filters and badges.
         </p>
         <div className="space-y-3">
-          {FIELDS.map(({ key, label }) => (
-            <FormField key={key} label={label}>
+          {FIELDS.map(({ key, status }) => (
+            <FormField key={key} label={getLabel(status)}>
               <input
                 type="text"
                 value={labels[key]}

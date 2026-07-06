@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
 > **Last Updated:** July 6, 2026 (v0.48.0 in progress)
-> **Current Focus:** Phase 10.0E design consistency sweep (S12) — Batch 1 (straggler file conversions) shipped; Batches 2–3 next.
+> **Current Focus:** Phase 10.0E design consistency sweep (S12) — Batches 1–2 shipped; Batch 3 (S11 regression defects + close-out) next.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -233,12 +233,12 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 - searchSort.js utility (C8)
 
 **Known stragglers (batch later):**
-- `text-[#e0e0e0]` wrapper in AddPage.jsx (→ S12 Batch 2)
+- ~~`text-[#e0e0e0]` wrapper in AddPage.jsx~~ ✅ converted in S12 Batch 2 (v0.48.0)
 - ~~CriteriaBuilder.jsx still has legacy gray classes~~ ✅ converted in S12 Batch 1 (v0.48.0)
 
 ---
 
-### 10.0D: UX Audit Fix Sessions ← CURRENT
+### 10.0D: UX Audit Fix Sessions
 
 **Priority:** P0 — Fix What's Broken Before Building What's New  
 **Status:** ✅ Complete — all 11 sessions shipped; Session 11 regression pass on Sessions 1–10 passed (non-regression findings logged to Open Questions backlog)  
@@ -290,14 +290,14 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 ### 10.0E: Design Consistency Sweep (S12) ← CURRENT
 
 **Priority:** P0 — finish the conversion before feature work resumes
-**Status:** 🔄 In progress — Batch 1 shipped (v0.48.0 in progress)
+**Status:** 🔄 In progress — Batches 1–2 shipped (v0.48.0 in progress)
 **Based on:** `docs/FRONTEND_AUDIT_S12.md` (committed 6a25f82)
 
 | Batch | Scope | Status |
 |-------|-------|--------|
 | 1 | Straggler file conversions: DuplicateCollectionModal, BookLinkPopup, CriteriaBuilder — colors, ui/Modal, FormField, useStatusLabels (4th straggler DuplicateFinderModal found dead → deleted) | ✅ 2026-07-06 (A1–A5 = 0; pattern G = 0; zero `Abandoned` literals in CriteriaBuilder) |
-| 2 | Remaining color drift: App.jsx, Toast, UnifiedNavBar, ReadingStatusCard, Settings, AddPage + H2/H3/I1 leftovers | ⬜ |
-| 3 | Sweep close-out + verification vs audit baseline | ⬜ |
+| 2 | Scattered mechanical cleanup: category A remainder (21), C overrides (Button success/warning variants, AuthorInput fold-in), D typography (21 fixed / BottomNav skipped), H2/H3, I1 (P1 DNF-renders-as-Not-Started fixed), scrollbar navy hexes, `library-*` alias deletion | ✅ 2026-07-06 (A1–A5 = 0; D outside ui/ = 0 + BottomNav exception; `library-` = 0, alias block deleted; zero bespoke label loaders) |
+| 3 | S11 regression defects: rating tappable, series sort asc/desc, grid setting leaking onto Series landing, MarkFinished date validation (close-out verification folds into this batch) | ⬜ |
 
 **Discovered in Batch 1:** `DuplicateFinderModal.jsx` was imported nowhere (dead since the DuplicatesPage rework) — verified repo-wide and **deleted** same session. Voice-pass candidates left as-is (out of scope): DuplicatesPage:183 "Your library is clean!" exclamation, :196 "books" in the duplicate-count string.
 

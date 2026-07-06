@@ -271,7 +271,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           <AuthorInput
             value={form.authors}
             onChange={(v) => updateForm('authors', v)}
-            className={inputClass(!!errors.author)}
+            error={!!errors.author}
           />
         </FormField>
 
@@ -339,10 +339,8 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
           </Button>
           <Button
             type="submit"
-            variant="primary"
-            className={
-              isAddingFormat ? 'flex-1 !bg-action-success hover:!bg-action-success-hover' : 'flex-1'
-            }
+            variant={isAddingFormat ? 'success' : 'primary'}
+            className="flex-1"
             disabled={isSubmitting}
             loading={isSubmitting}
           >

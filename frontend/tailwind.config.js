@@ -8,18 +8,6 @@ export default {
     extend: {
       colors: {
         // ===========================================
-        // LEGACY ALIASES (keep for existing code)
-        // Maps to Warm A values so existing classes
-        // shift automatically. Use semantic tokens
-        // in all new code.
-        // ===========================================
-        library: {
-          bg: '#1a1918',       // Warm charcoal base
-          card: '#242220',     // Warm surface
-          accent: '#5e8a8a',   // Muted teal
-        },
-
-        // ===========================================
         // SEMANTIC TOKENS — Use these in all new code
         // Warm A palette: Swan Song inspired
         // ===========================================

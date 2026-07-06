@@ -132,7 +132,7 @@ export default function SortDropdown({
                   className={`flex items-center gap-2 ${isActive ? 'text-action-primary' : 'text-text-body'}`}
                 >
                   {opt.label}
-                  <span className="text-[10px] px-1.5 py-0.5 bg-action-warning/15 text-action-warning rounded uppercase font-semibold">
+                  <span className="text-caption text-action-warning px-1.5 py-0.5 bg-action-warning/15 rounded uppercase">
                     Drag to reorder
                   </span>
                 </span>
@@ -209,7 +209,7 @@ export default function SortDropdown({
                       className={`flex items-center gap-2 ${isActive ? 'text-action-primary' : 'text-text-body'}`}
                     >
                       {opt.label}
-                      <span className="text-[10px] px-1.5 py-0.5 bg-action-warning/15 text-action-warning rounded uppercase font-semibold">
+                      <span className="text-caption text-action-warning px-1.5 py-0.5 bg-action-warning/15 rounded uppercase">
                         Drag to reorder
                       </span>
                     </span>

@@ -17,16 +17,16 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #242220; /* bg.surface — tailwind.config.js */
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #4a4541; /* action.secondary — tailwind.config.js */
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #5e5954; /* action.secondary-hover — tailwind.config.js */
 }
 
 /* Gradient cover animation */

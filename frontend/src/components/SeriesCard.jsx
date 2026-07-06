@@ -48,8 +48,8 @@ function SeriesCard({ series, variant = 'compact' }) {
             style={{ backgroundImage: gradient, backgroundColor: bgColor }}
           >
             <span
-              className="text-sm font-bold font-serif"
-              style={{ color: textColor, textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+              className="text-sm font-serif"
+              style={{ color: textColor, textShadow: '0 1px 3px rgba(0,0,0,0.3)', fontWeight: 700 }}
             >
               {seriesAbbrev(series.name)}
             </span>
@@ -109,8 +109,8 @@ function SeriesCard({ series, variant = 'compact' }) {
             {/* Series name — centered */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
               <h3
-                className="text-center font-serif font-bold text-sm leading-tight"
-                style={{ color: textColor, textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)' }}
+                className="text-center font-serif text-sm leading-tight"
+                style={{ color: textColor, textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)', fontWeight: 700 }}
               >
                 {displayName}
               </h3>

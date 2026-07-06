@@ -83,7 +83,7 @@ function Header() {
       <header className="bg-bg-surface border-b border-border-default sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-3 md:px-8">
           {/* Logo */}
-          <NavLink to="/" className="text-xl font-bold text-text-primary">
+          <NavLink to="/" className="text-h2 text-text-primary">
             Liminal
           </NavLink>
           
