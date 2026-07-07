@@ -355,7 +355,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
               </div>
 
               {showTypeInfo && (
-                <div className="mb-3 p-3 bg-bg-elevated border border-border-default rounded-lg space-y-2 text-body-sm">
+                <div className="mb-3 p-3 bg-bg-elevated border border-border-default rounded-lg space-y-2 text-body-sm text-text-secondary">
                   {COLLECTION_TYPES.map(type => (
                     <div key={type.id}>
                       <span className="font-medium text-text-primary">{type.icon} {type.name}:</span>

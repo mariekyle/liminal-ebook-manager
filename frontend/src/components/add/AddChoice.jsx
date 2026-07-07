@@ -22,7 +22,7 @@ export default function AddChoice({ onChoice }) {
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-      <h1 className="text-h2 mb-2 text-center">What would you like to add?</h1>
+      <h1 className="text-h2 text-text-primary mb-2 text-center">What would you like to add?</h1>
 
       {bookCount !== null && (
         <p className="text-body-sm text-text-secondary mb-8 text-center">

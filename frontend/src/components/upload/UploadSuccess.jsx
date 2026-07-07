@@ -175,7 +175,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
 
 function SummaryRow({ label, value }) {
   return (
-    <div className="flex justify-between text-body-sm">
+    <div className="flex justify-between text-body-sm text-text-secondary">
       <span className="text-text-secondary">{label}</span>
       <span className="text-text-primary font-medium">{value}</span>
     </div>

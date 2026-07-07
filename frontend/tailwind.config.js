@@ -45,6 +45,7 @@ export default {
           danger: '#c0564e',
           'danger-hover': '#a84940',
           warning: '#c4956a',
+          'warning-hover': '#ab825c',   // ~13% deeper, same derivation as the other -hover tokens
           secondary: '#4a4541',
           'secondary-hover': '#5e5954',
         },
@@ -68,6 +69,19 @@ export default {
           finished: '#7a9e6a',
           dnf: '#7a756e',       // NOT red — DNF is neutral, not an error
         },
+      },
+
+      // Typography tokens — single token source (migrated from tokens.css @layer components, v0.49.0)
+      // Size + line-height + weight only; color is appended per-site as a text-text-* utility.
+      fontSize: {
+        'h1':      ['1.5rem',   { lineHeight: '2rem',    fontWeight: '700' }],
+        'h2':      ['1.25rem',  { lineHeight: '1.75rem', fontWeight: '600' }],
+        'h3':      ['1.125rem', { lineHeight: '1.75rem', fontWeight: '600' }],
+        'h4':      ['1rem',     { lineHeight: '1.5rem',  fontWeight: '500' }],
+        'body':    ['1rem',     { lineHeight: '1.5rem' }],
+        'body-sm': ['0.875rem', { lineHeight: '1.25rem' }],
+        'caption': ['0.75rem',  { lineHeight: '1rem' }],
+        'label':   ['0.875rem', { lineHeight: '1.25rem', fontWeight: '500' }],
       },
 
       // Calm transition timing

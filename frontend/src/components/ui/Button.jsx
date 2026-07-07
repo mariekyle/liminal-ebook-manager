@@ -30,8 +30,7 @@ export default function Button({
     ghost: 'bg-transparent text-text-secondary border border-border-default hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]',
     danger: 'bg-action-danger text-text-primary hover:bg-action-danger-hover active:scale-[0.97]',
     success: 'bg-action-success text-text-primary hover:bg-action-success-hover active:scale-[0.97]',
-    // action-warning has no -hover token in config; /85 matches the former call-site override
-    warning: 'bg-action-warning text-text-primary hover:bg-action-warning/85 active:scale-[0.97]',
+    warning: 'bg-action-warning text-text-primary hover:bg-action-warning-hover active:scale-[0.97]',
   }
 
   const sizeClasses = {

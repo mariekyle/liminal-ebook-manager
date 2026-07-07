@@ -59,7 +59,7 @@ function PrevX(props) {
 function Section({ title, children }) {
   return (
     <section className="py-8 border-b border-border-default">
-      <h2 className="text-h4 mb-6">{title}</h2>
+      <h2 className="text-h4 text-text-primary mb-6">{title}</h2>
       <div className="bg-bg-surface rounded-lg p-6">{children}</div>
     </section>
   )
@@ -70,7 +70,7 @@ function LabelRow({ children }) {
 }
 
 function GroupLabel({ children }) {
-  return <p className="text-label mb-3">{children}</p>
+  return <p className="text-label text-text-body mb-3">{children}</p>
 }
 
 export default function ComponentPreview() {
@@ -105,7 +105,7 @@ export default function ComponentPreview() {
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-10">
         <header className="mb-10">
-          <h1 className="text-h2 mb-2">Component Preview</h1>
+          <h1 className="text-h2 text-text-primary mb-2">Component Preview</h1>
           <p className="text-body-sm text-text-secondary">Design system reference for conversion verification</p>
         </header>
 

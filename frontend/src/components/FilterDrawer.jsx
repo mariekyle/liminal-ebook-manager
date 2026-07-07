@@ -113,7 +113,7 @@ function FilterDrawer({
       >
         <div className="flex flex-col min-h-full">
           <div className="flex items-center justify-between px-4 py-4 border-b border-border-subtle flex-shrink-0">
-            <h2 className="text-h4">Filters</h2>
+            <h2 className="text-h4 text-text-primary">Filters</h2>
             <IconButton type="button" variant="default" size="md" onClick={onClose} aria-label="Close filters" tooltip="Close">
               <XIcon />
             </IconButton>
@@ -189,7 +189,7 @@ function FilterContent({
   return (
     <>
       <div className="mb-4">
-        <p className="text-label mb-2">Category</p>
+        <p className="text-label text-text-body mb-2">Category</p>
         <div className="flex flex-wrap gap-2">
           {categories.map((cat) => {
             const isSelected = cat === 'All' ? !selectedCategory : selectedCategory === cat
@@ -205,7 +205,7 @@ function FilterContent({
       {showLibraryFilters && (
         <>
           <div className="mb-4">
-            <p className="text-label mb-2">Status</p>
+            <p className="text-label text-text-body mb-2">Status</p>
             <div className="flex flex-wrap gap-2">
               {statuses.map((status) => {
                 const isSelected = status === 'Any' ? !selectedStatus : selectedStatus === status
@@ -244,7 +244,7 @@ function FilterContent({
 
           {onOpenTagsModal && (
             <div className="mb-6">
-              <p className="text-label mb-2">Tags</p>
+              <p className="text-label text-text-body mb-2">Tags</p>
               <button
                 type="button"
                 onClick={() => {
@@ -263,7 +263,7 @@ function FilterContent({
             <>
               {onOpenFandomModal && (
                 <div className="mb-4">
-                  <p className="text-label mb-2">Fandom</p>
+                  <p className="text-label text-text-body mb-2">Fandom</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -280,7 +280,7 @@ function FilterContent({
 
               {onOpenShipModal && (
                 <div className="mb-4">
-                  <p className="text-label mb-2">Ship</p>
+                  <p className="text-label text-text-body mb-2">Ship</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -296,7 +296,7 @@ function FilterContent({
               )}
 
               <div className="mb-4">
-                <p className="text-label mb-2">Content Rating</p>
+                <p className="text-label text-text-body mb-2">Content Rating</p>
                 <div className="space-y-2">
                   {contentRatingOptions.map((option) => (
                     <label
@@ -328,7 +328,7 @@ function FilterContent({
               </div>
 
               <div className="mb-6">
-                <p className="text-label mb-2">Completion Status</p>
+                <p className="text-label text-text-body mb-2">Completion Status</p>
                 <div className="space-y-2">
                   {completionStatusOptions.map((option) => (
                     <label
@@ -363,7 +363,7 @@ function FilterContent({
 
           {onFormatsChange && (
             <div className="mb-6">
-              <p className="text-label mb-2">Formats</p>
+              <p className="text-label text-text-body mb-2">Formats</p>
               <div className="space-y-2">
                 {[
                   { value: 'ebook', label: 'Ebook' },

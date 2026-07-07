@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.49.0] - 2026-07-06
+
+> Token migration session (10.0E follow-on): one token system. The 8 typography classes move from `tokens.css` `@layer components` to `tailwind.config.js` `theme.extend.fontSize` (same class names), every call site that relied on the class-carried color gets that color appended explicitly, and the `@layer components` block is deleted. Zero intended visual change. `tailwind.config.js` is now the single token source, and the S13 lint gets a zero-target instead of freezing the old usage count.
+
+**Docker rebuild required** (backend version bump).
+
+### Added
+#### `action.warning-hover` token (Decisions 2026-07-06 scope addition)
+- `'warning-hover': '#ab825c'` in the config `action` colors — ~13% deeper, same derivation as the other `-hover` tokens.
+- `ui/Button` warning variant hover: `hover:bg-action-warning/85` opacity workaround → `hover:bg-action-warning-hover` (the 0.48.0 comment noting the missing token is gone with it).
+
+### Changed
+#### Typography tokens: `@layer components` → `theme.extend.fontSize`
+- All 8 classes (`text-h1`–`h4`, `text-body`, `text-body-sm`, `text-caption`, `text-label`) are now first-class Tailwind utilities defined in `tailwind.config.js` with identical size / line-height / weight. `body`/`body-sm`/`caption` set no font-weight, exactly as before.
+- Root cause this kills: component-layer classes lose the cascade to any utility and fail silently — the 0.47.2 BookDetail bug. As config-driven utilities they can't drop out of the build behind an import-order change.
+- **71 unpaired call sites** (across 21 files) carried their color only via the deleted classes; each got exactly the color the class carried, appended in place: `text-h1`–`h4` → `text-text-primary` · `text-body` → `text-text-body` · `text-body-sm` → `text-text-secondary` · `text-caption` → `text-text-muted` · `text-label` → `text-text-body`. One class appended per site, no other changes — rendering is preserved exactly.
+
+### Removed
+#### `tokens.css` `@layer components` block
+- Block and its header comment deleted. The file stays (with the `@import` in `index.css`): `.glass-panel` (unused — S13 deletion item) and `.grain-overlay` remain.
+
+### Technical
+#### Pre-edit sweep (classification report)
+- 437 occurrences = 8 definitions + **429 usages**: 357 paired (334 same-string, 19 all-branches-colored ternaries, 4 indirect via always-colored function/map/variable), **71 unpaired**, 1 comment mention (`index.css:11`, untouched). S12 Batch 2's 14 D-fix sites all classified paired, as designed.
+- **Baseline reconciliation:** `docs/FRONTEND_AUDIT_S12.md` §1 says 394 (audit commit) / 408 (post-S12) — correct within the audit's scope, which excludes the 3 frozen frontend files by design. This session swept repo-wide: frozen `upload/BookCard.jsx` carries the other 21 usages (13 `text-body-sm` + 7 `text-caption` + 1 `text-label`), so **429 is the true repo-wide count** (415 at the audit commit). The S13 lint zero-target stays on the 408 audit scope, because lint allowlists frozen files.
+#### Verification
+- `npm run build` (vite) passes; compiled CSS emits all used typography utilities with the exact former values and no color declarations; `.text-h1` is no longer force-emitted (0 usages — JIT drops it).
+- Post-edit sweep: usage count unchanged at 429; unpaired = 0; cascade-flip grep (token class + core `text-xs`–`3xl` in one className) = 0 including `ui/`; audit patterns A1–A5 = 0 repo-wide outside frozen files; `warning/85` = 0.
+#### Files Modified
+- `frontend/tailwind.config.js` — `theme.extend.fontSize` (8 keys) + `action.warning-hover`
+- `frontend/src/styles/tokens.css` — `@layer components` block deleted
+- `frontend/src/components/ui/Button.jsx` — warning variant hover on the new token
+- `backend/main.py` — version 0.49.0
+- 21 files, 71 one-line color appends: `BookDetail.jsx` (25), `FilterDrawer.jsx` (9), `HomeTab.jsx` (9), `ManualEntryForm.jsx`/`WishlistForm.jsx`/`ComponentPreview.jsx` (3 each), `CollectionPicker.jsx`/`WishlistTab.jsx`/`CollapsibleSection.jsx`/`FormField.jsx` (2 each), `BookCard.jsx`, `CollectionModal.jsx`, `FandomModal.jsx`, `SeriesCard.jsx`, `ShipModal.jsx`, `TagsModal.jsx`, `AddChoice.jsx`, `upload/BookCard.jsx`, `UploadSuccess.jsx`, `DuplicatesPage.jsx`, `ImportPage.jsx` (1 each)
+- **Frozen-file exception (sanctioned):** `components/upload/BookCard.jsx` is on the frozen list; it took exactly one of the 71 appends (`text-label` → `+ text-text-body`, its unpaired Category label) because the `@layer components` deletion would otherwise have recolored that site. The frozen list is otherwise untouched (`GradientCover.jsx`, `MosaicCover.jsx`, `covers.py`, `metadata.py`, `database.py`).
+
+---
+
 ## [0.48.0] - 2026-07-06
 
 > Phase 10.0E design consistency sweep (S12), shipped in three batches: straggler conversions (Batch 1), scattered mechanical cleanup (Batch 2), S11 regression defects + close-out verification (Batch 3).

@@ -88,7 +88,7 @@ function TagsModal({ isOpen, onClose, selectedTags, onApply, category }) {
                       <span className="text-text-primary text-caption">✓</span>
                     )}
                   </div>
-                  <span className="flex-1 text-left truncate text-body-sm">{tag.name}</span>
+                  <span className="flex-1 text-left truncate text-body-sm text-text-secondary">{tag.name}</span>
                   <span className="text-caption text-text-muted">{tag.count}</span>
                 </button>
               ))}

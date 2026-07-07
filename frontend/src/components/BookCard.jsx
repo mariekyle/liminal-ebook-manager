@@ -202,7 +202,7 @@ function BookCard({
             {!isInProgress && !isDNF && readTimeDisplay && (
               <div className="flex items-center gap-1.5 mt-1 text-text-muted">
                 <ClockIcon />
-                <span className="text-caption">{readTimeDisplay}</span>
+                <span className="text-caption text-text-muted">{readTimeDisplay}</span>
               </div>
             )}
           </div>

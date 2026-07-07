@@ -41,8 +41,8 @@ const MetadataRow = ({ label, children, show = true }) => {
   if (!show || !children) return null
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 mb-2">
-      <span className="text-caption min-w-[80px]">{label}</span>
-      <div className="text-body-sm">{children}</div>
+      <span className="text-caption text-text-muted min-w-[80px]">{label}</span>
+      <div className="text-body-sm text-text-secondary">{children}</div>
     </div>
   )
 }
@@ -1377,7 +1377,7 @@ function BookDetail() {
       <div className="flex-1 min-w-0">
         {/* Date line - primary element */}
         {formatSessionDateRange(session.date_started, session.date_finished) && (
-          <div className="text-body-sm mb-1">
+          <div className="text-body-sm text-text-secondary mb-1">
             {formatSessionDateRange(session.date_started, session.date_finished)}
           </div>
         )}
@@ -1454,7 +1454,7 @@ function BookDetail() {
           <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
-          <span className="text-label">WISHLIST</span>
+          <span className="text-label text-text-body">WISHLIST</span>
           <span className="text-text-secondary text-sm">— You don't own this yet</span>
         </div>
       )}
@@ -1537,7 +1537,7 @@ function BookDetail() {
               {readTimeData && (
                 <div className="px-3 py-2 text-center">
                   <div className="text-h4 text-text-primary">{readTimeData.display}</div>
-                  <div className="text-caption">{readTimeData.microcopy}</div>
+                  <div className="text-caption text-text-muted">{readTimeData.microcopy}</div>
                 </div>
               )}
               
@@ -1548,7 +1548,7 @@ function BookDetail() {
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
                 <div className="text-h4 text-text-primary">{getLabel(selectedStatus)}</div>
-                <div className="text-caption">status</div>
+                <div className="text-caption text-text-muted">status</div>
               </button>
               
               {/* Rating — opens session editor (ratings live on reading sessions) */}
@@ -1565,7 +1565,7 @@ function BookDetail() {
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
                 <StarRating value={sessionsStats.average_rating || 0} readOnly size="sm" className="justify-center" />
-                <div className="text-caption">
+                <div className="text-caption text-text-muted">
                   {sessionsStats.average_rating > 0 
                     ? getRatingLabel(sessionsStats.average_rating)
                     : 'no rating'}
@@ -1579,7 +1579,7 @@ function BookDetail() {
                 className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
               >
                 <div className="text-h4 text-text-primary">{selectedCategory || 'Uncategorized'}</div>
-                <div className="text-caption">category</div>
+                <div className="text-caption text-text-muted">category</div>
               </button>
             </div>
           )}
@@ -1685,7 +1685,7 @@ function BookDetail() {
           /* TBR UI */
           <div>
             <div className="flex flex-wrap gap-3 items-center mb-4">
-              <span className="text-label">Priority:</span>
+              <span className="text-label text-text-body">Priority:</span>
               
               {/* Priority Chip + Popup */}
               <div className="relative">
@@ -1758,7 +1758,7 @@ function BookDetail() {
             {(book.tbr_reason || isEditingReason) && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-label">Why this one?</span>
+                  <span className="text-label text-text-body">Why this one?</span>
                   {!isEditingReason && (
                     <button
                       type="button"
@@ -1797,7 +1797,7 @@ function BookDetail() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-body-sm italic">"{book.tbr_reason}"</p>
+                  <p className="text-body-sm text-text-secondary italic">"{book.tbr_reason}"</p>
                 )}
               </div>
             )}
@@ -2022,7 +2022,7 @@ function BookDetail() {
                 {hasSummary && (
                   <div className="border-t border-border-default pt-4 mt-4">
                     <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
-                      <p className="text-body-sm leading-relaxed">
+                      <p className="text-body-sm text-text-secondary leading-relaxed">
                         {decodeHtmlEntities(book.summary)}
                       </p>
                     </CollapsibleSection>
@@ -2059,8 +2059,8 @@ function BookDetail() {
                       <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                         {metadataEntries.map((entry, idx) => (
                           <Fragment key={idx}>
-                            <span className="text-caption">{entry.label}</span>
-                            <div className="text-body-sm">{entry.value}</div>
+                            <span className="text-caption text-text-muted">{entry.label}</span>
+                            <div className="text-body-sm text-text-secondary">{entry.value}</div>
                           </Fragment>
                         ))}
                       </div>
@@ -2210,7 +2210,7 @@ function BookDetail() {
           <div className="prose prose-invert prose-sm max-w-none text-text-body">
             <ReactMarkdown
               components={{
-                h2: ({children}) => <h2 className="text-h4 mt-4 mb-2 first:mt-0">{children}</h2>,
+                h2: ({children}) => <h2 className="text-h4 text-text-primary mt-4 mb-2 first:mt-0">{children}</h2>,
                 h3: ({children}) => <h3 className="text-label text-text-primary mt-3 mb-1">{children}</h3>,
                 p: ({children}) => {
                   // Process children to handle [[Book Title]] links
@@ -2225,7 +2225,7 @@ function BookDetail() {
                     ? children.map((child, i) => processChildren(child, i)).flat()
                     : processChildren(children, 0)
                   
-                  return <p className="text-body-sm mb-2">{processed}</p>
+                  return <p className="text-body-sm text-text-secondary mb-2">{processed}</p>
                 },
                 hr: () => <hr className="border-border-default my-4" />,
                 strong: ({children}) => <strong className="text-label text-text-primary">{children}</strong>,
@@ -2271,7 +2271,7 @@ function BookDetail() {
               </svg>
             </IconButton>
             
-            <h2 className="text-h3">Edit Notes</h2>
+            <h2 className="text-h3 text-text-primary">Edit Notes</h2>
             
             <Button
               variant="primary"
@@ -2363,7 +2363,7 @@ function BookDetail() {
       {!isWishlist && book.series && (
         <div className={`bg-bg-surface rounded-lg overflow-hidden mb-6 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="px-4 py-3 border-b border-border-default flex items-center justify-between">
-            <h2 className="text-label">
+            <h2 className="text-label text-text-body">
               {book.series}
             </h2>
             <Link 
@@ -2386,7 +2386,7 @@ function BookDetail() {
                   <li key={seriesBook.id}>
                     {isCurrentBook ? (
                       <div className="flex items-center gap-4 px-4 py-3 bg-bg-elevated/50">
-                        <span className="text-caption w-8 flex-shrink-0">
+                        <span className="text-caption text-text-muted w-8 flex-shrink-0">
                           {seriesBook.series_number ? String(seriesBook.series_number).padStart(2, '0') : '—'}
                         </span>
                         <span className="text-action-primary font-medium flex-1 truncate">
@@ -2399,7 +2399,7 @@ function BookDetail() {
                         to={`/book/${seriesBook.id}`}
                         className="flex items-center gap-4 px-4 py-3 hover:bg-bg-elevated/50 transition-colors"
                       >
-                        <span className="text-caption w-8 flex-shrink-0">
+                        <span className="text-caption text-text-muted w-8 flex-shrink-0">
                           {seriesBook.series_number ? String(seriesBook.series_number).padStart(2, '0') : '—'}
                         </span>
                         <span className="text-text-primary flex-1 truncate">
@@ -2448,7 +2448,7 @@ function BookDetail() {
           </p>
           
           <div>
-            <span className="text-label block mb-2">What format?</span>
+            <span className="text-label text-text-body block mb-2">What format?</span>
             <div className="flex flex-col gap-2">
               <Button
                 type="button"
@@ -2799,7 +2799,7 @@ function BookDetail() {
 
               {/* Current book preview */}
               <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
-                <div className="text-caption mb-1">This title (will be merged and deleted):</div>
+                <div className="text-caption text-text-muted mb-1">This title (will be merged and deleted):</div>
                 <div className="font-medium text-text-primary">{book.title}</div>
                 <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
               </div>
@@ -2824,7 +2824,7 @@ function BookDetail() {
               {/* Search results */}
               {mergeResults.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-caption mb-2">Select the title to merge into:</div>
+                  <div className="text-caption text-text-muted mb-2">Select the title to merge into:</div>
                   {mergeResults.map((result) => (
                     <Button
                       key={result.id}
@@ -2836,7 +2836,7 @@ function BookDetail() {
                       <span className="font-medium text-text-primary w-full">{result.title}</span>
                       <span className="text-sm text-text-secondary font-normal w-full">{result.authors?.join(', ') || 'Unknown Author'}</span>
                       {result.category && (
-                        <span className="text-caption mt-1 w-full">{result.category}</span>
+                        <span className="text-caption text-text-muted mt-1 w-full">{result.category}</span>
                       )}
                     </Button>
                   ))}
@@ -3091,7 +3091,7 @@ function BookDetail() {
           Remove Edition
         </Modal.Header>
         <Modal.Body>
-          <p className="text-body-sm">
+          <p className="text-body-sm text-text-secondary">
             Remove the <span className="text-label text-text-primary">{editionToDelete?.label}</span> edition from this title?
           </p>
           <p className="text-text-secondary text-sm mt-2">

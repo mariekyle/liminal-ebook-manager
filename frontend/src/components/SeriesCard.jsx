@@ -117,7 +117,7 @@ function SeriesCard({ series, variant = 'compact' }) {
 
               {variant === 'standard' && (
                 <p
-                  className="text-center text-caption mt-1"
+                  className="text-center text-caption text-text-muted mt-1"
                   style={{ color: textColor, opacity: 0.65, textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}
                 >
                   {series.book_count} {series.book_count === 1 ? 'title' : 'titles'}

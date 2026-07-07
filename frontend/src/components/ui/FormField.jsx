@@ -32,7 +32,7 @@ const FormField = forwardRef(function FormField(
   if (children != null) {
     return (
       <div className={`mb-0 ${className}`}>
-        {label && <label className="block text-label mb-1.5">{label}</label>}
+        {label && <label className="block text-label text-text-body mb-1.5">{label}</label>}
         {children}
         {error && typeof error === 'string' && (
           <p className="mt-1.5 text-xs text-action-danger">{error}</p>
@@ -53,7 +53,7 @@ const FormField = forwardRef(function FormField(
 
   return (
     <div className={`mb-4 ${className}`}>
-      {label && <label className="block text-label mb-1.5">{label}</label>}
+      {label && <label className="block text-label text-text-body mb-1.5">{label}</label>}
 
       {type === 'textarea' ? (
         <textarea

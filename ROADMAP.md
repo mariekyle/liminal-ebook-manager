@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 6, 2026 (v0.48.0)
-> **Current Focus:** Phase 10.0E complete (S12 shipped, 3 batches). Next: token migration session (10.0E follow-on), then S13 lint.
+> **Last Updated:** July 6, 2026 (v0.49.0)
+> **Current Focus:** S13 — lint script + DESIGN_SYSTEM.md. Token migration shipped (v0.49.0): tailwind.config.js is the single token source; lint gets a zero-target.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -303,7 +303,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 **Discovered in Batch 1:** `DuplicateFinderModal.jsx` was imported nowhere (dead since the DuplicatesPage rework) — verified repo-wide and **deleted** same session. Voice-pass candidates left as-is (out of scope): DuplicatesPage:183 "Your library is clean!" exclamation, :196 "books" in the duplicate-count string.
 
 ### 10.0E follow-on / parked from S12 sweep
-- [ ] **Token migration session** (between S12 and S13): typography scale → tailwind.config fontSize, append colors at unpaired sites, delete tokens.css @layer components block. Enables S13 zero-target.
+- [x] **Token migration session** (between S12 and S13): typography scale → tailwind.config fontSize, append colors at unpaired sites, delete tokens.css @layer components block. Enables S13 zero-target. — ✅ 2026-07-06 (v0.49.0). Note for S13: repo-wide typography-token count is **429**; the audit's 408 is scope-correct (the 3 frozen frontend files are excluded by design — `upload/BookCard.jsx` holds the other 21). The lint zero-target stays on the 408 audit scope since lint allowlists frozen files. One sanctioned frozen-file color append in `upload/BookCard.jsx` (see CHANGELOG 0.49.0).
 - [ ] **Raw element conversion backlog** (post-S13, per-file): BookDetail (30) → Library (15) → CollectionDetail (10) → SortDropdown (9) → remainder (≤8 each). Whitelist intentionally-bare buttons per file for lint.
 - [ ] **AnalyzingModal → shared Modal** — decide dismiss semantics first (it's a progress surface).
 - [ ] **S13 additions:** delete unused .glass-panel; lint ignore-list seeds (BottomNav emoji sizing, wrapper-label patterns per §8, CollectionsTab fixed grid, SeriesCard indigo comment; from Batch 3 close-out: Library Series-tab fixed grid, and the C-engine false positive on CriteriaBuilder's FormField `label`-prop span — nested JSX in a prop, not an override).

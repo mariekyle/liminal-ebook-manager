@@ -56,11 +56,11 @@ export default function CollapsibleSection({
     <div className={`border-t border-white/5 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <h3 className="text-label uppercase tracking-wider">
+        <h3 className="text-label text-text-body uppercase tracking-wider">
           {title}
         </h3>
         {variant === 'tags' && count && (
-          <span className="text-caption">{count} tags</span>
+          <span className="text-caption text-text-muted">{count} tags</span>
         )}
       </div>
 

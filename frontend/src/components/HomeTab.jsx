@@ -175,7 +175,7 @@ function HomeTab() {
     <div className="space-y-8">
       {/* Currently Reading Section */}
       <section>
-        <h2 className="text-h4 mb-3 px-4 md:px-0">Currently Reading</h2>
+        <h2 className="text-h4 text-text-primary mb-3 px-4 md:px-0">Currently Reading</h2>
 
         {loadingInProgress ? (
           <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2">
@@ -212,7 +212,7 @@ function HomeTab() {
       {/* Recently Added Section */}
       {(loadingRecent || recentlyAdded.length > 0 || errorRecent) && (
         <section>
-          <h2 className="text-h4 mb-3 px-4 md:px-0">Recently Added</h2>
+          <h2 className="text-h4 text-text-primary mb-3 px-4 md:px-0">Recently Added</h2>
 
           {loadingRecent ? (
             <div className="flex gap-4 overflow-x-auto px-4 md:px-0 pb-2">
@@ -245,7 +245,7 @@ function HomeTab() {
       {(loadingDiscover || discover.length > 0 || errorDiscover) && (
         <section>
           <div className="flex items-center justify-between mb-3 px-4 md:px-0">
-            <h2 className="text-h4">Discover Something New</h2>
+            <h2 className="text-h4 text-text-primary">Discover Something New</h2>
             <IconButton
               type="button"
               variant="default"
@@ -301,7 +301,7 @@ function HomeTab() {
       {/* Quick Reads Section */}
       {(loadingQuickReads || quickReads.length > 0 || errorQuickReads) && (
         <section>
-          <h2 className="text-h4 mb-3 px-4 md:px-0">
+          <h2 className="text-h4 text-text-primary mb-3 px-4 md:px-0">
             Quick Reads
             <span className="text-caption text-text-muted font-normal ml-2">Under 3 hours</span>
           </h2>
@@ -336,11 +336,11 @@ function HomeTab() {
       {/* Stats Section */}
       <section className="px-4 md:px-0">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-h4">Your Reading</h2>
+          <h2 className="text-h4 text-text-primary">Your Reading</h2>
           <select
             value={statsPeriod}
             onChange={e => setStatsPeriod(e.target.value)}
-            className="bg-bg-surface text-label px-3 py-1 rounded-lg border border-border-default focus:outline-none focus:border-action-primary min-h-[44px]"
+            className="bg-bg-surface text-label text-text-body px-3 py-1 rounded-lg border border-border-default focus:outline-none focus:border-action-primary min-h-[44px]"
           >
             <option value="month">This Month</option>
             <option value="year">This Year</option>
@@ -362,15 +362,15 @@ function HomeTab() {
             {/* Stats grid */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
-                <p className="text-h2">{formatNumber(stats.words_read)}</p>
+                <p className="text-h2 text-text-primary">{formatNumber(stats.words_read)}</p>
                 <p className="text-caption text-text-muted">words read</p>
               </div>
               <div>
-                <p className="text-h2">{formatReadingTime(stats.words_read)}</p>
+                <p className="text-h2 text-text-primary">{formatReadingTime(stats.words_read)}</p>
                 <p className="text-caption text-text-muted">reading time</p>
               </div>
               <div>
-                <p className="text-h2">{stats.titles_finished}</p>
+                <p className="text-h2 text-text-primary">{stats.titles_finished}</p>
                 <p className="text-caption text-text-muted">titles finished</p>
               </div>
             </div>

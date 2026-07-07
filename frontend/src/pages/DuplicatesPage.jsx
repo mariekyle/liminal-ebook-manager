@@ -167,7 +167,7 @@ function DuplicatesPage() {
             <button
               type="button"
               onClick={scanForDuplicates}
-              className="ml-4 underline hover:no-underline text-body-sm"
+              className="ml-4 underline hover:no-underline text-body-sm text-text-secondary"
             >
               Try again
             </button>

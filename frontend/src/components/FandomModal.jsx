@@ -81,7 +81,7 @@ function FandomModal({ isOpen, onClose, selectedFandom, onApply }) {
                       <div className="w-2.5 h-2.5 rounded-full bg-action-primary" />
                     )}
                   </div>
-                  <span className="flex-1 truncate text-body-sm">{fandom}</span>
+                  <span className="flex-1 truncate text-body-sm text-text-secondary">{fandom}</span>
                 </button>
               ))}
             </div>

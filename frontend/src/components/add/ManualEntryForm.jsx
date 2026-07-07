@@ -173,13 +173,13 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
   return (
     <div className="py-4">
       <div className="mb-6 text-center max-w-md mx-auto">
-        <h1 className="text-h2 mb-2">Another Format</h1>
+        <h1 className="text-h2 text-text-primary mb-2">Another Format</h1>
         <p className="text-body-sm text-text-secondary">What do you know about it?</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
         <div>
-          <span className="block text-label mb-2">Format</span>
+          <span className="block text-label text-text-body mb-2">Format</span>
           <div className="flex gap-2 flex-wrap">
             {[
               { value: 'physical', label: 'Physical' },
@@ -301,7 +301,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
 
         {showFanficFields && (
           <div>
-            <span className="block text-label mb-2">Completion Status</span>
+            <span className="block text-label text-text-body mb-2">Completion Status</span>
             <div className="flex gap-2 flex-wrap">
               {['Complete', 'WIP', 'Abandoned'].map((status) => (
                 <Button

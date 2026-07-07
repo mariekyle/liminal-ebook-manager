@@ -152,7 +152,7 @@ export default function BookCard({
               </div>
 
               <div>
-                <label className="block text-label mb-1.5">Category</label>
+                <label className="block text-label text-text-body mb-1.5">Category</label>
                 <div className="flex items-center gap-2">
                   <select
                     value={book.category}

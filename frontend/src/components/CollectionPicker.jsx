@@ -169,7 +169,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
                       </div>
 
                       <div className="flex-1 text-left min-w-0">
-                        <div className="font-medium text-body-sm truncate">{collection.name}</div>
+                        <div className="font-medium text-body-sm text-text-secondary truncate">{collection.name}</div>
                         <div className="text-caption text-text-muted">
                           {collection.book_count} {collection.book_count === 1 ? 'book' : 'books'}
                         </div>
@@ -190,7 +190,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
               className="w-full flex items-center justify-center gap-2 px-3 py-3 mt-2 rounded-lg border-2 border-dashed border-border-default text-text-secondary hover:border-action-primary hover:text-action-primary transition-colors duration-200 ease-out min-h-[44px]"
             >
               <AddIcon />
-              <span className="text-body-sm font-medium">New Collection</span>
+              <span className="text-body-sm text-text-secondary font-medium">New Collection</span>
             </button>
           </>
         )}

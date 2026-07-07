@@ -265,7 +265,7 @@ export default function ImportPage() {
             onDrop={handleDrop}
           >
             <div className="text-4xl mb-3">📄</div>
-            <h2 className="text-h4 mb-2">Drop Obsidian book notes here</h2>
+            <h2 className="text-h4 text-text-primary mb-2">Drop Obsidian book notes here</h2>
             <p className="text-text-secondary text-body-sm mb-4">
               or click to select .md files
             </p>

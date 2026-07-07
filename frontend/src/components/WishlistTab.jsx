@@ -25,7 +25,7 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="text-6xl mb-4">📚</div>
-      <h2 className="text-h3 mb-2">All quiet on the threshold</h2>
+      <h2 className="text-h3 text-text-primary mb-2">All quiet on the threshold</h2>
       <p className="text-body-sm text-text-secondary mb-6 max-w-md">
         Heard a whisper of something good? Glimpsed a cover that caught your eye? Save it here —— a promise to your future self.
       </p>
@@ -188,7 +188,7 @@ function WishlistTab() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-h2 mb-1">Wishlist</h1>
+          <h1 className="text-h2 text-text-primary mb-1">Wishlist</h1>
           <p className="text-body-sm text-text-secondary">
             {books.length === 0
               ? 'Your future reads'
