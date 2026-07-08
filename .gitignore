@@ -28,3 +28,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Claude Code session rules — local only, single copy at repo root (contains NAS/network detail)
+CLAUDE.md

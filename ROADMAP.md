@@ -308,7 +308,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 - [ ] **AnalyzingModal → shared Modal** — decide dismiss semantics first (it's a progress surface).
 - [ ] **S13 additions:** delete unused .glass-panel; lint ignore-list seeds (BottomNav emoji sizing, wrapper-label patterns per §8, CollectionsTab fixed grid, SeriesCard indigo comment; from Batch 3 close-out: Library Series-tab fixed grid, and the C-engine false positive on CriteriaBuilder's FormField `label`-prop span — nested JSX in a prop, not an override).
 - [x] **BookDetail dead code from the never-landed S3 rating popup** — deleted 2026-07-06 (same v0.48.0 tree): `ratingPopupOpen`, dead twin `statusPopupOpen`, `handleRatingChange`, and its private `ratingLoading`/`ratingStatus` state. `selectedRating` kept (write-only now; setters live in refresh paths — belongs to the parked status data-model sprint).
-- [ ] **Docs:** SKILL.md still lists BottomSheet/ThreeDotMenu under ui/ — remove ghosts.
+- [x] **Docs:** SKILL.md still lists BottomSheet/ThreeDotMenu under ui/ — remove ghosts. — ✅ 2026-07-07, with frozen-list and database-name corrections in the same pass.
 
 ---
 
