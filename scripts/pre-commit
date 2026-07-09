@@ -1,0 +1,35 @@
+#!/bin/sh
+# Liminal pre-commit hook — design-lint, warn-and-allow (Decisions 2026-07-08).
+#
+# ALWAYS exits 0. This hook never blocks a commit — the committed
+# docs/DESIGN_LINT_REPORT.md is the enforcement surface, not the commit gate.
+# The report is refreshed and STAGED here so the committed copy never lags
+# the commit it describes (report writes are content-aware: a run that
+# changes nothing leaves the file untouched, so this stage is a no-op then).
+#
+# Tracked source lives at scripts/pre-commit. Install by copying to
+# .git/hooks/pre-commit and making it executable. Git runs this with the
+# working-tree root as the current directory.
+
+ran=""
+if command -v node >/dev/null 2>&1; then
+  node scripts/design-lint.mjs --warn || true
+  ran=1
+elif command -v deno >/dev/null 2>&1; then
+  # The SMB dev machine has no Node runtime (CLAUDE.md) — Deno runs the same
+  # script unchanged through its node: compatibility layer.
+  deno run --quiet --allow-read=. --allow-write=docs scripts/design-lint.mjs --warn || true
+  ran=1
+else
+  echo "design-lint: skipped — no node or deno runtime found on this machine."
+  echo "Run 'npm run design-lint' (from frontend/) in a Node environment to refresh docs/DESIGN_LINT_REPORT.md."
+fi
+
+# Stage the (possibly refreshed) report only when the lint actually ran —
+# never stage a stale report from a runtime-less machine.
+if [ -n "$ran" ] && [ -f docs/DESIGN_LINT_REPORT.md ]; then
+  git add docs/DESIGN_LINT_REPORT.md 2>/dev/null \
+    || echo "design-lint: could not stage docs/DESIGN_LINT_REPORT.md — stage it manually before committing."
+fi
+
+exit 0

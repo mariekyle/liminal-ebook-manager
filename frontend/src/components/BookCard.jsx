@@ -184,7 +184,7 @@ function BookCard({
               <>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-status-reading flex-shrink-0" />
-                  <span className="text-caption text-status-reading">Reading</span>
+                  <span className="text-caption text-status-reading">{getLabel('In Progress')}</span>
                 </div>
                 <div className="h-[3px] bg-bg-base/50 rounded-full mt-1 w-full">
                   <div className="h-full bg-action-primary rounded-full" style={{ width: '50%' }} />

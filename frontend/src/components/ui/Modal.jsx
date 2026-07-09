@@ -41,7 +41,6 @@ export default function Modal({
   size = 'md',
   fullscreen = false,
   fullscreenOnMobile = false,
-  glass = false,
   children,
   className = '',
 }) {
@@ -72,9 +71,7 @@ export default function Modal({
   const sizeClass = size === 'fullscreen' ? '' : SIZES[size] || SIZES.md
   const shellClasses = effectiveFullscreen
     ? `fixed inset-0 z-50 flex flex-col bg-bg-surface min-h-0 ${className}`
-    : `w-full ${sizeClass} max-h-[85vh] flex flex-col min-h-0 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${
-        glass ? 'glass-panel' : 'bg-bg-surface border border-border-default'
-      } ${className}`
+    : `w-full ${sizeClass} max-h-[85vh] flex flex-col min-h-0 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] bg-bg-surface border border-border-default ${className}`
 
   const layoutValue = { fullscreen: effectiveFullscreen }
 

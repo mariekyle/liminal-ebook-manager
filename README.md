@@ -72,11 +72,12 @@ git clone https://github.com/yourusername/liminal.git
 cd liminal
 ```
 
-Configure your book storage path in `docker-compose.yml`:
+Configure your book storage path — copy `.env.example` to `.env` and set the host path (the compose file reads it and refuses to start without one):
 
-```yaml
-volumes:
-  - /path/to/your/books:/books:ro
+```bash
+cp .env.example .env
+# then edit .env:
+# BOOKS_HOST_PATH=/path/to/your/books
 ```
 
 Start the container:

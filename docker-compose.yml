@@ -7,7 +7,10 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      - /volume1/Media/Reading/Books:/books
+      # Host path to your ebook library — set BOOKS_HOST_PATH in a .env file
+      # next to this compose file (copy .env.example). Required on purpose:
+      # compose fails loudly instead of silently mounting a wrong path.
+      - ${BOOKS_HOST_PATH:?Set BOOKS_HOST_PATH in .env — host path to your ebook library}:/books
     environment:
       - BOOKS_PATH=/books
       - DATABASE_PATH=/app/data/library.db

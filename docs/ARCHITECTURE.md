@@ -1,357 +1,296 @@
-# Liminal Ebook Manager - Architecture Guide
+# Liminal Architecture
 
+> Describes the system as of **v0.50.0**. History lives in git and `CHANGELOG.md` — this doc is current-state only. Public repo: paths below are container-relative; deployment is described generically.
 
-> ⚠️ **Note:** This document reflects the original system design. 
-> For current schema, features, and components, see CHANGELOG.md and ROADMAP.md.
-> A full revision is planned after the design system refactor.
+## 1. System overview
 
+Liminal is a self-hosted library manager for a personal collection of ~1,700+ reads — published books and fanfiction — with reading tracking, notes, collections, and wishlist management. Mobile-first (~95% of use is a phone browser).
 
-
-## Overview
-
-Liminal is a self-hosted web application for managing your ebook library. It runs on your Synology NAS (or any Docker-capable machine), scans your book folders, extracts metadata, and provides a mobile-friendly interface for browsing and taking notes.
-
-**Key principle:** The app only modifies your book files when you upload new books. Existing books are never modified—only read for metadata extraction. All app data (library index, notes, settings) lives in a separate SQLite database.
-
----
-
-## System Architecture
+One Docker container runs everything: a FastAPI backend serving a REST API under `/api`, the built React SPA as static files, and SQLite as storage. Two volumes matter: the app data volume (database, covers, backups) and the library volume holding the actual ebook files in `Author - Title` folders (under category subfolders for older material; new uploads write flat — see §10). The app only writes to the library volume when uploading new files; existing files are read-only inputs for metadata extraction.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Your Device                           │
-│                    (Phone, Tablet, PC)                       
-│                                                              │
-│    Browser → http://your-nas:3000 (via Tailscale)           │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Container                         │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                 React Frontend (:3000)                  │ │
-│  │                                                         │ │
-│  │  • Library grid/list view                              │ │
-│  │  • Book detail pages                                   │ │
-│  │  • Note editor with [[linking]]                        │ │
-│  │  • Search, filter, sort                                │ │
-│  └────────────────────────┬───────────────────────────────┘ │
-│                           │ /api/*                          │
-│                           ▼                                  │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                FastAPI Backend (:8000)                  │ │
-│  │                                                         │ │
-│  │  Routes:                                                │ │
-│  │  • GET  /api/books        - list/search/filter books   │ │
-│  │  • GET  /api/books/{id}   - single book + notes        │ │
-│  │  • POST /api/books/{id}/notes - create/update note     │ │
-│  │  • POST /api/sync         - scan folders for changes   │ │
-│  │  • GET  /api/export       - dump notes to markdown     │ │
-│  │  • GET  /api/covers/{id}  - serve generated covers     │ │
-│  │                                                         │ │
-│  │  Services:                                              │ │
-│  │  • MetadataExtractor - reads EPUB/PDF metadata         │ │
-│  │  • CoverGenerator - creates gradient covers            │ │
-│  │  • LinkParser - extracts [[links]] from notes          │ │
-│  └────────────────────────┬───────────────────────────────┘ │
-│                           │                                  │
-│                           ▼                                  │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                  SQLite Database                        │ │
-│  │                  /data/library.db                       │ │
-│  │                                                         │ │
-│  │  Tables:                                                │ │
-│  │  • books - metadata, folder paths, cover colors        │ │
-│  │  • notes - markdown content, timestamps                │ │
-│  │  • links - from_note_id, to_book_id (for backlinks)   │ │
-│  │  • tags  - book categorization                         │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                                                              │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ Volume mount (read-write for uploads)
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Your Book Storage                         │
-│              /volume1/Media/Reading/Books/                   │
-│                                                              │
-│  Fiction/                                                    │
-│    └── Author - [Series ##] Title/                          │
-│          ├── book.epub                                       │
-│          └── book.pdf                                        │
-│  Non-Fiction/                                                │
-│  FanFiction/                                                 │
-└─────────────────────────────────────────────────────────────┘
+Browser (React SPA) ──/api──▶ FastAPI (uvicorn, port 3000)
+                                 │
+                    ┌────────────┼─────────────┐
+                    ▼            ▼             ▼
+              SQLite (aiosqlite)  /books    /app/data/covers
+              /app/data/library.db (ebooks)  (extracted + custom)
 ```
 
----
+The SPA is served by the same FastAPI process (static mount + catch-all to `index.html`), so there is no separate web server and no CORS in production (the CORS middleware exists for dev, when Vite serves the frontend separately).
 
-## Data Flow
+## 2. Stack + versions
 
-### 1. Library Sync (scanning for books)
+Read from `backend/requirements.txt` and `frontend/package.json` (pinned there; this table is a snapshot):
 
-```
-User clicks "Sync" → POST /api/sync
-                           │
-                           ▼
-              Walk directory tree looking for
-              folders containing .epub/.pdf/.mobi
-                           │
-                           ▼
-              For each book folder:
-              ├── Check if already in database (by path)
-              │   ├── Yes → Skip or update if modified
-              │   └── No  → Extract metadata
-              │             ├── Parse folder name (author, series, title)
-              │             ├── Read EPUB/PDF for richer metadata
-              │             ├── Generate gradient cover colors
-              │             └── Insert into database
-                           │
-                           ▼
-              Return summary: {added: 12, updated: 3, total: 1560}
-```
+| Layer | Tech / version |
+|---|---|
+| Runtime image | `python:3.11-slim` (frontend build stage: `node:20-slim`) |
+| API | FastAPI 0.109.0 on uvicorn[standard] 0.27.0 |
+| DB driver | aiosqlite 0.19.0 |
+| Metadata extraction | ebooklib 0.18 · PyPDF2 3.0.1 · lxml 5.1.0 |
+| Validation | pydantic 2.5.3 (+ pydantic-settings 2.1.0) |
+| Scheduling | APScheduler 3.10.4 (automated backups) |
+| Uploads | python-multipart 0.0.6 |
+| UI | React 18.2 + react-router-dom 6.21 |
+| Rendering extras | react-markdown 9 (notes) · @dnd-kit (collections reorder) · @tanstack/react-virtual 3.13 (installed, currently unused — see §7) |
+| Styling | Tailwind CSS 3.4 — semantic tokens in `tailwind.config.js` (single token source) |
+| Bundler | Vite 5 |
 
-### 2. Browsing the Library
+Plain JSX (no TypeScript), no component library, no state-management library.
+
+## 3. File structure (current, trimmed)
 
 ```
-User opens app → GET /api/books?category=Fiction&sort=title
-                           │
-                           ▼
-              Query SQLite with filters/sorting
-                           │
-                           ▼
-              Return JSON array of books with:
-              • id, title, authors, series, seriesNumber
-              • category, wordCount, publicationYear
-              • coverColors (for gradient generation)
-              • hasNotes (boolean for UI indicator)
-```
-
-### 3. Viewing/Editing Notes
-
-```
-User opens book → GET /api/books/{id}
-                           │
-                           ▼
-              Return book metadata + all notes for this book
-              Notes include raw markdown with [[links]]
-                           │
-                           ▼
-              Frontend renders markdown, makes links clickable
-              User edits note → POST /api/books/{id}/notes
-                           │
-                           ▼
-              Backend parses [[links]] from content
-              Updates notes table + links table (for backlinks)
-```
-
----
-
-## Database Schema
-
-```sql
--- Core book data (extracted from files + folders)
-CREATE TABLE books (
-    id INTEGER PRIMARY KEY,
-    title TEXT NOT NULL,
-    authors TEXT NOT NULL,        -- JSON array: ["Author 1", "Author 2"]
-    series TEXT,
-    series_number TEXT,
-    category TEXT,                -- Fiction, Non-Fiction, FanFiction
-    publication_year INTEGER,
-    word_count INTEGER,
-    summary TEXT,
-    tags TEXT,                    -- JSON array: ["fantasy", "romance"]
-    
-    folder_path TEXT UNIQUE,      -- /volume1/.../Author - Title/
-    file_path TEXT,               -- Path to primary ebook file
-    
-    cover_color_1 TEXT,           -- Hex color for gradient
-    cover_color_2 TEXT,
-    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- User's notes about books (the important stuff!)
-CREATE TABLE notes (
-    id INTEGER PRIMARY KEY,
-    book_id INTEGER NOT NULL,
-    content TEXT,                 -- Markdown with [[links]]
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (book_id) REFERENCES books(id)
-);
-
--- Tracks [[links]] between notes for backlink queries
-CREATE TABLE links (
-    id INTEGER PRIMARY KEY,
-    from_note_id INTEGER NOT NULL,
-    to_book_id INTEGER NOT NULL,
-    FOREIGN KEY (from_note_id) REFERENCES notes(id),
-    FOREIGN KEY (to_book_id) REFERENCES books(id)
-);
-
--- For quick filtering
-CREATE INDEX idx_books_category ON books(category);
-CREATE INDEX idx_books_series ON books(series);
-CREATE INDEX idx_links_to_book ON links(to_book_id);
-```
-
----
-
-## Key Design Decisions
-
-### Why SQLite?
-
-- Single file, easy to backup (just copy `library.db`)
-- No separate database server to manage
-- Fast enough for tens of thousands of books
-- Full-text search built in (for searching notes later)
-- You can open it directly with any SQLite browser if needed
-
-### Why store markdown in the database instead of files?
-
-- Instant search across all notes
-- Link tracking (the `links` table) enables backlinks
-- Atomic updates (no partial writes if something fails)
-- Still your data—export to `.md` files anytime
-
-### Why generate covers instead of extracting them?
-
-- Many ebooks (especially fanfiction) have no covers
-- Consistent aesthetic across your library
-- Faster sync (no image processing during scan)
-- Covers extracted from books can be added as a future enhancement
-
-### Why a monolithic container instead of separate frontend/backend?
-
-- Simpler deployment (one thing to run)
-- No CORS configuration needed
-- Easier for others to self-host if you share this
-- Can split later if needed
-
----
-
-## File Structure
-
-```
-ebook-library-app/
-│
-├── docker-compose.yml        # Run everything with one command
-├── Dockerfile                # Builds the combined container
-│
-├── backend/                  # Python/FastAPI
+liminal/
+├── backend/
+│   ├── main.py                  # FastAPI app, lifespan (init_db, TBR repair, backup scheduler), static serving
+│   ├── database.py              # schema + idempotent migrations + sync_title_from_sessions  ⚠️ FROZEN
 │   ├── requirements.txt
-│   ├── main.py              # FastAPI app entry point
-│   ├── database.py          # SQLite connection + schema
-│   ├── models.py            # Pydantic models for API
-│   │
 │   ├── routers/
-│   │   ├── books.py         # /api/books endpoints
-│   │   ├── notes.py         # /api/books/{id}/notes endpoints  
-│   │   └── sync.py          # /api/sync endpoint
-│   │
+│   │   ├── titles.py            # book CRUD, TBR, editions, merge, duplicates, covers (renamed from books.py, Phase 5)
+│   │   ├── sessions.py          # reading sessions
+│   │   ├── collections.py       # manual / checklist / automatic collections
+│   │   ├── upload.py            # analyze/finalize upload batches, link-to-title
+│   │   ├── sync.py              # library folder scan, metadata rescan
+│   │   ├── authors.py           # author list/detail/rename/notes
+│   │   ├── home.py              # home-screen shelves + stats
+│   │   ├── settings.py          # key-value settings
+│   │   ├── backups.py           # backup settings/history/manual
+│   │   ├── covers.py            # cover image serving
+│   │   └── import_metadata.py   # Obsidian reading-metadata import
 │   └── services/
-│       ├── metadata.py      # EPUB/PDF extraction (ported from Obsidian plugin)
-│       ├── covers.py        # Gradient generation (ported from Obsidian plugin)
-│       └── links.py         # [[link]] parsing
-│
-├── frontend/                 # React
-│   ├── package.json
-│   ├── index.html
+│       ├── metadata.py          # EPUB/PDF metadata extraction  ⚠️ FROZEN
+│       ├── covers.py            # gradient colors + EPUB cover extraction  ⚠️ FROZEN
+│       ├── upload_service.py    # temp sessions, validation, grouping
+│       └── backup.py            # APScheduler jobs, retention
+├── frontend/
 │   ├── src/
-│   │   ├── App.jsx          # Main app + routing
-│   │   ├── api.js           # Fetch wrapper for backend
-│   │   │
-│   │   ├── components/
-│   │   │   ├── Library.jsx      # Grid/list of books
-│   │   │   ├── BookCard.jsx     # Single book in grid
-│   │   │   ├── BookDetail.jsx   # Full book view + notes
-│   │   │   ├── NoteEditor.jsx   # Markdown editor
-│   │   │   └── GradientCover.jsx # Renders the gradient covers
-│   │   │
-│   │   └── styles/
-│   │       └── main.css
-│   │
-│   └── vite.config.js       # Build config
-│
-├── data/                    # Mounted volume for persistence
-│   └── library.db           # SQLite database (created on first run)
-│
-└── docs/
-    └── ARCHITECTURE.md      # This file
+│   │   ├── App.jsx              # routes + connection gate
+│   │   ├── api.js               # single fetch layer (~100 functions, error sanitization)
+│   │   ├── components/          # screens + shared components
+│   │   │   ├── ui/              # the 14-component design-system layer (see DESIGN_SYSTEM.md)
+│   │   │   ├── add/             # add-flow (manual entry, wishlist, upload hand-off)
+│   │   │   ├── settings/        # settings modals + rows
+│   │   │   ├── upload/          # upload review flow (upload/BookCard.jsx ⚠️ FROZEN)
+│   │   │   ├── GradientCover.jsx  ⚠️ FROZEN
+│   │   │   ├── MosaicCover.jsx    ⚠️ FROZEN
+│   │   │   └── … (Library, BookDetail, CollectionDetail, …)
+│   │   ├── hooks/               # useStatusLabels, useGridColumns, useRatingLabels, useSort
+│   │   ├── pages/               # routed pages (Settings, AddPage, ImportPage, AuthorsList, …)
+│   │   ├── styles/tokens.css    # grain overlay only — tokens live in tailwind.config.js
+│   │   └── utils/               # readTime, searchSort, categoryPhrases
+│   ├── tailwind.config.js       # THE token source (colors + typography)
+│   └── vite.config.js
+├── scripts/
+│   ├── design-lint.mjs          # design-system lint (see DESIGN_LINT_REPORT.md)
+│   └── pre-commit               # warn-and-allow hook source
+├── docs/                        # this file + design docs + audits
+├── Dockerfile                   # two-stage: node build → python runtime
+└── docker-compose.yml
 ```
 
----
+## 4. Current schema
 
-## Implementation Order
+**If this contradicts `backend/database.py`, `database.py` wins.**
 
-This is the suggested order for building out the app:
+SQLite, accessed exclusively through aiosqlite. One fresh connection per request via the `get_db` dependency; `aiosqlite.Row` row factory. No ORM — raw SQL throughout. `PRAGMA foreign_keys = ON` is set on the request connections (`get_db`), on init, and on the sync background connection — but **not** on the maintenance connections main.py opens at startup (TBR half-state repair, backup scheduler) or the scheduled-backup task's own connection, so FK cascades are not guaranteed on those paths.
 
-### Phase 1: Foundation (Get Something Running)
-1. Docker setup + basic FastAPI "hello world"
-2. SQLite database initialization
-3. React frontend that calls the API
-4. **Milestone:** See "Hello from the backend!" in your browser
+**Migrations:** there is no version table and no framework. `init_db()` runs the full `CREATE TABLE IF NOT EXISTS` schema, then `run_migrations()` applies idempotent steps: column-existence checks via `PRAGMA table_info` before `ALTER TABLE` (most columns) or unconditional `ALTER TABLE` inside a duplicate-error-swallowing `try/except` (the cover and gradient-color columns), `INSERT OR IGNORE` for defaults, one-time flags in `settings` (e.g. `links_reparsed`), and data backfills guarded by presence checks. Every container start re-runs the whole chain safely. Schema changes are a frozen-file edit — backup first, migration discipline per CLAUDE.md.
 
-### Phase 2: Library View (Read-Only)
-1. Folder scanning logic (walks your book directories)
-2. Basic metadata extraction (folder name parsing first)
-3. Books API endpoint (list, filter, sort)
-4. Library grid component
-5. **Milestone:** See your books displayed in a grid
+### titles — the core entity
 
-### Phase 3: Rich Metadata
-1. Port EPUB metadata extraction from Obsidian plugin
-2. Port gradient cover generation
-3. Cover display in library
-4. **Milestone:** Books show covers and have accurate metadata
+One row per *work* (independent of file format). Groups of columns:
 
-### Phase 4: Notes
-1. Notes database table + API endpoints
-2. Note editor component (basic textarea first)
-3. Markdown rendering
-4. **Milestone:** Can write and save notes for a book
+- **Identity/metadata:** `title`, `authors` (JSON array as TEXT), `series`, `series_number`, `category` (Fiction / Non-Fiction / FanFiction), `publication_year`, `word_count`, `summary`, `tags` (JSON), `isbn`, `publisher`, `chapter_count`.
+- **Fanfiction metadata (Phase 7):** `source_url`, `completion_status` (Complete / WIP / Abandoned — note: this "Abandoned" is a *fic* completion state, distinct from reading status), `fandom`, `relationships` (JSON), `characters` (JSON), `content_rating`, `ao3_warnings` (JSON), `ao3_category` (JSON).
+- **Covers:** `cover_color_1/2` (gradient pair, generated at creation), plus migration-added `cover_path`, `has_cover`, `cover_source` (`extracted` | `custom`).
+- **Reading cache:** `status` (`Unread` / `In Progress` / `Finished` / `Abandoned`, legacy `DNF` accepted), `rating`, `date_started`, `date_finished`.
+  *Known drift: Title status/rating/date cache overlaps ReadingSession — redesign parked (see Open Questions, "Status Knot"). Current shape is documented, not endorsed.*
+- **Wishlist/TBR:** `acquisition_status` (`owned` | `wishlist`, migration-added) with legacy `is_tbr` kept in lockstep, `tbr_priority`, `tbr_reason`.
+- **Housekeeping:** `is_orphaned` (folder missing at last sync), `created_at`, `updated_at`.
 
-### Phase 5: Linking
-1. [[Link]] parsing when saving notes
-2. Links table population
-3. Backlinks query and display
-4. Clickable links in note viewer
-5. **Milestone:** Notes link to each other like Obsidian
+### reading_sessions — one row per read
 
-### Phase 6: Polish
-1. Search (full-text across notes)
-2. Mobile optimization
-3. Export to markdown files
-4. Reading status tracking
-5. **Milestone:** Actually pleasant to use on your phone
+`title_id` (FK → titles, CASCADE), `session_number` (1..n per title), `session_status` (`in_progress` / `finished` / `dnf` — snake_case at this layer), `rating`, `format` (ebook / physical / audiobook / web), `date_started`, `date_finished`.
 
----
+After **any** session change, `sync_title_from_sessions()` (in `database.py`) recomputes the title cache: the latest session's status maps up to the title (`dnf` → `Abandoned`), its dates are copied up, and `titles.rating` becomes the average of rated sessions. No sessions → title reverts to `Unread` with cleared dates/rating.
 
-## Questions You'll Face (and Suggested Answers)
+### editions — formats owned per title
 
-**Q: How do I handle books that fail metadata extraction?**
-A: Fall back to folder name parsing (like the Obsidian plugin does). Log the failure but don't skip the book.
+`title_id` (FK, CASCADE), `format` (ebook / physical / audiobook / web), `file_path`, `folder_path`, `narrators` (JSON, audiobooks), `acquired_date`. A **unique index on (title_id, format)** prevents duplicate formats at the DB level. Deleting the last edition of a title is refused at the API layer.
 
-**Q: What if I reorganize my book folders?**
-A: The sync process should detect moved books (same title/author, different path) and update rather than duplicate. This is a Phase 6 enhancement.
+### notes + links — the Obsidian-style layer
 
-**Q: How do backlinks work with the linking system?**
-A: When you save a note, the backend scans for `[[Book Title]]` patterns. For each match, it looks up the book by title and creates a row in the `links` table. To show backlinks on a book's page, query: `SELECT * FROM links WHERE to_book_id = ?`
+`notes`: one markdown note per title (create-or-update), with `[[Title]]` links parsed on save into `links` (`from_note_id`, `to_title_id`, `link_text`; both FKs CASCADE). Backlinks are queried from `links`.
 
-**Q: Can I have multiple notes per book?**
-A: The schema supports it. Whether the UI shows one big note or multiple is up to you. Start with one note per book (simpler), expand later if you want.
+### collections + collection_books
 
----
+`collections`: `name`, `description`, cover fields (`cover_type` mosaic/gradient/custom, gradient color pair, `custom_cover_path`), `sort_order`, `collection_type` (`manual` | `checklist` | `automatic`), `auto_criteria` (JSON, automatic only), `is_default` (TBR and Reading History cannot be deleted). `collection_books`: membership rows with `position`, `added_at`, `completed_at` (checklist ticking), UNIQUE (collection_id, title_id), FKs CASCADE.
 
-## Next Steps
+### Supporting tables
 
-The companion files in this skeleton give you:
-- A working Docker setup
-- FastAPI backend that connects to SQLite
-- React frontend that fetches from the API
-- One working endpoint to prove it all connects
+- `settings` — key/value store: status/rating display labels, `reading_wpm`, `grid_columns`, backup config, migration flags.
+- `author_notes` — notes keyed by `author_name` (no FK; author names live inside `titles.authors` JSON).
+- `backup_history` — backup log (type, path, size, status), created by migration.
+- `books` — **legacy pre-Phase-5 table**; not created on fresh databases. See Open Questions.
 
-From there, you can use Cursor to build out each phase, using this document as your reference for how pieces should fit together.
+Indexes: single-column b-trees on the hot lookups (titles: category / series / title / status / is_tbr / acquisition_status / has_cover; the FK columns on editions, notes, links, reading_sessions, collection_books; also `editions.format`, `collections.sort_order`, `backup_history.created_at`) plus the unique composite `editions(title_id, format)`. No triggers, no views.
+
+## 5. API surface
+
+All endpoints live under `/api`; the FastAPI docs UI is at `/docs`. Naming history, one line: the router is `titles.py` and the table is `titles`, but most endpoint paths still say `/books/...` for frontend compatibility (renamed from `books.py` in Phase 5; the list response still calls its array `books`).
+
+| Router | Base | Endpoint groups |
+|---|---|---|
+| `titles.py` | `/api` | Library list (`/titles`, legacy `/books`) with filter/sort/pagination; title detail + per-field PATCHes (category, status, rating, dates, metadata, enhanced metadata, rescan); notes + backlinks; browse aggregates (categories, statuses, series, tags) + autocompletes; TBR CRUD + acquire; manual title creation; editions add/delete; title merge; duplicate finder; title covers (upload custom, delete/revert, extract, bulk-extract) |
+| `sessions.py` | `/api` | `GET/POST /titles/{id}/sessions`, `PATCH/DELETE /sessions/{id}` — there is no separate "finish" endpoint; finishing = PATCH with `session_status: "finished"` |
+| `collections.py` | `/api` | Collections CRUD + reorder; membership add/remove/reorder; checklist complete-toggle; automatic-criteria preview; smart-paste parse/apply (backend only — no UI since C5); collection covers; duplicate collection |
+| `upload.py` | `/api/upload` | `analyze-batch` → `finalize-batch` (per-book actions: new / add_format / add_to_existing / replace / skip); `link-to-title` (wishlist conversion with files); `cancel`; `limits`; `health` |
+| `sync.py` | `/api/sync` | `POST /sync` (folder scan; `?full=` re-extracts), `GET /sync/status` (in-memory progress), metadata rescan + preview |
+| `authors.py` | `/api/authors` | List with counts; author detail (notes + works); rename (rewrites `titles.authors` JSON everywhere); author-notes upsert |
+| `home.py` | `/api/home` | Shelves: in-progress, recently-added, discover (random unread), quick-reads (word-count window from the WPM setting); period stats from finished sessions |
+| `settings.py` | `/api/settings` | Get all / get one / upsert one |
+| `backups.py` | `/api/backups` | Settings (+ path test), manual backup, history list/delete |
+| `covers.py` | `/api/covers` | `GET /covers/{title_id}` — serves custom-else-extracted image; 404 means "frontend renders the gradient" |
+| `import_metadata.py` | `/api` | Obsidian import: parse / preview / batch apply; reading-metadata update (POST). ⚠ queries the legacy `books` table — see Open Questions |
+
+Registration order matters in two places: `titles.py` registers before `import_metadata.py`, so its `GET /books/match` wins over the duplicate path defined there; the SPA catch-all registers last so `/docs` and `/api/*` stay reachable.
+
+## 6. Data flows
+
+### Book lifecycle: upload → extract → library
+
+```
+POST /api/upload/analyze-batch  (multipart)
+  └─ temp session /tmp/liminal-uploads/{session_id}
+     validate (extension whitelist, 250 MB cap) — rejected files reported, not fatal
+     extract metadata per file → group by title/author similarity (≥0.80)
+     duplicate check (library folders) + familiar-title check (existing titles)
+        ▼ user reviews groups in the Add flow (action per book)
+POST /api/upload/finalize-batch
+  ├─ action=new:             move files → /books/{Author - Title}/
+  │                          generate_cover_colors() → gradient pair
+  │                          extract_metadata() (EPUB/PDF → summary, tags, AO3 fields, …)
+  │                          INSERT titles + editions('ebook')
+  ├─ action=add_format:      INSERT edition on the existing title
+  ├─ action=add_to_existing: move files into the existing title's folder + edition row
+  └─ then: background library sync
+POST /api/sync  (same path the manual Sync button uses)
+  └─ walk /books folders → parse folder name → pick best file per folder
+     extract_metadata (file data wins over folder name) → UPDATE (COALESCE) or INSERT
+     extract EPUB cover image → /app/data/covers/extracted/{title_id}.*
+        (skipped for FanFiction — gradient covers only; never overwrites a custom cover)
+     orphan detection: folder gone from disk → titles.is_orphaned = 1
+```
+
+### Reading-session lifecycle
+
+```
+POST /api/titles/{id}/sessions        PATCH /api/sessions/{sid}          DELETE /api/sessions/{sid}
+  session_number = max+1                null = "unchanged"; '' clears      delete row, renumber the
+  status ∈ in_progress|finished|dnf     dates/format only (status can't    remaining sessions
+  (rating only on ended sessions)       be cleared; rating has no clear
+                                        path); "finish" = status+date
+        │                                     │                                  │
+        └───────────────┬─────────────────────┴──────────────────────────────────┘
+                        ▼
+        sync_title_from_sessions(title_id)          ← the ONLY intended writer of the title cache
+          latest session status → titles.status   (in_progress→In Progress, finished→Finished, dnf→Abandoned)
+          latest session dates  → titles.date_started / date_finished
+          avg(rated sessions)   → titles.rating
+          no sessions           → Unread, dates/rating cleared
+```
+
+### Wishlist → library conversion
+
+```
+POST /api/tbr  ──▶  titles row: acquisition_status='wishlist', is_tbr=1, status='Unread', gradient colors
+                                    │
+   ┌────────────────────────────────┼──────────────────────────────┬─────────────────────────┐
+   ▼                                ▼                              ▼                         ▼
+POST /tbr/{id}/acquire        POST /upload/link-to-title     POST /books/{id}/editions   startup repair
+(no files; optional format;   (move uploaded files into      (adding any edition to a    (any wishlist title
+ edition + convert in one      the title folder; edition +    wishlist title converts     that already has
+ transaction)                  convert + background sync)     it first)                   editions gets fixed)
+   └────────────────────────────────┴──────────────────────────────┴─────────────────────────┘
+                                    ▼
+              UPDATE titles SET is_tbr=0, acquisition_status='owned', status=COALESCE(status,'Unread')
+```
+
+## 7. Frontend architecture
+
+- **Routing** (`App.jsx`; `BrowserRouter` is mounted in `main.jsx`): `/dev/components` (component gallery) sits outside the connection gate; everything else renders inside `ConnectedApp`, which health-checks `/api/health` first (connecting / error / connected states). Routes: `/` Library, `/book/:id`, `/series/:name`, `/authors`, `/author/:name`, `/collections`, `/collections/:id`, `/settings`, `/import`, `/add`, `/duplicates`, plus redirects `/tbr → /?acquisition=wishlist` and `/upload → /add`. Every routed page renders `UnifiedNavBar`; `BottomNav` is the mobile tab bar.
+- **State:** local component state + prop drilling — no global store, no app-level context (the only `createContext` in the tree is Modal's internal layout context). Cross-cutting signals: the `settingsChanged` window CustomEvent (settings hooks re-read on it) and `localStorage` (per-view sort via `useSort`). Filter state lives in URL params; back navigation uses the `returnUrl` pattern.
+- **Fetch layer:** `src/api.js` — single file, `API_BASE = '/api'` (same-origin; Vite dev proxy in development), ~100 exported functions. The central `apiFetch` sanitizes raw DB constraint errors into human copy before throwing; upload progress uses XHR; cover uploads use raw fetch/FormData. A handful of components still fetch directly — treat `api.js` as the front door for new code.
+- **Hooks:** `useStatusLabels` (internal DB value → user-configurable display label; "Abandoned" displays as "DNF" by default; module-level cache), `useGridColumns` (user's mobile column setting → grid classes), `useRatingLabels`, `useSort`. Session snake_case statuses map through `SESSION_STATUS_TO_BACKEND` (in BookDetail) before labeling.
+- **ui/ layer:** 14 shared components — inventory, props, and usage rules live in `DESIGN_SYSTEM.md`. Covers render via frozen `GradientCover` / `MosaicCover`.
+- **Performance reality check:** the Library loads the whole collection in one request (limit 10000) and renders it without virtualization — `@tanstack/react-virtual` is an installed but currently **unused** dependency. The version-ref stale-response guard exists in exactly one place today (CollectionDetail's sort logic); treat it as the pattern to copy when adding any async-race-prone list, not as something already applied everywhere.
+
+## 8. Deployment workflow
+
+Generic by design (public repo):
+
+1. Edit in the dev repo (Claude Code sessions; git is read-only for the agent — commits are manual).
+2. Copy changed files from the dev repo to the container volume. The two locations are separate folders — the end-of-session **deploy manifest** lists every changed file so nothing goes stale in production.
+3. Rebuild via Container Manager. The Dockerfile builds the frontend (node stage → static bundle at `/app/static`) and the Python runtime in one image. Backend or frontend-config changes require the rebuild; there is no hot reload.
+4. Doc updates (CHANGELOG, ROADMAP, this file) ship in the same commit as the code they describe.
+
+The SQLite database, covers, and backups live on the data volume and survive rebuilds. Back up the database file before any schema change — non-negotiable (CLAUDE.md).
+
+## 9. Frozen subsystems
+
+The canonical list and rules live in **CLAUDE.md** (repo root, untracked — re-read it, don't recall it). The six files and their one-line whys:
+
+| File | Why frozen |
+|---|---|
+| `frontend/src/components/GradientCover.jsx` | output changes repaint every rendered cover |
+| `frontend/src/components/MosaicCover.jsx` | output changes repaint every rendered cover |
+| `frontend/src/components/upload/BookCard.jsx` | gradient hex constants are cover-generation data; the UI chrome around them is the negotiable zone |
+| `backend/services/covers.py` | battle-tested extraction pipeline |
+| `backend/services/metadata.py` | battle-tested extraction pipeline |
+| `backend/database.py` | schema; migration discipline required |
+
+Frozen ≠ untouchable: edits require an explicit flag, justification against the stated risk, and ratification — silent edits are violations even when correct.
+
+## 10. 11pm debug
+
+**Where everything is (container paths):**
+
+| Thing | Path / endpoint |
+|---|---|
+| API + SPA | port `3000` (uvicorn) |
+| Health | `GET /api/health` (books path existence) · `GET /api/upload/health` · `GET /api/sync/status` |
+| API docs | `/docs` (FastAPI default) |
+| Database | `/app/data/library.db` — **always `library.db`, never `liminal.db`** |
+| Covers | `/app/data/covers/extracted/{title_id}.*` · `/app/data/covers/custom/{title_id}.*` |
+| Backups | `/app/data/backups` (default; the `backup_history` table logs runs) |
+| Ebooks | `/books/…` — mixed tree: category subfolders (`Fiction/`, `Non-Fiction/`, `FanFiction/`) are scanned as the primary structure; **new uploads write flat** to `/books/{Author - Title}/` (root-level flat is also scanned, labeled legacy in code) |
+| Upload temp | `/tmp/liminal-uploads/{session_id}` (cleaned on finalize/cancel/expiry) |
+
+**Env vars** (read at startup): `BOOKS_PATH` (default `/books`, scan root) · `DATABASE_PATH` (default `/app/data/library.db`) · `BOOKS_DIR` (default `/books`, upload destination — a *separate* variable from BOOKS_PATH) · `COVERS_DIR` (collection covers only; the in-code default and the compose value differ — trust compose, which points inside `/app/data`).
+
+**Logs:** nothing writes log files. Everything (uvicorn access log, sync progress prints, backup scheduler messages) goes to the container's stdout/stderr — read it in the Container Manager log view. If the app seems dead: that log stream first, `GET /api/health` second.
+
+**DB inspection:** open a *copy* of `library.db` in DB Browser for SQLite (pull it from the data volume; don't edit the live file while the container runs). Sanity queries: `SELECT COUNT(*) FROM titles;` · cache vs sessions for one title: `SELECT status, rating, date_finished FROM titles WHERE id = ?;` against `SELECT * FROM reading_sessions WHERE title_id = ? ORDER BY session_number;`.
+
+**Clean-ish reset steps, escalating:**
+1. Restart the container — startup re-runs the idempotent migrations and the wishlist half-state repair; the backup scheduler re-registers.
+2. `POST /api/sync` (or `?full=true` to re-extract metadata) — rebuilds library state from the `/books` folders; orphan flags update.
+3. Cover weirdness: `DELETE /api/books/{id}/cover?revert_to_gradient=true` per title, or the Settings bulk cover-extract pass.
+4. Real corruption: stop the container, restore the newest file from `/app/data/backups`, start, verify with the sanity queries.
+
+## 11. Open questions
+
+- **The Status Knot:** `titles.status/rating/date_started/date_finished` is a cache derived from `reading_sessions` (`sync_title_from_sessions` is the only intended writer), but the same columns are also directly PATCHable via the `/books/{id}/status`-family endpoints — two write paths to one truth. Redesign parked; the current shape is documented in §4, not endorsed.
+- **Import router targets the legacy table:** `import_metadata.py` queries `FROM books` throughout; fresh databases only have `titles` (`books` exists solely on pre-Phase-5 databases). Observed drift, recorded here — the import flow needs a decision (port to `titles` or retire) before it's trusted on a fresh DB.
+- **Smart-paste endpoints have no UI:** the frontend was removed in C5; three backend endpoints remain in `collections.py`. Keep or cull — decision pending.
+- **`text-h1` is intentionally absent** (the largest heading is h2); recorded in DESIGN_SYSTEM.md §2 so it doesn't get "fixed" back in.
+
+## 12. Cross-links
+
+- `docs/DESIGN_SYSTEM.md` — tokens, typography, the ui/ inventory, patterns, anti-patterns.
+- `docs/DESIGN_LINT_REPORT.md` — current lint counts + active ignores (regenerated by `scripts/design-lint.mjs`).
+- `CHANGELOG.md` — versioned history (append-top; full root causes).
+- `ROADMAP.md` — the single source of truth for plans.
+- `CLAUDE.md` (repo root, untracked) — frozen files, golden rules, session rules; wins on those subjects.

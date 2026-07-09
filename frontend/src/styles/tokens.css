@@ -1,15 +1,4 @@
 /* =============================================
-  GLASSMORPHISM UTILITY (optional — for modals)
-  ============================================= */
-
-.glass-panel {
-  background: rgba(36, 34, 32, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(232, 228, 223, 0.06);
-}
-
-/* =============================================
   GRAIN TEXTURE OVERLAY (optional — for body)
   Apply class "grain-overlay" to body or wrapper.
   Barely perceptible warmth, not visible noise.

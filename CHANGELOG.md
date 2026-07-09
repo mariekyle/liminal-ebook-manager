@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.50.0] - 2026-07-09
+
+> S13 complete, in two prompts. **Prompt A** — guardrail tooling: design-system lint (script + warn-and-allow pre-commit hook + committed report), code-reviewer subagent, locked cleanups. **Prompt B** — the canonical docs: `docs/DESIGN_SYSTEM.md` (new) and `docs/ARCHITECTURE.md` (full rewrite against the current tree), plus carry-over fixes (.glass-panel + Modal `glass` prop deleted together; content-aware lint-report writes; hook now stages the report). The lint mechanizes the FRONTEND_AUDIT_S12 zero-target; the committed `docs/DESIGN_LINT_REPORT.md` is the enforcement surface — commits are never blocked (Decisions 2026-07-08).
+
+**Docker rebuild required** (`backend/main.py` version bump). Frontend changes (`Modal.jsx`, `tokens.css`, `tailwind.config.js`) ride the same rebuild; all render identically (deleted code had zero callers / zero usages).
+
+### Added
+#### Design lint (`scripts/design-lint.mjs`)
+- Plain Node, zero dependencies (node: builtins only). Scans `frontend/src/**/*.{jsx,js,css}` on the audit scope (frozen files allowlisted; canonical list in CLAUDE.md, derived copy in the script).
+- **Strict categories (target 0):** hardcoded colors (audit Appendix A patterns A1–A5 verbatim), legacy `library-*` aliases, indigo utilities, cascade-flip pairing (typography token + core `text-xs`–`3xl` in one className — brace-aware across template literals and ternaries), `window.confirm(`, `"Abandoned"`/`"Did Not Finish"` as rendered UI copy (DB-value constants exempt by matcher shape), `font-bold` on headings or beside token classes, `text-h1` (class deleted this session).
+- **Report-only:** raw `<button>` outside `components/ui/` — becomes strict after the post-S13 conversion backlog clears.
+- Exceptions: `// design-lint-ignore` on the same line or the line above (CSS: `/* design-lint-ignore */`); every active ignore is inventoried in the report so exceptions stay visible.
+- Regenerates `docs/DESIGN_LINT_REPORT.md` every run (committed). Exit 1 on strict violations for CI-style use; `--warn` always exits 0 (hook mode).
+- First run: **0 strict violations across all 8 categories; 127 raw buttons counted.** None of the seven pre-sanctioned ignore sites from the session prompt actually trips the pattern set, so zero inline ignores were added (each verified individually; see session report).
+#### Pre-commit hook (`scripts/pre-commit` → `.git/hooks/pre-commit`)
+- Warn-and-allow: prints the category summary, **always exits 0** — the committed report is the enforcement surface, never the commit gate (Decisions 2026-07-08).
+- Falls back to Deno's node-compat layer when Node is absent (the SMB dev machine has no Node runtime — without this the hook would print nothing useful on every local commit), and to a skip message when neither runtime exists. Node remains the primary path per the prompt.
+#### Code-reviewer subagent (`.claude/agents/code-reviewer.md`)
+- End-of-session reviewer, runs before the deploy manifest; findings append to the session report beside the lint summary. Exactly three judgment checks (Decisions 2026-07-08): frozen-file detection (re-reads CLAUDE.md at review time, quotes the "why frozen" line, requires an explicit ratifiable exception), scope drift (Files to Modify + Out of Scope comparison), and pattern-conformance spot-check for un-greppable rules (cites DESIGN_SYSTEM.md section names; cites CLAUDE.md until DESIGN_SYSTEM.md ships later in S13). Checklist-with-pointers only — restates no rules.
+#### `npm run design-lint`
+- Added to `frontend/package.json` as `node ../scripts/design-lint.mjs` (the repo's only `package.json` lives in `frontend/`; the script resolves all paths from its own location, so it runs correctly from any cwd).
+#### CLAUDE.md standing rule
+- Appended: after any session that touches `frontend/src`, run `npm run design-lint` and include the category summary in the session report.
+#### `docs/DESIGN_SYSTEM.md` (new — Prompt B)
+- The canonical usage rulebook: token groups (names only — values stay in `tailwind.config.js`), the 7-class typography system with the emphasis mapping (stat values → `text-h4`, inline emphasis → `text-label`) and the explicit "no `text-h1`, largest heading is h2" decision, a full 14-component `ui/` inventory (every entry: Purpose / Variants & states / Required props / When to use / When NOT to use / Common mistakes / Frozen behaviors — written from source, adoption counts included), pattern docs (modals, forms, empty/loading/error, list/grid, S10 inline confirmation, page layout, status labels), and an anti-patterns table marking each rule lint-enforced vs judgment. Precedence block at top: CLAUDE.md > config values > this doc > philosophy/voice docs.
+- Frozen-behavior seeds recorded: SegmentedControl's 11px `sm` label (Fix Session 5), Modal's ✕-top-right + right-aligned footer-as-slot, BookCard's single `variant` prop API (documented under "adjacent shared components" — BookCard lives outside `ui/`).
+#### `docs/ARCHITECTURE.md` (full rewrite — Prompt B)
+- Phases 1–6 narrative deleted (git has it). Now current-state only against v0.50.0: system overview, stack with pinned versions read from the manifests, trimmed real file tree, hand-written schema from `database.py` (opens with "database.py wins"; Status-Knot drift note in the reading-cache section: documented, not endorsed), API surface per router with the `/api/books/` ↔ `titles` naming line, three ASCII data flows (upload→extract→library, session lifecycle, wishlist→owned conversion incl. all four conversion paths), frontend architecture (routing, no-global-state approach, api.js front door, hooks), generic deployment workflow, frozen subsystems table pointing at CLAUDE.md, an 11pm-debug section (container paths, env vars incl. the BOOKS_DIR/BOOKS_PATH split and COVERS_DIR compose-vs-code discrepancy, stdout-only logging, DB inspection, escalating reset steps), and Open Questions (Status Knot; `import_metadata.py` still queries the legacy `books` table — broken on fresh DBs, decision pending; UI-less smart-paste endpoints).
+- Public-repo constraint enforced: no IPs, hostnames, share names, or host volume paths — container-relative paths only; deployment described generically.
+
+### Changed
+- `frontend/tailwind.config.js` — `h1` fontSize key deleted (zero `text-h1` usages repo-wide; Decisions 2026-07-08). The remaining 7 typography tokens are unchanged; config import-verified post-edit. Any future `text-h1` usage is now a strict lint error.
+- `CHANGELOG.md` — one-line erratum added under [0.47.1] "Files Verified, No Changes": `metadata.py` is the frozen file, not `sync.py` (`sync.py` was never frozen). Original line preserved verbatim.
+- `scripts/design-lint.mjs` — report writes are now content-aware (Prompt B §0.2): the new report is compared against the on-disk file ignoring the run-date line; identical → no write, stdout says "Report unchanged". The run date is date-only and stamps the last *content* change — verified: two consecutive clean runs leave an identical checksum, and an introduce-violation→fix cycle returns the file byte-identical, so a clean tree stays clean.
+- `scripts/pre-commit` (+ reinstalled `.git/hooks/pre-commit`, byte-identical, executable) — after the lint runs, the hook stages `docs/DESIGN_LINT_REPORT.md` so the committed report never lags the commit it describes (resolves the "hook/report design tension" flagged in Prompt A). Staging is skipped on the no-runtime fallback path — a stale report is never staged blind — and a failed stage prints a warning instead of being swallowed (code-reviewer finding, same session). Hook still always exits 0.
+- `backend/main.py` — FastAPI app version 0.49.0 → **0.50.0** (the only backend change; forces the rebuild).
+- `ROADMAP.md` — S13 closed under 10.0E, current-focus line updated to 10.1 (pending go-decision), version header bumped.
+
+### Removed
+- **`.glass-panel` + Modal `glass` prop, deleted together** (Prompt B §0.1 — resolves Prompt A's stop-and-report, below). `ui/Modal.jsx` loses the zero-caller `glass` prop and its class branch (non-glass class string kept verbatim); `frontend/src/styles/tokens.css` loses the `.glass-panel` block, leaving only the grain overlay. Verified: `grep -rn "glass" frontend/src` returns zero hits; both files pass an esbuild parse.
+
+### Fixed
+- **BookCard list variant ignored the user's In Progress label.** `frontend/src/components/BookCard.jsx` hardcoded the string "Reading" for in-progress titles in `variant="list"`, bypassing `useStatusLabels` — anyone who renamed the In Progress status in Settings still saw "Reading" on list rows. Root cause: the list variant's status strip was built before the label hook covered this path; the file's other labels (DNF, Finished tooltip) already routed through `getLabel`. One-line fix: `{getLabel('In Progress')}`. Found by the S13 doc fact-check (recorded as known drift in DESIGN_SYSTEM.md §3, now updated to compliance). Verified: esbuild parse clean, no residual hardcoded rendered status strings in the file, design-lint 0 strict.
+
+### Security
+- **Host library path removed from the public repo.** `docker-compose.yml` no longer carries the real NAS volume path (flagged by the S13 doc-verification privacy scan); the `/books` mount now reads `${BOOKS_HOST_PATH:?…}` — *required* on purpose, so compose fails loudly instead of silently mounting a wrong path (matters because the auto-deploy webhook rebuilds from the tracked compose after `git reset --hard`). New committed `.env.example` documents `BOOKS_HOST_PATH` (+ optional `WEBHOOK_SECRET`); `.env` was already gitignored. Ripple fixes so instructions match the new mechanism: README installation block now says copy `.env.example` (its old example also showed a `:ro` mount that would have broken uploads — the app writes to `/books`); `docs/AUTO_DEPLOY.md` genericized both `/volume1/docker/liminal` example paths and its `.env` step now *appends* (`>>`) the webhook secret instead of overwriting the file. Tracked-file sweep for `/volume1`, LAN IPs, and hostnames is clean; webhook/ scripts are container-relative only. **Note: git history still contains the old path** — rewriting history vs. accepting the historical exposure is Marie's call (the folder structure it reveals is only as sensitive as the share names themselves).
+- **One-time step on the NAS clone before the next rebuild/auto-deploy:** create `.env` next to the compose file with the real `BOOKS_HOST_PATH` (and `WEBHOOK_SECRET` if the webhook is in use). Without it, `docker-compose up` now refuses to start the app — by design.
+
+### Skipped in Prompt A (stop-and-report — resolved in Prompt B)
+- **`.glass-panel` deletion NOT performed in Prompt A.** The prompt (and audit §12.6) called it unused, but `ui/Modal.jsx:76` referenced it via a `glass` prop (`glass ? 'glass-panel' : ...`) — the dead-code grep verification required by the golden rules failed. The prop itself had zero callers, so the class was only *transitively* dead; removing it cleanly meant also touching `Modal.jsx`, out of scope for Prompt A. **Resolution:** Prompt B named both files and locked the decision — prop + class deleted together (see Removed).
+
+### Technical
+#### Pattern gaps noted (not acted on — pattern set is locked to the prompt/audit; S13+ extension candidates)
+- `ui/CollapsibleSection.jsx:96` carries `text-teal-400`, a default-palette color A5 doesn't match (A5 covers indigo/red/green/blue/yellow only). Candidate A5 extension: remaining default hues (teal/orange/purple/amber/…).
+- **14 bare `alert()` calls on error paths** (BookDetail 673; CollectionDetail 609/638/676/721; CollectionsTab 197; CollectionModal 193/202/215/232; ImportPage 77/119/173/207) — CLAUDE.md golden rule 3 forbids alert for blocking errors, but the lint's `window.confirm(` category doesn't cover `alert(`. Also, bare `confirm(` (no `window.` prefix, zero current uses) would evade the literal pattern. Both are candidate categories/pattern widenings pending a decision.
+- Un-bracketed raw colors escape A4 by design (`[#hex]` only): index.css token-mirror hexes (commented as sanctioned), BookDetail inline-SVG `stroke="#5c5752"` ×4, SeriesCard/Badge inline-style hexes, `bg-white`/`border-white` utilities ×4, and one cool-toned `rgb(26,26,31)` fade in CollapsibleSection:86 that visibly mismatches the warm surface palette (bug candidate independent of lint).
+- **Hook/report design tension — RESOLVED in Prompt B** (both options taken: content-aware writes + hook staging; see Changed). Original Prompt A note: the hook regenerated the report at commit time but did not `git add` it, so the committed report always lagged one commit and the run-date stamp left the working tree dirty after every commit.
+#### Verification — Prompt B
+- Checklist greps all pass: zero hex values in DESIGN_SYSTEM.md; zero IPs/hostnames/share names/host-volume paths in either doc; all 14 ui/ inventory entries carry all seven headings (Frozen behaviors never omitted); "Abandoned" appears in docs only as the internal-DB-value/fic-completion explanation; ROADMAP gained no infrastructure details; version reads 0.50.0; design-lint clean (0 strict / 127 report-only) with the report file untouched by the content-aware writer.
+- Code-reviewer subagent (first production run): all three checks pass — no frozen-file edits, no scope drift, dead-code deletions grep-verified. Its one tooling suggestion (hook's `git add` failed silently) was applied same-session.
+- Adversarial 3-agent fact-check of both docs against source caught **10 real doc errors before commit**, all fixed: stale-audit modal counts (DuplicateCollectionModal already converted, DuplicateFinderModal deleted in S12 — only AnalyzingModal is bespoke), Modal ✕-guard routing (Header has its own `onClose`), BookCard's hardcoded "Reading" (doc had claimed full useStatusLabels compliance; drift now recorded as such), a performance bullet describing nonexistent virtualization (`@tanstack/react-virtual` is installed but unused; Library loads all titles at once — doc now states reality), inverted ebook-tree claim (category subfolders are primary; new uploads write flat), `PRAGMA foreign_keys` not actually on for main.py/backup maintenance connections, session-PATCH clear semantics ('' clears dates/format only; rating has no clear path), reading-metadata endpoint is POST not PATCH, two omitted indexes, BrowserRouter lives in main.jsx.
+#### Verification — Prompt A (no Node runtime on this machine — CLAUDE.md substitutes applied)
+- Adversarial multi-agent verification pass (4 independent agents): category counts re-derived without reading the script — all match (strict 0s; raw-button 127 confirmed by two exactly-agreeing methods); deliverables audit passed all 9 checks; hostile script review found no blockers, and its two confirmed latent defects were fixed and regression-tested same-session: (1) quotes inside comments within `className={...}` silently blinded the brace scanner (now comment-aware; regex literals remain a documented limitation), (2) multi-line heading tags with `font-bold` would have corrupted the report's markdown table (matched text now whitespace-collapsed).
+- Lint executed via Deno's node-compat layer (same V8 regex engine; script unchanged, plain Node remains the target runtime). Self-test exercised every strict category, both exit modes, ignore same-line/line-above suppression, and the ignores inventory, via a temporary file (created, linted, deleted).
+- Frozen-file exclusion spot-checked: `GradientCover.jsx` contains A-pattern-shaped content and appears nowhere in the report.
+- Hook tested with a deliberately introduced violation: summary printed, exit 0; clean re-run exits 0; `scripts/pre-commit` and `.git/hooks/pre-commit` byte-identical (`cmp`).
+- `grep -rn "text-h1" frontend/src` returns nothing (the only remaining `text-h1` strings in the repo are the lint script's own pattern and docs).
+- `tailwind.config.js` import-verified under Deno: parses, `h1` absent, 7 fontSize keys + color tokens intact. **`npm run build` not run locally (impossible without Node) — the next NAS container rebuild is the real build check; risk is nil since JIT never emitted `.text-h1` (zero usages, v0.49.0 verification).**
+- No new dependencies: `package-lock.json` and `node_modules` untouched.
+#### Files Created
+- `scripts/design-lint.mjs`
+- `scripts/pre-commit` (+ installed copy at `.git/hooks/pre-commit`, executable, untracked by design)
+- `docs/DESIGN_LINT_REPORT.md` (generated; committed)
+- `.claude/agents/code-reviewer.md`
+- `docs/DESIGN_SYSTEM.md` (Prompt B)
+- `.env.example` (Security follow-up)
+#### Files Modified
+- `frontend/package.json` — `design-lint` script entry
+- `frontend/tailwind.config.js` — `h1` fontSize key removed
+- `docs/ARCHITECTURE.md` — full rewrite (Prompt B)
+- `frontend/src/components/ui/Modal.jsx` — `glass` prop removed (Prompt B)
+- `frontend/src/styles/tokens.css` — `.glass-panel` removed (Prompt B)
+- `scripts/design-lint.mjs` + `scripts/pre-commit` — content-aware write + report staging (Prompt B; created and revised same session)
+- `backend/main.py` — version 0.50.0 (Prompt B)
+- `ROADMAP.md` — S13/10.0E close-out (Prompt B)
+- `CHANGELOG.md` — this entry + [0.47.1] erratum
+- `CLAUDE.md` — design-lint standing rule appended (untracked file, not in git)
+- `docker-compose.yml`, `README.md`, `docs/AUTO_DEPLOY.md` — host-path removal + instruction updates (Security follow-up)
+- `frontend/src/components/BookCard.jsx` — In Progress label routed through `useStatusLabels` (see Fixed)
+#### Files Deliberately NOT Modified
+- All frozen files (read-only reads of `database.py` for the ARCHITECTURE schema section)
+- The 11 stale cross-references to `VOICE_AND_TONE_v2.md` in DESIGN_PHILOSOPHY.md / MICROCOPY_LIBRARY.md — the real file is `docs/VOICE_AND_TONE.md`; out of scope this session, flagged for a follow-up rename-or-fix decision
+
+---
+
 ## [0.49.0] - 2026-07-06
 
 > Token migration session (10.0E follow-on): one token system. The 8 typography classes move from `tokens.css` `@layer components` to `tailwind.config.js` `theme.extend.fontSize` (same class names), every call site that relied on the class-carried color gets that color appended explicitly, and the `@layer components` block is deleted. Zero intended visual change. `tailwind.config.js` is now the single token source, and the S13 lint gets a zero-target instead of freezing the old usage count.
@@ -297,6 +392,7 @@ None.
 #### Files Verified, No Changes
 - `App.jsx` — `/upload → /add` redirect route retained for legacy bookmarks
 - `GradientCover.jsx`, `BookCard.jsx`, `sync.py` — frozen, untouched
+  - *Erratum (2026-07-08): `metadata.py` is the frozen file, not `sync.py` — `sync.py` was never on the frozen list. Original line preserved above.*
 - `database.py` — no schema changes
 - `validate_file()` signature unchanged; only the constant it references and its error message changed
 - `books`, `total_files`, `total_size` semantics on `AnalyzeResponse` unchanged for successful analyses; only additive `rejected_files` and the `Optional` re-typing of `session_id`

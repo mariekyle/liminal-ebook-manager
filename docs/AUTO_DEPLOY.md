@@ -38,13 +38,13 @@ a1b2c3d4e5f6... (64 characters)
 SSH into your Synology and navigate to your Liminal directory:
 
 ```bash
-cd /volume1/docker/liminal  # or wherever you cloned it
+cd /path/to/your/clone  # wherever you cloned it
 ```
 
-Create an environment file with your secret:
+Add your secret to the environment file (the same `.env` that holds `BOOKS_HOST_PATH` — copy `.env.example` first if it doesn't exist yet; use `>>` so you don't overwrite it):
 
 ```bash
-echo "WEBHOOK_SECRET=your-secret-from-step-1" > .env
+echo "WEBHOOK_SECRET=your-secret-from-step-1" >> .env
 ```
 
 Start the services:
@@ -171,7 +171,7 @@ If auto-deploy isn't working, you can always deploy manually:
 
 ```bash
 ssh your-nas
-cd /volume1/docker/liminal
+cd /path/to/your/clone
 git pull
 docker-compose up -d --build app
 ```

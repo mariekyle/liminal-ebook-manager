@@ -74,7 +74,6 @@ export default {
       // Typography tokens — single token source (migrated from tokens.css @layer components, v0.49.0)
       // Size + line-height + weight only; color is appended per-site as a text-text-* utility.
       fontSize: {
-        'h1':      ['1.5rem',   { lineHeight: '2rem',    fontWeight: '700' }],
         'h2':      ['1.25rem',  { lineHeight: '1.75rem', fontWeight: '600' }],
         'h3':      ['1.125rem', { lineHeight: '1.75rem', fontWeight: '600' }],
         'h4':      ['1rem',     { lineHeight: '1.5rem',  fontWeight: '500' }],
