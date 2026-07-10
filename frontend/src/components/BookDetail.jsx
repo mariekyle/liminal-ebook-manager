@@ -30,6 +30,19 @@ function decodeHtmlEntities(text) {
   return textarea.value
 }
 
+// Bare filename of an edition's file (file_path is an absolute server path)
+function editionFileName(edition) {
+  const base = (edition?.file_path || '').split('/').pop()
+  return base || `edition-${edition?.id}`
+}
+
+// Extension label for the edition picker (EPUB / PDF / MOBI ...)
+function editionExtensionLabel(edition) {
+  const name = editionFileName(edition)
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toUpperCase() : 'FILE'
+}
+
 const SESSION_STATUS_TO_BACKEND = {
   in_progress: 'In Progress',
   finished: 'Finished',
@@ -298,6 +311,10 @@ function BookDetail() {
   // Toast notification state
   const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' | 'loading' }
   const toastTimeoutRef = useRef(null)
+
+  // Download & Share state (10.1)
+  const [showDownloadSheet, setShowDownloadSheet] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   
   // TBR priority state
   const [priorityPopupOpen, setPriorityPopupOpen] = useState(false)
@@ -392,6 +409,20 @@ function BookDetail() {
       }
     }
   }, [])
+
+  // Download sheet: Escape closes, body scroll locks (mirrors Modal behavior)
+  useEffect(() => {
+    if (!showDownloadSheet) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setShowDownloadSheet(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [showDownloadSheet])
 
   // Load collections this book belongs to
   useEffect(() => {
@@ -1342,6 +1373,78 @@ function BookDetail() {
   const primaryAuthor = book.authors?.[0] || 'Unknown Author'
   const readTimeData = getReadTimeData(book.word_count, wpm)
   const isWishlist = book.acquisition_status === 'wishlist'
+
+  // Download & Share (10.1) — never touches reading status or sessions
+  const downloadableEditions = (book.editions || []).filter(
+    (e) => e.format === 'ebook' && e.file_path
+  )
+
+  const handleDownloadEdition = async (edition) => {
+    if (downloading) return
+    setShowDownloadSheet(false)
+    setDownloading(true)
+    const url = `/api/editions/${edition.id}/download`
+    const filename = editionFileName(edition)
+    showToast('Preparing…', 'loading')
+    try {
+      if (navigator.canShare) {
+        const response = await fetch(url)
+        if (!response.ok) {
+          let message = "Couldn't download the file. Try again?"
+          try {
+            const data = await response.json()
+            if (typeof data.detail === 'string') message = data.detail
+          } catch {
+            // non-JSON error body — keep the generic message
+          }
+          throw new Error(message)
+        }
+        const blob = await response.blob()
+        const file = new File([blob], filename, { type: blob.type })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] })
+          showToast('Shared', 'success')
+          return
+        }
+        // File sharing unsupported — download the blob we already fetched
+        const objectUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = objectUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(objectUrl)
+        showToast('Download started', 'success')
+        return
+      }
+      // No Web Share at all — the endpoint's attachment disposition handles the save
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      showToast('Download started', 'success')
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        // User closed the share sheet — clear the loading toast, no error
+        setToast(null)
+      } else {
+        showToast(err.message || "Couldn't download the file. Try again?", 'error')
+      }
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const handleDownloadClick = () => {
+    if (downloadableEditions.length === 1) {
+      handleDownloadEdition(downloadableEditions[0])
+    } else if (downloadableEditions.length > 1) {
+      setShowDownloadSheet(true)
+    }
+  }
   
   // Helper functions for sessions
   const formatSessionDate = (dateStr) => {
@@ -1888,6 +1991,16 @@ function BookDetail() {
       {/* Reading Status Card - Only for owned books */}
       {!isWishlist && (
         <div className={`px-4 py-3 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          {downloadableEditions.length >= 1 && (
+            <Button
+              variant="primary"
+              className="w-full mb-3"
+              loading={downloading}
+              onClick={handleDownloadClick}
+            >
+              Download
+            </Button>
+          )}
           <ReadingStatusCard
             status={normalizeStatus(book.status)}
             subtitle={['finished', 'dnf'].includes(normalizeStatus(book.status)) ? getStatusSubtitle() : null}
@@ -3114,6 +3227,48 @@ function BookDetail() {
       </Modal>
 
       </div>
+
+      {/* Download edition picker — bottom sheet (10.1 Treatment A) */}
+      {showDownloadSheet && (
+        <div
+          className="fixed inset-0 z-50"
+          role="presentation"
+          onClick={() => setShowDownloadSheet(false)}
+        >
+          <div className="absolute inset-0 bg-bg-overlay" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a format to download"
+            className="absolute bottom-0 left-0 right-0 bg-bg-surface border-t border-border-default rounded-t-xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-h4 text-text-primary mb-3">Choose a format</div>
+            <div className="flex flex-col gap-2">
+              {downloadableEditions.map((edition) => (
+                <button
+                  key={edition.id}
+                  type="button"
+                  onClick={() => handleDownloadEdition(edition)}
+                  className="w-full min-h-[44px] flex items-center gap-3 p-3 rounded-lg bg-bg-elevated border border-border-default text-left hover:bg-bg-elevated/80 transition-colors duration-[200ms] ease-out"
+                >
+                  <span className="text-label text-text-primary flex-shrink-0">
+                    {editionExtensionLabel(edition)}
+                  </span>
+                  {editionExtensionLabel(edition) === 'EPUB' && (
+                    <span className="text-caption text-text-muted border border-border-default rounded-full px-2 py-0.5 flex-shrink-0">
+                      Default
+                    </span>
+                  )}
+                  <span className="text-body-sm text-text-secondary truncate flex-1 text-right">
+                    {editionFileName(edition)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       <Toast toast={toast} />

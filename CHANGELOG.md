@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.51.0] - 2026-07-10
+
+> S14 — 10.1 Download & Share. Full-width "Download" button on BookDetail (owned titles with an ebook file): Web Share sheet with the actual file on Android — reader apps like Moon Reader appear as share targets — direct attachment download elsewhere. Multiple ebook editions open a bottom-sheet format picker (Treatment A, Decisions 2026-07-09). The feature never writes reading status or sessions.
+
+**Docker rebuild required** (backend: new `downloads.py` router, `main.py` registration + version bump). `BookDetail.jsx` rides the same rebuild.
+
+### Added
+#### Backend — edition file serving (`backend/routers/downloads.py`, new)
+- `GET /api/editions/{edition_id}/download` — small standalone router modeled on `covers.py` (own `APIRouter(prefix="/api/editions")`, registered bare in `main.py`; `titles.py` stays untouched at ~3000 lines).
+- Serves `editions.file_path` via `FileResponse`: media type by extension (`.epub` → `application/epub+zip`, `.pdf`, `.mobi`, `.azw3`, else `application/octet-stream`), `Content-Disposition: attachment` with the file's basename (FileResponse `filename=`, which RFC-5987-encodes non-ASCII names).
+- Defense in depth, all 404: unknown edition; non-ebook edition (the frontend never offers these, but the path is guarded anyway); `Path.resolve(strict=True)` failure — paths go stale between syncs, same reality `sync.py` guards — with a "may have moved since the last library scan" detail the frontend surfaces; resolved path outside `BOOKS_PATH` (symlink-safe containment via `is_relative_to` on the resolved path — the id maps to `file_path` server-side, nothing client-supplied is ever served).
+
+#### Frontend — Download button + share flow (`frontend/src/components/BookDetail.jsx`)
+- Full-width primary `Button` above the owned-variant ReadingStatusCard, inside the same wrapper so it inherits mobile tab visibility. Renders only when the title has ≥1 ebook edition with a file — no disabled state; the wishlist variant gets no button.
+- Flow per edition: `Preparing…` loading toast → if `navigator.canShare`, fetch the file and offer `navigator.share({files: [File]})` (typed blob, so ebook readers appear as targets); if share exists but can't take files, reuse the fetched blob via object-URL anchor click; with no Web Share at all, a temporary anchor click on the endpoint URL (attachment disposition handles the save). Success/error via the existing local `showToast` + `ui/Toast` — no new hook. Share-sheet cancel (`AbortError`) clears the loading toast quietly — cancel is not an error.
+- Multiple downloadable editions → lightweight in-file bottom sheet (checked first per prompt: no `ui/BottomSheet` exists; house Modal is centered/fullscreen, not a sheet): rows show extension label, `Default` chip on EPUB, bare filename; 44px touch targets; backdrop tap + Escape close; body scroll locks (mirrors Modal). Note: edition-create and merge both enforce one edition per format, so the sheet triggers only if that invariant ever relaxes — shipped per locked Treatment A regardless.
+- Double-tap guard: `downloading` state drives the Button's `loading` prop.
+
+### Technical
+- **Created:** `backend/routers/downloads.py`
+- **Modified:** `backend/main.py` (downloads router import + registration, version 0.50.0 → 0.51.0), `frontend/src/components/BookDetail.jsx` (module-level `editionFileName`/`editionExtensionLabel` helpers, download state + Escape/scroll-lock effect, `downloadableEditions` + `handleDownloadEdition`/`handleDownloadClick`, full-width button, bottom sheet), `docs/DESIGN_LINT_REPORT.md` (regenerated: raw-button count 127 → 128 — the sheet's row button, report-only category; all 8 strict categories remain 0)
+- **Frozen files untouched:** `database.py` (no migration — `editions.file_path`/`format` already exist), `covers.py` (read as template only). `ReadingStatusCard.jsx` untouched: its dormant `fileUrl`/`hasFile`/`showDownload` affordance stays exactly as-is, reserved for the S15 knot sprint.
+- **Verified:** `python3 -m py_compile` on both backend files; esbuild parse of `BookDetail.jsx`; design lint 0 strict violations; grep scorecard — no status/session writes anywhere in the download path, dormant ReadingStatusCard props still `fileUrl={null}`/`hasFile={false}`.
+
 ## [0.50.0] - 2026-07-09
 
 > S13 complete, in two prompts. **Prompt A** — guardrail tooling: design-system lint (script + warn-and-allow pre-commit hook + committed report), code-reviewer subagent, locked cleanups. **Prompt B** — the canonical docs: `docs/DESIGN_SYSTEM.md` (new) and `docs/ARCHITECTURE.md` (full rewrite against the current tree), plus carry-over fixes (.glass-panel + Modal `glass` prop deleted together; content-aware lint-report writes; hook now stages the report). The lint mechanizes the FRONTEND_AUDIT_S12 zero-target; the committed `docs/DESIGN_LINT_REPORT.md` is the enforcement surface — commits are never blocked (Decisions 2026-07-08).

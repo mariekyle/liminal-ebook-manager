@@ -277,6 +277,8 @@ Past tense, five words or fewer, no exclamation, no terminal period.
 - "Saved"
 - "Status updated"
 - "Library synced"
+- "Downloaded"
+- "Preparing…" — loading toast, clears on success/failure/cancel
 
 ---
 
@@ -292,6 +294,8 @@ Anatomy: **what happened + what to do next + a way to do it.** Specific, plain, 
 | Metadata lookup failed | "Couldn't find details for this one. Add them manually?" |
 | Cover fetch failed | "Couldn't fetch a cover. Using a generated one for now." |
 | Sync incomplete | "Sync didn't finish. Your data is safe — try again?" |
+| Download failed | "Couldn't download the file. Try again?" |
+| File moved/missing | "Couldn't find the file — it may have moved since the last scan." |
 
 **Truth check:** reassurance clauses ("The file is still on your device," "Your data is safe") may only ship where the behavior actually guarantees it. Calm is built on honesty.
 

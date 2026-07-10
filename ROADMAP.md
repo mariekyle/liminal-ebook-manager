@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 9, 2026 (v0.50.0)
-> **Current Focus:** 10.1 Download & Share — pending go-decision. S13 shipped (v0.50.0): design lint + pre-commit guardrail + code-reviewer agent, DESIGN_SYSTEM.md, ARCHITECTURE.md rewrite. Phase 10.0E fully closed.
+> **Last Updated:** July 10, 2026 (v0.51.0)
+> **Current Focus:** 10.1 Download & Share shipped (v0.51.0, S14) — one-tap download with share-sheet integration on BookDetail. Next: 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -56,8 +56,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 │           │  10 + 1 sessions (includes final audit)                           │
 │           │  Ship each session independently                             │
 ├───────────┼──────────────────────────────────────────────────────────────┤
-│  ON HOLD  │  Phase 10.1-10.8: Liminal Connects (feature work)           │
-│           │  Paused until 10.0D critical/major fixes are resolved        │
+│  ON HOLD  │  Phase 10.2-10.8: Liminal Connects (feature work)           │
+│           │  10.1 shipped v0.51.0; rest paused pending go-decisions      │
 ├───────────┼──────────────────────────────────────────────────────────────┤
 │  PARALLEL │  Critical Fixes                                              │
 │           │  Cherry-picked bugs from Phase 9.5                           │
@@ -312,11 +312,11 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 
 ---
 
-### 10.1: Download & Share — ON HOLD
+### 10.1: Download & Share — ✅ Shipped v0.51.0 (S14)
 
 **Priority:** P0 — Highest Impact  
-**Status:** ⏸ On hold (pending 10.0D completion)  
-**Sessions:** 1-2
+**Status:** ✅ Shipped 2026-07-10 (S14, v0.51.0) — decisions locked in Decisions.md 2026-07-09  
+**Sessions:** 1-2 (shipped in 1)
 
 **The Problem:**  
 Finding and opening a book currently requires: Open Liminal → Note the book → Open NAS file browser → Navigate to books folder → Search → Download → Open in Moon Reader. This takes 1-2 minutes every time.
@@ -325,15 +325,15 @@ Finding and opening a book currently requires: Open Liminal → Note the book �
 One-tap download with share sheet integration.
 
 **Tasks:**
-- [ ] 10.1.1 **Serve EPUB Files** — Backend endpoint to serve book files with proper MIME type
-- [ ] 10.1.2 **Download Button** — Add "Read" button to ReadingStatusCard on BookDetail
-- [ ] 10.1.3 **Edition Selection** — If multiple editions exist, show picker (default to EPUB)
-- [ ] 10.1.4 **Web Share API** — Integrate share sheet for "Open in Moon Reader" on mobile
-- [ ] 10.1.5 **Fallback Download** — Direct download for browsers without Web Share API
-- [ ] 10.1.6 **Download Feedback** — Loading state, success/error toast
+- [x] 10.1.1 **Serve EPUB Files** — Backend endpoint to serve book files with proper MIME type — ✅ `GET /api/editions/{id}/download` in new `downloads.py` router; MIME by extension, attachment disposition, path-containment + stale-file guards
+- [x] 10.1.2 **Download Button** — ✅ shipped as a full-width "Download" button ABOVE ReadingStatusCard (not wired into the card — its dormant download affordance is reserved for the S15 knot sprint; Decisions 2026-07-09)
+- [x] 10.1.3 **Edition Selection** — If multiple editions exist, show picker (default to EPUB) — ✅ bottom-sheet picker (Treatment A); note: edition-create and merge both enforce one edition per format, so the picker triggers only if that invariant ever relaxes
+- [x] 10.1.4 **Web Share API** — Integrate share sheet for "Open in Moon Reader" on mobile — ✅ shares a typed `File` so reader apps appear as targets
+- [x] 10.1.5 **Fallback Download** — Direct download for browsers without Web Share API — ✅ temporary anchor click; attachment disposition handles the save
+- [x] 10.1.6 **Download Feedback** — Loading state, success/error toast — ✅ existing Toast pattern; share-sheet cancel fails quietly
 
 **Acceptance Criteria:**
-- Tap "Read" on any library book → file downloads or share sheet opens
+- Tap "Read" on any library book → file downloads or share sheet opens — *(label shipped as "Download" per Decisions 2026-07-09)*
 - Can select Moon Reader from share sheet and book opens
 - Works on Android Chrome (primary use case)
 
@@ -625,7 +625,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | 10.0 | Component Foundation | 2 | ✅ Complete |
 | 10.0C | Full Conversion | 8 | ✅ Complete |
 | **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
-| 10.1 | Download & Share | 1-2 | ⏸ On hold |
+| 10.1 | Download & Share | 1-2 | ✅ Shipped v0.51.0 (1 session) |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
 | 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |
