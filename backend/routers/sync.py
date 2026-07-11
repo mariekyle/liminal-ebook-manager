@@ -11,6 +11,7 @@ import os
 import json
 import re
 import aiosqlite
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends, BackgroundTasks
@@ -46,6 +47,14 @@ class SyncResult(BaseModel):
     missing_files: int = 0            # S15: edition files gone from disk (kept, not deleted)
     format_conflicts: int = 0         # S15: same format live in two folders for one title
     unmigrated_titles: int = 0        # S15: titles with file-backed 'ebook' rows (relabel pending)
+    # S15.3b: the identities behind the four counters above, for the results
+    # view — the same facts the container-log lines record, structured instead
+    # of printed. Each list is capped at DETAIL_CAP entries; the counters stay
+    # authoritative, so the view can say "and N more" past the cap.
+    format_conflict_details: list = []    # {title_id, title, format, folders: [a, b]}
+    duplicate_skip_details: list = []     # {folder, format, kept, skipped: [names]}
+    missing_file_details: list = []       # {title_id, title, format, expected_path, folder}
+    unmigrated_title_details: list = []   # {title_id, title, folder}
     message: str = ""
 
 
@@ -60,6 +69,62 @@ class SyncStatus(BaseModel):
 
 # Simple in-memory sync status (could be Redis for multi-worker setups)
 _sync_status = SyncStatus(in_progress=False)
+
+# S15.3b: per-list cap on stored finding details — keeps the persisted JSON
+# blob bounded no matter how bad a sync gets. Counters are never capped.
+DETAIL_CAP = 200
+
+# Settings key holding the last completed/failed sync as JSON (S15.3b)
+LAST_SYNC_RESULT_KEY = "last_sync_result"
+
+
+def _append_detail(items: list, entry: dict) -> None:
+    """Append a finding detail unless its list already holds DETAIL_CAP entries."""
+    if len(items) < DETAIL_CAP:
+        items.append(entry)
+
+
+async def _conflicting_folders(db, title_id: int, storage_format: str, folder_str: str) -> list:
+    """
+    Both folder paths of a format conflict detected via the unique-index
+    backstop, where only the losing folder is in scope — the winning edition's
+    folder comes from the database. Falls back to the one known folder.
+    """
+    cursor = await db.execute(
+        "SELECT folder_path FROM editions WHERE title_id = ? AND format = ?",
+        [title_id, storage_format]
+    )
+    row = await cursor.fetchone()
+    if row and row["folder_path"] and row["folder_path"] != folder_str:
+        return [row["folder_path"], folder_str]
+    return [folder_str]
+
+
+async def _persist_sync_result(db, result: SyncResult) -> None:
+    """
+    Store the finished (or failed) SyncResult as JSON under LAST_SYNC_RESULT_KEY
+    in the settings table, stamped with a UTC finished_at, so the results view
+    survives page loads. Every _do_sync exit path calls this — including error
+    exits, so "Last sync" never claims a clean state after a failed run.
+    Persistence failure is logged, never raised: a sync must not fail because
+    its report could not be saved (the caller still receives the live result).
+    """
+    try:
+        payload = result.model_dump()
+        payload["finished_at"] = datetime.now(timezone.utc).isoformat()
+        await db.execute(
+            """
+            INSERT INTO settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (LAST_SYNC_RESULT_KEY, json.dumps(payload)),
+        )
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Could not store the sync result for the results view: {e}")
 
 
 # --------------------------------------------------------------------------
@@ -356,20 +421,38 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
     
     books_root = Path(BOOKS_PATH)
     
-    if not books_root.exists():
-        return SyncResult(
+    # Scanning can fail outright (dead mount, folder vanishing mid-walk, the
+    # I/O errors a network share is prone to) — every outcome here must still
+    # be persisted, or the results view keeps presenting the previous run
+    try:
+        books_path_exists = books_root.exists()
+        book_folders = get_book_folders(books_root) if books_path_exists else []
+    except Exception as e:
+        logger.error(f"Sync could not scan the library folders: {e}")
+        result = SyncResult(
             status="error",
-            message=f"Books path does not exist: {BOOKS_PATH}"
+            message="Sync didn't finish. Your data is safe — try again?"
         )
-    
-    # Find all book folders
-    book_folders = get_book_folders(books_root)
-    
+        await _persist_sync_result(db, result)
+        return result
+
+    if not books_path_exists:
+        # Full path in the logs only — this message renders on the results page
+        logger.error(f"Sync: books path does not exist: {BOOKS_PATH}")
+        result = SyncResult(
+            status="error",
+            message="Couldn't reach the library folder. Check that it's connected, then try again."
+        )
+        await _persist_sync_result(db, result)
+        return result
+
     if not book_folders:
-        return SyncResult(
+        result = SyncResult(
             status="complete",
             message="No book folders found"
         )
+        await _persist_sync_result(db, result)
+        return result
     
     # Update sync status
     _sync_status = SyncStatus(
@@ -428,8 +511,22 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                 files_by_format, duplicate_files = discover_book_files(folder)
                 if duplicate_files:
                     result.duplicate_files_skipped += len(duplicate_files)
+                    skipped_by_format = {}
                     for dup in duplicate_files:
+                        dup_format = EXTENSION_TO_FORMAT[dup.suffix.lower()]
+                        skipped_by_format.setdefault(dup_format, []).append(dup.name)
                         print(f"Sync: same-format duplicate skipped in {folder_str}: {dup.name}")
+                    for dup_format, skipped_names in skipped_by_format.items():
+                        kept_file = files_by_format.get(dup_format)
+                        _append_detail(result.duplicate_skip_details, {
+                            "folder": folder_str,
+                            "format": dup_format,
+                            "kept": kept_file.name if kept_file else None,
+                            # Inner list capped too — a single 2,000-file folder
+                            # must not blow up the stored blob; the counter
+                            # keeps the true total
+                            "skipped": skipped_names[:DETAIL_CAP],
+                        })
 
                 # Best file for metadata extraction (epub-preferred order)
                 book_file = next(
@@ -598,6 +695,11 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     )
                     if await cursor.fetchone():
                         result.unmigrated_titles += 1
+                        _append_detail(result.unmigrated_title_details, {
+                            "title_id": existing["id"],
+                            "title": parsed["title"],
+                            "folder": folder_str,
+                        })
                         print(
                             f"Sync: title {existing['id']} still has a file-backed 'ebook' "
                             f"edition (relabel migration pending) — edition reconciliation "
@@ -638,6 +740,12 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                                     # Same format live in two folders — keep both
                                     # untouched, surface in the summary
                                     result.format_conflicts += 1
+                                    _append_detail(result.format_conflict_details, {
+                                        "title_id": existing["id"],
+                                        "title": parsed["title"],
+                                        "format": storage_format,
+                                        "folders": [old_folder, folder_str],
+                                    })
                                     print(
                                         f"Sync: format conflict for title {existing['id']} "
                                         f"({storage_format}): {old_folder} vs {folder_str} — skipped"
@@ -667,6 +775,14 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                                 except aiosqlite.IntegrityError:
                                     # Race backstop, same shape as the pre-check above
                                     result.format_conflicts += 1
+                                    _append_detail(result.format_conflict_details, {
+                                        "title_id": existing["id"],
+                                        "title": parsed["title"],
+                                        "format": storage_format,
+                                        "folders": await _conflicting_folders(
+                                            db, existing["id"], storage_format, folder_str
+                                        ),
+                                    })
                                     print(
                                         f"Sync: insert collision for title {existing['id']} "
                                         f"({storage_format}) in {folder_str} — skipped"
@@ -682,6 +798,13 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             if (folder_edition["format"] in STORAGE_FORMATS
                                     and folder_edition["format"] not in files_by_format):
                                 result.missing_files += 1
+                                _append_detail(result.missing_file_details, {
+                                    "title_id": existing["id"],
+                                    "title": parsed["title"],
+                                    "format": folder_edition["format"],
+                                    "expected_path": folder_edition["file_path"],
+                                    "folder": folder_str,
+                                })
                                 print(
                                     f"Sync: file missing for {folder_edition['format']} edition in "
                                     f"{folder_str} ({folder_edition['file_path']}) — edition kept"
@@ -774,6 +897,14 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             )
                         except aiosqlite.IntegrityError:
                             result.format_conflicts += 1
+                            _append_detail(result.format_conflict_details, {
+                                "title_id": title_id,
+                                "title": parsed["title"],
+                                "format": storage_format,
+                                "folders": await _conflicting_folders(
+                                    db, title_id, storage_format, folder_str
+                                ),
+                            })
                             print(
                                 f"Sync: insert collision for new title {title_id} "
                                 f"({storage_format}) in {folder_str} — skipped"
@@ -802,7 +933,13 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
             except Exception as e:
                 print(f"Error processing {folder}: {e}")
                 result.errors += 1
-        
+                # Discard this folder's half-applied writes so a later commit
+                # (next folder, orphan pass, result persist) can't flush them
+                try:
+                    await db.rollback()
+                except Exception as rollback_error:
+                    print(f"Rollback after folder error also failed: {rollback_error}")
+
         # =====================================================================
         # ORPHAN DETECTION: Find editions with missing folders
         # =====================================================================
@@ -881,10 +1018,25 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
         if result.errors > 0:
             msg_parts.append(f"{result.errors} errors")
         result.message = ", ".join(msg_parts)
-        
+
+    except Exception as e:
+        # S15.3b: an unexpected mid-sync crash used to vanish into an HTTP 500
+        # with the SyncResult lost. Record the interrupted run instead, so the
+        # results view never shows a stale clean state after a failed sync.
+        # Per-folder commits already applied stay; the open partial transaction
+        # is rolled back before the error record is written.
+        logger.error(f"Sync stopped partway ({type(e).__name__}): {e}")
+        try:
+            await db.rollback()
+        except Exception as rollback_error:
+            logger.error(f"Rollback after interrupted sync also failed: {rollback_error}")
+        result.status = "error"
+        result.message = "Sync didn't finish. Your data is safe — try again?"
+
     finally:
         _sync_status = SyncStatus(in_progress=False)
-    
+
+    await _persist_sync_result(db, result)
     return result
 
 

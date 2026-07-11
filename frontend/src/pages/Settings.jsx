@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   getSettings,
   updateSetting,
@@ -21,6 +21,7 @@ import RescanMetadataModal from '../components/settings/RescanMetadataModal'
 import ExtractCoversModal from '../components/settings/ExtractCoversModal'
 import { useStatusLabels } from '../hooks/useStatusLabels'
 import { useRatingLabels } from '../hooks/useRatingLabels'
+import { formatTimeAgo } from '../utils/formatTimeAgo'
 import { useNavigate } from 'react-router-dom'
 
 // Section header used above each group
@@ -40,18 +41,25 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-function formatTimeAgo(timestamp) {
-  if (!timestamp) return 'Never'
-  const date = new Date(timestamp)
-  const diffMs = Date.now() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} min ago`
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-  return date.toLocaleDateString()
+// Settings "Last sync" row summary — one line, worst news first (S15.3b)
+function lastSyncDescription(lastSync) {
+  if (!lastSync) return 'No syncs recorded yet.'
+  // A stored result that won't parse is an error, not a blank slate — the
+  // results page owns the full error state with retry
+  if (lastSync.unreadable) return "Couldn't read the last sync summary."
+  const when = formatTimeAgo(lastSync.finished_at)
+  if (lastSync.status === 'error') return `${when} — didn't finish`
+  if ((lastSync.total ?? 0) === 0) return `${when} — no folders found`
+  const attention =
+    (lastSync.format_conflicts || 0) +
+    (lastSync.missing_files || 0) +
+    (lastSync.duplicate_files_skipped || 0) +
+    (lastSync.unmigrated_titles || 0) +
+    (lastSync.orphaned || 0) +
+    (lastSync.errors || 0)
+  const base = `${when} — ${lastSync.added ?? 0} added, ${lastSync.updated ?? 0} updated`
+  if (attention === 0) return base
+  return `${base}, ${attention} need${attention === 1 ? 's' : ''} attention`
 }
 
 export default function Settings() {
@@ -80,9 +88,6 @@ export default function Settings() {
   const [fullSyncConfirming, setFullSyncConfirming] = useState(false)
   const [fullSyncing, setFullSyncing] = useState(false)
   const [fullSyncProgress, setFullSyncProgress] = useState(null)
-  // True once a post-sync page reload is scheduled — blocks starting a full
-  // sync that the reload would kill. Never reset; the reload resets everything.
-  const [reloadPending, setReloadPending] = useState(false)
 
   // Toast state — auto-dismissed by the effect below
   const [toast, setToast] = useState(null)
@@ -188,19 +193,34 @@ export default function Settings() {
   }
 
   // --- Sync ---
+  // Completed runs (clean or not) land on the results view — the sync report
+  // is persistent there (S15.3b). Inline messages cover the two cases with no
+  // fresh stored result to show: a sync already running, and a dead request.
   const handleSync = async () => {
     if (syncing || fullSyncing) return
     setSyncing(true)
     setSyncResult(null)
     try {
       const result = await syncLibrary()
-      setSyncResult({ success: true, message: `Found ${result.added} new, updated ${result.updated}` })
-      if (result.added > 0 || result.updated > 0) {
-        setReloadPending(true)
-        setTimeout(() => { window.location.reload() }, 1500)
+      if (result.status === 'already_running') {
+        setSyncResult({ message: 'A sync is already running. Try again in a moment.' })
+      } else {
+        navigate('/sync-results')
       }
     } catch {
-      setSyncResult({ success: false, message: 'Sync failed. Check console for details.' })
+      // The request can die (screen lock, dropped connection) while the
+      // server-side sync keeps running — check before claiming it failed
+      let stillRunning = false
+      try {
+        stillRunning = (await getSyncStatus()).in_progress
+      } catch {
+        // backend unreachable — the original failure message stands
+      }
+      setSyncResult({
+        message: stillRunning
+          ? 'Lost contact with the sync — it may still be running. Check back in a few minutes.'
+          : "Sync didn't finish. Your data is safe — try again?",
+      })
     } finally {
       setSyncing(false)
     }
@@ -208,7 +228,7 @@ export default function Settings() {
 
   // --- Full sync (S15.3a) ---
   const handleFullSync = async () => {
-    if (syncing || fullSyncing || reloadPending) return
+    if (syncing || fullSyncing) return
     setFullSyncConfirming(false)
     setFullSyncing(true)
     setFullSyncProgress(null)
@@ -227,16 +247,10 @@ export default function Settings() {
       const result = await syncLibrary(true)
       if (result.status === 'already_running') {
         setToast({ type: 'error', message: 'A sync is already running. Try again in a moment.' })
-      } else if (result.status === 'error') {
-        setToast({ type: 'error', message: result.message || "Sync didn't finish. Your data is safe — try again?" })
-      } else if (result.errors > 0) {
-        setToast({ type: 'error', message: `Sync finished — ${result.added} added, ${result.updated} updated, ${result.errors} error${result.errors === 1 ? '' : 's'}` })
-      } else if (result.total === 0) {
-        // "complete" with zero folders scanned usually means the library
-        // folder isn't reachable — never dress that up as a clean sync
-        setToast({ type: 'error', message: 'No folders found — check that the library folder is reachable.' })
       } else {
-        setToast({ type: 'success', message: `Library synced — ${result.added} added, ${result.updated} updated` })
+        // Every completed run — clean, with findings, failed, or zero folders —
+        // is presented by the results view from the stored SyncResult (S15.3b)
+        navigate('/sync-results')
       }
     } catch (err) {
       console.error('Full sync failed:', err)
@@ -320,6 +334,17 @@ export default function Settings() {
   }
 
   // --- Derived display values ---
+  // Stored by the backend after every sync (S15.3b); parsed for the row summary
+  const lastSync = useMemo(() => {
+    if (!settings.last_sync_result) return null
+    try {
+      return JSON.parse(settings.last_sync_result)
+    } catch {
+      // Never dress a corrupt stored result up as "no syncs yet"
+      return { unreadable: true }
+    }
+  }, [settings.last_sync_result])
+
   const statusLabelsPreview = [
     statusLabels['Unread'],
     statusLabels['In Progress'],
@@ -452,8 +477,9 @@ export default function Settings() {
               loading={syncing}
               disabled={fullSyncing}
             />
+            {/* Inline notices only — completed runs navigate to /sync-results */}
             {syncResult && (
-              <p className={`px-4 text-xs ${syncResult.success ? 'text-action-success' : 'text-action-danger'}`}>
+              <p className="px-4 text-caption text-action-danger">
                 {syncResult.message}
               </p>
             )}
@@ -463,7 +489,7 @@ export default function Settings() {
               type="navigation"
               onClick={() => setFullSyncConfirming(prev => !prev)}
               loading={fullSyncing}
-              disabled={syncing || reloadPending}
+              disabled={syncing}
             />
             {fullSyncing && (
               <p className="px-4 text-caption text-text-secondary">
@@ -485,13 +511,13 @@ export default function Settings() {
                     size="md"
                     onClick={() => setFullSyncConfirming(false)}
                   >
-                    Cancel
+                    Not Now
                   </Button>
                   <Button
                     type="button"
                     variant="primary"
                     size="md"
-                    disabled={syncing || reloadPending}
+                    disabled={syncing}
                     onClick={handleFullSync}
                   >
                     Run Full Sync
@@ -499,6 +525,12 @@ export default function Settings() {
                 </div>
               </div>
             )}
+            <SettingsRow
+              label="Last sync"
+              description={lastSyncDescription(lastSync)}
+              type="navigation"
+              to="/sync-results"
+            />
             <SettingsRow
               label="Find Duplicates"
               description="Review possible duplicate titles and merge them."

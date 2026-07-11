@@ -177,11 +177,11 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 ### Toast
 
 - **Purpose:** Transient confirmation strip (success / error / loading), bottom-center.
-- **Variants & states:** `toast.type`: success / error / loading (spinner). Falsy `toast` renders nothing. No dismiss button, no timing — the **caller** owns state and timeout (BookDetail's `showToast` helper, 3s default, is the reference implementation; there is no global toast manager).
+- **Variants & states:** `toast.type`: success / error / loading (spinner). Falsy `toast` renders an empty (but still mounted) live region. No dismiss button, no timing — the **caller** owns state and timeout (BookDetail's `showToast` helper, 3s default, is the reference implementation; there is no global toast manager).
 - **Required props:** `toast` (`{ message, type }`).
 - **When to use:** Subtle confirmations of successful actions; approved strings live in MICROCOPY_LIBRARY (Toast strings).
 - **When NOT to use:** **Blocking errors — never toast-only** (CLAUDE.md golden rule). Validation errors are inline. Loading states that block interaction deserve real affordances.
-- **Common mistakes:** Forgetting timeout cleanup on unmount. Assuming it announces to screen readers — it doesn't (no live region yet); don't make a toast the only confirmation of anything important.
+- **Common mistakes:** Forgetting timeout cleanup on unmount. Unmounting the component between toasts — the outer `role="status"` div is a persistent polite live region and must stay mounted (gate the `toast` value, never the component), or screen readers miss the announcement. Still: don't make a toast the only confirmation of anything important.
 - **Frozen behaviors:** None.
 
 ### UnifiedNavBar

@@ -11,6 +11,7 @@ import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
 import DuplicatesPage from './pages/DuplicatesPage'
 import Settings from './pages/Settings'
+import SyncResultsPage from './pages/SyncResultsPage'
 import ComponentPreview from './pages/ComponentPreview'
 import BottomNav from './components/BottomNav'
 import { checkHealth } from './api'
@@ -74,6 +75,7 @@ function ConnectedApp() {
           <Route path="/collections" element={<CollectionsTab />} />
           <Route path="/collections/:id" element={<CollectionDetail />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/sync-results" element={<SyncResultsPage />} />
           {/* Redirect /tbr to library with wishlist filter */}
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
           <Route path="/import" element={<ImportPage />} />

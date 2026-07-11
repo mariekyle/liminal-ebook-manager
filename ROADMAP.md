@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
 > **Last Updated:** July 11, 2026 (v0.53.0 in progress)
-> **Current Focus:** S15.3a Full Library Sync action built (v0.53.0 in progress, pending deploy) — the UI can finally send `?full=true`. Next up: S15.3b post-sync results view (decisions locked 2026-07-11: persistent, actionable, Settings-page surface), then S15.2b upload fixes and batch-2 UI items. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
+> **Current Focus:** S15.3 complete in v0.53.0 (in progress, pending deploy) — S15.3a Full Library Sync action + S15.3b post-sync results view (persistent "Last sync" on Settings, grouped findings at /sync-results, every warning links to its title). Conflict/duplicate triage can now run from the app instead of container logs. Next up: S15.2b upload fixes and batch-2 UI items. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -344,7 +344,7 @@ One-tap download with share sheet integration.
 ### Multi-Format Editions (S15) — ✅ Core shipped v0.52.0; follow-ups queued
 
 **Priority:** P0 — follow-on to 10.1 (the download picker can't distinguish formats it doesn't know about)
-**Status:** ✅ Sessions 1–3 shipped in v0.52.0 (2026-07-10) and verified in production: relabel clean (2,173 relabeled, 0 left as `'ebook'`), full-sync backfill created 3,939 editions with 0 errors, DB audit passed all integrity checks; 25 same-format duplicate files and 4 format conflicts surfaced for manual cleanup. Decisions locked in Decisions.md, S15 Decision Sprint 2026-07-10. S15.3a built 2026-07-11 (v0.53.0 in progress). Remaining: S15.3b results view, S15.2b upload fixes, batch-2 UI items.
+**Status:** ✅ Sessions 1–3 shipped in v0.52.0 (2026-07-10) and verified in production: relabel clean (2,173 relabeled, 0 left as `'ebook'`), full-sync backfill created 3,939 editions with 0 errors, DB audit passed all integrity checks; 25 same-format duplicate files and 4 format conflicts surfaced for manual cleanup. Decisions locked in Decisions.md, S15 Decision Sprint 2026-07-10. S15.3a + S15.3b built 2026-07-11 (v0.53.0 in progress). Remaining: S15.2b upload fixes, batch-2 UI items.
 **Sessions:** 3 shipped + follow-ups
 
 **The Problem:**
@@ -360,7 +360,7 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 
 **In flight — S15.3: Sync Control & Visibility**
 - [x] S15.3a **Full Sync action on the Settings page** with a confirmation step — the API supports `?full=true` but the UI could not send it (discovered at deploy; the backfill had to be triggered outside the app) — ✅ built 2026-07-11, v0.53.0 in progress (pending deploy): inline confirmation, live scan progress via the status endpoint, mutual-exclusion guards, every outcome surfaced; 4-lens adversarial verification passed with 0 blockers
-- [ ] S15.3b **Post-sync results view** — list format conflicts, same-format duplicate skips, and missing-file warnings in plain language so the 4 surfaced conflicts (and future ones) can be investigated without reading container logs. Note: Find Duplicates covers duplicate *titles* only, not file-level format conflicts — this view is the only surface for those. Decisions locked 2026-07-11: persistent + actionable — last-sync summary lives on the Settings page (stored SyncResult), shown after a manual sync via the same component; every warning links to its title. Also absorbs S15.3a's interim choices: replaces toast-only outcome surfacing and resolves the "Cancel" label tension with the voice doc (see CHANGELOG 0.53.0 accepted findings).
+- [x] S15.3b **Post-sync results view** — list format conflicts, same-format duplicate skips, and missing-file warnings in plain language so the 4 surfaced conflicts (and future ones) can be investigated without reading container logs. Note: Find Duplicates covers duplicate *titles* only, not file-level format conflicts — this view is the only surface for those. Decisions locked 2026-07-11: persistent + actionable — last-sync summary lives on the Settings page (stored SyncResult), shown after a manual sync via the same component; every warning links to its title. Also absorbs S15.3a's interim choices: replaces toast-only outcome surfacing and resolves the "Cancel" label tension with the voice doc (see CHANGELOG 0.53.0 accepted findings) — ✅ built 2026-07-11, v0.53.0 in progress (pending deploy): SyncResult persisted from every sync path including failed/interrupted runs, "Last sync" Settings row, grouped results view at /sync-results, manual syncs navigate there on completion, "Not Now" dismissal ratified. Note: stored details populate on the first post-deploy sync — the 4 known conflicts and 25 duplicate skips surface in the view after one Full Library Sync.
 
 **Remaining S15 follow-ups:**
 - [ ] S15.2b **Upload fixes** (split out — not covered by the Session 2 prompt): upload records every moved file as its own edition (not first-only); unguarded edition insert fix (fold-in); primary-file locator misses `.azw`/`.html`/`.htm`
@@ -655,7 +655,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | 10.0C | Full Conversion | 8 | ✅ Complete |
 | **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
 | 10.1 | Download & Share | 1-2 | ✅ Shipped v0.51.0 (1 session) |
-| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3a Full Sync action built (v0.53.0 in progress); S15.3b results view next, then S15.2b + batch-2 UI |
+| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3a + S15.3b built (v0.53.0 in progress); next: S15.2b + batch-2 UI |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
 | 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |

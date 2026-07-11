@@ -371,6 +371,24 @@ export async function getSyncStatus() {
   return apiFetch('/sync/status')
 }
 
+/**
+ * Last sync result, stored by the backend after every sync (S15.3b).
+ * Lives in the settings table as a JSON string under 'last_sync_result'.
+ *
+ * @returns {Object|null} Parsed SyncResult (plus finished_at), or null when
+ *   no sync has ever run. Throws when the stored value can't be read.
+ */
+export async function getLastSyncResult() {
+  const settings = await apiFetch('/settings')
+  const raw = settings.last_sync_result
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    throw new Error("Couldn't read the last sync results.")
+  }
+}
+
 // ============================================================
 // Rescan Metadata (Phase 7.0)
 // ============================================================
