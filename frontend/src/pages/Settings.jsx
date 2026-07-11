@@ -3,6 +3,7 @@ import {
   getSettings,
   updateSetting,
   syncLibrary,
+  getSyncStatus,
   getBackupSettings,
   updateBackupSettings,
   testBackupPath,
@@ -11,6 +12,7 @@ import {
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
 import FormField from '../components/ui/FormField'
+import Toast from '../components/ui/Toast'
 import SettingsRow from '../components/settings/SettingsRow'
 import StatusLabelsModal from '../components/settings/StatusLabelsModal'
 import RatingLabelsModal from '../components/settings/RatingLabelsModal'
@@ -75,6 +77,15 @@ export default function Settings() {
   // Library Tools action state
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
+  const [fullSyncConfirming, setFullSyncConfirming] = useState(false)
+  const [fullSyncing, setFullSyncing] = useState(false)
+  const [fullSyncProgress, setFullSyncProgress] = useState(null)
+  // True once a post-sync page reload is scheduled — blocks starting a full
+  // sync that the reload would kill. Never reset; the reload resets everything.
+  const [reloadPending, setReloadPending] = useState(false)
+
+  // Toast state — auto-dismissed by the effect below
+  const [toast, setToast] = useState(null)
 
   // Backup state
   const [backupSettings, setBackupSettings] = useState(null)
@@ -109,6 +120,13 @@ export default function Settings() {
 
     loadBackupSettings()
   }, [])
+
+  // Toast auto-dismiss (loading toasts persist until replaced)
+  useEffect(() => {
+    if (!toast || toast.type === 'loading') return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const loadBackupSettings = async () => {
     try {
@@ -171,19 +189,75 @@ export default function Settings() {
 
   // --- Sync ---
   const handleSync = async () => {
-    if (syncing) return
+    if (syncing || fullSyncing) return
     setSyncing(true)
     setSyncResult(null)
     try {
       const result = await syncLibrary()
       setSyncResult({ success: true, message: `Found ${result.added} new, updated ${result.updated}` })
       if (result.added > 0 || result.updated > 0) {
+        setReloadPending(true)
         setTimeout(() => { window.location.reload() }, 1500)
       }
     } catch {
       setSyncResult({ success: false, message: 'Sync failed. Check console for details.' })
     } finally {
       setSyncing(false)
+    }
+  }
+
+  // --- Full sync (S15.3a) ---
+  const handleFullSync = async () => {
+    if (syncing || fullSyncing || reloadPending) return
+    setFullSyncConfirming(false)
+    setFullSyncing(true)
+    setFullSyncProgress(null)
+    // Progress polling is best-effort — the sync request itself reports the outcome
+    const progressPoll = setInterval(async () => {
+      try {
+        const status = await getSyncStatus()
+        if (status.in_progress && status.current_operation !== 'rescan') {
+          setFullSyncProgress({ processed: status.processed, total: status.total })
+        }
+      } catch {
+        // a missed poll never interrupts the sync
+      }
+    }, 2000)
+    try {
+      const result = await syncLibrary(true)
+      if (result.status === 'already_running') {
+        setToast({ type: 'error', message: 'A sync is already running. Try again in a moment.' })
+      } else if (result.status === 'error') {
+        setToast({ type: 'error', message: result.message || "Sync didn't finish. Your data is safe — try again?" })
+      } else if (result.errors > 0) {
+        setToast({ type: 'error', message: `Sync finished — ${result.added} added, ${result.updated} updated, ${result.errors} error${result.errors === 1 ? '' : 's'}` })
+      } else if (result.total === 0) {
+        // "complete" with zero folders scanned usually means the library
+        // folder isn't reachable — never dress that up as a clean sync
+        setToast({ type: 'error', message: 'No folders found — check that the library folder is reachable.' })
+      } else {
+        setToast({ type: 'success', message: `Library synced — ${result.added} added, ${result.updated} updated` })
+      }
+    } catch (err) {
+      console.error('Full sync failed:', err)
+      // The request can die (screen lock, dropped connection) while the
+      // server-side sync keeps running — check before claiming it failed
+      let stillRunning = false
+      try {
+        stillRunning = (await getSyncStatus()).in_progress
+      } catch {
+        // backend unreachable — the original failure message stands
+      }
+      setToast({
+        type: 'error',
+        message: stillRunning
+          ? 'Lost contact with the sync — it may still be running. Check back in a few minutes.'
+          : "Sync didn't finish. Your data is safe — try again?",
+      })
+    } finally {
+      clearInterval(progressPoll)
+      setFullSyncing(false)
+      setFullSyncProgress(null)
     }
   }
 
@@ -376,11 +450,54 @@ export default function Settings() {
               type="navigation"
               onClick={handleSync}
               loading={syncing}
+              disabled={fullSyncing}
             />
             {syncResult && (
               <p className={`px-4 text-xs ${syncResult.success ? 'text-action-success' : 'text-action-danger'}`}>
                 {syncResult.message}
               </p>
+            )}
+            <SettingsRow
+              label="Full Library Sync"
+              description="Rescan every folder, including titles already in your library."
+              type="navigation"
+              onClick={() => setFullSyncConfirming(prev => !prev)}
+              loading={fullSyncing}
+              disabled={syncing || reloadPending}
+            />
+            {fullSyncing && (
+              <p className="px-4 text-caption text-text-secondary">
+                {fullSyncProgress
+                  ? `Scanning folders — ${fullSyncProgress.processed} of ${fullSyncProgress.total}`
+                  : 'Preparing…'}
+              </p>
+            )}
+            {fullSyncConfirming && !fullSyncing && (
+              <div className="mx-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg flex flex-col gap-3">
+                <p className="text-body-sm text-text-primary">
+                  Run a full sync? This rescans every folder and refreshes each
+                  title&apos;s details from its files — it may take a while.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    onClick={() => setFullSyncConfirming(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    disabled={syncing || reloadPending}
+                    onClick={handleFullSync}
+                  >
+                    Run Full Sync
+                  </Button>
+                </div>
+              </div>
             )}
             <SettingsRow
               label="Find Duplicates"
@@ -393,12 +510,14 @@ export default function Settings() {
               description="Re-extract fandom, ships, source URLs, and more from EPUB files."
               type="navigation"
               onClick={() => setRescanOpen(true)}
+              disabled={fullSyncing}
             />
             <SettingsRow
               label="Extract Covers"
               description="Pull cover images from EPUB files for missing covers."
               type="navigation"
               onClick={() => setExtractOpen(true)}
+              disabled={fullSyncing}
             />
           </div>
 
@@ -558,6 +677,8 @@ export default function Settings() {
       />
       <RescanMetadataModal isOpen={rescanOpen} onClose={() => setRescanOpen(false)} />
       <ExtractCoversModal isOpen={extractOpen} onClose={() => setExtractOpen(false)} />
+
+      <Toast toast={toast} />
     </div>
   )
 }
