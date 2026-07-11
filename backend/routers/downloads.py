@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from database import get_db
+from constants import EBOOK_FORMATS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/editions", tags=["downloads"])
@@ -24,6 +25,9 @@ MEDIA_TYPES = {
     'pdf': 'application/pdf',
     'mobi': 'application/x-mobipocket-ebook',
     'azw3': 'application/vnd.amazon.ebook',
+    'azw': 'application/vnd.amazon.ebook',
+    'html': 'text/html',
+    'htm': 'text/html',
 }
 
 
@@ -44,7 +48,7 @@ async def download_edition_file(edition_id: int, db = Depends(get_db)):
     if edition is None:
         raise HTTPException(status_code=404, detail="Edition not found")
 
-    if edition["format"] != "ebook" or not edition["file_path"]:
+    if edition["format"] not in EBOOK_FORMATS or not edition["file_path"]:
         raise HTTPException(
             status_code=404,
             detail="No downloadable file for this edition"

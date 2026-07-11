@@ -18,6 +18,7 @@ import StepIndicator from './StepIndicator'
 import AnalyzingModal from './AnalyzingModal'
 import FileDropZone from '../ui/FileDropZone'
 import Button from '../ui/Button'
+import { MANUAL_ENTRY_FORMATS } from '../../constants/formats'
 
 export default function AddToLibrary({
   files,
@@ -80,15 +81,17 @@ export default function AddToLibrary({
       <div className="mt-8 pt-6 border-t border-border-default">
         <p className="text-body-sm text-text-muted text-center mb-3">No files? Enter details manually</p>
         <div className="flex justify-center gap-2 flex-wrap">
-          {['Physical', 'Audiobook', 'Web/URL'].map((format) => (
+          {MANUAL_ENTRY_FORMATS.map(({ label }) => (
             <Button
-              key={format}
+              key={label}
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onManualEntry(format.toLowerCase().replace('/', '_'))}
+              // AddPage's formatMap expects label-derived slugs ('web_url'),
+              // not the format value — keep the transform
+              onClick={() => onManualEntry(label.toLowerCase().replace('/', '_'))}
             >
-              {format}
+              {label}
             </Button>
           ))}
         </div>

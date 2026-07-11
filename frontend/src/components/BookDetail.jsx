@@ -21,6 +21,7 @@ import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 import { useStatusLabels } from '../hooks/useStatusLabels'
 import { useRatingLabels } from '../hooks/useRatingLabels'
+import { EBOOK_FORMATS, FORMAT_CONFIG, formatLabel } from '../constants/formats'
 
 // Decode HTML entities in text (e.g., &amp; -> &, &quot; -> ")
 function decodeHtmlEntities(text) {
@@ -330,7 +331,6 @@ function BookDetail() {
   // TBR acquire modal state
   const [showAcquireModal, setShowAcquireModal] = useState(false)
   const [acquireLoading, setAcquireLoading] = useState(false)
-  const [acquireFormat, setAcquireFormat] = useState('ebook')
 
   const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
   const [markFinishedError, setMarkFinishedError] = useState(null)
@@ -1193,26 +1193,6 @@ function BookDetail() {
     }
   }
 
-  const handleAcquire = async () => {
-    setAcquireLoading(true)
-    try {
-      await convertTBRToLibrary(id, { format: acquireFormat })
-      // Refresh the book data - it's now in the library
-      const updatedBook = await getBook(id)
-      setBook(updatedBook)
-      setShowAcquireModal(false)
-      // Reset to library defaults
-      setSelectedStatus(updatedBook.status || 'Unread')
-      showToast('Moved to your library', 'success')
-    } catch (err) {
-      console.error('Failed to acquire book:', err)
-      setShowAcquireModal(false)
-      showToast('Something went wrong. Try again?', 'error')
-    } finally {
-      setAcquireLoading(false)
-    }
-  }
-
   // Toast notification helper
   const showToast = (message, type = 'success', duration = 3000) => {
     // Clear any existing timeout
@@ -1376,7 +1356,7 @@ function BookDetail() {
 
   // Download & Share (10.1) — never touches reading status or sessions
   const downloadableEditions = (book.editions || []).filter(
-    (e) => e.format === 'ebook' && e.file_path
+    (e) => EBOOK_FORMATS.includes(e.format) && e.file_path
   )
 
   const handleDownloadEdition = async (edition) => {
@@ -1691,13 +1671,7 @@ function BookDetail() {
           {!isWishlist && (
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
               {book.editions?.map((edition) => {
-                const formatConfig = {
-                  ebook: { label: 'Ebook', color: 'bg-chip-fiction/20 text-chip-fiction border-chip-fiction/30' },
-                  physical: { label: 'Physical', color: 'bg-action-warning/20 text-action-warning border-action-warning/30' },
-                  audiobook: { label: 'Audiobook', color: 'bg-chip-fandom/20 text-chip-fandom border-chip-fandom/30' },
-                  web: { label: 'Web', color: 'bg-chip-nonfiction/20 text-chip-nonfiction border-chip-nonfiction/30' }
-                }
-                const config = formatConfig[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default' }
+                const config = FORMAT_CONFIG[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default' }
 
                 return (
                   <span
@@ -3164,13 +3138,7 @@ function BookDetail() {
           </p>
           <div className="space-y-2">
             {book?.editions?.map((edition) => {
-              const formatLabels = {
-                ebook: 'Ebook',
-                physical: 'Physical',
-                audiobook: 'Audiobook',
-                web: 'Web'
-              }
-              const label = formatLabels[edition.format] || edition.format
+              const label = formatLabel(edition.format)
               return (
                 <button
                   key={edition.id}

@@ -12,6 +12,7 @@ from datetime import datetime
 import aiosqlite
 
 from database import get_db, sync_title_from_sessions
+from constants import COARSE_FORMATS
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 
@@ -140,13 +141,13 @@ async def create_session(
             detail="Cannot rate a session that is still in progress"
         )
     
-    # Validate format if provided
+    # Validate format if provided (sessions keep the coarse list — S15
+    # storage formats apply to editions only)
     if session.format is not None:
-        valid_formats = ['ebook', 'physical', 'audiobook', 'web']
-        if session.format not in valid_formats:
+        if session.format not in COARSE_FORMATS:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid format. Must be one of: {valid_formats}"
+                detail=f"Invalid format. Must be one of: {COARSE_FORMATS}"
             )
     
     # Get next session number
@@ -239,13 +240,13 @@ async def update_session(
             detail="Cannot rate a session that is still in progress"
         )
     
-   # Validate format if provided (empty string is allowed to clear)
+   # Validate format if provided (empty string is allowed to clear;
+   # sessions keep the coarse list — S15 storage formats apply to editions only)
     if updates.format is not None and updates.format != '':
-        valid_formats = ['ebook', 'physical', 'audiobook', 'web']
-        if updates.format not in valid_formats:
+        if updates.format not in COARSE_FORMATS:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid format. Must be one of: {valid_formats}"
+                detail=f"Invalid format. Must be one of: {COARSE_FORMATS}"
             )
     
     # Build update query dynamically

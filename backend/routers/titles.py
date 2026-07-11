@@ -23,6 +23,7 @@ from pydantic import BaseModel
 import aiosqlite
 
 from database import get_db
+from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS
 from services.covers import get_cover_style, Theme
 from services.covers import (
     extract_epub_cover, 
@@ -56,7 +57,7 @@ class EditionSummary(BaseModel):
 
 class EditionCreate(BaseModel):
     """Request model for creating a new edition."""
-    format: str  # ebook, physical, audiobook, web
+    format: str  # any ALL_EDITION_FORMATS value (constants.py)
     acquired_date: Optional[str] = None  # ISO date: YYYY-MM-DD
 
 
@@ -340,7 +341,7 @@ async def row_to_title_detail(row, db) -> TitleDetail:
             acquired_date=ed["acquired_date"]
         ))
         # Use first ebook edition's folder_path for backward compatibility
-        if ed["format"] == "ebook" and ed["folder_path"] and not folder_path:
+        if ed["format"] in EBOOK_FORMATS and ed["folder_path"] and not folder_path:
             folder_path = ed["folder_path"]
     
     # Determine acquisition status (fallback to is_tbr for backward compatibility)
@@ -541,6 +542,12 @@ async def list_titles(
     # Format filter (requires join with editions)
     if format:
         format_list = [f.strip() for f in format.split(',') if f.strip()]
+        # Coarse 'ebook' matches every ebook storage format (S15 two-tier
+        # model) so the Ebook filter keeps working post-migration
+        if 'ebook' in format_list:
+            format_list = list(dict.fromkeys(
+                [f for f in format_list if f != 'ebook'] + EBOOK_FORMATS
+            ))
         if format_list:
             format_placeholders = ','.join(['?' for _ in format_list])
             where_clauses.append(f"""
@@ -1421,7 +1428,7 @@ class TBRUpdate(BaseModel):
 
 class TBRAcquire(BaseModel):
     """Request body for converting TBR to library."""
-    format: Optional[str] = None  # "ebook", "physical", "audiobook", "web"
+    format: Optional[str] = None  # any ALL_EDITION_FORMATS value (constants.py)
 
 
 class TBRSummary(BaseModel):
@@ -1616,11 +1623,10 @@ async def acquire_tbr(
     if not row:
         raise HTTPException(status_code=404, detail="TBR item not found")
     
-    valid_formats = ['ebook', 'physical', 'audiobook', 'web']
-    if data.format and data.format not in valid_formats:
+    if data.format and data.format not in ALL_EDITION_FORMATS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid format. Must be one of: {valid_formats}"
+            detail=f"Invalid format. Must be one of: {ALL_EDITION_FORMATS}"
         )
 
     edition_id = None
@@ -1706,7 +1712,7 @@ class TitleCreate(BaseModel):
     series: Optional[str] = None
     series_number: Optional[str] = None
     category: Optional[str] = None
-    format: Optional[str] = None  # 'physical', 'audiobook', 'web'
+    format: Optional[str] = None  # any ALL_EDITION_FORMATS value (constants.py)
     source_url: Optional[str] = None
     completion_status: Optional[str] = None
     is_tbr: bool = False
@@ -1721,6 +1727,13 @@ async def create_title_manual(
     Create a new title manually (for physical, audiobook, web-based books).
     Creates a title record and optionally an edition.
     """
+    # Validate format (S15 — previously accepted any string verbatim)
+    if data.format and data.format not in ALL_EDITION_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format. Must be one of: {ALL_EDITION_FORMATS}"
+        )
+
     # Generate cover colors
     author_for_color = data.authors[0] if data.authors else "Unknown"
     from services.covers import generate_cover_colors
@@ -2119,15 +2132,19 @@ async def extract_cover_on_demand(title_id: int, db = Depends(get_db)):
     
     Only extracts if no custom cover exists (won't overwrite custom).
     """
-    # Get title info including file path
-    cursor = await db.execute("""
-        SELECT t.id, t.cover_source, e.file_path 
+    # Get title info including file path. Ebook-format editions only, and
+    # prefer .epub-bearing rows (extract_epub_cover is the only parser),
+    # then any file-bearing row, so a file-less edition can't shadow an
+    # extractable one. LEFT JOIN keeps the title-exists check working.
+    format_placeholders = ','.join(['?' for _ in EBOOK_FORMATS])
+    cursor = await db.execute(f"""
+        SELECT t.id, t.cover_source, e.file_path
         FROM titles t
-        LEFT JOIN editions e ON e.title_id = t.id
+        LEFT JOIN editions e ON e.title_id = t.id AND e.format IN ({format_placeholders})
         WHERE t.id = ?
-        ORDER BY e.id ASC
+        ORDER BY (e.file_path IS NULL), (LOWER(e.file_path) LIKE '%.epub') DESC, e.id ASC
         LIMIT 1
-    """, (title_id,))
+    """, (*EBOOK_FORMATS, title_id))
     row = await cursor.fetchone()
     
     if not row:
@@ -2174,17 +2191,18 @@ async def bulk_extract_covers(
     
     # Build query for titles in specified categories
     placeholders = ','.join(['?' for _ in category_list])
+    format_placeholders = ','.join(['?' for _ in EBOOK_FORMATS])
     query = f"""
         SELECT t.id, t.title, t.category, t.cover_source, t.has_cover,
                MIN(e.file_path) as epub_path
         FROM titles t
-        LEFT JOIN editions e ON t.id = e.title_id AND e.format = 'ebook'
+        LEFT JOIN editions e ON t.id = e.title_id AND e.format IN ({format_placeholders})
         WHERE t.category IN ({placeholders})
         GROUP BY t.id, t.title, t.category, t.cover_source, t.has_cover
         ORDER BY t.title
     """
-    
-    cursor = await db.execute(query, category_list)
+
+    cursor = await db.execute(query, [*EBOOK_FORMATS, *category_list])
     titles = await cursor.fetchall()
     
     results = {
@@ -2441,11 +2459,10 @@ async def create_edition(
         )
     
     # Validate format
-    valid_formats = ['ebook', 'physical', 'audiobook', 'web']
-    if edition.format not in valid_formats:
+    if edition.format not in ALL_EDITION_FORMATS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid format. Must be one of: {valid_formats}"
+            detail=f"Invalid format. Must be one of: {ALL_EDITION_FORMATS}"
         )
     
     # Check if this format already exists for this title

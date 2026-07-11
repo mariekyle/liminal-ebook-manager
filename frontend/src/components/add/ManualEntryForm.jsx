@@ -11,6 +11,7 @@ import Button from '../ui/Button'
 import FormField from '../ui/FormField'
 import SegmentedControl from '../ui/SegmentedControl'
 import AuthorInput from '../ui/AuthorInput'
+import { MANUAL_ENTRY_FORMATS } from '../../constants/formats'
 
 const inputClass = (hasError) =>
   `w-full bg-bg-elevated border rounded-lg px-4 py-3 text-text-primary text-sm font-[inherit] placeholder:text-text-muted transition-[border-color] duration-200 ease-out focus:outline-none focus:ring-[3px] focus:ring-action-primary/15 focus:border-border-focus ${
@@ -181,11 +182,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
         <div>
           <span className="block text-label text-text-body mb-2">Format</span>
           <div className="flex gap-2 flex-wrap">
-            {[
-              { value: 'physical', label: 'Physical' },
-              { value: 'audiobook', label: 'Audiobook' },
-              { value: 'web', label: 'Web/URL' },
-            ].map((opt) => (
+            {MANUAL_ENTRY_FORMATS.map((opt) => (
               <Button
                 key={opt.value}
                 type="button"

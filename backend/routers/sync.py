@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 from pydantic import BaseModel
 
 from database import get_db, get_db_path
+from constants import EXTENSION_TO_FORMAT, STORAGE_FORMATS
 from services.metadata import extract_metadata
 from services.covers import generate_cover_colors, extract_epub_cover
 from services.backup import get_backup_settings, create_backup
@@ -40,6 +41,11 @@ class SyncResult(BaseModel):
     total: int = 0
     orphaned: int = 0      # Titles marked as orphaned (folder missing)
     recovered: int = 0     # Previously orphaned titles now found
+    editions_created: dict = {}       # S15: new editions per storage format
+    duplicate_files_skipped: int = 0  # S15: same-format duplicate files in one folder
+    missing_files: int = 0            # S15: edition files gone from disk (kept, not deleted)
+    format_conflicts: int = 0         # S15: same format live in two folders for one title
+    unmigrated_titles: int = 0        # S15: titles with file-backed 'ebook' rows (relabel pending)
     message: str = ""
 
 
@@ -108,38 +114,65 @@ def parse_folder_name(folder_name: str) -> dict:
 
 
 def folder_contains_books(folder_path: Path) -> bool:
-    """Check if a folder contains book files."""
-    book_extensions = {'.epub', '.pdf', '.mobi', '.azw3'}
-    
+    """Check if a folder contains book files (hidden files don't count)."""
     try:
         for item in folder_path.iterdir():
-            if item.is_file() and item.suffix.lower() in book_extensions:
+            if (item.is_file() and not item.name.startswith('.')
+                    and item.suffix.lower() in EXTENSION_TO_FORMAT):
                 return True
     except PermissionError:
         pass
-    
+
     return False
 
 
-def find_book_file(folder_path: Path) -> Optional[Path]:
+def discover_book_files(folder_path: Path) -> tuple[dict, list]:
     """
-    Find the best book file in a folder for metadata extraction.
-    Prefers EPUB (best metadata), then PDF, then others.
+    Discover every recognized book file in a folder, one per storage format.
+
+    Returns ({storage_format: Path}, [skipped Paths]). When a folder holds
+    the same storage format twice (two epubs, or an .html and an .htm), the
+    alphabetically first file wins and the rest are skipped — deterministic
+    pick, locked decision (Decisions 2026-07-10).
     """
-    epub_files = list(folder_path.glob("*.epub"))
-    if epub_files:
-        return epub_files[0]
-    
-    pdf_files = list(folder_path.glob("*.pdf"))
-    if pdf_files:
-        return pdf_files[0]
-    
-    for ext in ["*.mobi", "*.azw3"]:
-        files = list(folder_path.glob(ext))
-        if files:
-            return files[0]
-    
-    return None
+    files_by_format = {}
+    skipped = []
+    try:
+        # Hidden files excluded — macOS/SMB AppleDouble siblings ("._x.epub")
+        # carry real extensions and would otherwise win the alphabetical pick
+        candidates = sorted(
+            (item for item in folder_path.iterdir()
+             if item.is_file() and not item.name.startswith('.')
+             and item.suffix.lower() in EXTENSION_TO_FORMAT),
+            key=lambda p: p.name,
+        )
+    except PermissionError:
+        return files_by_format, skipped
+
+    for item in candidates:
+        storage_format = EXTENSION_TO_FORMAT[item.suffix.lower()]
+        if storage_format in files_by_format:
+            skipped.append(item)
+        else:
+            files_by_format[storage_format] = item
+
+    return files_by_format, skipped
+
+
+def folder_has_format(folder_str: str, storage_format: str) -> bool:
+    """
+    True if the folder still holds a (non-hidden) file of this storage format.
+    Used to tell a live same-format conflict apart from a relocation whose old
+    folder survives but no longer contains the file.
+    """
+    try:
+        for item in Path(folder_str).iterdir():
+            if (item.is_file() and not item.name.startswith('.')
+                    and EXTENSION_TO_FORMAT.get(item.suffix.lower()) == storage_format):
+                return True
+    except (OSError, PermissionError):
+        return False
+    return False
 
 
 def get_book_folders(root_path: Path) -> list[Path]:
@@ -390,9 +423,19 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
             try:
                 # Parse folder name for basic info
                 parsed = parse_folder_name(folder.name)
-                
-                # Find book file for metadata extraction
-                book_file = find_book_file(folder)
+
+                # Discover every recognized book file, one per storage format (S15)
+                files_by_format, duplicate_files = discover_book_files(folder)
+                if duplicate_files:
+                    result.duplicate_files_skipped += len(duplicate_files)
+                    for dup in duplicate_files:
+                        print(f"Sync: same-format duplicate skipped in {folder_str}: {dup.name}")
+
+                # Best file for metadata extraction (epub-preferred order)
+                book_file = next(
+                    (files_by_format[f] for f in STORAGE_FORMATS if f in files_by_format),
+                    None
+                )
                 
                 # Try to extract richer metadata from the file
                 if book_file:
@@ -543,26 +586,106 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                         result.recovered += 1
                         print(f"Recovered orphaned title: {parsed['title']}")
                     
-                    # Update or create edition
+                    # Aborted-relabel guard: a file-backed 'ebook' edition on
+                    # this title means the S15 relabel migration hasn't
+                    # succeeded here. Creating storage-format rows now would
+                    # duplicate the same files AND permanently block the
+                    # relabel (unique-index collision at every startup) —
+                    # defer reconciliation until the migration has run clean.
                     cursor = await db.execute(
-                        "SELECT id FROM editions WHERE title_id = ? AND format = 'ebook'",
+                        "SELECT id FROM editions WHERE title_id = ? AND format = 'ebook' AND file_path IS NOT NULL",
                         [existing["id"]]
                     )
-                    existing_edition = await cursor.fetchone()
-                    
-                    if existing_edition:
-                        await db.execute(
-                            """UPDATE editions SET
-                                file_path = ?, folder_path = ?
-                            WHERE id = ?""",
-                            [str(book_file) if book_file else None, folder_str, existing_edition["id"]]
+                    if await cursor.fetchone():
+                        result.unmigrated_titles += 1
+                        print(
+                            f"Sync: title {existing['id']} still has a file-backed 'ebook' "
+                            f"edition (relabel migration pending) — edition reconciliation "
+                            f"deferred for {folder_str}"
                         )
                     else:
-                        await db.execute(
-                            """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
-                            VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
-                            [existing["id"], str(book_file) if book_file else None, folder_str]
+                        # Reconcile editions per storage format (S15): matched by
+                        # (folder_path, storage format) — sync never writes 'ebook'.
+                        # Non-storage formats (physical/audiobook/web/file-less
+                        # 'ebook') are invisible here: never updated, never deleted.
+                        for storage_format, discovered_file in files_by_format.items():
+                            file_str = str(discovered_file)
+                            cursor = await db.execute(
+                                "SELECT id, file_path FROM editions WHERE folder_path = ? AND format = ?",
+                                [folder_str, storage_format]
+                            )
+                            edition = await cursor.fetchone()
+                            if edition:
+                                if edition["file_path"] != file_str:
+                                    await db.execute(
+                                        "UPDATE editions SET file_path = ? WHERE id = ?",
+                                        [file_str, edition["id"]]
+                                    )
+                                continue
+
+                            # No edition for this format in this folder — the title
+                            # may still hold one elsewhere (folder moved, or the
+                            # same format is live in two folders)
+                            cursor = await db.execute(
+                                "SELECT id, folder_path FROM editions WHERE title_id = ? AND format = ?",
+                                [existing["id"], storage_format]
+                            )
+                            title_edition = await cursor.fetchone()
+                            if title_edition:
+                                old_folder = title_edition["folder_path"]
+                                if (old_folder and old_folder != folder_str
+                                        and folder_has_format(old_folder, storage_format)):
+                                    # Same format live in two folders — keep both
+                                    # untouched, surface in the summary
+                                    result.format_conflicts += 1
+                                    print(
+                                        f"Sync: format conflict for title {existing['id']} "
+                                        f"({storage_format}): {old_folder} vs {folder_str} — skipped"
+                                    )
+                                else:
+                                    # Folder moved / old folder no longer holds this
+                                    # format / file-less placeholder — re-point
+                                    # instead of duplicating
+                                    await db.execute(
+                                        "UPDATE editions SET file_path = ?, folder_path = ? WHERE id = ?",
+                                        [file_str, folder_str, title_edition["id"]]
+                                    )
+                                    print(
+                                        f"Sync: relocated {storage_format} edition of title "
+                                        f"{existing['id']} to {folder_str}"
+                                    )
+                            else:
+                                try:
+                                    await db.execute(
+                                        """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                                        [existing["id"], storage_format, file_str, folder_str]
+                                    )
+                                    result.editions_created[storage_format] = (
+                                        result.editions_created.get(storage_format, 0) + 1
+                                    )
+                                except aiosqlite.IntegrityError:
+                                    # Race backstop, same shape as the pre-check above
+                                    result.format_conflicts += 1
+                                    print(
+                                        f"Sync: insert collision for title {existing['id']} "
+                                        f"({storage_format}) in {folder_str} — skipped"
+                                    )
+
+                        # Files gone from disk: report, never delete (S14 stale-path stance)
+                        cursor = await db.execute(
+                            "SELECT format, file_path FROM editions WHERE folder_path = ?",
+                            [folder_str]
                         )
+                        folder_editions = await cursor.fetchall()
+                        for folder_edition in folder_editions:
+                            if (folder_edition["format"] in STORAGE_FORMATS
+                                    and folder_edition["format"] not in files_by_format):
+                                result.missing_files += 1
+                                print(
+                                    f"Sync: file missing for {folder_edition['format']} edition in "
+                                    f"{folder_str} ({folder_edition['file_path']}) — edition kept"
+                                )
                     
                     # Extract cover from EPUB if available (Phase 9C)
                     # Only for titles without covers or without custom covers
@@ -637,12 +760,24 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                     )
                     title_id = cursor.lastrowid
                     
-                    # Insert edition
-                    await db.execute(
-                        """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
-                        VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
-                        [title_id, str(book_file) if book_file else None, folder_str]
-                    )
+                    # Insert one edition per discovered storage format (S15) —
+                    # sync never writes 'ebook'
+                    for storage_format, discovered_file in files_by_format.items():
+                        try:
+                            await db.execute(
+                                """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                                [title_id, storage_format, str(discovered_file), folder_str]
+                            )
+                            result.editions_created[storage_format] = (
+                                result.editions_created.get(storage_format, 0) + 1
+                            )
+                        except aiosqlite.IntegrityError:
+                            result.format_conflicts += 1
+                            print(
+                                f"Sync: insert collision for new title {title_id} "
+                                f"({storage_format}) in {folder_str} — skipped"
+                            )
                     
                     # Extract cover from EPUB if available (Phase 9C)
                     # Skip FanFiction - they use gradient covers only
@@ -682,26 +817,36 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                   AND t.is_tbr = 0
             """)
             all_editions = await cursor.fetchall()
-            
-            orphaned_count = 0
+
+            # Group folders per title: a title is orphaned only when NONE of
+            # its edition folders survives (Decisions 2026-07-10 — titles can
+            # legitimately span two folders since S15; one live folder keeps
+            # the title un-orphaned). Single-folder titles behave as before.
+            title_folders = {}
             for edition in all_editions:
-                folder_path = edition["folder_path"]
-                title_id = edition["title_id"]
-                title_name = edition["title"]
-                already_orphaned = edition["is_orphaned"] == 1
-                
-                # Check if this folder exists in our found folders
-                if folder_path not in found_folder_paths:
-                    # Double-check the filesystem (in case of path format differences)
-                    if not os.path.exists(folder_path):
-                        if not already_orphaned:
-                            # Mark as orphaned
-                            await db.execute(
-                                "UPDATE titles SET is_orphaned = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                [title_id]
-                            )
-                            orphaned_count += 1
-                            print(f"Marked as orphaned: {title_name} (folder: {folder_path})")
+                entry = title_folders.setdefault(edition["title_id"], {
+                    "title": edition["title"],
+                    "already_orphaned": edition["is_orphaned"] == 1,
+                    "folders": [],
+                })
+                entry["folders"].append(edition["folder_path"])
+
+            orphaned_count = 0
+            for title_id, entry in title_folders.items():
+                # Check found folders first; double-check the filesystem
+                # (in case of path format differences)
+                all_folders_dead = all(
+                    folder_path not in found_folder_paths and not os.path.exists(folder_path)
+                    for folder_path in entry["folders"]
+                )
+                if all_folders_dead and not entry["already_orphaned"]:
+                    # Mark as orphaned
+                    await db.execute(
+                        "UPDATE titles SET is_orphaned = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                        [title_id]
+                    )
+                    orphaned_count += 1
+                    print(f"Marked as orphaned: {entry['title']} (folders: {', '.join(entry['folders'])})")
             
             if orphaned_count > 0:
                 await db.commit()
@@ -716,6 +861,23 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
             msg_parts.append(f"{result.recovered} recovered")
         if result.orphaned > 0:
             msg_parts.append(f"{result.orphaned} orphaned")
+        editions_created_total = sum(result.editions_created.values())
+        if editions_created_total > 0:
+            per_format = ", ".join(
+                f"{count} {fmt}" for fmt, count in sorted(result.editions_created.items())
+            )
+            msg_parts.append(f"{editions_created_total} editions created ({per_format})")
+        if result.duplicate_files_skipped > 0:
+            msg_parts.append(f"{result.duplicate_files_skipped} same-format duplicate files skipped")
+        if result.missing_files > 0:
+            msg_parts.append(f"{result.missing_files} edition files missing (kept, not deleted)")
+        if result.format_conflicts > 0:
+            msg_parts.append(f"{result.format_conflicts} format conflicts")
+        if result.unmigrated_titles > 0:
+            msg_parts.append(
+                f"{result.unmigrated_titles} titles deferred (unmigrated 'ebook' editions — "
+                "run again after the relabel migration succeeds)"
+            )
         if result.errors > 0:
             msg_parts.append(f"{result.errors} errors")
         result.message = ", ".join(msg_parts)

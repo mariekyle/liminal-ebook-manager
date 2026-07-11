@@ -3,6 +3,7 @@ import { useStatusLabels } from '../hooks/useStatusLabels'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 import FormField from './ui/FormField'
+import { COARSE_FORMATS, formatLabel } from '../constants/formats'
 
 const XIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5" aria-hidden>
@@ -365,12 +366,7 @@ function FilterContent({
             <div className="mb-6">
               <p className="text-label text-text-body mb-2">Formats</p>
               <div className="space-y-2">
-                {[
-                  { value: 'ebook', label: 'Ebook' },
-                  { value: 'physical', label: 'Physical' },
-                  { value: 'audiobook', label: 'Audiobook' },
-                  { value: 'web', label: 'Web' },
-                ].map(({ value, label }) => (
+                {COARSE_FORMATS.map((value) => ({ value, label: formatLabel(value) })).map(({ value, label }) => (
                   <label
                     key={value}
                     className="flex items-center gap-3 cursor-pointer group min-h-[44px]"

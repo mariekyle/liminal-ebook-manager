@@ -12,6 +12,7 @@ frontend/dist/
 # Local data (don't commit your database!)
 data/
 *.db
+*.db-*
 
 # Environment files (may contain secrets)
 .env

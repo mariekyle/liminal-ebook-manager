@@ -555,6 +555,64 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
     # Phase 9E: Smart Collections migration
     await run_smart_collections_migration(db)
 
+    # ==========================================================================
+    # Migration: Relabel file-backed editions by storage format (S15 Session 2)
+    # ==========================================================================
+    # Splits format='ebook' into extension-derived storage formats for
+    # editions that have a file. '.htm' normalizes to 'html'; unknown or
+    # missing extensions stay 'ebook' (decided fallback, Decisions 2026-07-10).
+    # File-less editions and non-'ebook' formats are untouched. Idempotent:
+    # relabeled rows no longer match the format='ebook' guard below.
+    from constants import STORAGE_FORMATS
+
+    await db.commit()  # isolate the relabel transaction from prior chain work
+    cursor = await db.execute(
+        "SELECT id, file_path FROM editions WHERE file_path IS NOT NULL AND format = 'ebook'"
+    )
+    relabel_candidates = await cursor.fetchall()
+
+    relabel_ids_by_format = {}
+    relabel_left_as_ebook = 0
+    for edition_id, file_path in relabel_candidates:
+        ext = Path(file_path).suffix.lower().lstrip('.')
+        if ext == 'htm':
+            ext = 'html'
+        if ext in STORAGE_FORMATS:
+            relabel_ids_by_format.setdefault(ext, []).append(edition_id)
+        else:
+            relabel_left_as_ebook += 1
+
+    if relabel_ids_by_format:
+        # A collision on the unique (title_id, format) index shouldn't be
+        # possible (one 'ebook' edition per title today), but abort cleanly
+        # and keep the data unchanged if one ever appears.
+        try:
+            for storage_format, edition_ids in relabel_ids_by_format.items():
+                await db.executemany(
+                    "UPDATE editions SET format = ? WHERE id = ?",
+                    [(storage_format, edition_id) for edition_id in edition_ids],
+                )
+            await db.commit()
+            relabeled_total = sum(len(ids) for ids in relabel_ids_by_format.values())
+            per_format = ", ".join(
+                f"{len(ids)} {fmt}" for fmt, ids in sorted(relabel_ids_by_format.items())
+            )
+            print(
+                f"Migration: Relabeled {relabeled_total} file-backed editions "
+                f"({per_format}); {relabel_left_as_ebook} left as 'ebook'"
+            )
+        except aiosqlite.IntegrityError as e:
+            await db.rollback()
+            print(
+                "Migration: Relabel ABORTED on (title_id, format) collision — "
+                f"rolled back, data unchanged: {e}"
+            )
+    else:
+        print(
+            "Migration: Relabel no-op — 0 file-backed 'ebook' editions to relabel; "
+            f"{relabel_left_as_ebook} left as 'ebook'"
+        )
+
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for old 'books' schema (pre-Phase 5)."""

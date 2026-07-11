@@ -20,6 +20,7 @@ import ChangeStatusModal from './ChangeStatusModal'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import { useGridColumns } from '../hooks/useGridColumns'
+import { formatLabel } from '../constants/formats'
 
 function readPageView(pageKey) {
   try {
@@ -686,18 +687,12 @@ function Library() {
               ))}
               {/* Format pills */}
               {activeView === 'library' && selectedFormats.map(format => {
-                const formatLabels = {
-                  ebook: 'Ebook',
-                  physical: 'Physical',
-                  audiobook: 'Audiobook',
-                  web: 'Web'
-                }
                 return (
                   <span
                     key={format}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-chip-character/20 text-chip-character rounded-full text-caption"
                   >
-                    {formatLabels[format] || format}
+                    {formatLabel(format)}
                     <button
                       type="button"
                       onClick={() => {

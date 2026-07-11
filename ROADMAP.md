@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 10, 2026 (v0.51.0)
-> **Current Focus:** 10.1 Download & Share shipped (v0.51.0, S14) — one-tap download with share-sheet integration on BookDetail. Next: 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
+> **Last Updated:** July 10, 2026 (v0.52.0)
+> **Current Focus:** S15 Multi-Format Editions shipped in v0.52.0 and verified in production (2,173 relabeled; 3,939 editions backfilled, 0 errors). Next up: S15.3 Sync Control & Visibility (in-app Full Sync + post-sync results view), then S15.2b upload fixes and batch-2 UI items. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -341,6 +341,35 @@ One-tap download with share sheet integration.
 
 ---
 
+### Multi-Format Editions (S15) — ✅ Core shipped v0.52.0; follow-ups queued
+
+**Priority:** P0 — follow-on to 10.1 (the download picker can't distinguish formats it doesn't know about)
+**Status:** ✅ Sessions 1–3 shipped in v0.52.0 (2026-07-10) and verified in production: relabel clean (2,173 relabeled, 0 left as `'ebook'`), full-sync backfill created 3,939 editions with 0 errors, DB audit passed all integrity checks; 25 same-format duplicate files and 4 format conflicts surfaced for manual cleanup. Decisions locked in Decisions.md, S15 Decision Sprint 2026-07-10. Remaining: S15.2b upload fixes, S15.3 sync control & visibility, batch-2 UI items.
+**Sessions:** 3 shipped + follow-ups
+
+**The Problem:**
+The database records one file per title even when the folder holds several — upload records only the first moved file, sync records a single epub-preferred edition. Every file-backed edition is `format='ebook'`, so sibling files (mobi/azw3/html) are invisible to the app and the download picker.
+
+**The Solution (two-tier format model):**
+Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains options. File-backed editions store extension-derived storage formats (epub/pdf/mobi/azw3/azw/html). `'ebook'` survives as a legal value meaning "ebook, no file." `reading_sessions.format` stays coarse and untouched.
+
+**Tasks (shipped in v0.52.0):**
+- [x] Session 1 **Format constants + consumers** — shared constants once per side (`backend/constants.py`, `frontend/src/constants/formats.js`); every named inline format list replaced with imports; `POST /titles` format validation added (fold-in fix); download gates → `format IN EBOOK_FORMATS AND file_path`; `text/html` media type; coarse-`ebook` filter expansion so the Library Ebook checkbox survives the migration — ✅ v0.52.0, verified no behavior change on unmigrated data
+- [x] Session 2 **Relabel migration** — idempotent startup migration relabels file-backed editions by extension (`.htm` → `'html'`; file-less/unknown → `'ebook'`); one-line run summary; collision-safe (transaction + clean abort); riders: `azw`/`htm` download media types, `*.db-*` gitignore hardening — ✅ v0.52.0, end-to-end tested; ran clean in production (2,173 relabeled)
+- [x] Session 3 **Format-aware sync** — one edition per recognized file per folder, matched by (folder_path, storage format); deterministic same-format pick (alphabetical, skip + report); relocation vs conflict handling; per-title orphan semantics; vanished files reported, never deleted; kills the full-sync duplicate-edition bug; sync never writes `'ebook'` again — ✅ v0.52.0, end-to-end tested; production backfill created 3,939 editions, 0 errors
+
+**Next up — S15.3: Sync Control & Visibility**
+- [ ] S15.3a **Full Sync action on the Settings page** with a confirmation step — the API supports `?full=true` but the UI cannot send it (discovered at deploy; the backfill had to be triggered outside the app)
+- [ ] S15.3b **Post-sync results view** — list format conflicts, same-format duplicate skips, and missing-file warnings in plain language so the 4 surfaced conflicts (and future ones) can be investigated without reading container logs. Note: Find Duplicates covers duplicate *titles* only, not file-level format conflicts — this view is the only surface for those.
+
+**Remaining S15 follow-ups:**
+- [ ] S15.2b **Upload fixes** (split out — not covered by the Session 2 prompt): upload records every moved file as its own edition (not first-only); unguarded edition insert fix (fold-in); primary-file locator misses `.azw`/`.html`/`.htm`
+- [ ] **Batch-2 UI items:** "Add file" affordance in BookDetail's 3-dot menu → existing upload link mode; BookDetail Files footer listing each file-backed edition as "FORMAT — filename"; coarse-chip collapse (multiple storage-format chips reading as one Ebook group where appropriate); desktop stale-path download bug (fold-in, Decisions 2026-07-10); backup-filename parser; microcopy verification pass over the new format surfaces
+
+**Definition of Done:** Every file in a title's folder is a visible, downloadable edition with its real format — shipped; follow-ups close the loop on adding files and investigating sync findings in-app.
+
+---
+
 ### 10.2: Usage Analytics
 
 **Priority:** P1 — Foundational  
@@ -626,6 +655,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | 10.0C | Full Conversion | 8 | ✅ Complete |
 | **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
 | 10.1 | Download & Share | 1-2 | ✅ Shipped v0.51.0 (1 session) |
+| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3 sync control/visibility next, then S15.2b + batch-2 UI |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
 | 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |
