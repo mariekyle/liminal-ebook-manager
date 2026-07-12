@@ -15,6 +15,7 @@ but internally query the 'titles' table.
 import os
 import json
 import re
+import shutil
 import logging
 from datetime import datetime
 from typing import Optional, List
@@ -24,6 +25,7 @@ import aiosqlite
 
 from database import get_db
 from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS
+from services.trash import move_to_trash, TrashError
 from services.covers import get_cover_style, Theme
 from services.covers import (
     extract_epub_cover, 
@@ -1697,8 +1699,95 @@ async def delete_tbr(
     
     await db.execute("DELETE FROM titles WHERE id = ?", [book_id])
     await db.commit()
-    
+
     return {"status": "deleted"}
+
+
+@router.delete("/books/{book_id}")
+async def delete_title(
+    book_id: int,
+    db = Depends(get_db)
+):
+    """
+    Delete a title: move its folder(s) to <books_root>/_trash/, then
+    delete the DB row (editions, sessions, notes, links, and collection
+    memberships cascade). User-initiated only — sync never deletes
+    (Decisions 2026-07-12).
+
+    Folders move FIRST; if any move fails, already-moved folders are
+    restored and the DB rows are left untouched — files and DB stay
+    consistent. A folder another title still references stays in place.
+    """
+    cursor = await db.execute(
+        "SELECT id FROM titles WHERE id = ?", [book_id]
+    )
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Title not found")
+
+    # Every folder this title references (folder_path lives on editions)
+    folders = set()
+    cursor = await db.execute(
+        """
+        SELECT DISTINCT folder_path FROM editions
+        WHERE title_id = ? AND folder_path IS NOT NULL AND folder_path != ''
+        """,
+        [book_id],
+    )
+    for row in await cursor.fetchall():
+        folders.add(row["folder_path"])
+
+    # A folder another title's editions still reference must not be trashed
+    shared = set()
+    for folder in folders:
+        cursor = await db.execute(
+            "SELECT 1 FROM editions WHERE folder_path = ? AND title_id != ? LIMIT 1",
+            [folder, book_id],
+        )
+        if await cursor.fetchone():
+            shared.add(folder)
+
+    to_move = [f for f in sorted(folders - shared) if Path(f).is_dir()]
+
+    # Move folders to trash BEFORE touching the DB; restore on failure so
+    # files and DB stay consistent (better an orphaned folder than an
+    # orphaned DB)
+    books_root = os.getenv("BOOKS_PATH", "/books")
+    moved = []  # (source, destination) pairs
+    try:
+        for folder in to_move:
+            moved.append((folder, move_to_trash(folder, books_root)))
+    except (TrashError, OSError) as e:
+        logger.error(f"Trash move failed for title {book_id}: {e}")
+        restore_failed = []
+        for source, dest in moved:
+            try:
+                shutil.move(dest, source)
+            except OSError as restore_err:
+                logger.error(
+                    f"Restore from trash failed: {dest} -> {source}: {restore_err}"
+                )
+                restore_failed.append(dest)
+        if restore_failed:
+            detail = (
+                "Couldn't move this title's files to trash. Nothing was "
+                "deleted, but some of its files are now in the trash folder "
+                "— move them back before trying again."
+            )
+        else:
+            detail = (
+                "Couldn't move this title's files to trash. Nothing was "
+                "deleted — try again?"
+            )
+        raise HTTPException(status_code=500, detail=detail)
+
+    await db.execute("DELETE FROM titles WHERE id = ?", [book_id])
+    await db.commit()
+
+    return {
+        "status": "deleted",
+        "trashed_folders": [dest for _, dest in moved],
+        "shared_folders_kept": sorted(shared),
+    }
 
 
 # --------------------------------------------------------------------------

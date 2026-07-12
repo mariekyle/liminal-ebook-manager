@@ -218,9 +218,13 @@ Every data-driven view ships all three. Loading: skeletons or the pulse pattern,
 
 Title grids use `useGridColumns` — the user's grid-columns setting controls mobile columns; desktop breakpoints are fixed in the hook's `gridClasses`. Adopters: Library, CollectionDetail, AuthorDetail, WishlistTab. **Group views are exempt by decision:** the Collections card grid and Library's Series tab keep fixed grids (they lay out groups, not titles). Rows in list mode come from `BookCard variant="list"`.
 
-### Inline confirmation (S10 pattern)
+### Destructive confirmations (S10 pattern)
 
-Destructive actions confirm **in place**: the triggering control swaps to a confirm/cancel pair (or an adjacent inline strip) styled with `action-danger` for the destructive choice. Never `window.confirm` (lint-enforced), no browser dialogs, no detached confirmation modals for single-item deletes. Copy follows the confirmation pattern: title asks, buttons answer ("Remove from library?" → [Remove] [Keep]).
+**Single-item deletes confirm inline where an in-place control exists** — a row, a card, a list item: the thing being deleted is on screen and can host its own confirm. The triggering control swaps to a confirm/cancel pair (or an adjacent inline strip) styled with `action-danger` for the destructive choice.
+
+**Actions launched from a 3-dot menu or a section header have no in-place surface.** These confirm via a **two-step modal**: step 1 states what is affected (counts, not adjectives); step 2 states what is and isn't recoverable. Buttons name their action; the safe button is the safe outcome, never a deferral.
+
+`window.confirm()` and `alert()` remain banned everywhere, without exception (`window.confirm` lint-enforced). Copy follows the confirmation pattern: title asks, buttons answer ("Remove from library?" → [Remove] [Keep]).
 
 ### Page layout
 

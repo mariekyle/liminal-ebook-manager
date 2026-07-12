@@ -22,6 +22,7 @@ from difflib import SequenceMatcher
 
 # Metadata extraction from EPUB/PDF files
 from services.metadata import extract_metadata as extract_epub_metadata
+from services.trash import TRASH_DIR_NAME
 
 from constants import EXTENSION_TO_FORMAT
 
@@ -700,6 +701,8 @@ async def check_duplicates(books: list[BookGroup], books_dir: str):
         
         # Scan book folders within this category
         for folder_name in os.listdir(category_path):
+            if folder_name == TRASH_DIR_NAME:
+                continue
             folder_path = os.path.join(category_path, folder_name)
             if os.path.isdir(folder_path):
                 # Get files in the folder
@@ -717,8 +720,9 @@ async def check_duplicates(books: list[BookGroup], books_dir: str):
     # Also check root level for any books directly in books_dir (legacy support)
     for folder_name in os.listdir(books_dir):
         folder_path = os.path.join(books_dir, folder_name)
-        # Skip category directories themselves
-        if folder_name in categories:
+        # Skip category directories themselves, and the trash folder —
+        # trashed titles must not match as duplicates
+        if folder_name in categories or folder_name == TRASH_DIR_NAME:
             continue
         if os.path.isdir(folder_path):
             files_in_folder = [

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from database import get_db, get_db_path
 from constants import EXTENSION_TO_FORMAT, STORAGE_FORMATS
+from services.trash import TRASH_DIR_NAME
 from services.metadata import extract_metadata
 from services.covers import generate_cover_colors, extract_epub_cover
 from services.backup import get_backup_settings, create_backup
@@ -256,8 +257,10 @@ def get_book_folders(root_path: Path) -> list[Path]:
     
     try:
         for item in root_path.iterdir():
-            # Skip hidden folders
-            if item.name.startswith('.'):
+            # Skip hidden folders and the trash folder — user-deleted
+            # titles wait there until emptied manually; sync never
+            # resurrects them (Decisions 2026-07-12)
+            if item.name.startswith('.') or item.name == TRASH_DIR_NAME:
                 continue
             
             if item.is_dir():

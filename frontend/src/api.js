@@ -494,6 +494,18 @@ export async function removeFromTBR(bookId) {
 }
 
 /**
+ * Delete a title: its files move to the server's trash folder (never
+ * permanently deleted by the app) and the library entry — with reading
+ * history and notes — is removed. If the move fails, nothing is deleted.
+ * @param {number} titleId - Title ID
+ */
+export async function deleteTitle(titleId) {
+  return apiFetch(`/books/${titleId}`, {
+    method: 'DELETE'
+  })
+}
+
+/**
  * Create a new title manually (for physical, audiobook, web-based books)
  * @param {Object} data - Title data
  * @param {string} data.title - Book title

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
+import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import CollapsibleSection from './ui/CollapsibleSection'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
@@ -182,7 +182,7 @@ const ThreeDotMenu = ({
                 <button
                   key={idx}
                   onClick={item.onClick}
-                  className="w-full text-left px-4 py-2.5 text-sm text-text-body hover:bg-bg-elevated transition-colors"
+                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-bg-elevated transition-colors ${item.danger ? 'text-action-danger' : 'text-text-body'}`}
                 >
                   {item.label}
                 </button>
@@ -214,7 +214,7 @@ const ThreeDotMenu = ({
                     <button
                       key={idx}
                       onClick={item.onClick}
-                      className="w-full text-left px-4 py-3.5 text-base text-text-body hover:bg-bg-elevated rounded-lg transition-colors"
+                      className={`w-full text-left px-4 py-3.5 text-base hover:bg-bg-elevated rounded-lg transition-colors ${item.danger ? 'text-action-danger' : 'text-text-body'}`}
                     >
                       {item.label}
                     </button>
@@ -375,6 +375,12 @@ function BookDetail() {
   const [mergeTarget, setMergeTarget] = useState(null) // The book we're merging INTO
   const [mergeSaving, setMergeSaving] = useState(false)
   const [mergeError, setMergeError] = useState(null)
+
+  // Delete title modal state (Batch 2 S1 — files move to _trash, DB rows cascade)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteStep, setDeleteStep] = useState(1) // 1 = consequences, 2 = final confirm
+  const [deleteSaving, setDeleteSaving] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   
   const [sessionForm, setSessionForm] = useState({
     date_started: '',
@@ -761,6 +767,33 @@ function BookDetail() {
       setMergeError(err.message || 'Failed to merge titles')
     } finally {
       setMergeSaving(false)
+    }
+  }
+
+  const openDeleteModal = () => {
+    setDeleteStep(1)
+    setDeleteError(null)
+    setDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleteSaving(true)
+    setDeleteError(null)
+
+    try {
+      await deleteTitle(book.id)
+
+      // Close modal before navigating (the title no longer exists)
+      setDeleteModalOpen(false)
+      navigate(returnUrl)
+    } catch (err) {
+      // A failed move never deletes the DB rows — surface and allow retry
+      console.error('Delete failed:', err)
+      const message = err.message || "Couldn't delete this title. Try again?"
+      setDeleteError(message)
+      showToast(message, 'error')
+    } finally {
+      setDeleteSaving(false)
     }
   }
 
@@ -1517,7 +1550,18 @@ function BookDetail() {
     { type: 'divider', show: !isWishlist },
     { label: 'Merge', onClick: () => { openMergeModal(); setMenuOpen(false) } },
     { label: 'Rescan Metadata', onClick: () => { handleRescanMetadata(); setMenuOpen(false) }, show: !isWishlist && !!book?.folder_path },
+    { type: 'divider' },
+    { label: 'Delete Title', onClick: () => { openDeleteModal(); setMenuOpen(false) }, danger: true },
   ]
+
+  // Delete Title modal facts — counts stated in step 1
+  const deleteFileCount = book?.editions?.filter(e => e.file_path).length || 0
+  const deleteReadCount = sessions.length
+  const deleteNoteCount = notes.length
+  const deleteRemovedParts = [
+    deleteReadCount > 0 && `${deleteReadCount} ${deleteReadCount === 1 ? 'read' : 'reads'} of reading history`,
+    deleteNoteCount > 0 && `${deleteNoteCount} ${deleteNoteCount === 1 ? 'note' : 'notes'}`,
+  ].filter(Boolean)
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -3191,6 +3235,87 @@ function BookDetail() {
           >
             Remove
           </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Delete Title Confirmation Modal (Batch 2 S1) — two-step */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => { if (!deleteSaving) setDeleteModalOpen(false) }}
+        size="sm"
+      >
+        <Modal.Header onClose={() => { if (!deleteSaving) setDeleteModalOpen(false) }}>
+          Delete this title?
+        </Modal.Header>
+        <Modal.Body>
+          {deleteError && (
+            <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4 text-body-sm">
+              {deleteError}
+            </div>
+          )}
+          {deleteStep === 1 ? (
+            <>
+              <p className="text-body-sm text-text-primary">
+                &ldquo;{decodeHtmlEntities(book.title)}&rdquo; leaves your library
+                {deleteRemovedParts.length > 0 && <>, along with {deleteRemovedParts.join(' and ')}</>}.
+              </p>
+              {deleteFileCount > 0 && (
+                <p className="text-body-sm text-text-secondary mt-2">
+                  Its {deleteFileCount} {deleteFileCount === 1 ? 'file moves' : 'files move'} to
+                  the trash folder on your server. Nothing is permanently deleted until you
+                  empty that folder yourself.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-body-sm text-text-primary">
+              {deleteFileCount > 0
+                ? "Files can come back from the trash folder — reading history and notes can't."
+                : (deleteReadCount > 0 || deleteNoteCount > 0)
+                  ? "Reading history and notes can't be brought back."
+                  : "This can't be undone."}
+            </p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {deleteStep === 1 ? (
+            <>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => setDeleteModalOpen(false)}
+              >
+                Not Now
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                onClick={() => setDeleteStep(2)}
+              >
+                Delete
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleteSaving}
+              >
+                Keep
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                onClick={handleConfirmDelete}
+                disabled={deleteSaving}
+                loading={deleteSaving}
+              >
+                Delete Title
+              </Button>
+            </>
+          )}
         </Modal.Footer>
       </Modal>
 
