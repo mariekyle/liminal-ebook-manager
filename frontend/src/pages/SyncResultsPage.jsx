@@ -66,6 +66,12 @@ function StatusCard({ result }) {
         <span className="text-right text-text-primary">{result.added ?? 0}</span>
         <span>Updated</span>
         <span className="text-right text-text-primary">{result.updated ?? 0}</span>
+        {result.fields_backfilled > 0 && (
+          <>
+            <span>Fields backfilled</span>
+            <span className="text-right text-text-primary">{result.fields_backfilled}</span>
+          </>
+        )}
         <span>Skipped</span>
         <span className="text-right text-text-primary">{result.skipped ?? 0}</span>
         <span>Folders scanned</span>

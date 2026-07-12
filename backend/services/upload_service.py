@@ -23,6 +23,8 @@ from difflib import SequenceMatcher
 # Metadata extraction from EPUB/PDF files
 from services.metadata import extract_metadata as extract_epub_metadata
 
+from constants import EXTENSION_TO_FORMAT
+
 
 # =============================================================================
 # DATA CLASSES
@@ -136,7 +138,11 @@ def cleanup_expired_sessions():
 # FILE HANDLING
 # =============================================================================
 
-ALLOWED_EXTENSIONS = {'.epub', '.pdf', '.mobi', '.azw', '.azw3', '.html', '.htm'}
+# Accepted upload extensions = the canonical extension→format map's keys
+# (constants.py) — same set as before, now with a single source. '.htm' is
+# accepted here and normalizes to 'html' at format-derivation time, matching
+# sync and the relabel migration (S15.2b).
+ALLOWED_EXTENSIONS = set(EXTENSION_TO_FORMAT)
 MAX_FILE_SIZE = 250 * 1024 * 1024  # 250 MB
 
 
@@ -879,15 +885,20 @@ async def finalize_book(
             if not target_dir or not os.path.exists(target_dir):
                 return {'id': book_id, 'status': 'error', 'message': f'Existing folder not found: {existing_folder}'}
             
+            moved_files = []
             for f in files_to_move:
                 target_path = os.path.join(target_dir, f.original_name)
                 shutil.copy2(f.temp_path, target_path)
-            
+                moved_files.append(target_path)
+
             return {
                 'id': book_id,
                 'status': 'format_added',
                 'folder': target_dir,
-                'files_added': len(files_to_move)
+                'files_added': len(files_to_move),
+                # Landed paths so the endpoint can record per-format
+                # editions (S15.2b) — internal, not part of the response
+                'moved_files': moved_files
             }
         
         elif action == 'replace':

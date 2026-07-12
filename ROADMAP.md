@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 11, 2026 (v0.53.0 in progress)
-> **Current Focus:** S15.3 complete in v0.53.0 (in progress, pending deploy) — S15.3a Full Library Sync action + S15.3b post-sync results view (persistent "Last sync" on Settings, grouped findings at /sync-results, every warning links to its title). Conflict/duplicate triage can now run from the app instead of container logs. Next up: S15.2b upload fixes and batch-2 UI items. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
+> **Last Updated:** July 12, 2026 (v0.54.0 in progress)
+> **Current Focus:** P1 Full-Sync Overwrite Contract built (v0.54.0 in progress) — sync is now a file registry, not a metadata authority: existing titles get fill-empty-only writes, populated fields are never overwritten on any sync route (the v0.53.0 full sync damaged 618 hand-edited titles; restoration from pre-sync backups is a separate data-ops task). Also in the tree: S15.3 + S15.2b (v0.53.0). Next up: batch-2 UI items. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -344,7 +344,7 @@ One-tap download with share sheet integration.
 ### Multi-Format Editions (S15) — ✅ Core shipped v0.52.0; follow-ups queued
 
 **Priority:** P0 — follow-on to 10.1 (the download picker can't distinguish formats it doesn't know about)
-**Status:** ✅ Sessions 1–3 shipped in v0.52.0 (2026-07-10) and verified in production: relabel clean (2,173 relabeled, 0 left as `'ebook'`), full-sync backfill created 3,939 editions with 0 errors, DB audit passed all integrity checks; 25 same-format duplicate files and 4 format conflicts surfaced for manual cleanup. Decisions locked in Decisions.md, S15 Decision Sprint 2026-07-10. S15.3a + S15.3b built 2026-07-11 (v0.53.0 in progress). Remaining: S15.2b upload fixes, batch-2 UI items.
+**Status:** ✅ Sessions 1–3 shipped in v0.52.0 (2026-07-10) and verified in production: relabel clean (2,173 relabeled, 0 left as `'ebook'`), full-sync backfill created 3,939 editions with 0 errors, DB audit passed all integrity checks; 25 same-format duplicate files and 4 format conflicts surfaced for manual cleanup. Decisions locked in Decisions.md, S15 Decision Sprint 2026-07-10. S15.3a + S15.3b + S15.2b built 2026-07-11 (v0.53.0 in progress). Remaining: batch-2 UI items.
 **Sessions:** 3 shipped + follow-ups
 
 **The Problem:**
@@ -359,12 +359,13 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 - [x] Session 3 **Format-aware sync** — one edition per recognized file per folder, matched by (folder_path, storage format); deterministic same-format pick (alphabetical, skip + report); relocation vs conflict handling; per-title orphan semantics; vanished files reported, never deleted; kills the full-sync duplicate-edition bug; sync never writes `'ebook'` again — ✅ v0.52.0, end-to-end tested; production backfill created 3,939 editions, 0 errors
 
 **In flight — S15.3: Sync Control & Visibility**
+- [x] P1 **Full-Sync Overwrite Contract** (Decisions.md 2026-07-11; carry-over first surfaced in the S15.3a copy review) — the v0.53.0 production full sync overwrote hand-corrected metadata on 618 titles (DB-diff confirmed). ✅ built 2026-07-12, v0.54.0 in progress: existing titles get fill-empty-only writes at the shared `_do_sync` path (NULL/'' — plus '[]' for authors/tags — is the only test; new titles still extract fully; per-title Rescan Metadata unchanged); covers all routes including incremental relocations, not just `full=true`; untouched titles stay byte-identical (no more updated_at churn); `fields_backfilled` counter + results-view row; confirmation copy corrected. End-to-end verified: edited title survives a full sync byte-identical, empty fields fill, relocation route can't overwrite. Damaged-title restoration from pre-sync backups = separate data-ops task.
 - [x] S15.3a **Full Sync action on the Settings page** with a confirmation step — the API supports `?full=true` but the UI could not send it (discovered at deploy; the backfill had to be triggered outside the app) — ✅ built 2026-07-11, v0.53.0 in progress (pending deploy): inline confirmation, live scan progress via the status endpoint, mutual-exclusion guards, every outcome surfaced; 4-lens adversarial verification passed with 0 blockers
 - [x] S15.3b **Post-sync results view** — list format conflicts, same-format duplicate skips, and missing-file warnings in plain language so the 4 surfaced conflicts (and future ones) can be investigated without reading container logs. Note: Find Duplicates covers duplicate *titles* only, not file-level format conflicts — this view is the only surface for those. Decisions locked 2026-07-11: persistent + actionable — last-sync summary lives on the Settings page (stored SyncResult), shown after a manual sync via the same component; every warning links to its title. Also absorbs S15.3a's interim choices: replaces toast-only outcome surfacing and resolves the "Cancel" label tension with the voice doc (see CHANGELOG 0.53.0 accepted findings) — ✅ built 2026-07-11, v0.53.0 in progress (pending deploy): SyncResult persisted from every sync path including failed/interrupted runs, "Last sync" Settings row, grouped results view at /sync-results, manual syncs navigate there on completion, "Not Now" dismissal ratified. Note: stored details populate on the first post-deploy sync — the 4 known conflicts and 25 duplicate skips surface in the view after one Full Library Sync.
 
 **Remaining S15 follow-ups:**
-- [ ] S15.2b **Upload fixes** (split out — not covered by the Session 2 prompt): upload records every moved file as its own edition (not first-only); unguarded edition insert fix (fold-in); primary-file locator misses `.azw`/`.html`/`.htm`
-- [ ] **Batch-2 UI items:** "Add file" affordance in BookDetail's 3-dot menu → existing upload link mode; BookDetail Files footer listing each file-backed edition as "FORMAT — filename"; coarse-chip collapse (multiple storage-format chips reading as one Ebook group where appropriate); desktop stale-path download bug (fold-in, Decisions 2026-07-10); backup-filename parser; microcopy verification pass over the new format surfaces
+- [x] S15.2b **Upload fixes** (split out — not covered by the Session 2 prompt): upload records every moved file as its own edition (not first-only); unguarded edition insert fix (fold-in); primary-file locator misses `.azw`/`.html`/`.htm` — ✅ built 2026-07-11, v0.53.0 in progress (pending deploy): all four upload edition-writing paths mirror sync's model (one edition per storage format, alphabetical same-format pick with skips surfaced, aborted-relabel defer guard, IntegrityError backstops); `.htm` → `'html'` at format-derivation time; locator replaced by sync's shared `discover_book_files`. Carry-over folded into batch-2: AddPage doesn't yet render per-book finalize messages, so skip/defer surfacing lives in the API response + logs until then.
+- [ ] **Batch-2 UI items:** "Add file" affordance in BookDetail's 3-dot menu → existing upload link mode; BookDetail Files footer listing each file-backed edition as "FORMAT — filename"; coarse-chip collapse (multiple storage-format chips reading as one Ebook group where appropriate); desktop stale-path download bug (fold-in, Decisions 2026-07-10); backup-filename parser; microcopy verification pass over the new format surfaces; render S15.2b's per-book upload messages (skips/defers) in AddPage
 
 **Definition of Done:** Every file in a title's folder is a visible, downloadable edition with its real format — shipped; follow-ups close the loop on adding files and investigating sync findings in-app.
 
@@ -655,7 +656,7 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 | 10.0C | Full Conversion | 8 | ✅ Complete |
 | **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
 | 10.1 | Download & Share | 1-2 | ✅ Shipped v0.51.0 (1 session) |
-| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3a + S15.3b built (v0.53.0 in progress); next: S15.2b + batch-2 UI |
+| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3a + S15.3b + S15.2b built (v0.53.0 in progress); next: batch-2 UI |
 | 10.2 | Usage Analytics | 1 | ⏸ On hold |
 | 10.3 | External Book Search | 2-3 | ⏸ On hold |
 | 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |

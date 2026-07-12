@@ -474,7 +474,7 @@ export async function updateTBR(bookId, data) {
  * Convert a TBR item to a library book ("I got this book!")
  * @param {number} bookId - Book ID
  * @param {Object} options - Conversion options
- * @param {string} [options.format] - Edition format to add ('ebook', 'physical', 'audiobook')
+ * @param {string} [options.format] - Edition format to add — any ALL_EDITION_FORMATS value (constants/formats.js)
  */
 export async function convertTBRToLibrary(bookId, options = {}) {
   return apiFetch(`/tbr/${bookId}/acquire`, {
@@ -501,7 +501,7 @@ export async function removeFromTBR(bookId) {
  * @param {string} data.series - Series name (optional)
  * @param {string} data.series_number - Series number (optional)
  * @param {string} data.category - Category (optional)
- * @param {string} data.format - Edition format: 'physical', 'audiobook', 'web'
+ * @param {string} data.format - Edition format — any ALL_EDITION_FORMATS value (constants/formats.js)
  * @param {string} data.source_url - Source URL (optional)
  * @param {string} data.completion_status - For fanfic: 'Complete', 'WIP', 'Abandoned'
  */
@@ -842,7 +842,7 @@ export async function getCollectionsForBook(titleId) {
  * Add a new edition (format) to an existing title
  * @param {number} bookId - Book ID
  * @param {Object} data - Edition data
- * @param {string} data.format - Format: 'ebook', 'physical', 'audiobook', 'web'
+ * @param {string} data.format - Format — any ALL_EDITION_FORMATS value (constants/formats.js)
  * @param {string} [data.acquired_date] - Optional acquisition date (YYYY-MM-DD)
  */
 export async function createEdition(bookId, data) {

@@ -40,8 +40,10 @@ from services.upload_service import (
     BookGroup,
 )
 
-# Import the standalone sync function
-from routers.sync import run_sync_standalone
+from constants import EXTENSION_TO_FORMAT, STORAGE_FORMATS
+
+# Standalone sync function + shared per-format file discovery (S15)
+from routers.sync import run_sync_standalone, discover_book_files
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -159,6 +161,10 @@ class LinkToTitleResponse(BaseModel):
     title_id: int
     files_moved: int
     folder_path: str
+    # S15.2b: same-format duplicate files kept on disk but not recorded as
+    # editions (alphabetical pick, as in sync). Additive — older clients
+    # ignore it.
+    skipped_duplicates: list[str] = []
 
 
 # =============================================================================
@@ -173,9 +179,95 @@ async def trigger_library_sync():
     try:
         print("Starting background library sync after upload...")
         result = await run_sync_standalone(full=False)
-        print(f"Background sync complete: {result.message}")
+        # _do_sync absorbs its own crashes into a status='error' result, so
+        # the except below no longer sees them — check the status instead
+        if result.status == "error":
+            print(f"Background sync failed: {result.message}")
+        else:
+            print(f"Background sync complete: {result.message}")
     except Exception as e:
         print(f"Background sync failed: {e}")
+
+
+# =============================================================================
+# FORMAT-AWARE EDITION RECORDING (S15.2b)
+# =============================================================================
+
+def group_moved_files_by_format(moved_paths: list[str]) -> tuple[dict, list[str]]:
+    """
+    One moved file per storage format, mirroring sync's discover_book_files:
+    the alphabetically first file wins within a format and the rest are
+    skipped — deterministic pick, locked decision (Decisions 2026-07-10).
+    '.htm' normalizes to 'html' via EXTENSION_TO_FORMAT.
+
+    Returns ({storage_format: path}, [skipped paths]).
+    """
+    files_by_format = {}
+    skipped = []
+    for path in sorted(moved_paths, key=os.path.basename):
+        name = os.path.basename(path)
+        # Hidden files excluded, as in sync's discover_book_files — an
+        # AppleDouble-style "._x.epub" name must not win the pick
+        if name.startswith('.'):
+            continue
+        storage_format = EXTENSION_TO_FORMAT.get(os.path.splitext(name)[1].lower())
+        if storage_format is None:
+            # Unreachable behind validate_file's extension gate — skip, don't crash
+            continue
+        if storage_format in files_by_format:
+            skipped.append(path)
+        else:
+            files_by_format[storage_format] = path
+    return files_by_format, skipped
+
+
+async def insert_editions_per_format(
+    db, title_id: int, files_by_format: dict, folder_path: str
+) -> tuple[list, list, bool]:
+    """
+    One edition per storage format (sync's model), guarded two ways:
+
+    - Aborted-relabel defer, same rule as sync's: a file-backed legacy
+      'ebook' edition on the title means the S15 relabel migration hasn't
+      succeeded here. Writing storage-format rows now would duplicate those
+      files AND permanently block the relabel (unique-index collision at
+      every startup) — nothing is inserted and deferred=True so callers
+      can surface it.
+    - IntegrityError backstop per insert: a collision on the
+      UNIQUE(title_id, format) index means the format is already recorded
+      — the existing edition wins, mirroring sync.
+
+    Does not commit — callers own the transaction.
+    Returns (created_formats, collided_formats, deferred).
+    """
+    cursor = await db.execute(
+        "SELECT id FROM editions WHERE title_id = ? AND format = 'ebook' AND file_path IS NOT NULL",
+        [title_id]
+    )
+    if await cursor.fetchone():
+        print(
+            f"Upload: title {title_id} still has a file-backed 'ebook' edition "
+            f"(relabel migration pending) — edition recording deferred"
+        )
+        return [], [], True
+
+    created = []
+    collided = []
+    for storage_format, format_file_path in files_by_format.items():
+        try:
+            await db.execute(
+                """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                [title_id, storage_format, format_file_path, folder_path]
+            )
+            created.append(storage_format)
+        except aiosqlite.IntegrityError:
+            collided.append(storage_format)
+            print(
+                f"Upload: edition already recorded for title {title_id} "
+                f"({storage_format}) — kept the existing one"
+            )
+    return created, collided, False
 
 
 # =============================================================================
@@ -421,37 +513,54 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
     files_to_move = [f for f in session.files if f.id in file_ids]
     
     files_moved = 0
+    moved_paths = []
     for uploaded_file in files_to_move:
         dest_path = os.path.join(folder_path, uploaded_file.original_name)
-        
+
         # Handle duplicate filenames
         base, ext = os.path.splitext(dest_path)
         counter = 1
         while os.path.exists(dest_path):
             dest_path = f"{base}_{counter}{ext}"
             counter += 1
-        
+
         # Move file
         shutil.move(uploaded_file.temp_path, dest_path)
+        moved_paths.append(dest_path)
         files_moved += 1
-    
-    # Create edition record pointing to this folder
-    # Get the primary file for the edition
-    primary_file = files_to_move[0].original_name if files_to_move else None
-    
-    await db.execute("""
-        INSERT INTO editions (title_id, format, folder_path, file_path, created_at)
-        VALUES (?, 'ebook', ?, ?, datetime('now'))
-    """, (title_id, folder_path, os.path.join(folder_path, primary_file) if primary_file else None))
-    
+
+    # One edition per storage format of the moved files (S15.2b — sync's
+    # model, replacing the single first-file 'ebook' record). Paths are the
+    # actual destinations, so collision-renamed files ("_1" suffix) record
+    # correctly.
+    files_by_format, skipped_paths = group_moved_files_by_format(moved_paths)
+    message_parts = [f'Added {files_moved} file(s) to existing title']
+    if files_by_format:
+        created, collided, deferred = await insert_editions_per_format(
+            db, title_id, files_by_format, folder_path
+        )
+        if deferred:
+            message_parts.append(
+                'edition records deferred — run a full sync after the format migration succeeds'
+            )
+        elif collided:
+            message_parts.append(
+                'already recorded, kept the existing edition: ' + ', '.join(collided)
+            )
+    if skipped_paths:
+        message_parts.append(
+            'same-format duplicates kept but not recorded: '
+            + ', '.join(os.path.basename(p) for p in skipped_paths)
+        )
+
     await db.commit()
-    
+
     return {
         'id': book_id,
         'status': 'format_added',
         'folder': folder_path,
         'files_added': files_moved,
-        'message': f'Added {files_moved} file(s) to existing title',
+        'message': '; '.join(message_parts),
         'title_id': title_id
     }
 
@@ -476,12 +585,16 @@ async def create_title_from_upload(
     series_number: str,
     category: str,
     folder_path: str,
-    file_path: str = None
+    file_path: str = None,
+    files_by_format: dict = None
 ) -> int:
     """
     Create a title record from upload data with full metadata extraction.
     This ensures user's category selection is saved and metadata is extracted
     immediately, without depending on background sync.
+
+    files_by_format ({storage_format: path}) drives edition creation — one
+    edition per storage format (S15.2b); file_path stays the metadata source.
     Returns the title_id.
     """
     # Parse author into list
@@ -505,6 +618,15 @@ async def create_title_from_upload(
             "UPDATE titles SET category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             [category or 'Uncategorized', existing[0]]
         )
+        # Record any formats this upload landed that aren't editions yet —
+        # incremental sync skips folders that already have editions, so a
+        # missed format would stay invisible until a full sync (S15.2b).
+        # Collisions and the relabel-defer case are expected here and
+        # handled (and logged) inside the helper.
+        if files_by_format:
+            await insert_editions_per_format(
+                db, existing[0], files_by_format, folder_path
+            )
         await db.commit()
         return existing[0]
     
@@ -628,13 +750,28 @@ async def create_title_from_upload(
             )
             title_id = cursor.lastrowid
     
-    # Insert edition (use OR IGNORE in case of race condition on edition too)
-    await db.execute(
-        """INSERT OR IGNORE INTO editions (title_id, format, file_path, folder_path, acquired_date)
-        VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
-        [title_id, file_path, folder_path]
-    )
-    
+    # One edition per discovered storage format (S15.2b — sync's model,
+    # replacing the single OR-IGNORE 'ebook' insert whose dedupe stopped
+    # working once uploads write storage formats). The helper's guards
+    # cover the race where title_id resolved to an existing title. Falls
+    # back to a single file-less 'ebook' edition when no recognized file
+    # was found, preserving the pre-S15 shape (title still reads as an
+    # owned ebook).
+    if files_by_format:
+        await insert_editions_per_format(db, title_id, files_by_format, folder_path)
+    else:
+        try:
+            await db.execute(
+                """INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                VALUES (?, 'ebook', ?, ?, CURRENT_TIMESTAMP)""",
+                [title_id, file_path, folder_path]
+            )
+        except aiosqlite.IntegrityError:
+            print(
+                f"Upload: edition already recorded for title {title_id} (ebook) "
+                f"— kept the existing one"
+            )
+
     await db.commit()
     return title_id
 
@@ -706,16 +843,22 @@ async def finalize_batch_endpoint(
                     # Create title record for new books
                     book_data = books_data[i]
                     try:
-                        # Find the primary ebook file in the folder
-                        file_path = None
-                        for ext in ['.epub', '.pdf', '.mobi', '.azw3']:
-                            import glob
-                            # Escape folder_path to handle brackets in series names like [Series 1]
-                            matches = glob.glob(f"{glob.escape(folder_path)}/*{ext}")
-                            if matches:
-                                file_path = matches[0]
-                                break
-                        
+                        # Every recognized file in the new folder, one per
+                        # storage format — shared discovery with sync
+                        # (S15.2b; replaces a glob loop that missed
+                        # .azw/.html/.htm and left file_path=None)
+                        discovered, duplicate_files = discover_book_files(Path(folder_path))
+                        files_by_format = {
+                            storage_format: str(path)
+                            for storage_format, path in discovered.items()
+                        }
+                        # Best file for metadata extraction (epub-preferred
+                        # order, as in sync)
+                        file_path = next(
+                            (files_by_format[f] for f in STORAGE_FORMATS if f in files_by_format),
+                            None
+                        )
+
                         title_id = await create_title_from_upload(
                             db=db,
                             title=book_data.get('title', 'Unknown Title'),
@@ -724,10 +867,16 @@ async def finalize_batch_endpoint(
                             series_number=book_data.get('series_number'),
                             category=book_data.get('category', 'Uncategorized'),
                             folder_path=folder_path,
-                            file_path=file_path
+                            file_path=file_path,
+                            files_by_format=files_by_format
                         )
                         # Add title_id to result for frontend navigation
                         result['title_id'] = title_id
+                        if duplicate_files:
+                            result['message'] = (
+                                'same-format duplicates kept but not recorded: '
+                                + ', '.join(p.name for p in duplicate_files)
+                            )
                     except Exception as e:
                         print(f"Warning: Failed to create title record during upload: {e}")
                         # Don't fail the upload - sync will create it later
@@ -744,6 +893,37 @@ async def finalize_batch_endpoint(
                         row = await cursor.fetchone()
                         if row:
                             result['title_id'] = row[0]
+                            # Record the landed files' formats as editions
+                            # (S15.2b) — this path previously recorded
+                            # nothing, and incremental sync skips folders
+                            # that already have editions, so new formats
+                            # stayed invisible until a full sync
+                            files_by_format, skipped_paths = group_moved_files_by_format(
+                                result.get('moved_files') or []
+                            )
+                            message_parts = []
+                            if files_by_format:
+                                created, collided, deferred = await insert_editions_per_format(
+                                    db, row[0], files_by_format, folder_path
+                                )
+                                await db.commit()
+                                if deferred:
+                                    message_parts.append(
+                                        'edition records deferred — run a full sync '
+                                        'after the format migration succeeds'
+                                    )
+                                elif collided:
+                                    message_parts.append(
+                                        'already recorded, kept the existing edition: '
+                                        + ', '.join(collided)
+                                    )
+                            if skipped_paths:
+                                message_parts.append(
+                                    'same-format duplicates kept but not recorded: '
+                                    + ', '.join(os.path.basename(p) for p in skipped_paths)
+                                )
+                            if message_parts:
+                                result['message'] = '; '.join(message_parts)
                     except Exception as e:
                         print(f"Warning: Failed to look up title_id for format_added: {e}")
             
@@ -890,23 +1070,40 @@ async def link_files_to_title(
                 shutil.move(uploaded_file.temp_path, str(dest_path))
                 moved_files.append(str(dest_path))
 
-        file_path = moved_files[0] if moved_files else None
+        # One edition per storage format of the moved files (S15.2b — sync's
+        # model, replacing the single first-file 'ebook' record)
+        files_by_format, skipped_paths = group_moved_files_by_format(moved_files)
+        for skipped in skipped_paths:
+            logger.info(
+                f"Link-to-title: same-format duplicate kept but not recorded: {skipped}"
+            )
 
-        # Atomically (a) create edition if needed, (b) convert wishlist -> owned if needed.
+        # Atomically (a) create editions if needed, (b) convert wishlist -> owned if needed.
         await db.execute("BEGIN")
         try:
-            try:
-                await db.execute(
-                    """
-                    INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
-                    VALUES (?, 'ebook', ?, ?, DATE('now'))
-                    """,
-                    [request.title_id, file_path, str(dest_folder)],
+            if files_by_format:
+                # Defer and collision cases are handled (and logged) inside
+                # the helper; the background sync's results view surfaces
+                # deferred titles after this endpoint returns
+                await insert_editions_per_format(
+                    db, request.title_id, files_by_format, str(dest_folder)
                 )
-            except aiosqlite.IntegrityError:
-                logger.info(
-                    f"Edition already exists for title {request.title_id} format ebook, skipping insert"
-                )
+            else:
+                # No recognized files moved — keep the pre-S15 file-less
+                # 'ebook' marker so the converted title still reads as an
+                # owned ebook
+                try:
+                    await db.execute(
+                        """
+                        INSERT INTO editions (title_id, format, file_path, folder_path, acquired_date)
+                        VALUES (?, 'ebook', NULL, ?, DATE('now'))
+                        """,
+                        [request.title_id, str(dest_folder)],
+                    )
+                except aiosqlite.IntegrityError:
+                    logger.info(
+                        f"Edition already exists for title {request.title_id} format ebook, skipping insert"
+                    )
 
             cursor = await db.execute(
                 "SELECT is_tbr, acquisition_status, status FROM titles WHERE id = ?",
@@ -953,7 +1150,8 @@ async def link_files_to_title(
             success=True,
             title_id=request.title_id,
             files_moved=len(moved_files),
-            folder_path=str(dest_folder)
+            folder_path=str(dest_folder),
+            skipped_duplicates=[os.path.basename(p) for p in skipped_paths]
         )
         
     except Exception as e:

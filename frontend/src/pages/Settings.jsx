@@ -501,8 +501,9 @@ export default function Settings() {
             {fullSyncConfirming && !fullSyncing && (
               <div className="mx-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg flex flex-col gap-3">
                 <p className="text-body-sm text-text-primary">
-                  Run a full sync? This rescans every folder and refreshes each
-                  title&apos;s details from its files — it may take a while.
+                  Run a full sync? This rescans every folder, registers new
+                  files and formats, adds missing titles, and fills gaps in
+                  empty fields — it may take a while.
                 </p>
                 <div className="flex gap-2 justify-end">
                   <Button

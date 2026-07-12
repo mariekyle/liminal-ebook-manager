@@ -42,6 +42,10 @@ class SyncResult(BaseModel):
     total: int = 0
     orphaned: int = 0      # Titles marked as orphaned (folder missing)
     recovered: int = 0     # Previously orphaned titles now found
+    # P1 Overwrite Contract (Decisions 2026-07-11): empty title fields
+    # filled on existing titles. Sync never overwrites populated fields,
+    # so this counts fills, not rewrites.
+    fields_backfilled: int = 0
     editions_created: dict = {}       # S15: new editions per storage format
     duplicate_files_skipped: int = 0  # S15: same-format duplicate files in one folder
     missing_files: int = 0            # S15: edition files gone from disk (kept, not deleted)
@@ -298,6 +302,47 @@ async def find_existing_title_by_folder(db, folder_str: str) -> Optional[dict]:
         [folder_str]
     )
     return await cursor.fetchone()
+
+
+# --------------------------------------------------------------------------
+# Fill-empty metadata writes (Full-Sync Overwrite Contract, Decisions
+# 2026-07-11): sync is a file registry, not a metadata authority. On
+# EXISTING titles it may fill empty fields only — never overwrite a
+# populated one, regardless of source. Same shape as the bulk
+# rescan-metadata endpoint's per-field "only if not already set" builder.
+# --------------------------------------------------------------------------
+
+def _is_empty_field(value, json_list: bool = False) -> bool:
+    """
+    The contract's emptiness test — NULL or empty string, nothing else.
+    JSON-list columns (authors, tags) additionally count their empty
+    serialization '[]' as empty.
+    """
+    if value is None or value == "":
+        return True
+    return json_list and value == "[]"
+
+
+def build_fill_empty_updates(current_row, candidates: dict) -> tuple[list, list, list]:
+    """
+    Build SET clauses that fill ONLY empty fields on an existing title:
+    a field is written when the stored value is empty AND the candidate
+    is non-empty, by the same test. Column names come from the static
+    candidates spec at the call site, never from data.
+
+    candidates: {column: (candidate_value, is_json_list)}
+    Returns (set_clauses, params, filled_columns).
+    """
+    set_clauses = []
+    params = []
+    filled = []
+    for column, (value, json_list) in candidates.items():
+        if (_is_empty_field(current_row[column], json_list)
+                and not _is_empty_field(value, json_list)):
+            set_clauses.append(f"{column} = ?")
+            params.append(value)
+            filled.append(column)
+    return set_clauses, params, filled
 
 
 def detect_fanfiction(parsed: dict, authors: list[str]) -> tuple[bool, str]:
@@ -627,58 +672,70 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                             category = "Uncategorized"
                 
                 if existing:
-                    # Check if this was previously orphaned (for recovery tracking)
+                    # Full current row: fill-empty needs the stored values,
+                    # and is_orphaned rides along for recovery tracking
                     cursor = await db.execute(
-                        "SELECT is_orphaned FROM titles WHERE id = ?",
+                        "SELECT * FROM titles WHERE id = ?",
                         [existing["id"]]
                     )
-                    orphan_row = await cursor.fetchone()
-                    was_orphaned = orphan_row and orphan_row["is_orphaned"] == 1
-                    
-                    # Update existing title (and recover if orphaned)
-                    # Only update enhanced fields if they have new values (preserve user edits)
-                    await db.execute(
-                        """UPDATE titles SET
-                            title = ?, authors = ?, series = COALESCE(?, series), series_number = COALESCE(?, series_number),
-                            category = ?, publication_year = COALESCE(?, publication_year), word_count = COALESCE(?, word_count),
-                            summary = COALESCE(?, summary), tags = CASE WHEN ? != '[]' THEN ? ELSE tags END,
-                            cover_color_1 = ?, cover_color_2 = ?,
-                            fandom = COALESCE(?, fandom),
-                            relationships = COALESCE(?, relationships),
-                            characters = COALESCE(?, characters),
-                            content_rating = COALESCE(?, content_rating),
-                            ao3_warnings = COALESCE(?, ao3_warnings),
-                            ao3_category = COALESCE(?, ao3_category),
-                            source_url = COALESCE(?, source_url),
-                            isbn = COALESCE(?, isbn),
-                            publisher = COALESCE(?, publisher),
-                            chapter_count = COALESCE(?, chapter_count),
-                            completion_status = COALESCE(?, completion_status),
-                            is_orphaned = 0,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?""",
-                        [
-                            parsed["title"], json.dumps(parsed["authors"]),
-                            parsed.get("series"), parsed.get("series_number"),
-                            category, parsed.get("publication_year"),
-                            parsed.get("word_count"), parsed.get("summary"),
-                            json.dumps(parsed.get("tags", [])), json.dumps(parsed.get("tags", [])),
-                            color1, color2,
-                            parsed.get("fandom"),
-                            parsed.get("relationships"),
-                            parsed.get("characters"),
-                            parsed.get("content_rating"),
-                            parsed.get("ao3_warnings"),
-                            parsed.get("ao3_category"),
-                            parsed.get("source_url"),
-                            parsed.get("isbn"),
-                            parsed.get("publisher"),
-                            parsed.get("chapter_count"),
-                            parsed.get("completion_status"),
-                            existing["id"]
-                        ]
-                    )
-                    
+                    current = await cursor.fetchone()
+                    was_orphaned = current and current["is_orphaned"] == 1
+
+                    # Fill-empty-only merge (Full-Sync Overwrite Contract,
+                    # Decisions 2026-07-11). The UPDATE this replaces wrote
+                    # title/authors/category/cover colors unconditionally
+                    # and every COALESCE'd field whenever extraction found a
+                    # value — the v0.53.0 metadata-loss bug (618 damaged
+                    # titles). Populated fields are now never written; the
+                    # per-title Rescan Metadata action stays the deliberate
+                    # re-extraction surface.
+                    candidates = {
+                        "title": (parsed["title"], False),
+                        "authors": (json.dumps(parsed["authors"]), True),
+                        "series": (parsed.get("series"), False),
+                        "series_number": (parsed.get("series_number"), False),
+                        "category": (category, False),
+                        "publication_year": (parsed.get("publication_year"), False),
+                        "word_count": (parsed.get("word_count"), False),
+                        "summary": (parsed.get("summary"), False),
+                        "tags": (json.dumps(parsed.get("tags", [])), True),
+                        "cover_color_1": (color1, False),
+                        "cover_color_2": (color2, False),
+                        "fandom": (parsed.get("fandom"), False),
+                        "relationships": (parsed.get("relationships"), False),
+                        "characters": (parsed.get("characters"), False),
+                        "content_rating": (parsed.get("content_rating"), False),
+                        "ao3_warnings": (parsed.get("ao3_warnings"), False),
+                        "ao3_category": (parsed.get("ao3_category"), False),
+                        "source_url": (parsed.get("source_url"), False),
+                        "isbn": (parsed.get("isbn"), False),
+                        "publisher": (parsed.get("publisher"), False),
+                        "chapter_count": (parsed.get("chapter_count"), False),
+                        "completion_status": (parsed.get("completion_status"), False),
+                    }
+                    set_clauses, params, filled = build_fill_empty_updates(current, candidates)
+
+                    # Orphan recovery is registry state, not metadata — it
+                    # writes even when nothing backfills. A title with no
+                    # empty fields to fill gets NO UPDATE at all: the row
+                    # stays byte-identical, updated_at included.
+                    if was_orphaned:
+                        set_clauses.append("is_orphaned = 0")
+                    if set_clauses:
+                        await db.execute(
+                            f"""UPDATE titles SET {', '.join(set_clauses)},
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?""",
+                            params + [existing["id"]]
+                        )
+                    if filled:
+                        result.updated += 1
+                        result.fields_backfilled += len(filled)
+                        print(
+                            f"Sync: backfilled {len(filled)} empty field(s) on title "
+                            f"{existing['id']}: {', '.join(filled)}"
+                        )
+
                     if was_orphaned:
                         result.recovered += 1
                         print(f"Recovered orphaned title: {parsed['title']}")
@@ -848,8 +905,6 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
                         except Exception as e:
                             logger.warning(f"Cover extraction failed for title {existing['id']}: {e}")
                             # Don't fail sync if cover extraction fails
-                    
-                    result.updated += 1
                 else:
                     # Insert new title with all enhanced metadata
                     cursor = await db.execute(
@@ -994,6 +1049,8 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
         
         # Build result message
         msg_parts = [f"Sync complete: {result.added} added, {result.updated} updated, {result.skipped} skipped"]
+        if result.fields_backfilled > 0:
+            msg_parts.append(f"{result.fields_backfilled} empty fields backfilled")
         if result.recovered > 0:
             msg_parts.append(f"{result.recovered} recovered")
         if result.orphaned > 0:
