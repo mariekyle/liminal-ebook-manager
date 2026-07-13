@@ -2669,17 +2669,23 @@ async def merge_titles(
     db: aiosqlite.Connection = Depends(get_db)
 ):
     """
-    Merge source title into target title.
-    
-    Operations:
-    1. Move all editions from source → target
+    Merge source title into target title. Merge is a RECORDS operation:
+    files never move between folders (Decisions 2026-07-12, reversed).
+
+    Files first: the source's folder(s) move to <books_root>/_trash/ with
+    their files still inside, BEFORE any DB write. If a move fails, moved
+    folders are restored and nothing is merged. Folders shared with another
+    title stay in place.
+
+    Then, in the DB:
+    1. Drop all of the source's editions (files ride along to trash)
     2. Move all reading_sessions from source → target
     3. Move all notes from source → target
     4. Move all collection_books entries from source → target
     5. Move all links (backlinks) from source → target
     6. Delete source title
-    
-    The target title keeps its metadata. Source title is deleted.
+
+    The target keeps its metadata and exactly the files it already had.
     """
     # Validate target exists
     cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", (target_id,))
@@ -2712,27 +2718,68 @@ async def merge_titles(
     
     cursor = await db.execute("SELECT COUNT(*) FROM links WHERE to_title_id = ?", (source_id,))
     links_count = (await cursor.fetchone())[0]
-    
-    # 1. Move editions (update title_id, handle potential format conflicts)
-    # First, get existing formats on target to avoid duplicates
-    cursor = await db.execute("SELECT format FROM editions WHERE title_id = ?", (target_id,))
-    target_formats = {row[0] for row in await cursor.fetchall()}
-    
-    # Move editions that don't conflict, delete ones that do
-    cursor = await db.execute("SELECT id, format FROM editions WHERE title_id = ?", (source_id,))
-    source_editions = await cursor.fetchall()
-    editions_moved = 0
-    for edition_id, edition_format in source_editions:
-        if edition_format not in target_formats:
-            await db.execute(
-                "UPDATE editions SET title_id = ? WHERE id = ?",
-                (target_id, edition_id)
+
+    # --- Files first: trash the source's folder(s) BEFORE any DB write ---
+    # Same contract as DELETE /books/{id} (v0.55.0): if a move fails, restore
+    # what moved and leave the DB untouched. A folder another title's editions
+    # still reference stays in place.
+    folders = set()
+    cursor = await db.execute(
+        """
+        SELECT DISTINCT folder_path FROM editions
+        WHERE title_id = ? AND folder_path IS NOT NULL AND folder_path != ''
+        """,
+        (source_id,),
+    )
+    for row in await cursor.fetchall():
+        folders.add(row[0])
+
+    shared = set()
+    for folder in folders:
+        cursor = await db.execute(
+            "SELECT 1 FROM editions WHERE folder_path = ? AND title_id != ? LIMIT 1",
+            (folder, source_id),
+        )
+        if await cursor.fetchone():
+            shared.add(folder)
+
+    to_move = [f for f in sorted(folders - shared) if Path(f).is_dir()]
+
+    books_root = os.getenv("BOOKS_PATH", "/books")
+    moved = []  # (source, destination) pairs
+    try:
+        for folder in to_move:
+            moved.append((folder, move_to_trash(folder, books_root)))
+    except (TrashError, OSError) as e:
+        logger.error(f"Trash move failed during merge of title {source_id}: {e}")
+        restore_failed = []
+        for src_folder, dest in moved:
+            try:
+                shutil.move(dest, src_folder)
+            except OSError as restore_err:
+                logger.error(
+                    f"Restore from trash failed: {dest} -> {src_folder}: {restore_err}"
+                )
+                restore_failed.append(dest)
+        if restore_failed:
+            detail = (
+                "Couldn't move this title's files to trash. Nothing was merged, "
+                "but some of its files are now in the trash folder — move them "
+                "back before trying again."
             )
-            target_formats.add(edition_format)
-            editions_moved += 1
         else:
-            # Duplicate format - delete it (target already has this format)
-            await db.execute("DELETE FROM editions WHERE id = ?", (edition_id,))
+            detail = (
+                "Couldn't move this title's files to trash. Nothing was merged "
+                "— try again?"
+            )
+        raise HTTPException(status_code=500, detail=detail)
+
+    # 1. Editions: merge is a RECORDS operation, not a file operation
+    # (Decisions 2026-07-12, reversed). Files never move between folders.
+    # The source's editions are dropped; its files ride along to trash inside
+    # its folder. The target keeps exactly the files it already had.
+    await db.execute("DELETE FROM editions WHERE title_id = ?", (source_id,))
+    editions_dropped = editions_count
     
     # 2. Move reading sessions (renumber to continue sequence)
     cursor = await db.execute(
@@ -2799,12 +2846,14 @@ async def merge_titles(
         "source_id": source_id,
         "source_title": source[1],
         "merged": {
-            "editions": editions_moved,
+            "editions_dropped": editions_dropped,
             "sessions": sessions_count,
             "notes": notes_count,
             "collections": collections_count,
             "links": links_count
-        }
+        },
+        "trashed_folders": [dest for _, dest in moved],
+        "shared_folders_kept": sorted(shared)
     }
 
 

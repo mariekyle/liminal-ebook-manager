@@ -364,6 +364,7 @@ function BookDetail() {
   // Edition delete state (Phase 8.7g)
   const [editionToDelete, setEditionToDelete] = useState(null)
   const [editionDeleting, setEditionDeleting] = useState(false)
+  const [editionDeleteError, setEditionDeleteError] = useState(null)
   const [showEditionPicker, setShowEditionPicker] = useState(false)
   
   // Merge modal state (Phase 8.7d)
@@ -697,17 +698,18 @@ function BookDetail() {
     if (!editionToDelete) return
     
     setEditionDeleting(true)
+    setEditionDeleteError(null)
     try {
       await deleteEdition(editionToDelete.id)
-      
+
       // Refresh book data
       const updatedBook = await getBook(id)
       setBook(updatedBook)
-      
+
       setEditionToDelete(null)
     } catch (err) {
       console.error('Failed to delete edition:', err)
-      alert(err.message || 'Failed to delete edition')
+      setEditionDeleteError(err.message || "Couldn't remove this edition. Try again?")
     } finally {
       setEditionDeleting(false)
     }
@@ -2913,7 +2915,7 @@ function BookDetail() {
         fullscreenOnMobile
       >
         <Modal.Header onClose={() => setMergeModalOpen(false)}>
-          {mergeStep === 'search' ? 'Merge into Another Title' : 'Confirm Merge'}
+          {mergeStep === 'search' ? 'Merge into another title' : 'Merge into this title?'}
         </Modal.Header>
         <Modal.Body className="overflow-y-auto">
           {mergeError && (
@@ -2930,7 +2932,7 @@ function BookDetail() {
 
               {/* Current book preview */}
               <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
-                <div className="text-caption text-text-muted mb-1">This title (will be merged and deleted):</div>
+                <div className="text-caption text-text-muted mb-1">This title — its history moves over, its files go to trash</div>
                 <div className="font-medium text-text-primary">{book.title}</div>
                 <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
               </div>
@@ -2984,15 +2986,9 @@ function BookDetail() {
 
           {mergeStep === 'confirm' && mergeTarget && (
             <>
-              <div className="bg-action-warning/20 border border-action-warning rounded-lg p-4 mb-4">
-                <div className="flex items-start gap-2">
-                  <span className="text-action-warning text-lg">⚠️</span>
-                  <div>
-                    <div className="font-medium text-action-warning">This action cannot be undone</div>
-                    <div className="text-sm text-text-secondary mt-1">
-                      All data from the source title will be moved to the target, and the source will be permanently deleted.
-                    </div>
-                  </div>
+              <div className="bg-bg-elevated border border-border-default rounded-lg p-4 mb-4">
+                <div className="text-body-sm text-text-secondary">
+                  This title's reading history, notes, and collections move to the one you picked. Its files move to the trash folder — the kept title stays with the files it already has.
                 </div>
               </div>
 
@@ -3020,14 +3016,21 @@ function BookDetail() {
                 </div>
               </div>
 
-              <div className="mt-4 text-sm text-text-secondary">
-                <div className="font-medium text-text-primary mb-2">What will be moved:</div>
+              <div className="mt-4 text-body-sm text-text-secondary">
+                <div className="text-label text-text-primary mb-2">Moves over</div>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>All editions (file formats)</li>
-                  <li>All reading sessions</li>
-                  <li>All notes</li>
-                  <li>All collection memberships</li>
+                  <li>Reading sessions</li>
+                  <li>Notes</li>
+                  <li>Collection memberships</li>
+                  <li>Backlinks</li>
                 </ul>
+                <div className="text-label text-text-primary mt-4 mb-2">Goes to the trash folder</div>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>This title's files and its folder</li>
+                </ul>
+                <div className="text-caption text-text-muted mt-3">
+                  Files can come back from the trash folder. Emptying it is manual.
+                </div>
               </div>
             </>
           )}
@@ -3042,7 +3045,7 @@ function BookDetail() {
             )}
             <div className="flex-1" />
             <Button variant="ghost" onClick={() => setMergeModalOpen(false)}>
-              Cancel
+              {mergeStep === 'confirm' ? 'Keep separate' : 'Cancel'}
             </Button>
             {mergeStep === 'confirm' && (
               <Button
@@ -3051,7 +3054,7 @@ function BookDetail() {
                 disabled={mergeSaving}
                 loading={mergeSaving}
               >
-                Merge & Delete
+                Merge
               </Button>
             )}
           </div>
@@ -3189,6 +3192,7 @@ function BookDetail() {
                   type="button"
                   onClick={() => {
                     setShowEditionPicker(false)
+                    setEditionDeleteError(null)
                     setEditionToDelete({ ...edition, label })
                   }}
                   className="w-full text-left px-4 py-3 rounded-lg bg-bg-elevated hover:bg-bg-surface transition-colors text-body-sm text-text-primary"
@@ -3216,6 +3220,11 @@ function BookDetail() {
           Remove Edition
         </Modal.Header>
         <Modal.Body>
+          {editionDeleteError && (
+            <div className="bg-action-danger/20 border border-action-danger text-action-danger px-4 py-2 rounded mb-4 text-body-sm">
+              {editionDeleteError}
+            </div>
+          )}
           <p className="text-body-sm text-text-secondary">
             Remove the <span className="text-label text-text-primary">{editionToDelete?.label}</span> edition from this title?
           </p>
