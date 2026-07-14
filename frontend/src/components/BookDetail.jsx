@@ -44,6 +44,15 @@ function editionExtensionLabel(edition) {
   return dot > 0 ? name.slice(dot + 1).toUpperCase() : 'FILE'
 }
 
+// Human-readable file size for the Files section (B/KB/MB, one decimal for MB)
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  // Branch on the rounded value so 1,048,500 B reads "1.0 MB", not "1024 KB"
+  const kb = Math.round(bytes / 1024)
+  if (kb < 1024) return `${kb} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 const SESSION_STATUS_TO_BACKEND = {
   in_progress: 'In Progress',
   finished: 'Finished',
@@ -365,7 +374,10 @@ function BookDetail() {
   const [editionToDelete, setEditionToDelete] = useState(null)
   const [editionDeleting, setEditionDeleting] = useState(false)
   const [editionDeleteError, setEditionDeleteError] = useState(null)
-  const [showEditionPicker, setShowEditionPicker] = useState(false)
+
+  // Files section state (Batch 2 S3) — edit mode resets on collapse
+  const [filesExpanded, setFilesExpanded] = useState(false)
+  const [filesEditMode, setFilesEditMode] = useState(false)
   
   // Merge modal state (Phase 8.7d)
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
@@ -706,6 +718,10 @@ function BookDetail() {
       const updatedBook = await getBook(id)
       setBook(updatedBook)
 
+      // With one edition left there's nothing removable — exit edit mode
+      // (the Edit/Done toggle hides itself at editions.length <= 1)
+      if ((updatedBook.editions?.length || 0) <= 1) setFilesEditMode(false)
+
       setEditionToDelete(null)
     } catch (err) {
       console.error('Failed to delete edition:', err)
@@ -713,6 +729,12 @@ function BookDetail() {
     } finally {
       setEditionDeleting(false)
     }
+  }
+
+  // Files section toggle (Batch 2 S3) — collapsing exits edit mode
+  const toggleFilesSection = () => {
+    if (filesExpanded) setFilesEditMode(false)
+    setFilesExpanded(!filesExpanded)
   }
 
   // Merge handlers (Phase 8.7d)
@@ -805,6 +827,10 @@ function BookDetail() {
     setError(null)
     setShowDateEditors(false)
     setActiveTab('details')
+    // Files section state is per-title — BookDetail doesn't remount on
+    // in-page /book/:id navigation (merge success, note links, series mates)
+    setFilesExpanded(false)
+    setFilesEditMode(false)
     // Reset sessions state when navigating to new book
     setSessions([])
     setSessionsStats({ times_read: 0, average_rating: null })
@@ -1293,6 +1319,7 @@ function BookDetail() {
     if (returnUrl.startsWith('/series')) return 'Series'
     if (returnUrl.includes('view=series')) return 'Series'
     if (returnUrl.startsWith('/author')) return 'Authors'
+    if (returnUrl.startsWith('/sync-results')) return 'Sync results'
     return 'Library'
   }
 
@@ -1547,8 +1574,6 @@ function BookDetail() {
     { type: 'divider' },
     { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
     { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
-    { label: 'Add Format', onClick: () => { openAddEdition(); setMenuOpen(false) }, show: !isWishlist },
-    { label: 'Remove Format', onClick: () => { setShowEditionPicker(true); setMenuOpen(false) }, show: !isWishlist && book?.editions?.length > 1 },
     { type: 'divider', show: !isWishlist },
     { label: 'Merge', onClick: () => { openMergeModal(); setMenuOpen(false) } },
     { label: 'Rescan Metadata', onClick: () => { handleRescanMetadata(); setMenuOpen(false) }, show: !isWishlist && !!book?.folder_path },
@@ -2305,6 +2330,103 @@ function BookDetail() {
             </div>
           ) : (
             <p className="text-text-secondary text-sm">Not in any collections</p>
+          )}
+        </div>
+      )}
+
+      {/* Files Section (Batch 2 S3) — owns all format actions */}
+      {!isWishlist && (
+        <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
+          <div className="flex items-center">
+            <h2 className="flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={toggleFilesSection}
+                aria-expanded={filesExpanded}
+                className="w-full flex items-center min-h-11 text-left text-label text-text-body uppercase tracking-wide"
+              >
+                Files
+              </button>
+            </h2>
+            {filesExpanded && book?.editions?.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setFilesEditMode(!filesEditMode) }}
+                className="min-h-11 px-3 text-body-sm text-action-primary"
+              >
+                {filesEditMode ? 'Done' : 'Edit'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleFilesSection}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="w-11 h-11 flex items-center justify-center text-text-secondary"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`w-4 h-4 transition-transform duration-200 ease-out ${filesExpanded ? 'rotate-180' : ''}`}
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+
+          {filesExpanded && (
+            <div className="mt-1">
+              <ul>
+                {(book?.editions || []).map((edition) => {
+                  const label = formatLabel(edition.format)
+                  return (
+                    <li key={edition.id} className="flex items-center gap-2 min-h-11">
+                      <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+                        <span className="text-body-sm text-text-primary flex-shrink-0">{label}</span>
+                        <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
+                        {edition.file_path ? (
+                          <>
+                            <span className="text-body-sm text-text-secondary truncate">{editionFileName(edition)}</span>
+                            <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
+                            <span className="text-body-sm text-text-secondary flex-shrink-0 whitespace-nowrap">
+                              {edition.file_size != null ? formatFileSize(edition.file_size) : 'size unavailable'}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-body-sm text-text-secondary">No file</span>
+                        )}
+                      </div>
+                      {filesEditMode && book?.editions?.length > 1 && (
+                        <IconButton
+                          aria-label={`Remove ${label}`}
+                          onClick={() => {
+                            setEditionDeleteError(null)
+                            setEditionToDelete({ ...edition, label })
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                          </svg>
+                        </IconButton>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              <div className="flex items-center gap-2 mt-2">
+                <Button variant="ghost" onClick={openAddEdition}>
+                  Add format
+                </Button>
+                <Button variant="ghost" onClick={() => navigate(`/add?mode=upload&linkTo=${book.id}`)}>
+                  Add files
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -3170,53 +3292,13 @@ function BookDetail() {
         />
       )}
 
-      {/* Edition Picker for Remove (Session 9) */}
-      <Modal
-        isOpen={showEditionPicker}
-        onClose={() => setShowEditionPicker(false)}
-        size="sm"
-      >
-        <Modal.Header onClose={() => setShowEditionPicker(false)}>
-          Remove Format
-        </Modal.Header>
-        <Modal.Body>
-          <p className="text-body-sm text-text-secondary mb-4">
-            Which format would you like to remove?
-          </p>
-          <div className="space-y-2">
-            {book?.editions?.map((edition) => {
-              const label = formatLabel(edition.format)
-              return (
-                <button
-                  key={edition.id}
-                  type="button"
-                  onClick={() => {
-                    setShowEditionPicker(false)
-                    setEditionDeleteError(null)
-                    setEditionToDelete({ ...edition, label })
-                  }}
-                  className="w-full text-left px-4 py-3 rounded-lg bg-bg-elevated hover:bg-bg-surface transition-colors text-body-sm text-text-primary"
-                >
-                  {label}
-                  {edition.file_path && (
-                    <span className="block text-xs text-text-muted mt-0.5 truncate">
-                      {edition.file_path.split('/').pop()}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </Modal.Body>
-      </Modal>
-
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       <Modal
         isOpen={!!editionToDelete}
-        onClose={() => setEditionToDelete(null)}
+        onClose={() => { if (!editionDeleting) setEditionToDelete(null) }}
         size="sm"
       >
-        <Modal.Header onClose={() => setEditionToDelete(null)}>
+        <Modal.Header onClose={() => { if (!editionDeleting) setEditionToDelete(null) }}>
           Remove Edition
         </Modal.Header>
         <Modal.Body>
@@ -3226,15 +3308,16 @@ function BookDetail() {
             </div>
           )}
           <p className="text-body-sm text-text-secondary">
-            Remove the <span className="text-label text-text-primary">{editionToDelete?.label}</span> edition from this title?
+            Remove <span className="text-label text-text-primary">{editionToDelete?.label}</span> from this title?
+            {editionToDelete?.file_path && <> The file moves to the trash folder.</>}
           </p>
           <p className="text-text-secondary text-sm mt-2">
             This won't delete any reading sessions associated with this format.
           </p>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="ghost" onClick={() => setEditionToDelete(null)}>
-            Cancel
+          <Button variant="ghost" onClick={() => setEditionToDelete(null)} disabled={editionDeleting}>
+            Keep
           </Button>
           <Button
             variant="danger"

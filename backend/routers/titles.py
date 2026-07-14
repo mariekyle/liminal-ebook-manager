@@ -25,7 +25,7 @@ import aiosqlite
 
 from database import get_db
 from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS
-from services.trash import move_to_trash, TrashError
+from services.trash import move_to_trash, move_file_to_trash, TrashError
 from services.covers import get_cover_style, Theme
 from services.covers import (
     extract_epub_cover, 
@@ -55,6 +55,9 @@ class EditionSummary(BaseModel):
     folder_path: Optional[str] = None
     narrators: Optional[List[str]] = None
     acquired_date: Optional[str] = None
+    # Stat'd at request time, never stored (Batch 2 S3). None for
+    # fileless editions and for stale paths.
+    file_size: Optional[int] = None
 
 
 class EditionCreate(BaseModel):
@@ -334,13 +337,20 @@ async def row_to_title_detail(row, db) -> TitleDetail:
     folder_path = None
     for ed in edition_rows:
         narrators = parse_json_field(ed["narrators"]) if ed["narrators"] else None
+        file_size = None
+        if ed["file_path"]:
+            try:
+                file_size = os.path.getsize(ed["file_path"])
+            except OSError:
+                file_size = None  # stale/missing path — never an exception
         editions.append(EditionSummary(
             id=ed["id"],
             format=ed["format"],
             file_path=ed["file_path"],
             folder_path=ed["folder_path"],
             narrators=narrators,
-            acquired_date=ed["acquired_date"]
+            acquired_date=ed["acquired_date"],
+            file_size=file_size
         ))
         # Use first ebook edition's folder_path for backward compatibility
         if ed["format"] in EBOOK_FORMATS and ed["folder_path"] and not folder_path:
@@ -2602,16 +2612,24 @@ async def delete_edition(
 ):
     """
     Delete an edition from a title.
-    
+
     Prevents deleting the last edition - a title must have at least one edition.
     Uses atomic conditional delete to prevent race conditions.
+
+    Files first (Batch 2 S3): a file-backed edition's file moves to
+    <books_root>/_trash/ BEFORE the DB delete; if the DB delete then
+    fails, the file is moved back. A file another edition still
+    references stays in place (records-only delete), as does a path
+    already gone from disk. The edition's folder is never touched —
+    other formats live there.
     """
     # Get the edition info and count in one query
     cursor = await db.execute("""
-        SELECT 
-            e.id, 
-            e.title_id, 
-            e.format, 
+        SELECT
+            e.id,
+            e.title_id,
+            e.format,
+            e.file_path,
             t.title,
             (SELECT COUNT(*) FROM editions WHERE title_id = e.title_id) as edition_count
         FROM editions e
@@ -2619,46 +2637,120 @@ async def delete_edition(
         WHERE e.id = ?
     """, (edition_id,))
     edition = await cursor.fetchone()
-    
+
     if not edition:
         raise HTTPException(status_code=404, detail="Edition not found")
-    
-    title_id = edition[1]
-    edition_format = edition[2]
-    title_name = edition[3]
-    edition_count = edition[4]
-    
+
+    title_id = edition["title_id"]
+    edition_format = edition["format"]
+    file_path = edition["file_path"]
+    title_name = edition["title"]
+    edition_count = edition["edition_count"]
+
     # Pre-check for better error message (non-atomic, just for UX)
     if edition_count <= 1:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Cannot delete the last edition. A title must have at least one edition."
         )
-    
+
+    # A file another edition row still references must not be trashed
+    # (records-only delete — mirrors delete_title's shared-folder guard)
+    shared = False
+    if file_path:
+        cursor = await db.execute(
+            "SELECT 1 FROM editions WHERE file_path = ? AND id != ? LIMIT 1",
+            (file_path, edition_id),
+        )
+        shared = await cursor.fetchone() is not None
+
+    # Move the file to trash BEFORE touching the DB; restore on failure
+    # so files and DB stay consistent (better an orphaned file than an
+    # orphaned DB). A path already gone from disk is skipped, mirroring
+    # delete_title's is_dir() filter.
+    trashed_to = None
+    if file_path and not shared and Path(file_path).is_file():
+        books_root = os.getenv("BOOKS_PATH", "/books")
+        try:
+            trashed_to = move_file_to_trash(file_path, books_root)
+        except (TrashError, OSError) as e:
+            logger.error(f"Trash move failed for edition {edition_id}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Couldn't move this format's file to trash. "
+                    "Nothing was removed — try again?"
+                ),
+            )
+
+    def restore_trashed_file():
+        if not trashed_to:
+            return True
+        try:
+            shutil.move(trashed_to, file_path)
+            return True
+        except OSError as restore_err:
+            logger.error(
+                f"Restore from trash failed: {trashed_to} -> {file_path}: {restore_err}"
+            )
+            return False
+
     # Atomic conditional delete - only succeeds if there are 2+ editions
     # This prevents race conditions where two concurrent deletes could leave 0 editions
-    cursor = await db.execute("""
-        DELETE FROM editions 
-        WHERE id = ? 
-        AND (SELECT COUNT(*) FROM editions WHERE title_id = ?) > 1
-    """, (edition_id, title_id))
-    await db.commit()
-    
+    try:
+        cursor = await db.execute("""
+            DELETE FROM editions
+            WHERE id = ?
+            AND (SELECT COUNT(*) FROM editions WHERE title_id = ?) > 1
+        """, (edition_id, title_id))
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Edition delete failed after trash move: {e}")
+        if restore_trashed_file():
+            detail = "Couldn't remove this format. Nothing was removed — try again?"
+        else:
+            detail = (
+                "Couldn't remove this format. Nothing was removed, but its "
+                "file is now in the trash folder — move it back before "
+                "trying again."
+            )
+        raise HTTPException(status_code=500, detail=detail)
+
     # Check if deletion actually happened
     if cursor.rowcount == 0:
-        # Either edition was already deleted, or it became the last one due to race
-        raise HTTPException(
-            status_code=400, 
-            detail="Cannot delete the last edition. A title must have at least one edition."
+        # Two distinct causes — check which before undoing the file move
+        cursor = await db.execute(
+            "SELECT 1 FROM editions WHERE id = ?", (edition_id,)
         )
-    
+        if await cursor.fetchone():
+            # Row still there: it became the last edition mid-flight.
+            # Undo the trash move so files match the DB.
+            detail = "Cannot delete the last edition. A title must have at least one edition."
+            if not restore_trashed_file():
+                detail += " Its file is now in the trash folder — move it back."
+            raise HTTPException(status_code=400, detail=detail)
+        # A concurrent request already deleted the row. Restoring would drop
+        # the file back into the library with no DB row pointing at it (the
+        # next sync would re-ingest it) — leave it in trash: row gone plus
+        # file trashed is exactly the intended end state.
+        return {
+            "success": True,
+            "deleted_edition_id": edition_id,
+            "format": edition_format,
+            "title_id": title_id,
+            "title": title_name,
+            "remaining_editions": edition_count - 1,
+            "trashed_file": trashed_to
+        }
+
     return {
         "success": True,
         "deleted_edition_id": edition_id,
         "format": edition_format,
         "title_id": title_id,
         "title": title_name,
-        "remaining_editions": edition_count - 1
+        "remaining_editions": edition_count - 1,
+        "trashed_file": trashed_to
     }
 
 

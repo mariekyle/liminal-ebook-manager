@@ -52,3 +52,42 @@ def move_to_trash(folder: str, books_root: str) -> str:
 
     shutil.move(str(src), str(dest))
     return str(dest)
+
+
+def move_file_to_trash(file_path: str, books_root: str) -> str:
+    """
+    Move a single file into <books_root>/_trash/, collision-safe.
+
+    Sibling of move_to_trash for edition-level deletes (Batch 2 S3).
+    Refuses directories — folder moves stay on move_to_trash, whose
+    directory-only raise is the delete-title contract. Refuses paths
+    outside the books root, the root itself, and anything already in
+    trash. Name collisions inside _trash get a numeric suffix before
+    the extension ("name_1.epub") instead of overwriting. Returns the
+    destination path.
+    """
+    root = Path(books_root).resolve()
+    src = Path(file_path).resolve()
+
+    if src == root:
+        raise TrashError("Refusing to trash the books root")
+    if src.is_dir():
+        raise TrashError(f"Not a file: {file_path}")
+    if not src.is_file():
+        raise TrashError(f"Not a file: {file_path}")
+    if not src.is_relative_to(root):
+        raise TrashError(f"File is outside the books root: {file_path}")
+    if TRASH_DIR_NAME in src.relative_to(root).parts:
+        raise TrashError(f"File is already in trash: {file_path}")
+
+    trash_dir = root / TRASH_DIR_NAME
+    trash_dir.mkdir(parents=True, exist_ok=True)
+
+    dest = trash_dir / src.name
+    counter = 1
+    while dest.exists():
+        dest = trash_dir / f"{src.stem}_{counter}{src.suffix}"
+        counter += 1
+
+    shutil.move(str(src), str(dest))
+    return str(dest)

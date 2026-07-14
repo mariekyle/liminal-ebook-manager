@@ -86,6 +86,11 @@ const TEXT_H1 = /(?<![\w-])text-h1(?![\w-])/g
 
 const WINDOW_CONFIRM = /window\.confirm\(/g
 
+// Bare or window-qualified alert() calls — same no-silent-failures rule as
+// window.confirm. \b keeps showAlert()/customAlert() out; window.alert()
+// still matches (the dot is a word boundary).
+const ALERT_CALL = /\balert\(/g
+
 // "Abandoned" / "Did Not Finish" as rendered UI copy. DB-value constants
 // (comparisons, map keys, getLabel() arguments) deliberately do not match.
 // The render-fallback shape is conservative on purpose — `x || 'Abandoned'`
@@ -112,6 +117,7 @@ const CATEGORIES = [
   { key: 'indigo', label: 'Indigo utility classes', strict: true },
   { key: 'cascade-flip', label: 'Cascade-flip pairing (token + core size)', strict: true },
   { key: 'window-confirm', label: 'window.confirm()', strict: true },
+  { key: 'alert-call', label: 'alert() calls', strict: true },
   { key: 'status-label-literal', label: '"Abandoned" / "Did Not Finish" in UI copy', strict: true },
   { key: 'font-bold', label: 'font-bold on headings / with token classes', strict: true },
   { key: 'text-h1', label: 'text-h1 (class no longer exists)', strict: true },
@@ -290,6 +296,7 @@ function scanFile(abs, ctx) {
 
   // JSX/JS-only categories
   runPattern('window-confirm', WINDOW_CONFIRM)
+  runPattern('alert-call', ALERT_CALL)
   for (const [sub, regex] of STATUS_LABEL_LITERALS) runPattern('status-label-literal', regex, sub)
 
   // className-aware categories
