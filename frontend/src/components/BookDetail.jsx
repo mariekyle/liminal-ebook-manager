@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
-import CollapsibleSection from './ui/CollapsibleSection'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 import ReadingStatusCard from './ReadingStatusCard'
@@ -376,7 +375,6 @@ function BookDetail() {
   const [editionDeleteError, setEditionDeleteError] = useState(null)
 
   // Files section state (Batch 2 S3) — edit mode resets on collapse
-  const [filesExpanded, setFilesExpanded] = useState(false)
   const [filesEditMode, setFilesEditMode] = useState(false)
   
   // Merge modal state (Phase 8.7d)
@@ -731,12 +729,6 @@ function BookDetail() {
     }
   }
 
-  // Files section toggle (Batch 2 S3) — collapsing exits edit mode
-  const toggleFilesSection = () => {
-    if (filesExpanded) setFilesEditMode(false)
-    setFilesExpanded(!filesExpanded)
-  }
-
   // Merge handlers (Phase 8.7d)
   const openMergeModal = () => {
     setMergeStep('search')
@@ -827,9 +819,8 @@ function BookDetail() {
     setError(null)
     setShowDateEditors(false)
     setActiveTab('details')
-    // Files section state is per-title — BookDetail doesn't remount on
+    // Files edit mode is per-title — BookDetail doesn't remount on
     // in-page /book/:id navigation (merge success, note links, series mates)
-    setFilesExpanded(false)
     setFilesEditMode(false)
     // Reset sessions state when navigating to new book
     setSessions([])
@@ -2065,7 +2056,7 @@ function BookDetail() {
         </div>
       )}
 
-      {/* Book Details Sections - Collapsible (Flattened) */}
+      {/* Book Details Sections (Flattened) */}
       {/* On mobile: only show in Details tab. On desktop: always show */}
       {!isWishlist && (
         <div className={`${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
@@ -2176,29 +2167,35 @@ function BookDetail() {
             
             return (
               <>
-                {/* About This Book - Summary (collapsible) */}
+                {/* About This Book - Summary */}
                 {hasSummary && (
                   <div className="border-t border-border-default pt-4 mt-4">
-                    <CollapsibleSection title="About This Book" variant="text" className="border-t-0">
+                    <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                      <h3 className="text-label text-text-body uppercase tracking-wider">
+                        About This Book
+                      </h3>
+                    </div>
+                    <div className="px-4 pb-2">
                       <p className="text-body-sm text-text-secondary leading-relaxed">
                         {decodeHtmlEntities(book.summary)}
                       </p>
-                    </CollapsibleSection>
+                    </div>
                   </div>
                 )}
-                
-                {/* Tags Section (collapsible) */}
+
+                {/* Tags Section */}
                 {hasTags && (
                   <div className="border-t border-border-default pt-4 mt-4">
-                    <CollapsibleSection 
-                      title="Tags" 
-                      variant="tags" 
-                      count={allTags.length}
-                      className="border-t-0"
-                    >
+                    <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                      <h3 className="text-label text-text-body uppercase tracking-wider">
+                        Tags
+                      </h3>
+                      <span className="text-caption text-text-muted">{allTags.length} tags</span>
+                    </div>
+                    <div className="px-4 pb-2">
                       <div className="flex flex-wrap gap-2">
                         {allTags.map((tag, idx) => (
-                          <span 
+                          <span
                             key={idx}
                             className="px-2.5 py-1 bg-bg-elevated rounded-md text-sm text-text-body border border-border-default"
                           >
@@ -2206,14 +2203,19 @@ function BookDetail() {
                           </span>
                         ))}
                       </div>
-                    </CollapsibleSection>
+                    </div>
                   </div>
                 )}
-                
-                {/* Metadata Section (collapsible) */}
+
+                {/* Metadata Section */}
                 {hasMetadata && (
                   <div className="border-t border-border-default pt-4 mt-4">
-                    <CollapsibleSection title="Metadata" variant="grid" className="border-t-0">
+                    <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                      <h3 className="text-label text-text-body uppercase tracking-wider">
+                        Metadata
+                      </h3>
+                    </div>
+                    <div className="px-4 pb-2">
                       <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                         {metadataEntries.map((entry, idx) => (
                           <Fragment key={idx}>
@@ -2222,7 +2224,7 @@ function BookDetail() {
                           </Fragment>
                         ))}
                       </div>
-                    </CollapsibleSection>
+                    </div>
                   </div>
                 )}
               </>
@@ -2338,48 +2340,21 @@ function BookDetail() {
       {!isWishlist && (
         <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="flex items-center">
-            <h2 className="flex-1 min-w-0">
-              <button
-                type="button"
-                onClick={toggleFilesSection}
-                aria-expanded={filesExpanded}
-                className="w-full flex items-center min-h-11 text-left text-label text-text-body uppercase tracking-wide"
-              >
-                Files
-              </button>
+            <h2 className="flex-1 min-w-0 flex items-center min-h-11 text-label text-text-body uppercase tracking-wide">
+              Files
             </h2>
-            {filesExpanded && book?.editions?.length > 1 && (
+            {book?.editions?.length > 1 && (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setFilesEditMode(!filesEditMode) }}
+                onClick={() => setFilesEditMode(!filesEditMode)}
                 className="min-h-11 px-3 text-body-sm text-action-primary"
               >
                 {filesEditMode ? 'Done' : 'Edit'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={toggleFilesSection}
-              tabIndex={-1}
-              aria-hidden="true"
-              className="w-11 h-11 flex items-center justify-center text-text-secondary"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`w-4 h-4 transition-transform duration-200 ease-out ${filesExpanded ? 'rotate-180' : ''}`}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
           </div>
 
-          {filesExpanded && (
-            <div className="mt-1">
+          <div className="mt-1">
               <ul>
                 {(book?.editions || []).map((edition) => {
                   const label = formatLabel(edition.format)
@@ -2427,7 +2402,6 @@ function BookDetail() {
                 </Button>
               </div>
             </div>
-          )}
         </div>
       )}
 

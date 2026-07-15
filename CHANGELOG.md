@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.58.0] — 2026-07-14
+
+### Changed
+- **BookDetail renders every section fully expanded, always** (Session A — subtractive; decided 2026-07-14 from daily use: scrolling is free on this screen, hiding content is not). No chevrons, no toggles, no "View more" fade, no disclosure of any kind. Pure deletion — no new features, no restyling, no section reordering (order is the next session's decision and needed an honest screen to decide against).
+  - **About This Book / Tags / Metadata** no longer render through `ui/CollapsibleSection` — each is now a plain heading + content inlined with the exact markup the component produced in its expanded state (same `h3` classes, same `px-4` spacing, Tags keeps its "N tags" count in the header), so nothing shifts visually except the truncation dying. The `maxHeight`/`overflow-hidden` truncation wrapper, gradient fade, and "View more"/"View less" toggle are gone with the component usage. A long summary is now a long scroll — accepted consequence, on the record.
+  - **Files section is always open.** The header is a plain `<h2>` again — the heading-wraps-button disclosure pattern, its `aria-expanded`, and the decorative `aria-hidden` chevron duplicate button are all deleted. Edition rows and the [Add format] / [Add files] footer actions now always show (previously only while expanded).
+  - **The Files Edit ⇄ Done toggle survives** — it gates destructive actions, not disclosure. Still in the section header, still hidden at a single edition (`editions.length > 1` guard on both the toggle and the per-row ×), and a successful delete down to one edition still exits edit mode. The "reset edit mode on collapse" half of `toggleFilesSection` is deleted (no collapse to reset on); the **reset-on-id-change in the load effect stays** — that's the v0.57.0 cross-navigation fix, which is about navigation, not disclosure.
+
+### Removed
+- `filesExpanded` state, `toggleFilesSection`, the Files chevron SVG, and BookDetail's `CollapsibleSection` import/usages. The Edit-button's dead `e.stopPropagation()` went with the clickable header it was defending against.
+- **`ui/CollapsibleSection.jsx` itself is NOT deleted** — recon halt-condition check: `ComponentPreview.jsx` (the component gallery) still imports and demos it, so removing BookDetail's *usage* was the scope. BookDetail was its only production consumer; the batch-3 "CollapsibleSection is a naming lie" item stays open (the component still exists, now gallery-only).
+
+### Technical
+- **Modified:** `frontend/src/components/BookDetail.jsx` (three CollapsibleSection usages inlined as plain sections; Files header/body de-disclosed; `filesExpanded` + `toggleFilesSection` deleted; load-effect reset trimmed to `filesEditMode` only; stale "Collapsible" comments corrected), `backend/main.py` (version 0.57.0 → 0.58.0 — **backend file changed: full Docker rebuild required**, even though the change is frontend-only), `CHANGELOG.md`, `ROADMAP.md`. **No schema change, no file operations, no `library.db` backup needed for this deploy.**
+- **Verified:** esbuild parse clean on `BookDetail.jsx` (native esbuild via `deno run -A npm:esbuild`); no import added, so no export-side grep owed (only the CollapsibleSection import was *removed*). Leftover grep clean — zero hits for `filesExpanded` / `toggleFilesSection` / `CollapsibleSection` / `aria-expanded` / `rotate-180` in BookDetail; the four surviving `overflow-hidden` in the file are real layout (desktop dropdown, mobile bottom sheet, fullscreen notes editor, Series card corner-clipping), not disclosure. Design-lint category summary: **`alert()` exactly 13** (untouched, per session scope), every other strict category 0, raw-`<button>` report-only **130 → 128** (−2: the Files header disclosure button and the decorative chevron button became a plain heading / were deleted).
+
 ## [0.57.0] — 2026-07-13
 
 ### Added

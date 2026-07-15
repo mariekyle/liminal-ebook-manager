@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 13, 2026 (v0.57.0)
-> **Current Focus:** Batch-2 UI sessions. Sessions 1–3 built (v0.55.0–v0.57.0): Delete Title with a trash folder (user-initiated deletion moves folders to `_trash/`, never a permanent delete; sync ignores `_trash/`; two-step confirmation in BookDetail), Merge now trashes the source folder — merge is a records operation, files never move between folders (decision reversed 2026-07-12), so sync can no longer re-ingest a merged-away title — and BookDetail's Files section now owns all format actions (v0.57.0): per-edition rows with filename + size, Add format / Add files, per-row remove that trashes the file with the same files-first contract. v0.53.0 (S15.3a + S15.3b + S15.2b) and v0.54.0 (P1 Overwrite Contract) deployed together 2026-07-12; the 618 damaged titles are closed — not restored (decided 2026-07-12), moving forward from current state. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision.
+> **Last Updated:** July 14, 2026 (v0.58.0)
+> **Current Focus:** Batch-2 UI sessions. Sessions 1–3 built (v0.55.0–v0.57.0): Delete Title with a trash folder (user-initiated deletion moves folders to `_trash/`, never a permanent delete; sync ignores `_trash/`; two-step confirmation in BookDetail), Merge now trashes the source folder — merge is a records operation, files never move between folders (decision reversed 2026-07-12), so sync can no longer re-ingest a merged-away title — and BookDetail's Files section now owns all format actions (v0.57.0): per-edition rows with filename + size, Add format / Add files, per-row remove that trashes the file with the same files-first contract. v0.53.0 (S15.3a + S15.3b + S15.2b) and v0.54.0 (P1 Overwrite Contract) deployed together 2026-07-12; the 618 damaged titles are closed — not restored (decided 2026-07-12), moving forward from current state. 10.0D Session 11 Final Audit remains open; 10.2+ pending go-decision. v0.58.0 (Session A — subtractive, 2026-07-14): BookDetail renders every section fully expanded, always — all collapse/disclosure deleted (CollapsibleSection usages, Files chevron toggle); the Files Edit ⇄ Done toggle survives (it gates destructive actions, not disclosure). Section ORDER is deliberately untouched — that's the next session's decision, made against the now-honest screen.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,9 +15,9 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.47.2)
+## Current State (v0.58.0)
 
-The app is fully functional for daily use with 1,700+ books. Core systems are stable:
+The app is fully functional for daily use with 1,700+ titles. Core systems are stable:
 
 | System | Status |
 |--------|--------|
@@ -37,6 +37,12 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 | Design consistency sweep | ✅ Phase 10.0E complete (S12, v0.48.0) |
 | NNG usability audit | ✅ Complete — 141 findings (4 critical, 29 major) |
 | UX fix sessions | ✅ Complete — 11/11 shipped, Session 11 regression pass passed (findings logged to Open Questions) |
+| Download & share | ✅ Shipped v0.51.0 |
+| Multi-format editions (S15) | ✅ One edition per file format; format-aware sync + upload (v0.52.0–v0.53.0) |
+| Sync safety & visibility | ✅ Fill-empty-only overwrite contract, persistent results view (v0.53.0–v0.54.0) |
+| Delete & merge with trash folder | ✅ Files move to `_trash/`, never deleted outright (v0.55.0–v0.56.0) |
+| Files section (format management) | ✅ BookDetail owns format actions; remove trashes the file (v0.57.0) |
+| BookDetail always-expanded | ✅ All collapse/disclosure deleted — every section renders in full (v0.58.0) |
 
 **What's Missing:**
 - ❌ Wishlist requires manual metadata entry
@@ -51,8 +57,8 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 
 ```
 ┌───────────┬──────────────────────────────────────────────────────────────┐
-│  CURRENT  │  Phase 10.0D: UX Audit Fix Sessions                         │
-│           │  10 + 1 sessions (includes final audit)                           │
+│  CURRENT  │  S15 batch-2 UI sessions (Files section shipped v0.57.0)    │
+│           │  Phase 10.0D Session 11 Final Audit still open               │
 │           │  Ship each session independently                             │
 ├───────────┼──────────────────────────────────────────────────────────────┤
 │  ON HOLD  │  Phase 10.2-10.8: Liminal Connects (feature work)           │
@@ -83,7 +89,7 @@ The app is fully functional for daily use with 1,700+ books. Core systems are st
 ### 10.0: Component Foundation ✅
 
 **Priority:** P0 — Prerequisite for Consistent Development  
-**Status:** ✅ Complete — ready for 10.0C conversion  
+**Status:** ✅ Complete
 **Sessions:** 2
 
 **The Problem:**  
@@ -96,8 +102,7 @@ No reusable components exist. Every screen has slightly different buttons, heade
 Establish design tokens and core components before building Phase 10 features. All new code will use these primitives, ensuring consistency going forward.
 
 **Reference Documents:**
-- `DESIGN_SYSTEM_REFACTOR.md` — January 2026 audit of 29 screens, component inventory, inconsistency analysis
-- `RN_DESIGN_TOKENS.md` — Token definitions (colors, spacing, typography, etc.)
+- `docs/DESIGN_SYSTEM.md` — the living design system (tokens, components, patterns); supersedes the archived refactor audit and token-definition docs
 
 ---
 
@@ -249,7 +254,7 @@ Systematic conversion of every file. No "convert as you touch" — that's how we
 A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user flows) revealed 4 critical issues, 29 major issues, and 75 minor issues. One core flow (wishlist-to-library conversion) is completely broken. The most-visited page (BookDetail) has a structural action architecture problem. Text contrast fails WCAG AA. Grid settings don't apply consistently. Building new features on top of these problems would compound them.
 
 **The Solution:**  
-10 fix sessions, ordered by severity. Each session follows: review findings → make design decisions (lock in Decisions.md) → write Cursor prompts → implement → verify. No rushing to prompts before decisions are locked.
+10 fix sessions, ordered by severity. Each session follows: review findings → make design decisions (lock in Decisions.md) → write Claude Code prompts → implement → verify. No rushing to prompts before decisions are locked.
 
 **Session Plan:** See `UX_FIX_SESSIONS.md` for full session details, finding IDs, and scope.
 
@@ -367,6 +372,7 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 - [x] **Batch-2 Session 1 — Delete Title with trash** (Decisions 2026-07-12: UI-initiated deletion + move-to-`_trash`) — ✅ built 2026-07-12, v0.55.0 in progress: `DELETE /api/books/{id}` moves the title's edition folders to `<books_root>/_trash/` (shared `services/trash.py` helper — `shutil.move`, collision-suffixed, containment-guarded, never `rmtree`) then deletes the row (children cascade); sync's discovery walker and upload duplicate detection skip `_trash/`; BookDetail 3-dot menu "Delete Title" behind a two-step inline confirmation (consequences with counts, honest files-vs-history asymmetry, [Not Now]/[Delete] then [Keep]/[Delete Title]); failed moves restore already-moved folders and never touch the DB. Sync still never deletes. End-to-end verified (25 checks, incl. trashed-folder-never-reappears and the failure/restore path). Session 2 reuses this mechanism for merge (records-only — the merge-files decision was reversed).
 - [x] **Batch-2 Session 2 — Merge trashes the source folder** (Decisions 2026-07-12, REVERSED 2026-07-12: merge is a records operation — files never move between folders; the original move-unique-formats-into-the-kept-folder plan is dropped as the app's highest-risk file operation for a scenario unseen in 1+ year of use, recoverable anyway via `_trash/` + Add Format) — ✅ built 2026-07-12, v0.56.0: merging B into A moves B's folder(s) to `_trash/` files-first with the same restore-on-failure contract as Delete Title; ALL of B's editions are dropped (files ride along to trash inside B's folder), so A keeps exactly the files it had and no edition can point into a folder its title doesn't own — this also fixes the old merge's cross-folder edition pointers (re-pointed `title_id` without updating `folder_path`); folders shared with another title stay put; sessions (renumbered to continue A's sequence), notes, collections, and backlinks still move over; confirm copy rewritten — it no longer claims irreversibility, because files come back from `_trash/`. End-to-end verified (37 checks, incl. merged-title-never-reappears-on-sync and the failure/restore path).
 - [x] **Batch-2 Session 3 — Files section owns format actions** (2026-07-12 decision; hybrid mockup approved 2026-07-13) — ✅ built 2026-07-13, v0.57.0: BookDetail gains a collapsed-by-default Files section directly below Collections — one row per edition ("FORMAT · filename · size" for file-backed editions, size stat'd at request time and never stored; "FORMAT · No file" for fileless; "size unavailable" when the path is stale), footer [Add format] / [Add files] visible whenever the section is expanded, per-row remove (44px ×) gated behind an Edit ⇄ Done header toggle that resets on collapse and hides entirely with a single edition. Add Format / Remove Format left the 3-dot menu and the Remove-Format picker modal is deleted. Removing a file-backed format now moves its file to `_trash/` files-first (new `move_file_to_trash` sibling helper; same restore-on-failure contract as Delete Title; a file shared with another edition, or already missing from disk, stays put — records-only delete). The confirm modal states the file consequence and its footer is [Keep] / [Remove]. Riders: design-lint `alert(` strict rule (closing the 0.56.1 blind spot — 13 pre-existing sites now on the honest ledger for batch 3), `getBackLabel` "Sync results" case. Recon finding: "Add files" needed no AddPage work — `/add?mode=upload&linkTo={id}` handling already existed end-to-end (built for the wishlist Acquire flow); the new action just navigates to it. End-to-end verified (31 checks, incl. the DB-failure file-restore path).
+- [x] **Session A — Kill collapse on BookDetail (subtractive)** (decided 2026-07-14 from daily use: scrolling is free on this screen, hiding content is not) — ✅ built 2026-07-14, v0.58.0: every BookDetail section renders fully expanded, always — the three `CollapsibleSection` usages (About This Book / Tags / Metadata) inlined as plain headings + full content (no "View more" fade, no truncation), the Files section's disclosure (heading-wraps-button, `aria-expanded`, decorative chevron) deleted with its `filesExpanded` state, and the [Add format] / [Add files] footer now always visible. The Files Edit ⇄ Done toggle survives (gates destructive actions, not disclosure; `> 1` guards and delete-to-one-exits-edit-mode intact), as does the v0.57.0 reset-on-id-change. `ui/CollapsibleSection.jsx` NOT deleted — ComponentPreview still demos it (recon halt-condition); BookDetail was its only production consumer. Section ORDER deliberately untouched — next session's decision, made against the honest screen.
 - [ ] **Batch-2 UI items (remaining):** coarse-chip collapse (multiple storage-format chips reading as one Ebook group where appropriate); desktop stale-path download bug (fold-in, Decisions 2026-07-10); backup-filename parser; microcopy verification pass over the new format surfaces (now including the Session 3 strings: confirm-modal file consequence, "size unavailable", "No file"); render S15.2b's per-book upload messages (skips/defers) in AddPage; the 13 `alert()` sites surfaced by the new lint rule (CollectionsTab 1, CollectionModal 4, CollectionDetail 4, ImportPage 4 — batch 3); from the 2026-07-12 decision sprint: download picker drops file size (the size now lives in the Files section — the picker-side removal remains), 3-dot menu audit (Collections → section, reading-session actions → ReadingStatusCard — collides with the S16 Status Knot, see Decisions). ~~Merge actually merges files~~ — decision REVERSED 2026-07-12; shipped instead as records-only merge in Session 2 (v0.56.0)
 
 **Definition of Done:** Every file in a title's folder is a visible, downloadable edition with its real format — shipped; follow-ups close the loop on adding files and investigating sync findings in-app.
@@ -466,7 +472,7 @@ Set up Ollama on self hosted NAS as a local AI server.
 **Tasks:**
 - [ ] 10.4.1 **Install Ollama** — Docker container on TrueNAS or native install
 - [ ] 10.4.2 **Pull Models** — Llama 3 8B (text), LLaVA 13B (vision)
-- [ ] 10.4.3 **Network Config** — Ensure Synology/Liminal can reach Ollama endpoint
+- [ ] 10.4.3 **Network Config** — Ensure the NAS/Liminal can reach Ollama endpoint
 - [ ] 10.4.4 **Health Check Endpoint** — Liminal can verify Ollama is running
 - [ ] 10.4.5 **Test Inference** — Verify text and vision models respond correctly
 - [ ] 10.4.6 **Document Setup** — Add to ARCHITECTURE.md for future reference
@@ -540,12 +546,12 @@ Reading sessions are entered manually. Highlights and bookmarks are trapped in M
 Read Moon Reader's sync data (via MoonSync approach) and import into Liminal.
 
 **Prerequisites:**
-- Enable WebDAV on Synology
+- Enable WebDAV on the NAS
 - Configure Moon Reader to sync to WebDAV
 - Locate `books.sync` file
 
 **Tasks:**
-- [ ] 10.6.1 **WebDAV Setup Guide** — Document how to configure Synology + Moon Reader
+- [ ] 10.6.1 **WebDAV Setup Guide** — Document how to configure the NAS's WebDAV + Moon Reader
 - [ ] 10.6.2 **Parse books.sync** — Understand format (reference MoonSync project)
 - [ ] 10.6.3 **Book Matching** — Match Moon Reader entries to Liminal books (by filename or title)
 - [ ] 10.6.4 **Import Reading Progress** — Pages read, percentage, current position
@@ -826,18 +832,12 @@ Items to address when time permits:
 
 ### Current Architecture
 
-```
-## Infrastructure
-
-**Deployment:** 
-Docker container on a self-hosted NAS. FastAPI backend + React frontend served from the same container. SQLite database and book files on mounted volumes.
-
-```
+**Deployment:** Docker container on a self-hosted NAS. FastAPI backend + React frontend served from the same container. SQLite database and book files on mounted volumes.
 
 ### Future with Moon Reader Sync
 
 ```
-Moon+ Reader → WebDAV (Synology) → books.sync file
+Moon+ Reader → WebDAV (on the NAS) → books.sync file
                                         ↓
                               Liminal reads + imports
                                         ↓
@@ -865,7 +865,6 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 | `ARCHITECTURE.md` | System design, data flow (needs update after Phase 10) |
 | `CHANGELOG.md` | Version history |
 | `CODE_PATTERNS.md` | Battle-tested code solutions |
-| `CURSOR_PROMPT_GUIDE.md` | How to write effective prompts |
 | `FRONTEND_AUDIT_2026.md` | Claude Code audit — basis for 10.0C work groups |
 | `liminal-ux-audit.md` | NNG usability audit — 141 findings, basis for 10.0D fix sessions |
 | `UX_FIX_SESSIONS.md` | 10 prioritized fix sessions with finding IDs and scope |
@@ -874,4 +873,4 @@ Moon+ Reader → WebDAV (Synology) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: May 4, 2026 (v0.47.1)*
+*Last updated: July 14, 2026 (v0.58.0)*
