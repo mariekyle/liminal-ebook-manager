@@ -169,10 +169,10 @@ async def create_session(
         session.session_status, session.rating, session.format, now, now
     ))
     session_id = cursor.lastrowid
-    await db.commit()
-    
-    # Sync cached values on title
+
+    # Recompute the title projection in the same transaction
     await sync_title_from_sessions(db, title_id)
+    await db.commit()
     
     # Return created session
     cursor = await db.execute("""
@@ -283,14 +283,14 @@ async def update_session(
     
     if update_fields:
         await db.execute(f"""
-            UPDATE reading_sessions 
+            UPDATE reading_sessions
             SET {', '.join(update_fields)}
             WHERE id = ?
         """, params)
-        await db.commit()
-    
-    # Sync cached values on title
+
+    # Recompute the title projection in the same transaction
     await sync_title_from_sessions(db, title_id)
+    await db.commit()
     
     # Return updated session
     cursor = await db.execute("""
@@ -342,11 +342,10 @@ async def delete_session(session_id: int, db: aiosqlite.Connection = Depends(get
             updated_at = ?
         WHERE title_id = ? AND session_number > ?
     """, (datetime.utcnow().isoformat(), title_id, deleted_number))
-    
-    await db.commit()
-    
-    # Sync cached values on title
+
+    # Recompute the title projection in the same transaction
     await sync_title_from_sessions(db, title_id)
+    await db.commit()
     
     return {"message": "Session deleted", "title_id": title_id}
 

@@ -689,63 +689,81 @@ async def get_db() -> AsyncGenerator[aiosqlite.Connection, None]:
 
 async def sync_title_from_sessions(db, title_id: int):
     """
-    Recalculate and update a title's cached status, rating, and dates
+    Recalculate and update a title's projected status, rating, and dates
     based on its reading sessions. Call this after any session change.
+
+    Runs inside the caller's transaction — the caller commits.
+    Projection rules (Decisions 2026-07-14): status and date_started come
+    from the session with the latest date_started (ties broken by higher
+    id); date_finished from the latest closed session only; rating is the
+    average of non-null session ratings.
     """
-    # Get all sessions for this title, ordered by session_number descending
+    # Winning session: latest date_started, tie -> higher id.
+    # NULL date_started sorts last under DESC in SQLite.
     cursor = await db.execute("""
-        SELECT session_status, date_started, date_finished, rating
+        SELECT session_status, date_started
         FROM reading_sessions
         WHERE title_id = ?
-        ORDER BY session_number DESC
+        ORDER BY date_started DESC, id DESC
+        LIMIT 1
     """, (title_id,))
-    sessions = await cursor.fetchall()
-    
-    if not sessions:
+    winner = await cursor.fetchone()
+
+    if not winner:
         # No sessions = unread
         await db.execute("""
-            UPDATE titles 
-            SET status = 'Unread', 
-                date_started = NULL, 
+            UPDATE titles
+            SET status = 'Unread',
+                date_started = NULL,
                 date_finished = NULL,
                 rating = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (title_id,))
-    else:
-        # Most recent session determines status
-        most_recent = sessions[0]
-        new_status = most_recent[0]  # session_status
-        
-        # Map session_status to title status
-        status_map = {
-            'in_progress': 'In Progress',
-            'finished': 'Finished',
-            'dnf': 'Abandoned'
-        }
-        title_status = status_map.get(new_status, 'In Progress')
-        
-        new_date_started = most_recent[1]
-        new_date_finished = most_recent[2]
-        
-        # Calculate average rating from all sessions that have ratings
-        ratings = [s[3] for s in sessions if s[3] is not None]
-        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
-        # Store as integer if whole number, otherwise keep decimal
-        if avg_rating is not None and avg_rating == int(avg_rating):
-            avg_rating = int(avg_rating)
-        
-        await db.execute("""
-            UPDATE titles 
-            SET status = ?,
-                date_started = ?,
-                date_finished = ?,
-                rating = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """, (title_status, new_date_started, new_date_finished, avg_rating, title_id))
-    
-    await db.commit()
+        return
+
+    # Map session_status to title status
+    status_map = {
+        'in_progress': 'In Progress',
+        'finished': 'Finished',
+        'dnf': 'Abandoned'
+    }
+    title_status = status_map.get(winner[0], 'In Progress')
+    new_date_started = winner[1]
+
+    # date_finished reads closed sessions only: a latest DNF or open
+    # session must not null a real finish date from a prior read.
+    cursor = await db.execute("""
+        SELECT date_finished
+        FROM reading_sessions
+        WHERE title_id = ? AND session_status = 'finished'
+        ORDER BY date_started DESC, id DESC
+        LIMIT 1
+    """, (title_id,))
+    closed = await cursor.fetchone()
+    new_date_finished = closed[0] if closed else None
+
+    # Calculate average rating from all sessions that have ratings
+    cursor = await db.execute("""
+        SELECT rating
+        FROM reading_sessions
+        WHERE title_id = ? AND rating IS NOT NULL
+    """, (title_id,))
+    ratings = [row[0] for row in await cursor.fetchall()]
+    avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+    # Store as integer if whole number, otherwise keep decimal
+    if avg_rating is not None and avg_rating == int(avg_rating):
+        avg_rating = int(avg_rating)
+
+    await db.execute("""
+        UPDATE titles
+        SET status = ?,
+            date_started = ?,
+            date_finished = ?,
+            rating = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (title_status, new_date_started, new_date_finished, avg_rating, title_id))
 
 
 # =============================================================================

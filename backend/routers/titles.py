@@ -17,13 +17,13 @@ import json
 import re
 import shutil
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File
 from pydantic import BaseModel
 import aiosqlite
 
-from database import get_db
+from database import get_db, sync_title_from_sessions
 from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS
 from services.trash import move_to_trash, move_file_to_trash, TrashError
 from services.covers import get_cover_style, Theme
@@ -231,6 +231,8 @@ class BookCategoryUpdate(BaseModel):
 class BookStatusUpdate(BaseModel):
     """Request body for updating a title's read status."""
     status: str
+    date_finished: Optional[str] = None  # Finished only: YYYY-MM-DD, defaults to today
+    rating: Optional[int] = None         # Finished/DNF only: 1-5
 
 
 class BookRatingUpdate(BaseModel):
@@ -821,6 +823,23 @@ async def update_book_category(
     return {"status": "ok", "category": category_value}
 
 
+async def _insert_session_row(db, title_id: int, *, date_started, date_finished,
+                              session_status, rating, now):
+    """Insert a reading session with the next session_number for the title."""
+    cursor = await db.execute(
+        "SELECT COALESCE(MAX(session_number), 0) + 1 FROM reading_sessions WHERE title_id = ?",
+        (title_id,)
+    )
+    next_number = (await cursor.fetchone())[0]
+    await db.execute("""
+        INSERT INTO reading_sessions (
+            title_id, session_number, date_started, date_finished,
+            session_status, rating, format, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
+    """, (title_id, next_number, date_started, date_finished,
+          session_status, rating, now, now))
+
+
 @router.patch("/books/{book_id}/status")
 async def update_book_status(
     book_id: int,
@@ -828,30 +847,127 @@ async def update_book_status(
     db = Depends(get_db)
 ):
     """
-    Update a title's read status.
+    Change a title's read status by writing reading sessions
+    (sessions-canonical, Decisions 2026-07-14). titles.status is a
+    projection recomputed from sessions — never written directly here.
+
+    - In Progress: keep the open session, or start one dated today
+    - Finished: close the open session (end date + optional rating),
+      or record an already-closed session if none is open
+    - Abandoned/DNF: mark the open session dnf, keeping its date_started
+    - Unread: delete open sessions; closed history keeps projecting
+
     Valid statuses: Unread, In Progress, Finished, Abandoned (legacy: DNF)
     """
     # Verify title exists
     cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
-    
+
     # Validate status value (accept both Abandoned and legacy DNF)
     valid_statuses = ['Unread', 'In Progress', 'Finished', 'Abandoned', 'DNF']
     if update.status not in valid_statuses:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
         )
-    
-    # Update status
-    await db.execute(
-        "UPDATE titles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [update.status, book_id]
-    )
+
+    if update.rating is not None and (update.rating < 1 or update.rating > 5):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    requested = 'Abandoned' if update.status == 'DNF' else update.status
+    today = date.today().isoformat()
+    now = datetime.utcnow().isoformat()
+
+    # Open session, if any (latest wins if legacy data holds several)
+    cursor = await db.execute("""
+        SELECT id FROM reading_sessions
+        WHERE title_id = ? AND session_status = 'in_progress'
+        ORDER BY date_started DESC, id DESC
+        LIMIT 1
+    """, (book_id,))
+    open_session = await cursor.fetchone()
+
+    if requested == 'In Progress':
+        if not open_session:
+            await _insert_session_row(
+                db, book_id, date_started=today, date_finished=None,
+                session_status='in_progress', rating=None, now=now
+            )
+    elif requested == 'Finished':
+        finish_date = update.date_finished or today
+        if open_session:
+            await db.execute("""
+                UPDATE reading_sessions
+                SET session_status = 'finished', date_finished = ?,
+                    rating = ?, updated_at = ?
+                WHERE id = ?
+            """, (finish_date, update.rating, now, open_session[0]))
+        else:
+            # No open session: record the read as already closed. Its
+            # date_started mirrors the finish date so the projection's
+            # date ordering sees it as the latest read.
+            await _insert_session_row(
+                db, book_id, date_started=finish_date, date_finished=finish_date,
+                session_status='finished', rating=update.rating, now=now
+            )
+    elif requested == 'Abandoned':
+        if open_session:
+            # Preserve date_started; date_finished stays as-is (the
+            # projection reads finish dates from closed sessions only)
+            await db.execute("""
+                UPDATE reading_sessions
+                SET session_status = 'dnf', rating = ?, updated_at = ?
+                WHERE id = ?
+            """, (update.rating, now, open_session[0]))
+        else:
+            await _insert_session_row(
+                db, book_id, date_started=today, date_finished=None,
+                session_status='dnf', rating=update.rating, now=now
+            )
+    else:  # Unread
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM reading_sessions WHERE title_id = ? AND session_status = 'in_progress'",
+            (book_id,)
+        )
+        open_count = (await cursor.fetchone())[0]
+        if open_count:
+            await db.execute(
+                "DELETE FROM reading_sessions WHERE title_id = ? AND session_status = 'in_progress'",
+                (book_id,)
+            )
+            # Renumber remaining sessions to keep sequence continuous
+            cursor = await db.execute(
+                "SELECT id, session_number FROM reading_sessions WHERE title_id = ? ORDER BY session_number",
+                (book_id,)
+            )
+            rows = await cursor.fetchall()
+            for i, row in enumerate(rows, start=1):
+                if row[1] != i:
+                    await db.execute(
+                        "UPDATE reading_sessions SET session_number = ?, updated_at = ? WHERE id = ?",
+                        (i, now, row[0])
+                    )
+
+    # Recompute the title projection in the same transaction
+    await sync_title_from_sessions(db, book_id)
     await db.commit()
-    
-    return {"status": "ok", "read_status": update.status}
+
+    cursor = await db.execute(
+        "SELECT status, rating, date_started, date_finished FROM titles WHERE id = ?",
+        [book_id]
+    )
+    row = await cursor.fetchone()
+
+    # read_status is the PROJECTED status, which can differ from the
+    # request (e.g. Unread requested while closed history remains)
+    return {
+        "status": "ok",
+        "read_status": row[0],
+        "rating": row[1],
+        "date_started": row[2],
+        "date_finished": row[3]
+    }
 
 
 @router.patch("/books/{book_id}/rating")
@@ -861,29 +977,55 @@ async def update_book_rating(
     db = Depends(get_db)
 ):
     """
-    Update a title's rating.
+    Set or clear the rating on the latest closed (finished/dnf) session
+    (sessions-canonical, Decisions 2026-07-14). titles.rating is the
+    projected session average — never written directly here.
     Valid ratings: 1-5, or null to clear.
     """
     # Verify title exists
     cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
-    
+
     # Validate rating value
     if update.rating is not None and (update.rating < 1 or update.rating > 5):
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Invalid rating. Must be 1-5 or null to clear."
         )
-    
-    # Update rating
+
+    # Latest rateable session (in-progress sessions can't hold ratings)
+    cursor = await db.execute("""
+        SELECT id FROM reading_sessions
+        WHERE title_id = ? AND session_status IN ('finished', 'dnf')
+        ORDER BY date_started DESC, id DESC
+        LIMIT 1
+    """, (book_id,))
+    target = await cursor.fetchone()
+
+    if not target:
+        if update.rating is None:
+            # Nothing to clear — projection already shows no rating
+            return {"status": "ok", "rating": None}
+        raise HTTPException(
+            status_code=400,
+            detail="No completed reading session to rate. Add a reading session first."
+        )
+
     await db.execute(
-        "UPDATE titles SET rating = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [update.rating, book_id]
+        "UPDATE reading_sessions SET rating = ?, updated_at = ? WHERE id = ?",
+        (update.rating, datetime.utcnow().isoformat(), target[0])
     )
+
+    # Recompute the title projection in the same transaction
+    await sync_title_from_sessions(db, book_id)
     await db.commit()
-    
-    return {"status": "ok", "rating": update.rating}
+
+    # rating is the PROJECTED average across sessions, which can differ
+    # from the value just written to the session
+    cursor = await db.execute("SELECT rating FROM titles WHERE id = ?", [book_id])
+    row = await cursor.fetchone()
+    return {"status": "ok", "rating": row[0]}
 
 
 @router.patch("/books/{book_id}/dates")
@@ -893,27 +1035,61 @@ async def update_book_dates(
     db = Depends(get_db)
 ):
     """
-    Update a title's reading dates.
-    Dates should be in ISO format (YYYY-MM-DD) or null to clear.
+    Update reading dates on the projection-winning session
+    (sessions-canonical, Decisions 2026-07-14). Title date columns are
+    projected — never written directly here.
+
+    Null means "leave unchanged", NOT "clear" — the old null-passing
+    status-change handlers must not clobber session dates during the
+    B1→B2 window. Clearing a date happens in the session editor
+    (PATCH /sessions/{id} with empty string).
     """
     # Verify title exists
     cursor = await db.execute("SELECT id FROM titles WHERE id = ?", [book_id])
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
-    
-    # Update dates
-    await db.execute(
-        """UPDATE titles 
-           SET date_started = ?, date_finished = ?, updated_at = CURRENT_TIMESTAMP 
-           WHERE id = ?""",
-        [update.date_started, update.date_finished, book_id]
+
+    # Projection-winning session holds the title's dates
+    cursor = await db.execute("""
+        SELECT id FROM reading_sessions
+        WHERE title_id = ?
+        ORDER BY date_started DESC, id DESC
+        LIMIT 1
+    """, (book_id,))
+    winner = await cursor.fetchone()
+
+    if winner:
+        update_fields = []
+        params = []
+        if update.date_started is not None:
+            update_fields.append("date_started = ?")
+            params.append(update.date_started)
+        if update.date_finished is not None:
+            update_fields.append("date_finished = ?")
+            params.append(update.date_finished)
+        if update_fields:
+            update_fields.append("updated_at = ?")
+            params.append(datetime.utcnow().isoformat())
+            params.append(winner[0])
+            await db.execute(
+                f"UPDATE reading_sessions SET {', '.join(update_fields)} WHERE id = ?",
+                params
+            )
+
+        # Recompute the title projection in the same transaction
+        await sync_title_from_sessions(db, book_id)
+        await db.commit()
+
+    # No session: nothing can hold dates; return the projected (null)
+    # values rather than erroring under the legacy call sequence
+    cursor = await db.execute(
+        "SELECT date_started, date_finished FROM titles WHERE id = ?", [book_id]
     )
-    await db.commit()
-    
+    row = await cursor.fetchone()
     return {
-        "status": "ok", 
-        "date_started": update.date_started,
-        "date_finished": update.date_finished
+        "status": "ok",
+        "date_started": row[0],
+        "date_finished": row[1]
     }
 
 
@@ -2928,7 +3104,11 @@ async def merge_titles(
     
     # 6. Delete source title (cascades to any remaining FK references)
     await db.execute("DELETE FROM titles WHERE id = ?", (source_id,))
-    
+
+    # 7. Recompute the target's projection over the merged session
+    # history, in the same transaction (sessions-canonical, v0.59.0)
+    await sync_title_from_sessions(db, target_id)
+
     await db.commit()
     
     return {
