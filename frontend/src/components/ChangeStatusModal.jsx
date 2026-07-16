@@ -25,12 +25,6 @@ export default function ChangeStatusModal({ book, onConfirm, onClose, error, sav
     { value: 'Abandoned', label: labels['Abandoned'] },
   ]
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return null
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-
   return (
     <Modal isOpen onClose={onClose} size="md">
       <Modal.Header onClose={onClose}>Change Status</Modal.Header>
@@ -52,10 +46,12 @@ export default function ChangeStatusModal({ book, onConfirm, onClose, error, sav
             ))}
           </select>
         </FormField>
-        {book.date_finished && (
+        {/* Snap-back honesty (B2): Unread deletes open sessions only —
+            closed history keeps projecting, so nothing is "cleared" */}
+        {selectedStatus === 'Unread' && book.date_finished && (
           <div className="mt-4 p-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
             <p className="text-body-sm text-text-secondary">
-              Finish date will be cleared ({formatDate(book.date_finished)})
+              Reading history is kept — this title may stay {labels['Finished']} until its past reads are deleted in History.
             </p>
           </div>
         )}

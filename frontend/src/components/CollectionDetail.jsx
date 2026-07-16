@@ -30,7 +30,7 @@ import {
   arrayMove
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings, updateBookStatus, updateBookDates, updateBookRating, reorderBooksInCollection } from '../api'
+import { getCollection, deleteCollection, removeBookFromCollection, updateCollection, getSettings, updateBookStatus, reorderBooksInCollection } from '../api'
 import BookCard from './BookCard'
 import CollectionModal from './CollectionModal'
 import MosaicCover from './MosaicCover'
@@ -238,6 +238,10 @@ export default function CollectionDetail() {
   // Phase 9E: Checklist modals
   const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
   const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
+  // Shared by both status modals (never open together) — surfaces the
+  // backend's plain-language detail in the modal error banner (B2)
+  const [statusActionError, setStatusActionError] = useState(null)
+  const [statusActionSaving, setStatusActionSaving] = useState(false)
   const [selectedBook, setSelectedBook] = useState(null)
 
   // Client-side search filter (G5-13). Applies to currently-loaded books only —
@@ -639,90 +643,80 @@ export default function CollectionDetail() {
     }
   }
 
-  // Handle marking book as finished
-  const handleMarkFinished = async (dateFinished, rating) => {
-    if (!selectedBook) return
-    
-    try {
-      await updateBookStatus(selectedBook.id, 'Finished')
-      if (dateFinished) {
-        await updateBookDates(selectedBook.id, selectedBook.date_started, dateFinished)
-      }
-      if (rating) {
-        await updateBookRating(selectedBook.id, rating)
-      }
-      
-      const updatedBook = { 
-        ...selectedBook, 
-        status: 'Finished', 
-        date_finished: dateFinished, 
-        rating: rating || selectedBook.rating 
-      }
-      
-      // Update local state - move book between sections for checklist
-      if (collection?.collection_type === 'checklist') {
-        // Remove from incomplete, add to completed
+  // Checklist section moves key off the PROJECTED status the endpoint
+  // returns — a snap-back must not move the book on a tapped value (B2)
+  const applyProjectedStatus = (result) => {
+    const updatedBook = {
+      ...selectedBook,
+      status: result.read_status,
+      rating: result.rating,
+      date_started: result.date_started,
+      date_finished: result.date_finished,
+    }
+
+    if (collection?.collection_type === 'checklist') {
+      const wasFinished = selectedBook.status === 'Finished'
+      const isFinished = result.read_status === 'Finished'
+      if (isFinished && !wasFinished) {
+        // Moving to completed
         setIncompleteBooks(prev => prev.filter(b => b.id !== selectedBook.id))
         setCompletedBooks(prev => [...prev, updatedBook])
         setIncompleteTotal(prev => prev - 1)
         setCompletedTotal(prev => prev + 1)
+      } else if (!isFinished && wasFinished) {
+        // Moving to incomplete
+        setCompletedBooks(prev => prev.filter(b => b.id !== selectedBook.id))
+        setIncompleteBooks(prev => [...prev, updatedBook])
+        setCompletedTotal(prev => prev - 1)
+        setIncompleteTotal(prev => prev + 1)
       } else {
-        setBooks(prev => prev.map(b => 
-          b.id === selectedBook.id ? updatedBook : b
-        ))
+        // Status changed but staying in same section
+        const mapBook = (prev) => prev.map(b => (b.id === selectedBook.id ? updatedBook : b))
+        if (isFinished) {
+          setCompletedBooks(mapBook)
+        } else {
+          setIncompleteBooks(mapBook)
+        }
       }
-    } catch (err) {
-      console.error('Failed to mark book as finished:', err)
-      alert('Failed to update book')
+    } else {
+      setBooks(prev => prev.map(b =>
+        b.id === selectedBook.id ? updatedBook : b
+      ))
     }
-    
-    setShowMarkFinishedModal(false)
-    setSelectedBook(null)
+  }
+
+  // Handle marking book as finished — one-call contract (B2)
+  const handleMarkFinished = async (dateFinished, rating) => {
+    if (!selectedBook) return
+    setStatusActionSaving(true)
+    setStatusActionError(null)
+    try {
+      const result = await updateBookStatus(selectedBook.id, 'Finished', { dateFinished, rating })
+      applyProjectedStatus(result)
+      setShowMarkFinishedModal(false)
+      setSelectedBook(null)
+    } catch (err) {
+      setStatusActionError(err.message || "Couldn't update the status. Try again?")
+    } finally {
+      setStatusActionSaving(false)
+    }
   }
 
   // Handle changing status (from finished to something else)
   const handleChangeStatus = async (newStatus) => {
     if (!selectedBook) return
-    
+    setStatusActionSaving(true)
+    setStatusActionError(null)
     try {
-      await updateBookStatus(selectedBook.id, newStatus)
-      // Clear date_finished when changing away from Finished
-      await updateBookDates(selectedBook.id, selectedBook.date_started, null)
-      
-      const updatedBook = { ...selectedBook, status: newStatus, date_finished: null }
-      
-      // Update local state - move book between sections for checklist
-      if (collection?.collection_type === 'checklist') {
-        if (newStatus === 'Finished' && selectedBook.status !== 'Finished') {
-          // Moving to completed
-          setIncompleteBooks(prev => prev.filter(b => b.id !== selectedBook.id))
-          setCompletedBooks(prev => [...prev, updatedBook])
-          setIncompleteTotal(prev => prev - 1)
-          setCompletedTotal(prev => prev + 1)
-        } else if (newStatus !== 'Finished' && selectedBook.status === 'Finished') {
-          // Moving to incomplete
-          setCompletedBooks(prev => prev.filter(b => b.id !== selectedBook.id))
-          setIncompleteBooks(prev => [...prev, updatedBook])
-          setCompletedTotal(prev => prev - 1)
-          setIncompleteTotal(prev => prev + 1)
-        } else {
-          // Status changed but staying in same section
-          setIncompleteBooks(prev => prev.map(b => 
-            b.id === selectedBook.id ? updatedBook : b
-          ))
-        }
-      } else {
-        setBooks(prev => prev.map(b => 
-          b.id === selectedBook.id ? updatedBook : b
-        ))
-      }
+      const result = await updateBookStatus(selectedBook.id, newStatus)
+      applyProjectedStatus(result)
+      setShowChangeStatusModal(false)
+      setSelectedBook(null)
     } catch (err) {
-      console.error('Failed to change status:', err)
-      alert('Failed to update book')
+      setStatusActionError(err.message || "Couldn't update the status. Try again?")
+    } finally {
+      setStatusActionSaving(false)
     }
-    
-    setShowChangeStatusModal(false)
-    setSelectedBook(null)
   }
 
   // Handle long press / right click for quick status menu
@@ -1438,7 +1432,10 @@ export default function CollectionDetail() {
           onClose={() => {
             setShowMarkFinishedModal(false)
             setSelectedBook(null)
+            setStatusActionError(null)
           }}
+          error={statusActionError}
+          saving={statusActionSaving}
         />
       )}
 
@@ -1449,7 +1446,10 @@ export default function CollectionDetail() {
           onClose={() => {
             setShowChangeStatusModal(false)
             setSelectedBook(null)
+            setStatusActionError(null)
           }}
+          error={statusActionError}
+          saving={statusActionSaving}
         />
       )}
 

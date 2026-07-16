@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, updateBookRating, updateBookDates, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
+import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 import ReadingStatusCard from './ReadingStatusCard'
 import GradientCover from './GradientCover'
 import UnifiedEditModal from './UnifiedEditModal'
-import MarkFinishedModal from './MarkFinishedModal'
-import ChangeStatusModal from './ChangeStatusModal'
 import ChangeCoverModal from './ChangeCoverModal'
 import CollectionPicker from './CollectionPicker'
 import BookLinkPopup from './BookLinkPopup'
@@ -56,6 +54,20 @@ const SESSION_STATUS_TO_BACKEND = {
   in_progress: 'In Progress',
   finished: 'Finished',
   dnf: 'Abandoned',
+}
+
+// Longest label (chars) that keeps the status toggle on one row of four.
+// 11 admits every shipped default incl. "In Progress" (11); any custom
+// label past it flips the whole control to 2×2 (ratified 2026-07-15).
+const STATUS_LABEL_ONE_ROW_MAX = 11
+
+// Active-state classes for the inline status toggle (B2) — reading teal,
+// finished sage, unread/dnf neutral, all via status tokens
+const STATUS_TOGGLE_ACTIVE = {
+  Unread: 'bg-status-unread/20 border-status-unread text-text-primary',
+  'In Progress': 'bg-status-reading/20 border-status-reading text-status-reading',
+  Finished: 'bg-status-finished/20 border-status-finished text-status-finished',
+  Abandoned: 'bg-status-dnf/20 border-status-dnf text-text-secondary',
 }
 
 // Helper component for displaying labeled metadata (Phase 7.0)
@@ -284,18 +296,10 @@ function BookDetail() {
   
   // Status editing state
   const [selectedStatus, setSelectedStatus] = useState('Unread')
-  const [statusLoading, setStatusLoading] = useState(false)
-  const [statusStatus, setStatusStatus] = useState(null)
-  
+
   // Rating editing state
   const [selectedRating, setSelectedRating] = useState(null)
 
-  // Date editing state
-  const [dateStarted, setDateStarted] = useState('')
-  const [dateFinished, setDateFinished] = useState('')
-  const [datesLoading, setDatesLoading] = useState(false)
-  const [datesStatus, setDatesStatus] = useState(null)
-  
   // Rescan metadata state
   const [rescanning, setRescanning] = useState(false)
   
@@ -340,18 +344,22 @@ function BookDetail() {
   const [showAcquireModal, setShowAcquireModal] = useState(false)
   const [acquireLoading, setAcquireLoading] = useState(false)
 
-  const [showMarkFinishedModal, setShowMarkFinishedModal] = useState(false)
-  const [markFinishedError, setMarkFinishedError] = useState(null)
-  const [markFinishedSaving, setMarkFinishedSaving] = useState(false)
-  const [showChangeStatusModal, setShowChangeStatusModal] = useState(false)
-  const [changeStatusError, setChangeStatusError] = useState(null)
-  const [changeStatusSaving, setChangeStatusSaving] = useState(false)
+  // Inline status toggle state (B2) — writes through the one-call
+  // session-writing endpoint; the toggle renders the projection
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState(null)
+  const [statusNote, setStatusNote] = useState(null) // snap-back microcopy
+  const [showFinishedCapture, setShowFinishedCapture] = useState(false)
+  const [finishDate, setFinishDate] = useState('')
+  const [finishDateError, setFinishDateError] = useState(null)
+  const [finishRating, setFinishRating] = useState(null)
+
+  // Download-triggered "Start reading?" prompt (B2) — Unread only
+  const [showStartPrompt, setShowStartPrompt] = useState(false)
+  const [startPromptSaving, setStartPromptSaving] = useState(false)
 
   // Mobile tab state
   const [activeTab, setActiveTab] = useState('details')
-  
-  // Date editors visibility
-  const [showDateEditors, setShowDateEditors] = useState(false)
   
   // Sessions state
   const [sessions, setSessions] = useState([])
@@ -539,39 +547,6 @@ function BookDetail() {
     return sorted[0]
   }
 
-  const getStatusSubtitle = () => {
-    const session = getMostRecentSession()
-    if (!session) return null
-    
-    const formatDate = (dateStr) => {
-      if (!dateStr) return null
-      // Parse as local date to avoid timezone shift
-      // Input format: "YYYY-MM-DD"
-      const [year, month, day] = dateStr.split('-').map(Number)
-      const date = new Date(year, month - 1, day) // month is 0-indexed
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    }
-    
-    const start = formatDate(session.date_started)
-    const end = formatDate(session.date_finished)
-    
-    if (start && end) {
-      // Check if same year to avoid repetition
-      // Parse as local dates to avoid timezone shift
-      const [startYear] = session.date_started.split('-').map(Number)
-      const [endYear] = session.date_finished.split('-').map(Number)
-      if (startYear === endYear) {
-        const [y, m, d] = session.date_started.split('-').map(Number)
-        const startShort = new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        return `${startShort} – ${end}`
-      }
-      return `${start} – ${end}`
-    }
-    if (end) return end
-    if (start) return `Started ${start}`
-    return null
-  }
-
   // Normalize status from backend (may be capitalized) to lowercase for component
   const normalizeStatus = (status) => {
     if (!status) return 'unread'
@@ -627,8 +602,6 @@ function BookDetail() {
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
       setSelectedRating(bookData.rating ?? null)
-      setDateStarted(bookData.date_started || '')
-      setDateFinished(bookData.date_finished || '')
     } catch (err) {
       setSessionError(err.message)
     } finally {
@@ -655,8 +628,6 @@ function BookDetail() {
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
       setSelectedRating(bookData.rating ?? null)
-      setDateStarted(bookData.date_started || '')
-      setDateFinished(bookData.date_finished || '')
     } catch (err) {
       setSessionError(err.message)
       setShowSessionDeleteConfirm(false) // return to form so user sees the error banner
@@ -817,7 +788,6 @@ function BookDetail() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    setShowDateEditors(false)
     setActiveTab('details')
     // Files edit mode is per-title — BookDetail doesn't remount on
     // in-page /book/:id navigation (merge success, note links, series mates)
@@ -837,8 +807,6 @@ function BookDetail() {
         setSelectedCategory(bookData.category || '')
         setSelectedStatus(bookData.status || 'Unread')
         setSelectedRating(bookData.rating ?? null)
-        setDateStarted(bookData.date_started || '')
-        setDateFinished(bookData.date_finished || '')
         setSelectedPriority(bookData.tbr_priority || 'normal')
         // Pre-populate editor with existing note content
         if (notesData.length > 0) {
@@ -1092,117 +1060,83 @@ function BookDetail() {
     }
   }
 
-  const handleStatusChange = async (newStatus) => {
-    if (statusLoading || newStatus === selectedStatus) return
-    
-    const previousStatus = selectedStatus
-    setStatusLoading(true)
-    setStatusStatus(null)
-    
-    // Optimistic update
-    setSelectedStatus(newStatus)
-    
+  // Toggle tap → B1 one-call endpoint → refetch → pill and toggle both
+  // render the PROJECTION, never the tapped value (snap-back, 2026-07-15)
+  const applyStatus = async (backendStatus, extras = {}) => {
+    if (!book || !id) return false
+    setStatusSaving(true)
+    setStatusError(null)
+    setStatusNote(null)
     try {
-      await updateBookStatus(id, newStatus)
-      setBook(prev => ({ ...prev, status: newStatus }))
-      setStatusStatus('saved')
-      setTimeout(() => setStatusStatus(null), 2000)
-    } catch (err) {
-      console.error('Failed to update status:', err)
-      // Revert on failure
-      setSelectedStatus(previousStatus)
-      setStatusStatus('error')
-      setTimeout(() => setStatusStatus(null), 3000)
-    } finally {
-      setStatusLoading(false)
-    }
-  }
-
-  const handleMarkFinishedConfirm = async (dateFinished, rating) => {
-    if (!book || !id) return
-    setMarkFinishedSaving(true)
-    setMarkFinishedError(null)
-    try {
-      await updateBookStatus(id, 'Finished')
-      if (dateFinished) await updateBookDates(id, book.date_started, dateFinished)
-      if (rating) await updateBookRating(id, rating)
+      const result = await updateBookStatus(id, backendStatus, extras)
+      if (backendStatus === 'Unread' && result.read_status === 'Finished') {
+        setStatusNote(`Reading history kept — this title stays ${getLabel('Finished')}. To fully reset it, delete its past reads in History.`)
+      } else if (backendStatus === 'Unread' && result.read_status === 'Abandoned') {
+        setStatusNote(`Set-aside record kept — this title stays ${getLabel('Abandoned')}. To fully reset it, delete that record in History.`)
+      }
       const bookData = await getBook(id)
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
       setSelectedRating(bookData.rating ?? null)
-      setDateStarted(bookData.date_started || '')
-      setDateFinished(bookData.date_finished || '')
       await fetchSessions()
-      setShowMarkFinishedModal(false)
+      setShowFinishedCapture(false)
+      return true
     } catch (err) {
-      console.error('Failed to mark finished:', err)
-      setMarkFinishedError(err.message || 'Something went wrong. Please try again.')
+      setStatusError(err.message || "Couldn't update the status. Try again?")
+      return false
     } finally {
-      setMarkFinishedSaving(false)
+      setStatusSaving(false)
     }
   }
 
-  const handleChangeStatusFromModal = async (newStatus) => {
-    if (!book || !id) return
-    setChangeStatusSaving(true)
-    setChangeStatusError(null)
+  const handleToggleTap = (value) => {
+    if (statusSaving) return
+    setStatusError(null)
+    setStatusNote(null)
+    if (value === 'Finished') {
+      if (selectedStatus === 'Finished') return
+      setFinishDate(new Date().toISOString().split('T')[0])
+      setFinishRating(null)
+      setFinishDateError(null)
+      setShowFinishedCapture(true)
+      return
+    }
+    setShowFinishedCapture(false)
+    if (value === selectedStatus) return
+    applyStatus(value)
+  }
+
+  const handleFinishedConfirm = () => {
+    if (!finishDate) {
+      setFinishDateError('Pick a date to mark this as finished')
+      return
+    }
+    setFinishDateError(null)
+    applyStatus('Finished', { dateFinished: finishDate, rating: finishRating })
+  }
+
+  // Accept on the download-triggered prompt → open In Progress session
+  // dated today with the downloaded format (coarse domain: 'ebook')
+  const handleStartReadingAccept = async () => {
+    if (!book || !id || startPromptSaving) return
+    setStartPromptSaving(true)
+    setStatusError(null)
     try {
-      await updateBookStatus(id, newStatus)
-      await updateBookDates(id, book.date_started, null)
+      await createSession(id, {
+        date_started: new Date().toISOString().split('T')[0],
+        session_status: 'in_progress',
+        format: 'ebook',
+      })
       const bookData = await getBook(id)
       setBook(bookData)
       setSelectedStatus(bookData.status || 'Unread')
       setSelectedRating(bookData.rating ?? null)
-      setDateStarted(bookData.date_started || '')
-      setDateFinished(bookData.date_finished || '')
       await fetchSessions()
-      setShowChangeStatusModal(false)
+      setShowStartPrompt(false)
     } catch (err) {
-      console.error('Failed to change status:', err)
-      setChangeStatusError(err.message || 'Something went wrong. Please try again.')
+      setStatusError(err.message || "Couldn't start the session. Try again?")
     } finally {
-      setChangeStatusSaving(false)
-    }
-  }
-
-  const handleDateChange = async (field, value) => {
-    if (datesLoading) return
-    
-    const newDateStarted = field === 'started' ? value : dateStarted
-    const newDateFinished = field === 'finished' ? value : dateFinished
-    
-    // Save previous values for rollback
-    const previousDateStarted = dateStarted
-    const previousDateFinished = dateFinished
-    
-    // Optimistic update
-    if (field === 'started') {
-      setDateStarted(value)
-    } else {
-      setDateFinished(value)
-    }
-    
-    setDatesLoading(true)
-    setDatesStatus(null)
-    
-    try {
-      await updateBookDates(id, newDateStarted, newDateFinished)
-      setBook(prev => ({ 
-        ...prev, 
-        date_started: newDateStarted || null,
-        date_finished: newDateFinished || null
-      }))
-      setDatesStatus('saved')
-      setTimeout(() => setDatesStatus(null), 2000)
-    } catch (err) {
-      console.error('Failed to update dates:', err)
-      // Revert on failure
-      setDateStarted(previousDateStarted)
-      setDateFinished(previousDateFinished)
-      setDatesStatus('error')
-      setTimeout(() => setDatesStatus(null), 3000)
-    } finally {
-      setDatesLoading(false)
+      setStartPromptSaving(false)
     }
   }
 
@@ -1412,6 +1346,19 @@ function BookDetail() {
     (e) => EBOOK_FORMATS.includes(e.format) && e.file_path
   )
 
+  // Toggle grid is content-driven from the known labels — no DOM
+  // measurement: one row of four unless any label exceeds the max
+  const statusToggleOptions = getStatusOptions()
+  const statusToggleTwoUp = statusToggleOptions.some(
+    (o) => (o.label || '').length > STATUS_LABEL_ONE_ROW_MAX
+  )
+
+  // After a download initiates AND the projection is Unread, offer the
+  // inline "Start reading?" prompt. Never renders for other statuses.
+  const maybeOfferStartReading = () => {
+    if (normalizeStatus(book.status) === 'unread') setShowStartPrompt(true)
+  }
+
   const handleDownloadEdition = async (edition) => {
     if (downloading) return
     setShowDownloadSheet(false)
@@ -1437,6 +1384,7 @@ function BookDetail() {
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file] })
           showToast('Shared', 'success')
+          maybeOfferStartReading()
           return
         }
         // File sharing unsupported — download the blob we already fetched
@@ -1449,6 +1397,7 @@ function BookDetail() {
         link.remove()
         URL.revokeObjectURL(objectUrl)
         showToast('Download started', 'success')
+        maybeOfferStartReading()
         return
       }
       // No Web Share at all — the endpoint's attachment disposition handles the save
@@ -1459,6 +1408,7 @@ function BookDetail() {
       link.click()
       link.remove()
       showToast('Download started', 'success')
+      maybeOfferStartReading()
     } catch (err) {
       if (err.name === 'AbortError') {
         // User closed the share sheet — clear the loading toast, no error
@@ -1686,15 +1636,12 @@ function BookDetail() {
                 </div>
               )}
               
-              {/* Status — opens change status modal */}
-              <button
-                type="button"
-                onClick={() => setShowChangeStatusModal(true)}
-                className="bg-bg-surface rounded-lg px-3 py-2 text-center hover:bg-bg-elevated transition-colors border border-border-default"
-              >
+              {/* Status — display only; the toggle below Download is the
+                  interactive surface (B2, ratified 2026-07-15) */}
+              <div className="bg-bg-surface rounded-lg px-3 py-2 text-center border border-border-default">
                 <div className="text-h4 text-text-primary">{getLabel(selectedStatus)}</div>
                 <div className="text-caption text-text-muted">status</div>
-              </button>
+              </div>
               
               {/* Rating — opens session editor (ratings live on reading sessions) */}
               <button
@@ -2024,7 +1971,7 @@ function BookDetail() {
         )}
       </div>
 
-      {/* Reading Status Card - Only for owned books */}
+      {/* Reading status — inline segmented toggle (B2, v0.60.0) */}
       {!isWishlist && (
         <div className={`px-4 py-3 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           {downloadableEditions.length >= 1 && (
@@ -2037,22 +1984,105 @@ function BookDetail() {
               Download
             </Button>
           )}
-          <ReadingStatusCard
-            status={normalizeStatus(book.status)}
-            subtitle={['finished', 'dnf'].includes(normalizeStatus(book.status)) ? getStatusSubtitle() : null}
-            fileUrl={null}
-            hasFile={false}
-            onEditSession={() => {
-              const session = getMostRecentSession()
-              if (session) {
-                openEditSession(session)
-              } else {
-                openAddSession()
-              }
-            }}
-            onMarkFinished={() => setShowMarkFinishedModal(true)}
-            onChangeStatus={() => setShowChangeStatusModal(true)}
-          />
+
+          {/* Download-triggered transition — Unread only, dashed card */}
+          {showStartPrompt && normalizeStatus(book.status) === 'unread' && (
+            <div className="border border-dashed border-border-focus rounded-lg p-3 mb-3">
+              <p className="text-body-sm text-text-body mb-3">Start reading this now?</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  loading={startPromptSaving}
+                  onClick={handleStartReadingAccept}
+                >
+                  Start reading
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={startPromptSaving}
+                  onClick={() => setShowStartPrompt(false)}
+                >
+                  Not yet
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div
+            role="group"
+            aria-label="Reading status"
+            className={`grid gap-2 ${statusToggleTwoUp ? 'grid-cols-2' : 'grid-cols-4'}`}
+          >
+            {statusToggleOptions.map(({ value, label }) => {
+              const active = value === selectedStatus
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={statusSaving}
+                  onClick={() => handleToggleTap(value)}
+                  className={`min-h-[44px] px-2 py-2 rounded-lg border text-label transition-colors duration-calm ease-calm disabled:opacity-60 ${
+                    active
+                      ? STATUS_TOGGLE_ACTIVE[value]
+                      : 'bg-bg-surface border-border-default text-text-secondary hover:bg-bg-elevated'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Finished tap → inline date + rating capture */}
+          {showFinishedCapture && (
+            <div className="bg-bg-surface border border-border-default rounded-lg p-3 mt-3">
+              <div className="space-y-3">
+                <FormField label="Date finished" error={finishDateError}>
+                  <input
+                    type="date"
+                    value={finishDate}
+                    onChange={(e) => {
+                      setFinishDate(e.target.value)
+                      if (e.target.value) setFinishDateError(null)
+                    }}
+                    className={`w-full px-3 py-2 bg-bg-elevated border rounded-lg text-text-primary text-body-sm focus:outline-none ${
+                      finishDateError
+                        ? 'border-action-danger focus:border-action-danger'
+                        : 'border-border-default focus:border-action-primary'
+                    }`}
+                  />
+                </FormField>
+                <FormField label="Rating (optional)">
+                  <StarRating value={finishRating} onChange={setFinishRating} size="lg" />
+                </FormField>
+              </div>
+              <div className="flex gap-2 justify-end mt-3">
+                <Button
+                  variant="ghost"
+                  disabled={statusSaving}
+                  onClick={() => setShowFinishedCapture(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" loading={statusSaving} onClick={handleFinishedConfirm}>
+                  Mark {getLabel('Finished')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {statusNote && (
+            <p className="text-body-sm text-text-secondary mt-2" role="status">
+              {statusNote}
+            </p>
+          )}
+          {statusError && (
+            <p className="text-body-sm text-action-danger mt-2" role="alert">
+              {statusError}
+            </p>
+          )}
         </div>
       )}
 
@@ -3239,32 +3269,6 @@ function BookDetail() {
           setBook(updatedBook)
         }}
       />
-
-      {showMarkFinishedModal && book && (
-        <MarkFinishedModal
-          book={book}
-          onConfirm={handleMarkFinishedConfirm}
-          onClose={() => {
-            setShowMarkFinishedModal(false)
-            setMarkFinishedError(null)
-          }}
-          error={markFinishedError}
-          saving={markFinishedSaving}
-        />
-      )}
-
-      {showChangeStatusModal && book && (
-        <ChangeStatusModal
-          book={book}
-          onConfirm={handleChangeStatusFromModal}
-          onClose={() => {
-            setShowChangeStatusModal(false)
-            setChangeStatusError(null)
-          }}
-          error={changeStatusError}
-          saving={changeStatusSaving}
-        />
-      )}
 
       {/* Delete Edition Confirmation Modal (Phase 8.7g) */}
       <Modal

@@ -226,35 +226,22 @@ export async function updateBookCategory(bookId, category) {
 }
 
 /**
- * Update a book's read status
+ * Update a book's read status — one call, sessions-canonical (v0.59.0).
+ * @param {number} bookId - Book ID
+ * @param {string} status - Unread | In Progress | Finished | Abandoned
+ * @param {Object} [extras] - Optional fields for the Finished flow
+ * @param {string} [extras.dateFinished] - ISO date the read finished
+ * @param {number} [extras.rating] - 1-5 rating for the closing session
+ * @returns response.read_status is the PROJECTED status, which can
+ *          differ from the request (e.g. Unread on closed history)
  */
-export async function updateBookStatus(bookId, status) {
+export async function updateBookStatus(bookId, status, extras = {}) {
+  const body = { status }
+  if (extras.dateFinished) body.date_finished = extras.dateFinished
+  if (extras.rating) body.rating = extras.rating
   return apiFetch(`/books/${bookId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
-  })
-}
-
-/**
- * Update a book's rating
- */
-export async function updateBookRating(bookId, rating) {
-  return apiFetch(`/books/${bookId}/rating`, {
-    method: 'PATCH',
-    body: JSON.stringify({ rating }),
-  })
-}
-
-/**
- * Update a book's reading dates
- */
-export async function updateBookDates(bookId, dateStarted, dateFinished) {
-  return apiFetch(`/books/${bookId}/dates`, {
-    method: 'PATCH',
-    body: JSON.stringify({ 
-      date_started: dateStarted || null,
-      date_finished: dateFinished || null
-    }),
+    body: JSON.stringify(body),
   })
 }
 

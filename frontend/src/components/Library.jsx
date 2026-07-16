@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { listBooks, getCategories, listSeries, getSettings, updateBookStatus, updateBookDates, updateBookRating } from '../api'
+import { listBooks, getCategories, listSeries, getSettings, updateBookStatus } from '../api'
 import BookCard from './BookCard'
 import SeriesCard from './SeriesCard'
 import TagsModal from './TagsModal'
@@ -98,6 +98,10 @@ function Library() {
   const [selectedBook, setSelectedBook] = useState(null)
   const [showMarkFinished, setShowMarkFinished] = useState(false)
   const [showChangeStatus, setShowChangeStatus] = useState(false)
+  // Shared by both status modals (never open together) — surfaces the
+  // backend's plain-language detail in the modal error banner (B2)
+  const [statusActionError, setStatusActionError] = useState(null)
+  const [statusActionSaving, setStatusActionSaving] = useState(false)
 
   const [browseView, setBrowseView] = useState(() => readPageView('browse'))
   const [seriesView, setSeriesView] = useState(() => readPageView('series'))
@@ -351,35 +355,46 @@ function Library() {
     setContextMenu({ show: true, book, x: position.x, y: position.y })
   }
 
+  // One-call contract (B2): the endpoint writes sessions and returns the
+  // PROJECTED status/rating/dates — apply those, never the tapped values
   const handleMarkFinished = async (dateFinished, rating) => {
     if (!selectedBook) return
+    setStatusActionSaving(true)
+    setStatusActionError(null)
     try {
-      await updateBookStatus(selectedBook.id, 'Finished')
-      if (dateFinished) await updateBookDates(selectedBook.id, selectedBook.date_started, dateFinished)
-      if (rating) await updateBookRating(selectedBook.id, rating)
+      const result = await updateBookStatus(selectedBook.id, 'Finished', { dateFinished, rating })
       setBooks(prev => prev.map(b =>
-        b.id === selectedBook.id ? { ...b, status: 'Finished', date_finished: dateFinished, rating: rating ?? b.rating } : b
+        b.id === selectedBook.id
+          ? { ...b, status: result.read_status, rating: result.rating, date_started: result.date_started, date_finished: result.date_finished }
+          : b
       ))
+      setShowMarkFinished(false)
+      setSelectedBook(null)
     } catch (err) {
-      console.error('Failed to mark finished:', err)
+      setStatusActionError(err.message || "Couldn't update the status. Try again?")
+    } finally {
+      setStatusActionSaving(false)
     }
-    setShowMarkFinished(false)
-    setSelectedBook(null)
   }
 
   const handleChangeStatus = async (newStatus) => {
     if (!selectedBook) return
+    setStatusActionSaving(true)
+    setStatusActionError(null)
     try {
-      await updateBookStatus(selectedBook.id, newStatus)
-      await updateBookDates(selectedBook.id, selectedBook.date_started, null)
+      const result = await updateBookStatus(selectedBook.id, newStatus)
       setBooks(prev => prev.map(b =>
-        b.id === selectedBook.id ? { ...b, status: newStatus, date_finished: null } : b
+        b.id === selectedBook.id
+          ? { ...b, status: result.read_status, rating: result.rating, date_started: result.date_started, date_finished: result.date_finished }
+          : b
       ))
+      setShowChangeStatus(false)
+      setSelectedBook(null)
     } catch (err) {
-      console.error('Failed to change status:', err)
+      setStatusActionError(err.message || "Couldn't update the status. Try again?")
+    } finally {
+      setStatusActionSaving(false)
     }
-    setShowChangeStatus(false)
-    setSelectedBook(null)
   }
 
   return (
@@ -1031,7 +1046,9 @@ function Library() {
         <MarkFinishedModal
           book={selectedBook}
           onConfirm={handleMarkFinished}
-          onClose={() => { setShowMarkFinished(false); setSelectedBook(null); }}
+          onClose={() => { setShowMarkFinished(false); setSelectedBook(null); setStatusActionError(null); }}
+          error={statusActionError}
+          saving={statusActionSaving}
         />
       )}
 
@@ -1039,7 +1056,9 @@ function Library() {
         <ChangeStatusModal
           book={selectedBook}
           onConfirm={handleChangeStatus}
-          onClose={() => { setShowChangeStatus(false); setSelectedBook(null); }}
+          onClose={() => { setShowChangeStatus(false); setSelectedBook(null); setStatusActionError(null); }}
+          error={statusActionError}
+          saving={statusActionSaving}
         />
       )}
 
