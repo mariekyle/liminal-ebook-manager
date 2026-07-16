@@ -60,21 +60,24 @@ class SessionsListResponse(BaseModel):
 @router.get("/titles/{title_id}/sessions", response_model=SessionsListResponse)
 async def list_sessions(title_id: int, db: aiosqlite.Connection = Depends(get_db)):
     """
-    List all reading sessions for a title, newest first.
-    Also returns aggregate stats (times_read, average_rating).
+    List all reading sessions for a title, in projection order.
+    Also returns aggregate stats (times_read counts finished sessions
+    only; average_rating spans all rated sessions).
     """
     # Verify title exists
     cursor = await db.execute("SELECT id FROM titles WHERE id = ?", (title_id,))
     if not await cursor.fetchone():
         raise HTTPException(status_code=404, detail="Title not found")
-    
-    # Get sessions, newest first (highest session_number)
+
+    # Projection order — MUST match sync_title_from_sessions (database.py):
+    # latest date_started first, ties broken by higher id, NULL date_started
+    # last under DESC. The first row is the title status pill's source.
     cursor = await db.execute("""
-        SELECT id, title_id, session_number, date_started, date_finished, 
+        SELECT id, title_id, session_number, date_started, date_finished,
                session_status, rating, format, created_at, updated_at
         FROM reading_sessions
         WHERE title_id = ?
-        ORDER BY session_number DESC
+        ORDER BY date_started DESC, id DESC
     """, (title_id,))
     rows = await cursor.fetchall()
     
@@ -96,8 +99,10 @@ async def list_sessions(title_id: int, db: aiosqlite.Connection = Depends(get_db
         if row[6] is not None:
             ratings.append(row[6])
     
-    # Calculate stats
-    times_read = len(sessions)
+    # Calculate stats — a "read" is a closed Done session only; in_progress
+    # and dnf never count (B3 ruling 2026-07-15, matching the projection's
+    # own finished-only closed-date logic)
+    times_read = sum(1 for s in sessions if s.session_status == 'finished')
     average_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
     
     return SessionsListResponse(

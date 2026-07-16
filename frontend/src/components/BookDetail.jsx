@@ -1508,19 +1508,24 @@ function BookDetail() {
     </div>
   )
 
-  // Menu items for 3-dot menu
+  // Menu items for 3-dot menu — page-level actions only (B3, v0.61.0);
+  // add-session lives in Reading History, collections in its section
   const menuItems = [
     { label: 'Edit', onClick: () => { setShowUnifiedEditModal(true); setMenuOpen(false) } },
     { label: 'Change Cover', onClick: () => { setShowCoverModal(true); setMenuOpen(false) } },
     { type: 'divider' },
-    { label: 'Add Reading Session', onClick: () => { openAddSession(); setMenuOpen(false) }, show: !isWishlist },
-    { label: 'Add to Collection', onClick: () => { setShowCollectionPicker(true); setMenuOpen(false) }, show: !isWishlist },
-    { type: 'divider', show: !isWishlist },
     { label: 'Merge', onClick: () => { openMergeModal(); setMenuOpen(false) } },
     { label: 'Rescan Metadata', onClick: () => { handleRescanMetadata(); setMenuOpen(false) }, show: !isWishlist && !!book?.folder_path },
     { type: 'divider' },
     { label: 'Delete Title', onClick: () => { openDeleteModal(); setMenuOpen(false) }, danger: true },
   ]
+
+  // Remove Format modal facts — the trash sentence must match what the
+  // backend actually does: stale paths (file_size null) and files another
+  // of this title's editions still references are never moved (B3, v0.61.0)
+  const editionFileOnDisk = !!editionToDelete?.file_path && editionToDelete.file_size != null
+  const editionFileShared = editionFileOnDisk &&
+    (book?.editions || []).some(e => e.id !== editionToDelete.id && e.file_path === editionToDelete.file_path)
 
   // Delete Title modal facts — counts stated in step 1
   const deleteFileCount = book?.editions?.filter(e => e.file_path).length || 0
@@ -1922,8 +1927,8 @@ function BookDetail() {
                     aria-label="Add reading session"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                      <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                      <path d="m15 5 4 4"/>
+                      <path d="M12 5v14"/>
+                      <path d="M5 12h14"/>
                     </svg>
                   </button>
                 </div>
@@ -2281,8 +2286,8 @@ function BookDetail() {
                 aria-label="Add reading session"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                  <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                  <path d="m15 5 4 4"/>
+                  <path d="M12 5v14"/>
+                  <path d="M5 12h14"/>
                 </svg>
               </button>
             </div>
@@ -3277,7 +3282,7 @@ function BookDetail() {
         size="sm"
       >
         <Modal.Header onClose={() => { if (!editionDeleting) setEditionToDelete(null) }}>
-          Remove Edition
+          Remove Format
         </Modal.Header>
         <Modal.Body>
           {editionDeleteError && (
@@ -3287,7 +3292,8 @@ function BookDetail() {
           )}
           <p className="text-body-sm text-text-secondary">
             Remove <span className="text-label text-text-primary">{editionToDelete?.label}</span> from this title?
-            {editionToDelete?.file_path && <> The file moves to the trash folder.</>}
+            {editionFileOnDisk && !editionFileShared && <> The file moves to the trash folder.</>}
+            {editionFileShared && <> The file stays — another format still uses it.</>}
           </p>
           <p className="text-text-secondary text-sm mt-2">
             This won't delete any reading sessions associated with this format.
