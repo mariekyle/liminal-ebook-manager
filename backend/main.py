@@ -28,6 +28,7 @@ from routers.collections import router as collections_router
 from routers.backups import router as backups_router
 from routers.covers import router as covers_router
 from routers.downloads import router as downloads_router
+from routers.trash import router as trash_router
 
 # Configuration from environment
 BOOKS_PATH = os.getenv("BOOKS_PATH", "/books")
@@ -107,7 +108,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.65.0",
+    version="0.66.0",
     lifespan=lifespan
 )
 
@@ -132,6 +133,7 @@ app.include_router(collections_router, prefix="/api")
 app.include_router(backups_router, prefix="/api")
 app.include_router(covers_router)  # Phase 9C: Cover serving with custom/extracted logic
 app.include_router(downloads_router)  # 10.1: Edition file downloads
+app.include_router(trash_router)  # Batch-3 B1: trash stats + empty trash
 
 
 # Health check endpoint

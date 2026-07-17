@@ -8,6 +8,7 @@ import {
   updateBackupSettings,
   testBackupPath,
   createManualBackup,
+  getTrashStats,
 } from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
@@ -19,6 +20,7 @@ import RatingLabelsModal from '../components/settings/RatingLabelsModal'
 import BackupRetentionModal from '../components/settings/BackupRetentionModal'
 import RescanMetadataModal from '../components/settings/RescanMetadataModal'
 import ExtractCoversModal from '../components/settings/ExtractCoversModal'
+import EmptyTrashModal from '../components/settings/EmptyTrashModal'
 import { useStatusLabels } from '../hooks/useStatusLabels'
 import { useRatingLabels } from '../hooks/useRatingLabels'
 import { formatTimeAgo } from '../utils/formatTimeAgo'
@@ -103,6 +105,11 @@ export default function Settings() {
   const [savingBackupSettings, setSavingBackupSettings] = useState(false)
   const [backupError, setBackupError] = useState(null)
 
+  // Trash state (Batch 3 B1)
+  const [trashStats, setTrashStats] = useState(null)
+  const [trashError, setTrashError] = useState(null)
+  const [emptyTrashOpen, setEmptyTrashOpen] = useState(false)
+
   // Modal open state
   const [statusLabelsOpen, setStatusLabelsOpen] = useState(false)
   const [ratingLabelsOpen, setRatingLabelsOpen] = useState(false)
@@ -124,6 +131,7 @@ export default function Settings() {
       .finally(() => setLoading(false))
 
     loadBackupSettings()
+    loadTrashStats()
   }, [])
 
   // Toast auto-dismiss (loading toasts persist until replaced)
@@ -144,6 +152,17 @@ export default function Settings() {
     } catch (err) {
       console.error('Failed to load backup settings:', err)
       setBackupError(err.message || 'Failed to load backup settings.')
+    }
+  }
+
+  const loadTrashStats = async () => {
+    try {
+      setTrashError(null)
+      setTrashStats(await getTrashStats())
+    } catch (err) {
+      console.error('Failed to load trash stats:', err)
+      setTrashStats(null)
+      setTrashError(err.message || "Couldn't check the trash.")
     }
   }
 
@@ -557,6 +576,9 @@ export default function Settings() {
           {/* ================= BACKUPS ================= */}
           <SectionHeader>Backups</SectionHeader>
           <div className="px-2 space-y-1">
+            <p className="px-4 pb-1 text-caption text-text-muted">
+              Backups cover the library database only — book files aren't included.
+            </p>
             {backupSettings ? (
               <>
                 <SettingsRow
@@ -698,6 +720,45 @@ export default function Settings() {
               <p className="px-4 py-3 text-body-sm text-text-muted">Loading backup settings…</p>
             )}
           </div>
+
+          {/* ================= TRASH ================= */}
+          <SectionHeader>Trash</SectionHeader>
+          <div className="px-2 space-y-1">
+            {trashStats ? (
+              trashStats.item_count === 0 ? (
+                <p className="px-4 py-3 text-body-sm text-text-muted">Trash is empty.</p>
+              ) : (
+                <>
+                  <div className="px-4 py-3">
+                    <span className="text-body text-text-primary">
+                      {trashStats.item_count} {trashStats.item_count === 1 ? 'item' : 'items'} · {formatBytes(trashStats.total_bytes)}
+                    </span>
+                  </div>
+                  <div className="px-4 pt-2">
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="w-full"
+                      onClick={() => setEmptyTrashOpen(true)}
+                    >
+                      Empty trash
+                    </Button>
+                  </div>
+                </>
+              )
+            ) : trashError ? (
+              <div className="mx-4 my-2 space-y-2">
+                <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-3 text-sm text-action-danger">
+                  {trashError}
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={loadTrashStats}>
+                  Try again
+                </Button>
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-text-muted">Loading trash…</p>
+            )}
+          </div>
         </>
       )}
 
@@ -710,6 +771,18 @@ export default function Settings() {
       />
       <RescanMetadataModal isOpen={rescanOpen} onClose={() => setRescanOpen(false)} />
       <ExtractCoversModal isOpen={extractOpen} onClose={() => setExtractOpen(false)} />
+      <EmptyTrashModal
+        isOpen={emptyTrashOpen}
+        onClose={() => setEmptyTrashOpen(false)}
+        itemCount={trashStats?.item_count ?? 0}
+        sizeLabel={formatBytes(trashStats?.total_bytes ?? 0)}
+        onEmptied={() => {
+          setEmptyTrashOpen(false)
+          loadTrashStats()
+          setToast({ type: 'success', message: 'Trash emptied.' })
+        }}
+        onRefreshStats={loadTrashStats}
+      />
 
       <Toast toast={toast} />
     </div>

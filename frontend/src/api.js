@@ -1121,3 +1121,21 @@ export async function duplicateCollection(collectionId, data) {
     body: JSON.stringify(data)
   })
 }
+
+/**
+ * Get trash folder stats
+ * @returns {Promise<{item_count: number, total_bytes: number}>}
+ */
+export async function getTrashStats() {
+  return apiFetch('/trash/stats')
+}
+
+/**
+ * Permanently delete every top-level entry in the trash folder — no undo
+ * @returns {Promise<{removed_count: number, freed_bytes: number, errors: Array<{name: string, error: string}>}>}
+ */
+export async function emptyTrash() {
+  return apiFetch('/trash/empty', {
+    method: 'POST'
+  })
+}
