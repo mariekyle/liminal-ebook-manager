@@ -164,8 +164,10 @@ export default function CollectionDetail() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   const [removeMode, setRemoveMode] = useState(false)
   const [selectedForRemoval, setSelectedForRemoval] = useState(new Set())
+  const [removeError, setRemoveError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const { gridClasses: settingsGridClasses } = useGridColumns()
   
@@ -606,17 +608,19 @@ export default function CollectionDetail() {
   
   const handleDelete = async () => {
     try {
+      setDeleteError(null)
       await deleteCollection(id)
       navigate('/collections')
     } catch (err) {
       console.error('Failed to delete collection:', err)
-      alert('Failed to delete collection')
+      setDeleteError("Couldn't delete the collection. Try again?")
     }
   }
   
   const handleBatchRemove = async () => {
     if (selectedForRemoval.size === 0) return
     try {
+      setRemoveError(null)
       for (const titleId of selectedForRemoval) {
         await removeBookFromCollection(id, titleId)
       }
@@ -639,7 +643,7 @@ export default function CollectionDetail() {
       setRemoveMode(false)
     } catch (err) {
       console.error('Failed to remove books:', err)
-      alert('Failed to remove some books')
+      setRemoveError("Couldn't remove some titles. Try again?")
     }
   }
 
@@ -871,7 +875,7 @@ export default function CollectionDetail() {
           }}
         >
           {removeMode ? (
-            <div className="relative">
+            <div className="relative pl-2.5">
               <BookCard
                 book={book}
                 variant="list"
@@ -1081,6 +1085,7 @@ export default function CollectionDetail() {
                   <button
                     onClick={() => {
                       setShowMenu(false)
+                      setDeleteError(null)
                       setShowDeleteConfirm(true)
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-action-danger hover:bg-bg-surface transition-colors"
@@ -1461,6 +1466,14 @@ export default function CollectionDetail() {
       >
         <Modal.Header onClose={() => setShowDeleteConfirm(false)}>Delete Collection</Modal.Header>
         <Modal.Body>
+          {deleteError && (
+            <div
+              role="alert"
+              className="mb-3 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+            >
+              {deleteError}
+            </div>
+          )}
           <p className="text-body-sm text-text-secondary">
             Are you sure you want to delete &quot;{collection.name}&quot;? This action cannot be undone.
           </p>
@@ -1476,28 +1489,38 @@ export default function CollectionDetail() {
       </Modal>
 
       {removeMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-elevated border-t border-border-default px-4 py-3 flex items-center justify-between pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
-          <button
-            type="button"
-            onClick={() => { setRemoveMode(false); setSelectedForRemoval(new Set()) }}
-            className="text-body-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px] px-3"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleBatchRemove}
-            disabled={selectedForRemoval.size === 0}
-            className={`text-body-sm font-medium min-h-[44px] px-4 rounded-lg transition-colors ${
-              selectedForRemoval.size > 0
-                ? 'bg-action-danger text-text-primary hover:bg-action-danger-hover'
-                : 'bg-bg-surface text-text-muted cursor-not-allowed'
-            }`}
-          >
-            {selectedForRemoval.size > 0
-              ? `Remove ${selectedForRemoval.size}`
-              : 'Remove'}
-          </button>
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-elevated border-t border-border-default px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+          {removeError && (
+            <div
+              role="alert"
+              className="mb-2 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+            >
+              {removeError}
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => { setRemoveMode(false); setSelectedForRemoval(new Set()); setRemoveError(null) }}
+              className="text-body-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px] px-3"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleBatchRemove}
+              disabled={selectedForRemoval.size === 0}
+              className={`text-body-sm font-medium min-h-[44px] px-4 rounded-lg transition-colors ${
+                selectedForRemoval.size > 0
+                  ? 'bg-action-danger text-text-primary hover:bg-action-danger-hover'
+                  : 'bg-bg-surface text-text-muted cursor-not-allowed'
+              }`}
+            >
+              {selectedForRemoval.size > 0
+                ? `Remove ${selectedForRemoval.size}`
+                : 'Remove'}
+            </button>
+          </div>
         </div>
       )}
       </div>

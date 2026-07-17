@@ -484,39 +484,38 @@ async def add_books_to_collection(collection_id: int, data: CollectionBooksAdd, 
 
 @router.delete("/collections/{collection_id}/books/{title_id}")
 async def remove_book_from_collection(collection_id: int, title_id: int, db=Depends(get_db)):
-    """Remove a book from a collection (manual or checklist only)."""
-    
+    """Remove a book from a collection (manual or checklist only).
+
+    Idempotent: removing a book that isn't in the collection succeeds as a
+    no-op — the desired end state ("not in collection") already holds.
+    """
+
     # Verify collection exists and check type
     cursor = await db.execute(
-        'SELECT id, collection_type FROM collections WHERE id = ?', 
+        'SELECT id, collection_type FROM collections WHERE id = ?',
         (collection_id,)
     )
     collection = await cursor.fetchone()
-    
+
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
-    
+
     if collection['collection_type'] == 'automatic':
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Cannot manually remove books from automatic collections"
         )
-    
-    # Verify book is in collection
-    cursor = await db.execute(
-        'SELECT id FROM collection_books WHERE collection_id = ? AND title_id = ?',
-        (collection_id, title_id)
-    )
-    if not await cursor.fetchone():
-        raise HTTPException(status_code=404, detail="Book not in collection")
-    
+
+    # No membership pre-check: a 404 on non-members made a partial batch
+    # remove un-retryable (titles removed before a mid-loop failure stayed in
+    # the client's selection and re-failed every retry — v0.63.0 known edge).
     await db.execute('''
-        DELETE FROM collection_books 
+        DELETE FROM collection_books
         WHERE collection_id = ? AND title_id = ?
     ''', (collection_id, title_id))
-    
+
     await db.commit()
-    
+
     return {"message": "Book removed from collection"}
 
 

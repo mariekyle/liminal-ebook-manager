@@ -103,6 +103,7 @@ export default function CollectionsTab() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [collectionToDelete, setCollectionToDelete] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   
   // Configure drag sensors with activation constraint
   const sensors = useSensors(
@@ -181,6 +182,7 @@ export default function CollectionsTab() {
   
   const handleDeleteCollection = (collection) => {
     setCollectionToDelete(collection)
+    setDeleteError(null)
     setShowDeleteConfirm(true)
   }
   
@@ -188,13 +190,14 @@ export default function CollectionsTab() {
     if (!collectionToDelete) return
     
     try {
+      setDeleteError(null)
       await deleteCollection(collectionToDelete.id)
       setShowDeleteConfirm(false)
       setCollectionToDelete(null)
       fetchCollections()
     } catch (err) {
       console.error('Failed to delete collection:', err)
-      alert('Failed to delete collection')
+      setDeleteError("Couldn't delete the collection. Try again?")
     }
   }
   
@@ -485,6 +488,14 @@ export default function CollectionsTab() {
       >
         <Modal.Header onClose={() => setShowDeleteConfirm(false)}>Delete Collection?</Modal.Header>
         <Modal.Body>
+          {deleteError && (
+            <div
+              role="alert"
+              className="mb-3 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+            >
+              {deleteError}
+            </div>
+          )}
           <p className="text-body-sm text-text-secondary">
             Are you sure you want to delete &quot;{collectionToDelete?.name}&quot;? This action cannot be undone.
           </p>

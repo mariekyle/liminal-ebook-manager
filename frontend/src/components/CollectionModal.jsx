@@ -69,6 +69,8 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
   const [uploadingCover, setUploadingCover] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  // Cover-action errors surface beside the cover controls, not the top banner
+  const [coverError, setCoverError] = useState(null)
   
   // State for cover preview (when editing collection with custom cover)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState(null)
@@ -176,6 +178,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
     
     // For existing collections, update via API
     try {
+      setCoverError(null)
       await updateCollectionCoverType(collection.id, type)
       setCoverType(type)
       
@@ -190,19 +193,20 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       }
     } catch (err) {
       console.error('Failed to update cover type:', err)
-      alert('Failed to update cover type')
+      setCoverError("Couldn't change the cover style. Try again?")
     }
   }
 
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file || !collection?.id) return
-    
+
+    setCoverError(null)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB')
+      setCoverError('That image is over 5MB. Try a smaller one?')
       return
     }
-    
+
     try {
       setUploadingCover(true)
       await uploadCollectionCover(collection.id, file)
@@ -212,7 +216,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       setCoverPreviewUrl(URL.createObjectURL(file))
     } catch (err) {
       console.error('Failed to upload cover:', err)
-      alert('Failed to upload cover')
+      setCoverError("Couldn't upload the cover. Try again?")
     } finally {
       setUploadingCover(false)
     }
@@ -222,6 +226,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
     if (!collection?.id) return
     
     try {
+      setCoverError(null)
       await deleteCollectionCover(collection.id)
       setCoverType('gradient')
       setUploadedThisSession(false)  // Reset since cover was deleted
@@ -229,7 +234,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
       setCoverPreviewUrl(null)
     } catch (err) {
       console.error('Failed to delete cover:', err)
-      alert('Failed to remove cover')
+      setCoverError("Couldn't remove the cover. Try again?")
     }
   }
 
@@ -440,6 +445,14 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
           {collection?.id && (
             <FormField label="Cover style">
               <div className="space-y-2">
+                {coverError && (
+                  <div
+                    role="alert"
+                    className="rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+                  >
+                    {coverError}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => handleCoverTypeChange('gradient')}
