@@ -7,7 +7,6 @@ import CollectionsTab from './components/CollectionsTab'
 import CollectionDetail from './components/CollectionDetail'
 import AuthorDetail from './components/AuthorDetail'
 import AuthorsList from './pages/AuthorsList'
-import ImportPage from './pages/ImportPage'
 import AddPage from './pages/AddPage'
 import DuplicatesPage from './pages/DuplicatesPage'
 import Settings from './pages/Settings'
@@ -78,7 +77,6 @@ function ConnectedApp() {
           <Route path="/sync-results" element={<SyncResultsPage />} />
           {/* Redirect /tbr to library with wishlist filter */}
           <Route path="/tbr" element={<Navigate to="/?acquisition=wishlist" replace />} />
-          <Route path="/import" element={<ImportPage />} />
           <Route path="/add" element={<AddPage />} />
           <Route path="/duplicates" element={<DuplicatesPage />} />
           {/* Redirect old /upload URL to /add */}

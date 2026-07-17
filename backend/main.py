@@ -19,7 +19,6 @@ import aiosqlite
 from database import init_db, get_db, get_db_path
 from routers import titles, sync
 from services.backup import get_backup_settings, schedule_backup_jobs, start_scheduler
-from routers.import_metadata import router as import_router
 from routers.upload import router as upload_router
 from routers.settings import router as settings_router
 from routers.authors import router as authors_router
@@ -108,7 +107,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.61.0",
+    version="0.62.0",
     lifespan=lifespan
 )
 
@@ -124,7 +123,6 @@ app.add_middleware(
 # Include API routers
 app.include_router(titles.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
-app.include_router(import_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(authors_router, prefix="/api")

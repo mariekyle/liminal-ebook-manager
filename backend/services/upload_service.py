@@ -22,7 +22,7 @@ from difflib import SequenceMatcher
 
 # Metadata extraction from EPUB/PDF files
 from services.metadata import extract_metadata as extract_epub_metadata
-from services.trash import TRASH_DIR_NAME
+from services.trash import TRASH_DIR_NAME, TrashError, move_to_trash
 
 from constants import EXTENSION_TO_FORMAT
 
@@ -906,26 +906,50 @@ async def finalize_book(
             }
         
         elif action == 'replace':
-            # Delete existing and create new
+            # Trash existing and create new. existing_folder is client
+            # payload — the deletion goes through move_to_trash, which
+            # owns containment (resolves symlinks, refuses the books
+            # root and anything outside it) and moves the folder to
+            # _trash/ instead of deleting it. Any failed or skipped
+            # removal aborts the replace before new files are written.
             existing_folder = book_data.get('existing_folder')
-            if existing_folder:
-                # existing_folder might be full path or just name
-                if os.path.isabs(existing_folder):
-                    existing_path = existing_folder
-                else:
-                    # Search for it
-                    existing_path = None
-                    for category in ['FanFiction', 'Fiction', 'Non-Fiction']:
-                        potential_path = os.path.join(books_dir, category, existing_folder)
-                        if os.path.exists(potential_path):
-                            existing_path = potential_path
-                            break
-                    if not existing_path:
-                        existing_path = os.path.join(books_dir, existing_folder)
-                
-                if os.path.exists(existing_path):
-                    shutil.rmtree(existing_path)
-            
+            if not existing_folder:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Replace requested but no existing folder was given'
+                }
+
+            # existing_folder might be full path or just name
+            if os.path.isabs(existing_folder):
+                existing_path = existing_folder
+            else:
+                # Search for it
+                existing_path = None
+                for category in ['FanFiction', 'Fiction', 'Non-Fiction']:
+                    potential_path = os.path.join(books_dir, category, existing_folder)
+                    if os.path.exists(potential_path):
+                        existing_path = potential_path
+                        break
+                if not existing_path:
+                    existing_path = os.path.join(books_dir, existing_folder)
+
+            if not os.path.exists(existing_path):
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': f'Folder to replace not found: {existing_folder}'
+                }
+
+            try:
+                move_to_trash(existing_path, books_dir)
+            except TrashError as e:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': f'Could not move the existing folder to trash: {e}'
+                }
+
             # Fall through to 'new' logic
             action = 'new'
         
