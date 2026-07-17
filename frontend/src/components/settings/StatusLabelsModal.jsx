@@ -1,21 +1,13 @@
 import { useState, useEffect } from 'react'
 import { getSettings, updateSetting } from '../../api'
-import { useStatusLabels } from '../../hooks/useStatusLabels'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import FormField from '../ui/FormField'
 
 const DEFAULTS = { unread: 'Unread', in_progress: 'In Progress', finished: 'Finished', dnf: 'DNF' }
-// Row titles render the live label for each status (DB-value keys for the hook)
-const FIELDS = [
-  { key: 'unread', status: 'Unread' },
-  { key: 'in_progress', status: 'In Progress' },
-  { key: 'finished', status: 'Finished' },
-  { key: 'dnf', status: 'Abandoned' },
-]
+const FIELDS = ['unread', 'in_progress', 'finished', 'dnf']
 
 export default function StatusLabelsModal({ isOpen, onClose }) {
-  const { getLabel } = useStatusLabels()
   const [labels, setLabels] = useState(DEFAULTS)
 
   useEffect(() => {
@@ -36,9 +28,9 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
     setLabels(prev => ({ ...prev, [key]: value }))
   }
 
-  const handleBlur = async (key) => {
-    const raw = labels[key]
-    const value = raw.trim() || DEFAULTS[key]
+  // Save-on-commit path shared by blur and Reset — this modal has no Save
+  // button, so a state-only reset would never persist
+  const persistLabel = async (key, value) => {
     const next = { ...labels, [key]: value }
     setLabels(next)
     try {
@@ -48,6 +40,8 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
       console.error('Failed to save status label:', err)
     }
   }
+
+  const handleBlur = (key) => persistLabel(key, labels[key].trim() || DEFAULTS[key])
 
   if (!isOpen) return null
 
@@ -59,8 +53,24 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
           Rename any reading status. Shorter labels fit better in filters and badges.
         </p>
         <div className="space-y-3">
-          {FIELDS.map(({ key, status }) => (
-            <FormField key={key} label={getLabel(status)}>
+          {FIELDS.map((key) => (
+            <FormField key={key}>
+              {/* Static canonical default as the row title — the custom value
+                  lives in the input only. min-h-11 keeps row height stable
+                  whether or not the Reset link renders. */}
+              <div className="flex items-center justify-between min-h-11">
+                <label className="block text-label text-text-body">{DEFAULTS[key]}</label>
+                {labels[key] !== DEFAULTS[key] && (
+                  <button
+                    type="button"
+                    onClick={() => persistLabel(key, DEFAULTS[key])}
+                    aria-label={`Reset ${DEFAULTS[key]} label`}
+                    className="min-h-11 px-3 -mr-3 text-body-sm text-action-primary"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={labels[key]}

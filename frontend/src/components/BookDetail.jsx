@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import Button from './ui/Button'
@@ -145,17 +146,24 @@ const ThreeDotMenu = ({
   menuItems 
 }) => {
   const menuRef = useRef(null)
-  
+  // The portaled mobile sheet lives outside menuRef's DOM subtree — without
+  // this second containment check, a tap on any sheet item would count as
+  // "outside" and close the menu on mousedown, before the item's click fires
+  const sheetRef = useRef(null)
+
   // Close menu when clicking outside (desktop)
   useEffect(() => {
     if (!menuOpen) return
-    
+
     const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target) &&
+        !(sheetRef.current && sheetRef.current.contains(e.target))
+      ) {
         setMenuOpen(false)
       }
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [menuOpen, setMenuOpen])
@@ -210,10 +218,14 @@ const ThreeDotMenu = ({
             ))}
           </div>
           
-          {/* Mobile Bottom Sheet */}
-          <div className="md:hidden fixed inset-0 z-50">
+          {/* Mobile Bottom Sheet — portaled to <body>: the sticky UnifiedNavBar
+              wrapper (z-20) is a stacking context, so rendered in place the
+              sheet's z-50 resolves inside it and paints under the z-40 bottom
+              nav no matter how high its own z-index goes */}
+          {createPortal(
+          <div ref={sheetRef} className="md:hidden fixed inset-0 z-50">
             {/* Backdrop */}
-            <div 
+            <div
               className="absolute inset-0 bg-bg-overlay"
               onClick={() => setMenuOpen(false)}
             />
@@ -252,7 +264,9 @@ const ThreeDotMenu = ({
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
+          )}
         </>
       )}
     </div>
@@ -382,9 +396,6 @@ function BookDetail() {
   const [editionDeleting, setEditionDeleting] = useState(false)
   const [editionDeleteError, setEditionDeleteError] = useState(null)
 
-  // Files section state (Batch 2 S3) — edit mode resets on collapse
-  const [filesEditMode, setFilesEditMode] = useState(false)
-  
   // Merge modal state (Phase 8.7d)
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
   const [mergeStep, setMergeStep] = useState('search') // 'search' | 'confirm'
@@ -687,10 +698,6 @@ function BookDetail() {
       const updatedBook = await getBook(id)
       setBook(updatedBook)
 
-      // With one edition left there's nothing removable — exit edit mode
-      // (the Edit/Done toggle hides itself at editions.length <= 1)
-      if ((updatedBook.editions?.length || 0) <= 1) setFilesEditMode(false)
-
       setEditionToDelete(null)
     } catch (err) {
       console.error('Failed to delete edition:', err)
@@ -789,9 +796,6 @@ function BookDetail() {
     setLoading(true)
     setError(null)
     setActiveTab('details')
-    // Files edit mode is per-title — BookDetail doesn't remount on
-    // in-page /book/:id navigation (merge success, note links, series mates)
-    setFilesEditMode(false)
     // Reset sessions state when navigating to new book
     setSessions([])
     setSessionsStats({ times_read: 0, average_rating: null })
@@ -2378,15 +2382,6 @@ function BookDetail() {
             <h2 className="flex-1 min-w-0 flex items-center min-h-11 text-label text-text-body uppercase tracking-wide">
               Files
             </h2>
-            {book?.editions?.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setFilesEditMode(!filesEditMode)}
-                className="min-h-11 px-3 text-body-sm text-action-primary"
-              >
-                {filesEditMode ? 'Done' : 'Edit'}
-              </button>
-            )}
           </div>
 
           <div className="mt-1">
@@ -2410,8 +2405,9 @@ function BookDetail() {
                           <span className="text-body-sm text-text-secondary">No file</span>
                         )}
                       </div>
-                      {filesEditMode && book?.editions?.length > 1 && (
+                      {book?.editions?.length > 1 && (
                         <IconButton
+                          className="!text-text-muted hover:!text-text-primary"
                           aria-label={`Remove ${label}`}
                           onClick={() => {
                             setEditionDeleteError(null)
