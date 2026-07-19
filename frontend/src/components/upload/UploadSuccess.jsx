@@ -70,12 +70,26 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
     <div className="py-6">
       <StepIndicator steps={['Add', 'Review', 'Done']} currentStep={2} />
 
+      {/* Header reflects the OUTCOME (ratified 2026-07-19): zero adds
+          never renders a green check; partial success states counts */}
       <div className="text-center mb-6">
-        <div className="text-5xl text-action-success mb-4">✓</div>
-        <h1 className="text-h4 text-text-primary mb-1">Added to your library</h1>
-        <p className="text-body-sm text-text-secondary">
-          {successCount === 1 ? 'Your collection grows' : `${successCount} stories added`}
-        </p>
+        {successCount === 0 ? (
+          <div className="text-5xl mb-4">⚠️</div>
+        ) : (
+          <div className="text-5xl text-action-success mb-4">✓</div>
+        )}
+        <h1 className="text-h4 text-text-primary mb-1">
+          {successCount === 0 ? 'Nothing was added' : 'Added to your library'}
+        </h1>
+        {successCount > 0 && (
+          <p className="text-body-sm text-text-secondary">
+            {errors > 0
+              ? `Added ${successCount} of ${successCount + errors}`
+              : successCount === 1
+                ? 'Your collection grows'
+                : `${successCount} stories added`}
+          </p>
+        )}
       </div>
 
       <div className="bg-bg-surface/80 rounded-lg p-4 mb-6 border border-border-subtle">

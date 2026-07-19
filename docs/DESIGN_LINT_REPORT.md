@@ -143,7 +143,7 @@ Raw `<button>` is report-only until the post-S13 conversion backlog clears, then
 | frontend/src/components/TagsMultiSelect.jsx:143 | raw-button | `<button` |
 | frontend/src/components/UnifiedEditModal.jsx:72 | raw-button | `<button` |
 | frontend/src/components/UnifiedEditModal.jsx:122 | raw-button | `<button` |
-| frontend/src/components/upload/UploadSuccess.jsx:102 | raw-button | `<button` |
+| frontend/src/components/upload/UploadSuccess.jsx:116 | raw-button | `<button` |
 | frontend/src/components/WishlistTab.jsx:213 | raw-button | `<button` |
 | frontend/src/components/WishlistTab.jsx:224 | raw-button | `<button` |
 | frontend/src/components/WishlistTab.jsx:235 | raw-button | `<button` |

@@ -3076,9 +3076,15 @@ async def replace_edition_file(
         with open(dest_resolved, 'wb') as fh:
             fh.write(content)
         new_size = os.path.getsize(dest_resolved)
+        # file_size is NOT an editions column — sizes are stat'd at read
+        # time by the GET serializer (stale paths → null, never an
+        # exception). Writing the phantom column was the v0.71.0-diagnosed
+        # failure: OperationalError AFTER the file had landed, so every
+        # swap reported the post-trash failure string and same-name swaps
+        # masked the never-updated row.
         await db.execute(
-            "UPDATE editions SET file_path = ?, file_size = ? WHERE id = ?",
-            (str(dest_resolved), new_size, edition_id),
+            "UPDATE editions SET file_path = ? WHERE id = ?",
+            (str(dest_resolved), edition_id),
         )
         await db.commit()
     except Exception as e:
@@ -3322,7 +3328,7 @@ async def merge_titles(
     if src_reason:
         await db.execute(
             "INSERT INTO notes (title_id, content) VALUES (?, ?)",
-            (target_id, f"Why this one (from the wishlist): {src_reason}")
+            (target_id, f"Why this was on the wishlist: {src_reason}")
         )
         wishlist_note_converted = True
 

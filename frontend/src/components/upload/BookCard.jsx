@@ -214,7 +214,7 @@ function FamiliarTitleBanner({ familiarTitle, action, fileCount, onActionClick }
             size="sm"
             onClick={() => onActionClick('add_to_existing', { title_id: familiarTitle.title_id })}
           >
-            Add to Existing
+            {familiarTitle.is_wishlist ? 'Move to library' : 'Add to Existing'}
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => onActionClick('skip')}>
             Skip
