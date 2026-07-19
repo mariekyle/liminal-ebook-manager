@@ -254,11 +254,17 @@ async def cleanup_old_backups(db: aiosqlite.Connection) -> Dict[str, Any]:
                 file_path = os.path.join(folder_path, filename)
                 
                 try:
-                    # Parse timestamp from filename: liminal_type_YYYYMMDD_HHMMSS.db
-                    parts = filename.replace('.db', '').split('_')
-                    if len(parts) >= 4:
-                        date_str = parts[2]  # YYYYMMDD
-                        time_str = parts[3]  # HHMMSS
+                    # Parse timestamp from filename: liminal_<type>_YYYYMMDD_HHMMSS.db.
+                    # The type token can itself contain an underscore
+                    # ('pre_sync' backups land in daily/), so the timestamp
+                    # is the trailing two tokens — positional parts[2]/[3]
+                    # misread those names and exempted them from retention.
+                    # Only liminal-written names are eligible for deletion;
+                    # anything else is skipped.
+                    parts = filename[:-len('.db')].split('_')
+                    if filename.startswith('liminal_') and len(parts) >= 4:
+                        date_str = parts[-2]  # YYYYMMDD
+                        time_str = parts[-1]  # HHMMSS
                         file_datetime = datetime.strptime(f"{date_str}_{time_str}", '%Y%m%d_%H%M%S')
                         
                         if file_datetime < cutoff:

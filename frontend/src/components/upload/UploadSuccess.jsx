@@ -119,8 +119,17 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
                   <span className={isError ? 'text-action-danger' : 'text-action-success'}>
                     {isError ? '✗' : '✓'}
                   </span>
-                  <span className="flex-1 truncate text-body-sm text-text-primary">
-                    {book?.title || 'Unknown'}
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate text-body-sm text-text-primary">
+                      {book?.title || 'Unknown'}
+                    </span>
+                    {/* Backend skip/defer notes (S15.2b) — error messages
+                        stay in the Errors block below, not duplicated here */}
+                    {message && !isError && (
+                      <span className="block text-body-sm text-text-secondary break-words">
+                        {message}
+                      </span>
+                    )}
                   </span>
                   {badge && (
                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${badge.className}`}>

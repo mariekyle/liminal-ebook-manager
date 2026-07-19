@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
+import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, replaceEditionFile, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 import ReadingStatusCard from './ReadingStatusCard'
@@ -41,6 +41,10 @@ function editionExtensionLabel(edition) {
   const dot = name.lastIndexOf('.')
   return dot > 0 ? name.slice(dot + 1).toUpperCase() : 'FILE'
 }
+
+// File-picker accept strings per storage format for Replace file; every
+// other format's extension equals its name
+const REPLACE_ACCEPT = { html: '.html,.htm' }
 
 // Human-readable file size for the Files section (B/KB/MB, one decimal for MB)
 function formatFileSize(bytes) {
@@ -395,6 +399,38 @@ function BookDetail() {
   const [editionToDelete, setEditionToDelete] = useState(null)
   const [editionDeleting, setEditionDeleting] = useState(false)
   const [editionDeleteError, setEditionDeleteError] = useState(null)
+
+  // Replace file state (D3(i-R), v0.70.0) — inline confirm per S10;
+  // errors render at the point of action (v0.63.0)
+  const [replaceTarget, setReplaceTarget] = useState(null) // { edition, label }
+  const [replacing, setReplacing] = useState(false)
+  const [replaceError, setReplaceError] = useState(null)
+  const replaceFileInputRef = useRef(null)
+
+  const handleReplaceFileChosen = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !replaceTarget) return
+    setReplacing(true)
+    setReplaceError(null)
+    try {
+      const res = await replaceEditionFile(replaceTarget.edition.id, file)
+      setBook(prev => ({
+        ...prev,
+        editions: (prev.editions || []).map(ed =>
+          ed.id === res.edition.id
+            ? { ...ed, file_path: res.edition.file_path, file_size: res.edition.file_size }
+            : ed
+        ),
+      }))
+      setReplaceTarget(null)
+      showToast('File replaced', 'success')
+    } catch (err) {
+      setReplaceError(err.message || "Couldn't replace the file. Try again?")
+    } finally {
+      setReplacing(false)
+    }
+  }
 
   // Merge modal state (Phase 8.7d)
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
@@ -1371,19 +1407,22 @@ function BookDetail() {
     const filename = editionFileName(edition)
     showToast('Preparing…', 'loading')
     try {
-      if (navigator.canShare) {
-        const response = await fetch(url)
-        if (!response.ok) {
-          let message = "Couldn't download the file. Try again?"
-          try {
-            const data = await response.json()
-            if (typeof data.detail === 'string') message = data.detail
-          } catch {
-            // non-JSON error body — keep the generic message
-          }
-          throw new Error(message)
+      // Fetch first on every path — a bare anchor navigation to a stale
+      // path either fails silently or saves the JSON error body as a
+      // file, so the backend's 404 detail has to be read before saving
+      const response = await fetch(url)
+      if (!response.ok) {
+        let message = "Couldn't download the file. Try again?"
+        try {
+          const data = await response.json()
+          if (typeof data.detail === 'string') message = data.detail
+        } catch {
+          // non-JSON error body — keep the generic message
         }
-        const blob = await response.blob()
+        throw new Error(message)
+      }
+      const blob = await response.blob()
+      if (navigator.canShare) {
         const file = new File([blob], filename, { type: blob.type })
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file] })
@@ -1391,26 +1430,16 @@ function BookDetail() {
           maybeOfferStartReading()
           return
         }
-        // File sharing unsupported — download the blob we already fetched
-        const objectUrl = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = objectUrl
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        URL.revokeObjectURL(objectUrl)
-        showToast('Download started', 'success')
-        maybeOfferStartReading()
-        return
       }
-      // No Web Share at all — the endpoint's attachment disposition handles the save
+      // No file sharing — save the fetched blob
+      const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = url
+      link.href = objectUrl
       link.download = filename
       document.body.appendChild(link)
       link.click()
       link.remove()
+      URL.revokeObjectURL(objectUrl)
       showToast('Download started', 'success')
       maybeOfferStartReading()
     } catch (err) {
@@ -2389,41 +2418,98 @@ function BookDetail() {
                 {(book?.editions || []).map((edition) => {
                   const label = formatLabel(edition.format)
                   return (
-                    <li key={edition.id} className="flex items-center gap-2 min-h-11">
-                      <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
-                        <span className="text-body-sm text-text-primary flex-shrink-0">{label}</span>
-                        <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
-                        {edition.file_path ? (
-                          <>
-                            <span className="text-body-sm text-text-secondary truncate">{editionFileName(edition)}</span>
-                            <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
-                            <span className="text-body-sm text-text-secondary flex-shrink-0 whitespace-nowrap">
-                              {edition.file_size != null ? formatFileSize(edition.file_size) : 'size unavailable'}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-body-sm text-text-secondary">No file</span>
+                    <li key={edition.id}>
+                      <div className="flex items-center gap-2 min-h-11">
+                        <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+                          <span className="text-body-sm text-text-primary flex-shrink-0">{label}</span>
+                          <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
+                          {edition.file_path ? (
+                            <>
+                              <span className="text-body-sm text-text-secondary truncate">{editionFileName(edition)}</span>
+                              <span className="text-body-sm text-text-muted flex-shrink-0">·</span>
+                              <span className="text-body-sm text-text-secondary flex-shrink-0 whitespace-nowrap">
+                                {edition.file_size != null ? formatFileSize(edition.file_size) : 'size unavailable'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-body-sm text-text-secondary">No file</span>
+                          )}
+                        </div>
+                        {edition.file_path && (
+                          <IconButton
+                            className="!text-text-muted hover:!text-text-primary"
+                            aria-label={`Replace ${label} file`}
+                            onClick={() => {
+                              setReplaceError(null)
+                              setReplaceTarget(prev => prev?.edition.id === edition.id ? null : { edition, label })
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                              <path d="M21 3v5h-5" />
+                              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                              <path d="M3 21v-5h5" />
+                            </svg>
+                          </IconButton>
+                        )}
+                        {book?.editions?.length > 1 && (
+                          <IconButton
+                            className="!text-text-muted hover:!text-text-primary"
+                            aria-label={`Remove ${label}`}
+                            onClick={() => {
+                              setEditionDeleteError(null)
+                              setEditionToDelete({ ...edition, label })
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 6 6 18" />
+                              <path d="m6 6 12 12" />
+                            </svg>
+                          </IconButton>
                         )}
                       </div>
-                      {book?.editions?.length > 1 && (
-                        <IconButton
-                          className="!text-text-muted hover:!text-text-primary"
-                          aria-label={`Remove ${label}`}
-                          onClick={() => {
-                            setEditionDeleteError(null)
-                            setEditionToDelete({ ...edition, label })
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 6 6 18" />
-                            <path d="m6 6 12 12" />
-                          </svg>
-                        </IconButton>
+                      {replaceTarget?.edition.id === edition.id && (
+                        <div className="mb-2 p-3 rounded-lg bg-bg-elevated border border-border-default">
+                          <p className="text-body-sm text-text-secondary mb-2">
+                            Replace the {label} file? The current file moves to trash (recoverable
+                            until you empty it), and the swap never changes this book&apos;s details.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={replacing}
+                              onClick={() => replaceFileInputRef.current?.click()}
+                            >
+                              {replacing ? 'Replacing…' : 'Choose new file'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={replacing}
+                              onClick={() => { setReplaceTarget(null); setReplaceError(null) }}
+                            >
+                              Keep current file
+                            </Button>
+                          </div>
+                          {replaceError && (
+                            <p className="text-body-sm text-action-danger mt-2">{replaceError}</p>
+                          )}
+                        </div>
                       )}
                     </li>
                   )
                 })}
               </ul>
+              <input
+                ref={replaceFileInputRef}
+                type="file"
+                accept={replaceTarget ? (REPLACE_ACCEPT[replaceTarget.edition.format] || `.${replaceTarget.edition.format}`) : undefined}
+                onChange={handleReplaceFileChosen}
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
               <div className="flex items-center gap-2 mt-2">
                 <Button variant="ghost" onClick={openAddEdition}>
                   Add format

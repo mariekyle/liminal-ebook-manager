@@ -894,6 +894,28 @@ export async function uploadCollectionCover(collectionId, file) {
 }
 
 /**
+ * Replace the file behind one edition (D3(i-R), v0.70.0)
+ * @param {number} editionId - Edition ID
+ * @param {File} file - Replacement file (must match the edition's format)
+ */
+export async function replaceEditionFile(editionId, file) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE}/editions/${editionId}/replace-file`, {
+    method: 'POST',
+    body: formData
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || "Couldn't replace the file. Try again?")
+  }
+
+  return response.json()
+}
+
+/**
  * Update collection cover type
  * @param {number} collectionId - Collection ID
  * @param {string} coverType - 'mosaic', 'gradient', or 'custom'

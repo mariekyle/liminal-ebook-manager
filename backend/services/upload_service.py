@@ -164,6 +164,12 @@ def validate_file(filename: str, size: int) -> tuple[bool, str]:
 async def save_uploaded_file(session: UploadSession, filename: str, content: bytes) -> UploadedFile:
     """Save an uploaded file to the session's temp directory"""
     file_id = str(uuid.uuid4())[:8]
+    # Client filename is untrusted: keep only the leaf name so a crafted
+    # "../x.epub"-style (or "..\x.epub") name can never steer a
+    # destination join. Browsers send bare basenames — folder upload
+    # isn't offered anywhere — so this is a no-op for legitimate traffic
+    # (ratified 2026-07-17, with per-path guards kept as second layer).
+    filename = os.path.basename(filename.replace('\\', '/'))
     ext = os.path.splitext(filename)[1].lower()
     
     # Use original filename but ensure uniqueness
@@ -868,7 +874,14 @@ async def finalize_book(
         if action == 'add_format':
             # Add to existing folder - existing_folder now contains full path
             existing_folder = book_data.get('existing_folder')
-            
+
+            if not existing_folder:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Add format requested but no existing folder was given'
+                }
+
             # Check if it's already a full path
             if os.path.isabs(existing_folder) or existing_folder.startswith(books_dir):
                 target_dir = existing_folder
@@ -885,15 +898,72 @@ async def finalize_book(
                     root_path = os.path.join(books_dir, existing_folder)
                     if os.path.exists(root_path):
                         target_dir = root_path
-            
+
             if not target_dir or not os.path.exists(target_dir):
                 return {'id': book_id, 'status': 'error', 'message': f'Existing folder not found: {existing_folder}'}
-            
-            moved_files = []
+
+            # Containment guard (A1): existing_folder is client payload —
+            # resolve symlinks and require a real directory inside the
+            # books root, never the root itself, never _trash/. Same
+            # containment move_to_trash owns for the replace path; every
+            # rejection here is a per-book error result, never a 4xx.
+            root = Path(books_dir).resolve()
+            target = Path(target_dir).resolve()
+            if not target.is_dir():
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': f'Existing folder not found: {existing_folder}'
+                }
+            if target == root:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Destination is the library root, not a title folder'
+                }
+            if not target.is_relative_to(root):
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Destination folder is outside the library'
+                }
+            if TRASH_DIR_NAME in target.relative_to(root).parts:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Destination folder is in the trash'
+                }
+
+            # Pre-flight before any write: resolve every destination and
+            # refuse overwrites. Any collision or escaping filename
+            # rejects the whole book with nothing written; books already
+            # landed earlier in the batch are unaffected. Writes and
+            # recorded paths keep the join style sync records, so the
+            # resolved form is validation-only.
+            destinations = []
+            collisions = []
             for f in files_to_move:
-                target_path = os.path.join(target_dir, f.original_name)
-                shutil.copy2(f.temp_path, target_path)
-                moved_files.append(target_path)
+                resolved = (target / f.original_name).resolve()
+                if resolved.parent != target:
+                    return {
+                        'id': book_id,
+                        'status': 'error',
+                        'message': f'Invalid destination filename: {f.original_name}'
+                    }
+                if os.path.lexists(resolved):
+                    collisions.append(f.original_name)
+                destinations.append(os.path.join(target_dir, f.original_name))
+            if collisions:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Already in the folder, not overwritten: ' + ', '.join(collisions)
+                }
+
+            moved_files = []
+            for f, dest in zip(files_to_move, destinations):
+                shutil.copy2(f.temp_path, dest)
+                moved_files.append(dest)
 
             return {
                 'id': book_id,
@@ -964,12 +1034,55 @@ async def finalize_book(
             
             # Build full path: books_dir / Author - Title (NO category subfolder)
             target_dir = os.path.join(books_dir, folder_name)
-            os.makedirs(target_dir, exist_ok=True)
-            
+
+            # Same guard family as add_format (v0.67.0), because the
+            # folder may PRE-EXIST (exist_ok below — an author-title
+            # matching a library folder the analyzer didn't flag) or be
+            # a pre-planted symlink redirecting the server-built name
+            # elsewhere. Pre-flight before any write; rejections are
+            # per-book error results.
+            root = Path(books_dir).resolve()
+            target = Path(target_dir).resolve()
+            if not target.is_relative_to(root):
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Destination folder is outside the library'
+                }
+            if TRASH_DIR_NAME in target.relative_to(root).parts:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Destination folder is in the trash'
+                }
+
+            # Collisions with an existing folder's files are refused,
+            # never overwritten (ratified 2026-07-17): a deliberate swap
+            # goes through Replace, which trashes the old folder first.
+            destinations = []
+            collisions = []
             for f in files_to_move:
-                target_path = os.path.join(target_dir, f.original_name)
-                shutil.copy2(f.temp_path, target_path)
-            
+                resolved = (target / f.original_name).resolve()
+                if resolved.parent != target:
+                    return {
+                        'id': book_id,
+                        'status': 'error',
+                        'message': f'Invalid destination filename: {f.original_name}'
+                    }
+                if os.path.lexists(resolved):
+                    collisions.append(f.original_name)
+                destinations.append(os.path.join(target_dir, f.original_name))
+            if collisions:
+                return {
+                    'id': book_id,
+                    'status': 'error',
+                    'message': 'Already in the folder, not overwritten: ' + ', '.join(collisions)
+                }
+
+            os.makedirs(target_dir, exist_ok=True)
+            for f, dest in zip(files_to_move, destinations):
+                shutil.copy2(f.temp_path, dest)
+
             return {
                 'id': book_id,
                 'status': 'created',

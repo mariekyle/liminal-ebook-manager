@@ -81,6 +81,8 @@ function ConnectedApp() {
           <Route path="/duplicates" element={<DuplicatesPage />} />
           {/* Redirect old /upload URL to /add */}
           <Route path="/upload" element={<Navigate to="/add" replace />} />
+          {/* Unknown URLs land on Library — silent redirect, not an error */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <BottomNav />

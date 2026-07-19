@@ -78,6 +78,10 @@ class FamiliarTitle(BaseModel):
     title: str
     authors: list[str]
     category: Optional[str] = None
+    # Fix A (ratified 2026-07-18): wishlist rows now match too — the
+    # review card labels them so "add to existing" reads as the
+    # wishlist-conversion it is. Additive; older clients ignore it.
+    is_wishlist: bool = False
 
 
 class BookInfo(BaseModel):
@@ -165,6 +169,9 @@ class LinkToTitleResponse(BaseModel):
     # editions (alphabetical pick, as in sync). Additive — older clients
     # ignore it.
     skipped_duplicates: list[str] = []
+    # D3(i-R): refusal notes (already-recorded formats) — rendered on the
+    # Done screen through the real response. Additive.
+    message: Optional[str] = None
 
 
 # =============================================================================
@@ -286,11 +293,17 @@ async def check_familiar_titles(db, books: list) -> dict:
     
     results = {}
     
-    # Get all existing titles from database
+    # Get all existing titles from database — INCLUDING wishlist rows
+    # (Fix A, ratified 2026-07-18). Wishlist entries have no folder, so
+    # the folder-duplicate check can never catch them; excluding them
+    # here (the old `WHERE is_tbr = 0`) meant uploading a wishlisted
+    # book always created a duplicate title, and deleting the wishlist
+    # row afterwards destroyed its notes and custom cover. Owned rows
+    # sort first so an owned twin still wins exact-match ties.
     cursor = await db.execute("""
-        SELECT id, title, authors, category 
-        FROM titles 
-        WHERE is_tbr = 0
+        SELECT id, title, authors, category, is_tbr, acquisition_status
+        FROM titles
+        ORDER BY is_tbr ASC, id ASC
     """)
     existing_titles = await cursor.fetchall()
     
@@ -316,12 +329,14 @@ async def check_familiar_titles(db, books: list) -> dict:
                     authors = json.loads(existing["authors"]) if existing["authors"] else []
                 except:
                     authors = []
-                
+
                 best_match = FamiliarTitle(
                     title_id=existing["id"],
                     title=existing_title,
                     authors=authors,
-                    category=existing["category"]
+                    category=existing["category"],
+                    is_wishlist=bool(existing["is_tbr"])
+                    or (existing["acquisition_status"] or '') == 'wishlist'
                 )
                 break
             
@@ -332,12 +347,14 @@ async def check_familiar_titles(db, books: list) -> dict:
                     authors = json.loads(existing["authors"]) if existing["authors"] else []
                 except:
                     authors = []
-                
+
                 best_match = FamiliarTitle(
                     title_id=existing["id"],
                     title=existing_title,
                     authors=authors,
-                    category=existing["category"]
+                    category=existing["category"],
+                    is_wishlist=bool(existing["is_tbr"])
+                    or (existing["acquisition_status"] or '') == 'wishlist'
                 )
                 best_score = similarity
         
@@ -511,10 +528,64 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
     
     # Find matching UploadedFile objects
     files_to_move = [f for f in session.files if f.id in file_ids]
-    
+
+    # Refuse same-format duplicates before any move (D3(i-R), ratified
+    # 2026-07-19): a file whose normalized format is already recorded as
+    # an edition would land as an unreferenced _1 orphan — the rename
+    # loop guards overwrites, then per-format recording refuses the
+    # duplicate edition. Refusing up front closes the orphan class at
+    # the source. Legacy 'ebook' editions match no storage format, so
+    # the S15.2b defer path is unaffected.
+    cursor = await db.execute(
+        "SELECT format FROM editions WHERE title_id = ?", (title_id,)
+    )
+    recorded_formats = {row[0] for row in await cursor.fetchall()}
+    refused_formats = []
+    files_to_land = []
+    for uploaded_file in files_to_move:
+        fmt = EXTENSION_TO_FORMAT.get(
+            os.path.splitext(uploaded_file.original_name)[1].lower()
+        )
+        if fmt is not None and fmt in recorded_formats:
+            if fmt not in refused_formats:
+                refused_formats.append(fmt)
+        else:
+            files_to_land.append(uploaded_file)
+
+    refusal_message = None
+    if refused_formats:
+        refusal_message = '; '.join(
+            f"Already have {'an' if f[0] in 'aeiou' else 'a'} {f} for this title "
+            "— use Replace file in the book's Files section to swap in a new copy."
+            for f in refused_formats
+        )
+        if not files_to_land:
+            # Every file refused: per-book error result, nothing moved,
+            # per the v0.62.0 rejection contract
+            return {
+                'id': book_id,
+                'status': 'error',
+                'message': refusal_message
+            }
+
     files_moved = 0
     moved_paths = []
-    for uploaded_file in files_to_move:
+
+    # Same per-file guard as add_format (v0.67.0): original_name is
+    # client payload — pre-flight every destination before the first
+    # move so an escaping filename rejects the book with nothing moved.
+    # The rename-on-collision below is the recorded S15.2b contract and
+    # stays as-is for legitimately landing files.
+    folder_resolved = Path(folder_path).resolve()
+    for uploaded_file in files_to_land:
+        if (folder_resolved / uploaded_file.original_name).resolve().parent != folder_resolved:
+            return {
+                'id': book_id,
+                'status': 'error',
+                'message': f'Invalid destination filename: {uploaded_file.original_name}'
+            }
+
+    for uploaded_file in files_to_land:
         dest_path = os.path.join(folder_path, uploaded_file.original_name)
 
         # Handle duplicate filenames
@@ -535,6 +606,8 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
     # correctly.
     files_by_format, skipped_paths = group_moved_files_by_format(moved_paths)
     message_parts = [f'Added {files_moved} file(s) to existing title']
+    if refusal_message:
+        message_parts.append(refusal_message)
     if files_by_format:
         created, collided, deferred = await insert_editions_per_format(
             db, title_id, files_by_format, folder_path
@@ -552,6 +625,29 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
             'same-format duplicates kept but not recorded: '
             + ', '.join(os.path.basename(p) for p in skipped_paths)
         )
+
+    # Wishlist → owned conversion (Fix A2, ratified 2026-07-18): files
+    # landing on a wishlist title convert it, exactly as the Acquire
+    # link flow does — without this the title would keep its files but
+    # stay labeled wishlist. Same transaction as the edition insert.
+    cursor = await db.execute(
+        "SELECT is_tbr, acquisition_status FROM titles WHERE id = ?",
+        (title_id,)
+    )
+    state = await cursor.fetchone()
+    if state and (bool(state["is_tbr"]) or (state["acquisition_status"] or '') == 'wishlist'):
+        await db.execute(
+            """
+            UPDATE titles
+            SET is_tbr = 0,
+                acquisition_status = 'owned',
+                status = COALESCE(NULLIF(status, ''), 'Unread'),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (title_id,)
+        )
+        message_parts.append('moved to your library from the wishlist')
 
     await db.commit()
 
@@ -1061,14 +1157,79 @@ async def link_files_to_title(
         
         # Find actual UploadedFile objects from session.files
         files_to_move = [f for f in session.files if f.id in all_file_ids]
-        
+
+        # Refuse same-format duplicates before any move (D3(i-R),
+        # ratified 2026-07-19) — same rule as the review route: a format
+        # already recorded on this title refuses the incoming file, so
+        # nothing lands as an unreferenced _1 orphan.
+        cursor = await db.execute(
+            "SELECT format FROM editions WHERE title_id = ?", (request.title_id,)
+        )
+        recorded_formats = {row[0] for row in await cursor.fetchall()}
+        refused_formats = []
+        files_to_land = []
+        for uploaded_file in files_to_move:
+            fmt = EXTENSION_TO_FORMAT.get(
+                os.path.splitext(uploaded_file.original_name)[1].lower()
+            )
+            if fmt is not None and fmt in recorded_formats:
+                if fmt not in refused_formats:
+                    refused_formats.append(fmt)
+            else:
+                files_to_land.append(uploaded_file)
+
+        refusal_message = None
+        if refused_formats:
+            refusal_message = '; '.join(
+                f"Already have {'an' if f[0] in 'aeiou' else 'a'} {f} for this title "
+                "— use Replace file in the book's Files section to swap in a new copy."
+                for f in refused_formats
+            )
+            if not files_to_land:
+                # Every file refused: nothing moves, the title is not
+                # converted (conversion requires at least one landed
+                # file — D3(i-R) edge), and the refusal is the message.
+                cleanup_session(request.session_id)
+                return LinkToTitleResponse(
+                    success=True,
+                    title_id=request.title_id,
+                    files_moved=0,
+                    folder_path=str(dest_folder),
+                    skipped_duplicates=[],
+                    message=refusal_message,
+                )
+
         # Move all files from session to destination
         moved_files = []
-        for uploaded_file in files_to_move:
+
+        # Same per-file guard as the other upload paths (v0.67.0/B3):
+        # original_name is client payload — pre-flight every destination
+        # before the first move so an escaping filename aborts with
+        # nothing moved (surfaces through this endpoint's existing
+        # generic-500 error path).
+        dest_resolved = dest_folder.resolve()
+        for uploaded_file in files_to_land:
+            if (dest_resolved / uploaded_file.original_name).resolve().parent != dest_resolved:
+                raise ValueError(
+                    f'Invalid destination filename: {uploaded_file.original_name}'
+                )
+
+        for uploaded_file in files_to_land:
             if os.path.exists(uploaded_file.temp_path):
-                dest_path = dest_folder / uploaded_file.original_name
-                shutil.move(uploaded_file.temp_path, str(dest_path))
-                moved_files.append(str(dest_path))
+                dest_path = str(dest_folder / uploaded_file.original_name)
+
+                # Collision → rename with a _1 suffix, the same recorded
+                # S15.2b contract as add_files_to_existing_title — a
+                # linked title is a normal title (ratified 2026-07-17);
+                # files the title already owns are never replaced.
+                base, ext = os.path.splitext(dest_path)
+                counter = 1
+                while os.path.exists(dest_path):
+                    dest_path = f"{base}_{counter}{ext}"
+                    counter += 1
+
+                shutil.move(uploaded_file.temp_path, dest_path)
+                moved_files.append(dest_path)
 
         # One edition per storage format of the moved files (S15.2b — sync's
         # model, replacing the single first-file 'ebook' record)
@@ -1151,7 +1312,8 @@ async def link_files_to_title(
             title_id=request.title_id,
             files_moved=len(moved_files),
             folder_path=str(dest_folder),
-            skipped_duplicates=[os.path.basename(p) for p in skipped_paths]
+            skipped_duplicates=[os.path.basename(p) for p in skipped_paths],
+            message=refusal_message,
         )
         
     except Exception as e:

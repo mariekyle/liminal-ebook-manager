@@ -271,7 +271,10 @@ export default function AddPage() {
       setSessionId(response.session_id)
       setBooks(response.books.map(book => ({
         ...book,
-        action: book.duplicate ? null : 'new',
+        // Wishlist familiar matches start unresolved (D2(a), ratified
+        // 2026-07-19): null arms the existing chooser, attention banner,
+        // and Add gate. Owned matches keep the long-standing 'new' default.
+        action: book.duplicate || book.familiar_title?.is_wishlist ? null : 'new',
         edited: false,
       })))
       
@@ -290,11 +293,11 @@ export default function AddPage() {
             setUploadProgress(prev => Math.min(prev + 10, 90))
           }, 500)
 
-          await linkFilesToTitle(response.session_id, linkToId)
-          
+          const linkResponse = await linkFilesToTitle(response.session_id, linkToId)
+
           clearInterval(progressInterval)
           setUploadProgress(100)
-          
+
           // Include linked book info for success screen display
           setBooks([{
             id: linkToId,
@@ -304,8 +307,17 @@ export default function AddPage() {
             action: 'add_to_existing',
             title_id: parseInt(linkToId, 10),
           }])
+          // Real response, not a synthetic result (D3(i-R), ratified
+          // 2026-07-19): refusal messages reach the Done screen, and a
+          // link that landed nothing renders as the error it is.
           setUploadResults({
-            results: [{ id: linkToId, status: 'format_added', title_id: parseInt(linkToId, 10) }]
+            results: [{
+              id: linkToId,
+              status: linkResponse.files_moved > 0 ? 'format_added' : 'error',
+              title_id: linkResponse.title_id ?? parseInt(linkToId, 10),
+              files_added: linkResponse.files_moved,
+              message: linkResponse.message || null,
+            }]
           })
           
           setTimeout(() => {

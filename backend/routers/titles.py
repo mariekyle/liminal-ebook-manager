@@ -24,8 +24,9 @@ from pydantic import BaseModel
 import aiosqlite
 
 from database import get_db, sync_title_from_sessions
-from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS
-from services.trash import move_to_trash, move_file_to_trash, TrashError
+from constants import ALL_EDITION_FORMATS, EBOOK_FORMATS, EXTENSION_TO_FORMAT
+from services.trash import move_to_trash, move_file_to_trash, TrashError, TRASH_DIR_NAME
+from services.upload_service import validate_file
 from services.covers import get_cover_style, Theme
 from services.covers import (
     extract_epub_cover, 
@@ -2930,6 +2931,181 @@ async def delete_edition(
     }
 
 
+@router.post("/editions/{edition_id}/replace-file")
+async def replace_edition_file(
+    edition_id: int,
+    file: UploadFile = File(...),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """
+    Replace the file behind one edition (D3(i-R), ratified 2026-07-19).
+
+    Deliberate per-format swap for the fanfic-update workflow: the
+    current file moves to <books_root>/_trash/ (recoverable until
+    emptied), the new file lands in the same folder, and the edition
+    row re-points with a fresh size. Metadata is NEVER touched — a file
+    swap changes no title details. The client sends only the file;
+    every path is server-derived.
+
+    Refusals leave the current file untouched and in place: extension
+    not matching the edition's format (Add Format is the right door),
+    a name collision with a different file in the folder, or a shared
+    file another edition still references.
+    """
+    cursor = await db.execute(
+        "SELECT id, title_id, format, file_path, folder_path FROM editions WHERE id = ?",
+        (edition_id,),
+    )
+    edition = await cursor.fetchone()
+    if not edition:
+        raise HTTPException(status_code=404, detail="Edition not found")
+
+    edition_format = edition["format"]
+    current_path = edition["file_path"]
+
+    # Legacy pre-migration editions have no storage format to match
+    if edition_format not in EXTENSION_TO_FORMAT.values():
+        raise HTTPException(
+            status_code=400,
+            detail="This format predates the format migration — run a full sync, then try again.",
+        )
+
+    # v0.68.0 intake rule: leaf name only
+    incoming_name = os.path.basename((file.filename or '').replace('\\', '/'))
+    content = await file.read()
+    is_valid, validation_error = validate_file(incoming_name, len(content))
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=validation_error)
+
+    incoming_format = EXTENSION_TO_FORMAT.get(
+        os.path.splitext(incoming_name)[1].lower()
+    )
+    if incoming_format != edition_format:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"That's {'an' if incoming_format[0] in 'aeiou' else 'a'} "
+                f"{incoming_format} file — this slot holds the {edition_format}. "
+                "To add another format, use Add Format instead."
+            ),
+        )
+
+    # Destination folder is server data: the edition's folder, else the
+    # current file's parent. Containment per the v0.68.0 guard family.
+    folder = edition["folder_path"] or (os.path.dirname(current_path) if current_path else None)
+    if not folder:
+        raise HTTPException(
+            status_code=400,
+            detail="No folder on record for this edition — run a sync first.",
+        )
+    books_root = os.getenv("BOOKS_PATH", "/books")
+    root_resolved = Path(books_root).resolve()
+    folder_resolved = Path(folder).resolve()
+    if not folder_resolved.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail="This edition's folder no longer exists — run a sync first.",
+        )
+    if folder_resolved == root_resolved or not folder_resolved.is_relative_to(root_resolved):
+        raise HTTPException(
+            status_code=400,
+            detail="This edition's folder is outside the library — run a sync first.",
+        )
+    if TRASH_DIR_NAME in folder_resolved.relative_to(root_resolved).parts:
+        raise HTTPException(
+            status_code=400,
+            detail="This edition's folder is in the trash — run a sync first.",
+        )
+
+    dest_resolved = (folder_resolved / incoming_name).resolve()
+    if dest_resolved.parent != folder_resolved:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid destination filename: {incoming_name}",
+        )
+
+    current_resolved = Path(current_path).resolve() if current_path else None
+
+    # A file another edition row still references must not be trashed
+    # or overwritten (records-only rules, as in delete_edition)
+    shared = False
+    if current_path:
+        cursor = await db.execute(
+            "SELECT 1 FROM editions WHERE file_path = ? AND id != ? LIMIT 1",
+            (current_path, edition_id),
+        )
+        shared = await cursor.fetchone() is not None
+
+    # Collision pre-flight BEFORE trashing anything: a refusal must
+    # leave the current file untouched and in place
+    if os.path.lexists(dest_resolved) and dest_resolved != current_resolved:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{incoming_name} already exists in this title's folder — "
+                "rename the new file, or remove the other copy first."
+            ),
+        )
+    if shared and current_resolved is not None and dest_resolved == current_resolved:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Another format of this title uses this same file — "
+                "replacing it here would break that one. Rename the new file first."
+            ),
+        )
+
+    # Trash the current file. Skipped when shared (stays for the other
+    # edition) or already gone from disk — replace then simply provides
+    # the file.
+    trashed_to = None
+    if current_path and not shared and Path(current_path).is_file():
+        try:
+            trashed_to = move_file_to_trash(current_path, books_root)
+        except (TrashError, OSError) as e:
+            logger.error(f"Replace-file trash move failed for edition {edition_id}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Couldn't move the current file to trash. Nothing was replaced — try again?",
+            )
+
+    # Land the new file, then re-point the row. No auto-restore past
+    # this point (ratified spec): failures are reported plainly and the
+    # original stays recoverable in _trash.
+    try:
+        with open(dest_resolved, 'wb') as fh:
+            fh.write(content)
+        new_size = os.path.getsize(dest_resolved)
+        await db.execute(
+            "UPDATE editions SET file_path = ?, file_size = ? WHERE id = ?",
+            (str(dest_resolved), new_size, edition_id),
+        )
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Replace-file landing failed for edition {edition_id}: {e}")
+        if trashed_to:
+            detail = (
+                "Couldn't finish the swap. The original file is in the trash "
+                "folder (recoverable until you empty it); the edition still "
+                "points at its old path. Run a sync if files look out of step."
+            )
+        else:
+            detail = "Couldn't finish the swap — nothing was replaced. Try again?"
+        raise HTTPException(status_code=500, detail=detail)
+
+    return {
+        "success": True,
+        "edition": {
+            "id": edition_id,
+            "title_id": edition["title_id"],
+            "format": edition_format,
+            "file_path": str(dest_resolved),
+            "file_size": new_size,
+        },
+        "trashed_file": trashed_to,
+    }
+
+
 @router.post("/titles/{target_id}/merge")
 async def merge_titles(
     target_id: int,
@@ -2951,9 +3127,12 @@ async def merge_titles(
     3. Move all notes from source → target
     4. Move all collection_books entries from source → target
     5. Move all links (backlinks) from source → target
-    6. Delete source title
+    6. Carry the source's cover when it beats the target's
+       (real > none, custom > extracted; ratified 2026-07-18)
+    7. Delete source title
 
-    The target keeps its metadata and exactly the files it already had.
+    The target keeps its metadata (plus a carried cover when the
+    source's wins) and exactly the files it already had.
     """
     # Validate target exists
     cursor = await db.execute("SELECT id, title FROM titles WHERE id = ?", (target_id,))
@@ -3101,11 +3280,56 @@ async def merge_titles(
         "UPDATE links SET to_title_id = ? WHERE to_title_id = ?",
         (target_id, source_id)
     )
-    
-    # 6. Delete source title (cascades to any remaining FK references)
+
+    # 6. Carry the cover when the source's beats the target's (ratified
+    # 2026-07-18): a real cover beats none, and a custom cover beats an
+    # extracted one; a custom target is never overridden. Merge deletes
+    # no cover files, so this is a column re-point — without it the
+    # source's cover columns died with the row in step 7.
+    cursor = await db.execute(
+        "SELECT has_cover, cover_path, cover_source FROM titles WHERE id = ?",
+        (source_id,)
+    )
+    src_cover = await cursor.fetchone()
+    cursor = await db.execute(
+        "SELECT has_cover, cover_source FROM titles WHERE id = ?",
+        (target_id,)
+    )
+    tgt_cover = await cursor.fetchone()
+    cover_carried = False
+    if src_cover and src_cover[0] and src_cover[1]:
+        target_has_cover = bool(tgt_cover and tgt_cover[0])
+        target_is_custom = bool(tgt_cover and tgt_cover[1] == 'custom')
+        if not target_has_cover or (src_cover[2] == 'custom' and not target_is_custom):
+            await db.execute(
+                "UPDATE titles SET cover_path = ?, has_cover = 1, cover_source = ? WHERE id = ?",
+                (src_cover[1], src_cover[2], target_id)
+            )
+            cover_carried = True
+
+    # 6b. Convert the source's wishlist note into a real note on the
+    # target (D1(b), ratified 2026-07-19): tbr_reason is a titles-row
+    # column, so it died with the row in step 7 — the cover bug one
+    # column over. Keys on the COLUMN, not wishlist status: any
+    # non-empty tbr_reason on a merged-away source converts (an owned
+    # source can carry a stale one). Prefix per the 2026-07-19 rider.
+    cursor = await db.execute(
+        "SELECT tbr_reason FROM titles WHERE id = ?", (source_id,)
+    )
+    src_reason_row = await cursor.fetchone()
+    src_reason = (src_reason_row[0] or '').strip() if src_reason_row else ''
+    wishlist_note_converted = False
+    if src_reason:
+        await db.execute(
+            "INSERT INTO notes (title_id, content) VALUES (?, ?)",
+            (target_id, f"Why this one (from the wishlist): {src_reason}")
+        )
+        wishlist_note_converted = True
+
+    # 7. Delete source title (cascades to any remaining FK references)
     await db.execute("DELETE FROM titles WHERE id = ?", (source_id,))
 
-    # 7. Recompute the target's projection over the merged session
+    # 8. Recompute the target's projection over the merged session
     # history, in the same transaction (sessions-canonical, v0.59.0)
     await sync_title_from_sessions(db, target_id)
 
@@ -3122,7 +3346,9 @@ async def merge_titles(
             "sessions": sessions_count,
             "notes": notes_count,
             "collections": collections_count,
-            "links": links_count
+            "links": links_count,
+            "cover_carried": cover_carried,
+            "wishlist_note_converted": wishlist_note_converted
         },
         "trashed_folders": [dest for _, dest in moved],
         "shared_folders_kept": sorted(shared)

@@ -197,9 +197,15 @@ function FamiliarTitleBanner({ familiarTitle, action, fileCount, onActionClick }
       <div className="mt-4 p-4 rounded-lg bg-bg-elevated border border-action-primary">
         <div className="font-medium flex items-center gap-2 mb-2 text-text-primary">A Familiar Title</div>
         <p className="text-body-sm text-text-secondary mb-3">
-          &quot;{familiarTitle.title}&quot; is in your library.{' '}
-          {fileCount > 1 ? 'These files' : 'This file'} will be added as new format
-          {fileCount > 1 ? 's' : ''}.
+          &quot;{familiarTitle.title}&quot;{' '}
+          {familiarTitle.is_wishlist ? 'is on your wishlist' : 'is in your library'}.{' '}
+          {familiarTitle.is_wishlist
+            ? (fileCount > 1
+                ? 'These files will move it to your library.'
+                : 'This file will move it to your library.')
+            : (fileCount > 1
+                ? 'These files will be added as new formats.'
+                : 'This file will be added as new format.')}
         </p>
         <div className="flex gap-2 flex-wrap">
           <Button
@@ -234,7 +240,8 @@ function FamiliarTitleBanner({ familiarTitle, action, fileCount, onActionClick }
           ✓ Adding to Existing Title
         </div>
         <p className="text-body-sm text-text-secondary mb-3">
-          {fileCount > 1 ? 'These files' : 'This file'} will be added to &quot;{familiarTitle.title}&quot;.
+          {fileCount > 1 ? 'These files' : 'This file'} will be added to &quot;{familiarTitle.title}&quot;
+          {familiarTitle.is_wishlist ? ' and move it to your library' : ''}.
         </p>
         <Button type="button" variant="secondary" size="sm" onClick={() => onActionClick(null)}>
           Change
