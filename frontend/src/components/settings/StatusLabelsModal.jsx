@@ -108,7 +108,9 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
                 onChange={(e) => handleChange(key, e.target.value)}
                 onBlur={() => handleBlur(key)}
                 placeholder={DEFAULTS[key]}
-                className="w-full bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
+                className={`w-full bg-bg-elevated px-3 py-2 rounded text-text-primary border focus:border-action-primary focus:outline-none text-sm ${
+                  saveError?.key === key ? 'border-action-danger' : 'border-border-default'
+                }`}
               />
               {saveError?.key === key && (
                 <p role="alert" className="mt-1.5 text-caption text-action-danger">

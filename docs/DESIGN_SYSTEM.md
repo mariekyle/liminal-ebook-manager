@@ -50,7 +50,7 @@ Seven token classes, defined as `fontSize` entries in `tailwind.config.js` (size
 
 ## 3. Component inventory — `frontend/src/components/ui/`
 
-Fourteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
+Thirteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
 
 Shared conventions across the directory: semantic tokens only; 200ms ease-out transitions; 44px tap targets at default (`md`) sizes — the explicit `sm` sizes drop to 36px (Button, IconButton) and SegmentedControl's segments sit at 40px inside a 44px container; `onChange` receives the **value** (string/array), not the event, in form components; autocomplete dropdowns cap at 8 suggestions, close 200ms after blur, and have no arrow-key navigation (pointer + typing only).
 
@@ -94,16 +94,6 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 - **Common mistakes:** Wrapping it in another FormField — it embeds its own (label + error included). Expecting case preservation: chips are normalized to lowercase on entry. There is no `className` prop.
 - **Frozen behaviors:** None.
 
-### CollapsibleSection
-
-- **Purpose:** Collapsed-by-default content area with fade + "View more"/"View less" toggle; hides the toggle when content fits.
-- **Variants & states:** `variant`: text / tags / grid — currently identical collapsed height; tags additionally shows "`N` tags" in the header and "View all N tags" toggle text when `count` is set. `collapsedHeight` overrides the default. Instant expand/collapse (no animation); state resets on unmount.
-- **Required props:** `title`, `children`. Optional: `variant='text'`, `count`, `collapsedHeight`, `className`.
-- **When to use:** Long detail-page sections — About This Book, Tags, Metadata (BookDetail is the reference caller).
-- **When NOT to use:** Content that must stay visible (reading-status card, actions); anything needing animated transitions.
-- **Common mistakes:** Forgetting `count` on the tags variant (truthiness-gated — `count={0}` shows nothing). Its built-in top border is cancelled with `className="border-t-0"` by every production caller that draws its own — do the same if your section wrapper has a border. Known issues logged for follow-up (CHANGELOG 0.50.0): the toggle uses a default-palette teal and the fade gradient hardcodes a cool near-black that mismatches the warm surface.
-- **Frozen behaviors:** None.
-
 ### FileDropZone
 
 - **Purpose:** Controlled file picker — dashed drop zone on desktop, compact button + list on mobile (≤768px).
@@ -127,7 +117,7 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 ### IconButton
 
 - **Purpose:** Icon-only button, 44px default.
-- **Variants & states:** `variant`: default / accent. `size`: md (44px) / sm (36px). Optional visual `tooltip` on hover. Disabled comes through native attribute via prop spread.
+- **Variants & states:** `variant`: default / accent / muted (rest color drops to the muted text token; hover matches default). `size`: md (44px) / sm (36px). Optional visual `tooltip` on hover. Disabled comes through native attribute via prop spread.
 - **Required props:** `children` (an svg) and — practically — `aria-label` via spread. Optional: `variant`, `size`, `tooltip`, `className`.
 - **When to use:** Section-header pencil actions (36px `sm`), nav-bar icon actions, close buttons in bespoke chrome.
 - **When NOT to use:** Actions with visible text (Button); anything needing a loading state.
@@ -247,7 +237,7 @@ Display labels come from `useStatusLabels` — **only**. "Abandoned" is the inte
 | SmartPaste references in the frontend — feature removed (C5, v0.44); backend endpoints linger but have no UI | **Judgment** |
 | `font-bold` on headings or beside typography tokens | **Lint (strict)** |
 | Tabs inside modals | **Judgment** (code-reviewer; restructure as steps/sections) |
-| `window.confirm(` — and `alert()` for blocking errors | **Lint (strict** for `window.confirm(`**)**; `alert(` is a logged gap — 14 legacy call sites are conversion backlog, don't add more |
+| `window.confirm(` — and `alert()` for blocking errors | **Lint (strict** for `window.confirm(` and bare `confirm(` — same function, both spellings matched since S16 C1**)**; `alert(` is a logged gap — 14 legacy call sites are conversion backlog, don't add more |
 | Typography token + core Tailwind size in one className | **Lint (strict**, cascade-flip**)** |
 | `text-h1` | **Lint (strict)** — see §2 |
 

@@ -2437,7 +2437,7 @@ function BookDetail() {
                         </div>
                         {edition.file_path && (
                           <IconButton
-                            className="!text-text-muted hover:!text-text-primary"
+                            variant="muted"
                             aria-label={`Replace ${label} file`}
                             onClick={() => {
                               setReplaceError(null)
@@ -2454,7 +2454,7 @@ function BookDetail() {
                         )}
                         {book?.editions?.length > 1 && (
                           <IconButton
-                            className="!text-text-muted hover:!text-text-primary"
+                            variant="muted"
                             aria-label={`Remove ${label}`}
                             onClick={() => {
                               setEditionDeleteError(null)

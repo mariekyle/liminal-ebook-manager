@@ -2,7 +2,7 @@
  * IconButton — Icon-only interactive button
  *
  * Sizes: default (44px), sm (36px)
- * Variants: default (gray), accent (teal)
+ * Variants: default (gray), accent (teal), muted (rest color drops to the muted text token)
  * Optional tooltip on hover
  *
  * Usage:
@@ -27,6 +27,7 @@ export default function IconButton({
   const variantClasses = {
     default: 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
     accent: 'text-action-primary hover:bg-action-primary/15',
+    muted: 'text-text-muted hover:bg-bg-elevated hover:text-text-primary',
   }
 
   const sizeClasses = {

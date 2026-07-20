@@ -11,9 +11,12 @@
  *   node scripts/design-lint.mjs          # exits 1 on strict violations (CI-style)
  *   node scripts/design-lint.mjs --warn   # always exits 0 (pre-commit hook mode)
  *
- * Counting rules (per FRONTEND_AUDIT_S12.md §0, reused verbatim):
+ * Counting rules (per FRONTEND_AUDIT_S12.md §0, one deviation noted):
  *   - An instance is one regex match (occurrence-level), not one line.
- *   - Counts include comments/JSDoc.
+ *   - Comments/JSDoc are stripped before matching (S16 C1 — deviation from the
+ *     audit's "counts include comments"): a `<button` or hex in prose is not a
+ *     violation, and commented-out code never counts. `design-lint-ignore`
+ *     markers are still read from the original, unstripped source.
  *   - Variant prefixes (hover:, focus:, md:) are part of the same instance.
  *
  * Exception mechanics:
@@ -33,8 +36,9 @@
  *     not checked.
  *   - Props like labelClassName= are scanned too (the matcher keys on the
  *     `className=` suffix) — intentional: forwarded class props reach the DOM.
- *   - Regex literals inside className={...} expressions can confuse the brace
- *     scanner; comments inside them are handled, regex literals are not.
+ *   - Regex literals are not tracked — they can confuse the brace scanner, and
+ *     the comment stripper reads an unescaped `//` inside one as a line
+ *     comment (escaped `\/\/` is handled). Comments inside braces are handled.
  */
 
 import fs from 'node:fs'
@@ -84,7 +88,10 @@ const INDIGO_UTILITY = /(?<![\w-])(?:[a-z][\w-]*:)*(?:[a-z][\w-]*-)?indigo-(?:\d
 // error, including a re-added CSS definition, so no dot-exclusion here.
 const TEXT_H1 = /(?<![\w-])text-h1(?![\w-])/g
 
-const WINDOW_CONFIRM = /window\.confirm\(/g
+// window.confirm() under either spelling — bare confirm() is the same function
+// and evaded the rule from S13 until S16 C1. The lookbehind keeps
+// showConfirm()/dialog.confirm() out; the window. prefix stays optional.
+const WINDOW_CONFIRM = /(?<![\w.$])(?:window\.)?confirm\(/g
 
 // Bare or window-qualified alert() calls — same no-silent-failures rule as
 // window.confirm. \b keeps showAlert()/customAlert() out; window.alert()
@@ -116,7 +123,7 @@ const CATEGORIES = [
   { key: 'library-alias', label: 'Legacy library-* alias classes', strict: true },
   { key: 'indigo', label: 'Indigo utility classes', strict: true },
   { key: 'cascade-flip', label: 'Cascade-flip pairing (token + core size)', strict: true },
-  { key: 'window-confirm', label: 'window.confirm()', strict: true },
+  { key: 'window-confirm', label: 'window.confirm() / bare confirm()', strict: true },
   { key: 'alert-call', label: 'alert() calls', strict: true },
   { key: 'status-label-literal', label: '"Abandoned" / "Did Not Finish" in UI copy', strict: true },
   { key: 'font-bold', label: 'font-bold on headings / with token classes', strict: true },
@@ -255,12 +262,63 @@ function* headingTags(text) {
   }
 }
 
+/**
+ * Replaces comment bodies with spaces so matchers never count commented-out
+ * code or prose (e.g. a `<button` inside JSDoc). Newlines inside comments are
+ * kept, so every offset and line number in the stripped text matches the
+ * source exactly. String/template-literal aware (including ${...} nesting);
+ * CSS strips block comments only (`//` inside url() is not a comment). An
+ * unescaped `//` inside a regex literal reads as a line comment — documented
+ * limitation (escaped `\/\/` is handled via the backslash guard).
+ */
+function stripComments(text, isCss) {
+  const out = text.split('')
+  const blank = (from, to) => {
+    for (let i = from; i < to; i++) if (out[i] !== '\n') out[i] = ' '
+  }
+  const stack = [] // '"' | "'" | '`' string states; '{' = ${...} interpolation
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    const top = stack[stack.length - 1]
+    if (top === '"' || top === "'") {
+      if (c === '\\') i++
+      else if (c === top || c === '\n') stack.pop()
+    } else if (top === '`') {
+      if (c === '\\') i++
+      else if (c === '`') stack.pop()
+      else if (c === '$' && text[i + 1] === '{') { stack.push('{'); i++ }
+    } else {
+      // Code context — either top-level or inside a template's ${...}
+      if (!isCss && c === '/' && text[i + 1] === '/' && text[i - 1] !== '\\') {
+        let end = text.indexOf('\n', i)
+        if (end === -1) end = text.length
+        blank(i, end)
+        i = end - 1
+      } else if (c === '/' && text[i + 1] === '*') {
+        let end = text.indexOf('*/', i + 2)
+        end = end === -1 ? text.length : end + 2
+        blank(i, end)
+        i = end - 1
+      } else if (!isCss && (c === '"' || c === "'" || c === '`')) {
+        stack.push(c)
+      } else if (top === '{') {
+        if (c === '{') stack.push('{')
+        else if (c === '}') stack.pop()
+      }
+    }
+  }
+  return out.join('')
+}
+
 function scanFile(abs, ctx) {
   const rel = relPath(abs)
   const text = fs.readFileSync(abs, 'utf8')
   const starts = lineStarts(text)
   const lines = text.split('\n')
   const isCss = abs.endsWith('.css')
+  // Matchers run against comment-stripped text; the ignore scan below stays on
+  // the original source (design-lint-ignore markers live in comments).
+  const stripped = stripComments(text, isCss)
 
   // Line-level ignores: the ignore line itself and the line below it.
   const suppressed = new Set()
@@ -283,7 +341,7 @@ function scanFile(abs, ctx) {
   const runPattern = (category, regex, detail = '') => {
     regex.lastIndex = 0
     let m
-    while ((m = regex.exec(text)) !== null) add(category, m.index, m[0], detail)
+    while ((m = regex.exec(stripped)) !== null) add(category, m.index, m[0], detail)
   }
 
   // Plain-text categories (JSX/JS and CSS alike)
@@ -300,7 +358,7 @@ function scanFile(abs, ctx) {
   for (const [sub, regex] of STATUS_LABEL_LITERALS) runPattern('status-label-literal', regex, sub)
 
   // className-aware categories
-  for (const { value, offset } of classNameValues(text)) {
+  for (const { value, offset } of classNameValues(stripped)) {
     if (TOKEN_CLASS.test(value) && CORE_SIZE.test(value)) {
       add('cascade-flip', offset, `${value.match(TOKEN_CLASS)[0]} + ${value.match(CORE_SIZE)[0]}`, 'one className')
     }
@@ -308,7 +366,7 @@ function scanFile(abs, ctx) {
       add('font-bold', offset, `font-bold + ${value.match(TOKEN_CLASS)[0]}`, 'with token class')
     }
   }
-  for (const { tag, offset } of headingTags(text)) {
+  for (const { tag, offset } of headingTags(stripped)) {
     if (FONT_BOLD.test(tag)) {
       add('font-bold', offset, tag.length > 80 ? `${tag.slice(0, 77)}...` : tag, 'on heading element')
     }
