@@ -1959,6 +1959,7 @@ function BookDetail() {
                     title="Add reading session"
                     aria-label="Add reading session"
                   >
+                    {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
                     <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                       <path d="M12 5v14"/>
                       <path d="M5 12h14"/>
@@ -2318,6 +2319,7 @@ function BookDetail() {
                 title="Add reading session"
                 aria-label="Add reading session"
               >
+                {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
                 <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                   <path d="M12 5v14"/>
                   <path d="M5 12h14"/>
@@ -2377,6 +2379,7 @@ function BookDetail() {
               className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
               title="Edit"
             >
+              {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
               <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 <path d="m15 5 4 4"/>
@@ -2472,7 +2475,7 @@ function BookDetail() {
                         <div className="mb-2 p-3 rounded-lg bg-bg-elevated border border-border-default">
                           <p className="text-body-sm text-text-secondary mb-2">
                             Replace the {label} file? The current file moves to trash (recoverable
-                            until you empty it), and the swap never changes this book&apos;s details.
+                            until you empty it), and the swap never changes this title&apos;s details.
                           </p>
                           <div className="flex items-center gap-2">
                             <Button
@@ -2534,6 +2537,7 @@ function BookDetail() {
               className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
               title="Edit"
             >
+              {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
               <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 <path d="m15 5 4 4"/>

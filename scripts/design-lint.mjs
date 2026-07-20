@@ -24,6 +24,10 @@
  *   - Line-level: `// design-lint-ignore` on the same line or the line immediately
  *     above suppresses that line for all categories. `/* design-lint-ignore *\/`
  *     works the same way in CSS.
+ *   - Block-level (CSS only): a `design-lint-hex-sanctioned-start` /
+ *     `design-lint-hex-sanctioned-end` comment pair exempts the enclosed lines
+ *     from the A6 unbracketed-hex pattern ONLY (index.css's token mirror);
+ *     every other category still applies inside the block.
  *   - Multi-line className values are anchored to the line of `className=`;
  *     an ignore for them must sit on or directly above that line, not beside
  *     the offending class deeper inside the expression.
@@ -77,6 +81,21 @@ const HARDCODED_COLOR_PATTERNS = [
   ['A5', /(?<![\w-])(?:text|bg|border|ring)-(?:indigo|red|green|blue|yellow)-\d{2,3}(?![\w-])/g],
 ]
 
+// A6 (C2 hex rescope, ratified 2026-07-20): unbracketed hex, scoped to where a
+// hex is styling rather than data — className string values, SVG stroke=/fill=
+// attributes, and CSS declarations. Inline-style objects and generation-data
+// constants (gradient lanes, chip colors, cover fallbacks) stay OUT of lint
+// scope: code-reviewer judgment. Exact lengths (8|6|4|3) keep hex-shaped id
+// selectors and partial words from matching; A4 owns the bracketed form.
+const UNBRACKETED_HEX = /(?<![[\w#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-fA-F\w-])/g
+const SVG_HEX_ATTR = /(?<![\w-])(?:stroke|fill)\s*=\s*["']#[0-9a-fA-F]{3,8}["']/g
+// CSS-only sanction markers: lines between the pair are exempt from
+// UNBRACKETED_HEX (index.css's token mirror — base styles and scrollbar
+// pseudo-elements can't take utility classes). Read from the original source,
+// like ignore markers. An unpaired start marker sanctions nothing — fail loud.
+const HEX_SANCTION_START = 'design-lint-hex-sanctioned-start'
+const HEX_SANCTION_END = 'design-lint-hex-sanctioned-end'
+
 // Legacy library-* alias utilities (deleted from tailwind.config.js in v0.48.0).
 const LIBRARY_ALIAS = /(?<![\w-])(?:[a-z][\w-]*:)*[a-z][\w-]*-library-[\w-]+(?![\w-])/g
 
@@ -119,7 +138,7 @@ const FONT_BOLD = /(?<![\w-])(?:[a-z][\w-]*:)*font-bold(?![\w-])/
 const RAW_BUTTON = /<button\b/g
 
 const CATEGORIES = [
-  { key: 'hardcoded-colors', label: 'Hardcoded colors (A1–A5)', strict: true },
+  { key: 'hardcoded-colors', label: 'Hardcoded colors (A1–A6)', strict: true },
   { key: 'library-alias', label: 'Legacy library-* alias classes', strict: true },
   { key: 'indigo', label: 'Indigo utility classes', strict: true },
   { key: 'cascade-flip', label: 'Cascade-flip pairing (token + core size)', strict: true },
@@ -350,12 +369,32 @@ function scanFile(abs, ctx) {
   runPattern('indigo', INDIGO_UTILITY)
   runPattern('text-h1', TEXT_H1)
 
-  if (isCss) return
+  if (isCss) {
+    // A6 in CSS: any unbracketed hex declaration, minus sanctioned blocks.
+    const sanctioned = []
+    let openLine = null
+    lines.forEach((line, i) => {
+      if (line.includes(HEX_SANCTION_START)) openLine = i + 1
+      else if (line.includes(HEX_SANCTION_END) && openLine !== null) {
+        sanctioned.push([openLine, i + 1])
+        openLine = null
+      }
+    })
+    UNBRACKETED_HEX.lastIndex = 0
+    let m
+    while ((m = UNBRACKETED_HEX.exec(stripped)) !== null) {
+      const line = lineAt(starts, m.index)
+      if (sanctioned.some(([from, to]) => line >= from && line <= to)) continue
+      add('hardcoded-colors', m.index, m[0], 'A6 css')
+    }
+    return
+  }
 
   // JSX/JS-only categories
   runPattern('window-confirm', WINDOW_CONFIRM)
   runPattern('alert-call', ALERT_CALL)
   for (const [sub, regex] of STATUS_LABEL_LITERALS) runPattern('status-label-literal', regex, sub)
+  runPattern('hardcoded-colors', SVG_HEX_ATTR, 'A6 stroke/fill')
 
   // className-aware categories
   for (const { value, offset } of classNameValues(stripped)) {
@@ -365,6 +404,9 @@ function scanFile(abs, ctx) {
     if (FONT_BOLD.test(value) && TOKEN_CLASS.test(value)) {
       add('font-bold', offset, `font-bold + ${value.match(TOKEN_CLASS)[0]}`, 'with token class')
     }
+    UNBRACKETED_HEX.lastIndex = 0
+    const hexHits = value.match(UNBRACKETED_HEX)
+    if (hexHits) add('hardcoded-colors', offset, hexHits.join(' '), 'A6 className')
   }
   for (const { tag, offset } of headingTags(stripped)) {
     if (FONT_BOLD.test(tag)) {

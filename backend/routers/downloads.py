@@ -59,7 +59,7 @@ async def download_edition_file(edition_id: int, db = Depends(get_db)):
     except OSError:
         raise HTTPException(
             status_code=404,
-            detail="File not found — it may have moved since the last library scan"
+            detail="Couldn't find the file — it may have moved since the last scan."
         )
 
     if not resolved.is_relative_to(Path(BOOKS_PATH).resolve()):

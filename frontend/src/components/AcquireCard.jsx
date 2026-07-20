@@ -90,7 +90,7 @@ export default function AcquireCard({
             onClick={onAcquire}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-text-primary font-medium text-sm transition-colors hover:opacity-90"
           >
-            🎉 I Got This Book!
+            I got this one
           </button>
         </div>
       )}

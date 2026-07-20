@@ -177,6 +177,8 @@ For displaying reading status and progress.
 
 **Implementation note:** the internal database value is `abandoned`; the display label comes from `useStatusLabels`, is user-configurable, and defaults to "DNF." "Abandoned" never renders in the UI. (This table replaces the earlier "Set aside" label — see `VOICE_AND_TONE_v2.md` → Status Language for the full rationale.)
 
+**Settings (StatusLabelsModal, v0.65.0):** field titles render the static canonical defaults; the per-field "Reset" link (visible text) renders only while the field's value differs from its default, with aria "Reset {Label} label" (see Screen Reader Labels).
+
 The label is functional; the surrounding language stays warm:
 
 - DNF filter active: "[count] reads you moved on from"
@@ -279,6 +281,69 @@ Past tense, five words or fewer, no exclamation, no terminal period.
 - "Library synced"
 - "Downloaded"
 - "Preparing…" — loading toast, clears on success/failure/cancel
+- "Trash emptied" — v0.66.0 suite below; terminal period dropped v0.74.0 per this rule
+- "File replaced" — v0.70.0 suite below
+
+### Empty trash (complete suite — v0.66.0; toast corrected v0.74.0)
+
+The app's only truly irreversible operation, behind its only type-to-confirm gate. Recorded complete as shipped:
+
+- Section stats: "{N} items · {X} MB" · zero state "Trash is empty." (no button offered) · transient "Loading trash…"
+- Section button: [Empty trash]
+- Modal title: "Empty trash?"
+- Modal body: "This deletes {N} items ({X MB}) for good. Emptied files skip the NAS recycle bin, and backups cover the library database only — not book files. Nothing can bring them back."
+- Type-to-confirm input label: "Type forever to confirm" (aria variant: "Type forever to confirm emptying the trash")
+- Footer pair: [Keep files] / [Empty trash]
+- Success toast: "Trash emptied"
+- Partial failure (modal stays open): "Couldn't empty the trash completely. {N} items remain — try again?"
+- Request failure: "Couldn't empty the trash. Try again?"
+- Stats load failure: "Couldn't check the trash."
+- Backups caption: "Backups cover the library database only — book files aren't included."
+
+### Replace file (complete suite — v0.70.0; "title's" corrections v0.74.0)
+
+Per-format swap in the Files section, trash-first contract. Recorded complete:
+
+- Inline confirm: "Replace the {format} file? The current file moves to trash (recoverable until you empty it), and the swap never changes this title's details."
+- Buttons: [Choose new file] / [Keep current file] · in-flight "Replacing…"
+- Success toast: "File replaced"
+- Duplicate-format refusal (upload routes): "Already have {a/an} {format} for this title — use Replace file in the title's Files section to swap in a new copy." (article follows the format name; multi-format refusals join with "; ")
+- Format mismatch: "That's a {format} file — this slot holds the {format}. To add another format, use Add Format instead."
+- Collision: "{name} already exists in this title's folder — rename the new file, or remove the other copy first."
+- Shared file: "Another format of this title uses this same file — replacing it here would break that one. Rename the new file first."
+- Trash-step failure: "Couldn't move the current file to trash. Nothing was replaced — try again?"
+- Post-trash failure: "Couldn't finish the swap. The original file is in the trash folder (recoverable until you empty it); the edition still points at its old path. Run a sync if files look out of step."
+- Legacy-format guard: "This format predates the format migration — run a full sync, then try again."
+- Folder guards: "No folder on record for this edition — run a sync first." / "This edition's folder no longer exists — run a sync first." / "This edition's folder is outside the library — run a sync first." / "This edition's folder is in the trash — run a sync first."
+- Frontend fallback: "Couldn't replace the file. Try again?"
+
+---
+
+## Wishlist → Library & Upload Results
+
+Approved strings for the wishlist-conversion flow and the upload Done page.
+
+**Wishlist banners (upload review, v0.69.0):**
+
+- "…is on your wishlist." (banner state)
+- "This file will move it to your library." / "These files will move it to your library." (banner consequence)
+- "…and move it to your library" (add-to-existing confirmation suffix)
+- "moved to your library from the wishlist" (per-book result message)
+
+**Chooser / acquire actions:**
+
+- "Move to library" (wishlist familiar-match primary action, v0.71.0)
+- "I got this one" (wishlist Acquire button, corrected v0.74.0 — supersedes "🎉 I Got This Book!")
+
+**Done-page outcome headers (v0.71.0):**
+
+- Zero adds: "Nothing was added" (attention glyph, no count line)
+- Partial: "Added {n} of {m}"
+
+**Wishlist-note prefix (merge / conversion):**
+
+- Current: "Why this was on the wishlist: " (v2, v0.71.0 — the single current string)
+- Superseded: "Why this one (from the wishlist): " (v0.70.0, replaced by v2)
 
 ---
 
@@ -296,8 +361,36 @@ Anatomy: **what happened + what to do next + a way to do it.** Specific, plain, 
 | Sync incomplete | "Sync didn't finish. Your data is safe — try again?" |
 | Download failed | "Couldn't download the file. Try again?" |
 | File moved/missing | "Couldn't find the file — it may have moved since the last scan." |
+| Delete collection failed | "Couldn't delete the collection. Try again?" |
+| Cover style change failed | "Couldn't change the cover style. Try again?" |
+| Cover image too large | "That image is over 5MB. Try a smaller one?" |
+| Cover upload failed | "Couldn't upload the cover. Try again?" |
+| Cover remove failed | "Couldn't remove the cover. Try again?" |
+| Batch remove partial failure | "Couldn't remove some titles. Try again?" |
+| Collections load failed (picker) | "Couldn't load your collections." |
+| Create-then-add partial failure | "Created the collection, but couldn't add this title to it. Tap it below to try again." |
+| Status labels load failed | "Couldn't load your labels." |
+| Infinite-scroll page failed | "Couldn't load more titles." |
+| Reorder save failed | "Couldn't save the new order. Try again?" |
+
+Rows added 2026-07-20 (batch-3 close): the v0.63.0 collection/cover set and the v0.72.0 load-failure set, both on the approved anatomy.
 
 **Truth check:** reassurance clauses ("The file is still on your device," "Your data is safe") may only ship where the behavior actually guarantees it. Calm is built on honesty.
+
+### Diagnostic register (per-item result rows)
+
+System-fixture carve-out: these state what happened without a next-step limb because they render in batch result rows for near-unreachable cases (v0.67.0/v0.68.0 rejection vocabulary; upload result strings sentence-cased v0.74.0).
+
+- "Add format requested but no existing folder was given"
+- "Destination is the library root, not a title folder"
+- "Destination folder is outside the library"
+- "Destination folder is in the trash"
+- "Invalid destination filename: {name}"
+- "Already in the folder, not overwritten: {names}"
+- "Same-format duplicates kept but not recorded: {names}"
+- "Already recorded, kept the existing edition: {formats}"
+- "Edition records deferred — run a full sync after the format migration succeeds"
+- "Couldn't find the file — it may have moved since the last scan." — the download 404 detail (same string as the File moved/missing row above; surfaces as the desktop download error toast since v0.67.0, backend detail aligned v0.74.0)
 
 ---
 
@@ -314,6 +407,7 @@ Assistive text is always in the functional register — no poetry, no questions,
 | Rating (interactive) | "Rate [N] of 5" | "Rate 3 of 5" |
 | Progress | Hybrid form | "34 percent — a third of the way through" |
 | Ambient count phrase | Plain equivalent exposed; poetry marked decorative | "1,687 titles" |
+| Per-field reset link (settings) | "Reset {Label} label" | "Reset DNF label" |
 
 ---
 
@@ -332,4 +426,6 @@ When writing new copy for the app:
 
 ---
 
-*Last updated: July 8, 2026 — synced with the July 2026 revision of `VOICE_AND_TONE_v2.md`. Supersedes the December 2025 draft (status labels moved from "Set aside" to "DNF"; genre-neutral "stories" phrasing converted to universal terms; empty states rewritten to the formula; Confirmations, Errors, Toasts, and Screen Reader sections added).*
+*Last updated: July 20, 2026 — batch-3 close (C2, v0.74.0): Error Strings extended with the v0.63.0 collection/cover set and the v0.72.0 load-failure set; Diagnostic register subsection added (v0.67.0/v0.68.0 rejection vocabulary + sentence-cased upload result strings); Empty trash (v0.66.0) and Replace file (v0.70.0) suites recorded complete with the v0.74.0 corrections; Wishlist → Library & Upload Results section added (v0.69.0–v0.71.0, including "I got this one"); StatusLabelsModal Reset strings (v0.65.0).*
+
+*Previous revision: July 8, 2026 — synced with the July 2026 revision of `VOICE_AND_TONE_v2.md`. Supersedes the December 2025 draft (status labels moved from "Set aside" to "DNF"; genre-neutral "stories" phrasing converted to universal terms; empty states rewritten to the formula; Confirmations, Errors, Toasts, and Screen Reader sections added).*

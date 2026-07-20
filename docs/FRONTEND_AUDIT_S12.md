@@ -90,7 +90,7 @@ Note: 2 of the 40 `text-label` usages are inside `ui/FormField.jsx` (the compone
 | 6 | App.jsx |
 | 5 | components/ui/Toast.jsx |
 | 3 | components/ui/UnifiedNavBar.jsx |
-| 2 | components/ReadingStatusCard.jsx · ui/Button.jsx · pages/Settings.jsx |
+| 2 | components/ReadingStatusCard.jsx *(→ AcquireCard, v0.72.0)* · ui/Button.jsx · pages/Settings.jsx |
 | 1 | pages/AddPage.jsx |
 
 **The four never-converted stragglers (Duplicates pair, BookLinkPopup, CriteriaBuilder) hold 91 of 112 instances (81%).** These are whole-file conversions, not scattered drift.
@@ -127,7 +127,7 @@ Samples:
 | 6 | 5 | 0 | 1 | 0 | components/FilterDrawer.jsx |
 | 6 | 2 | 3 | 1 | 0 | pages/Settings.jsx |
 | 5 | 5 | 0 | 0 | 0 | components/CollectionsTab.jsx |
-| 5 | 5 | 0 | 0 | 0 | components/ReadingStatusCard.jsx |
+| 5 | 5 | 0 | 0 | 0 | components/ReadingStatusCard.jsx *(→ AcquireCard, v0.72.0)* |
 | 5 | 4 | 1 | 0 | 0 | components/SearchBar.jsx |
 | 5 | 3 | 2 | 0 | 0 | pages/ImportPage.jsx |
 | 4 | 4 | 0 | 0 | 0 | components/CollectionCard.jsx |
@@ -141,7 +141,7 @@ Remaining 28 files: ≤4 each (full list reproducible via Appendix pattern B). S
 
 ## 4. Category C — Shared-Component className Overrides
 
-**3 instances / 3 files.** All ui/ components enumerated from the actual directory: AuthorInput, Badge, Button, ChipInput, CollapsibleSection, FileDropZone, FormField, IconButton, Modal, SearchInput, SegmentedControl, StarRating, Toast, UnifiedNavBar. (BottomSheet and ThreeDotMenu no longer exist in ui/ — see §12.5.)
+**3 instances / 3 files.** All ui/ components enumerated from the actual directory: AuthorInput, Badge, Button, ChipInput, CollapsibleSection *(→ TruncatedText v0.72.0, deleted v0.73.0)*, FileDropZone, FormField, IconButton, Modal, SearchInput, SegmentedControl, StarRating, Toast, UnifiedNavBar. (BottomSheet and ThreeDotMenu no longer exist in ui/ — see §12.5.)
 
 | File:line | Component | Override |
 |-----------|-----------|----------|
@@ -256,7 +256,7 @@ Context: this is the **fanfic completion-status** badge (Complete/WIP/Abandoned)
 
 | Where | Problem |
 |-------|---------|
-| [ReadingStatusCard.jsx:33](frontend/src/components/ReadingStatusCard.jsx:33), [:41](frontend/src/components/ReadingStatusCard.jsx:41) | `label: 'Not Started'` rendered directly (file imports the hook but not for this label). "Not Started" is not a configurable status label — decide: route through `getLabel('Unread')` or whitelist as distinct copy. |
+| [ReadingStatusCard.jsx:33](frontend/src/components/ReadingStatusCard.jsx:33), [:41](frontend/src/components/ReadingStatusCard.jsx:41) *(file → AcquireCard.jsx, v0.72.0)* | `label: 'Not Started'` rendered directly (file imports the hook but not for this label). "Not Started" is not a configurable status label — decide: route through `getLabel('Unread')` or whitelist as distinct copy. |
 | [CriteriaBuilder.jsx:201](frontend/src/components/CriteriaBuilder.jsx:201) | `label="Finished"` on the date-finished field — renders the fixed word while the status name is user-configurable elsewhere in the same form (`statusLabels['Finished']` exists 55 lines up). |
 
 Bespoke loaders duplicating the hook (drift risk — one already produced the H3 #2 bug):
@@ -324,7 +324,7 @@ Boundary guards used throughout: `(?<![\w-])` prefix (also `(?<![\w.-])` where C
 
 **B (outside components/ui/):** `<button\b` · `<input\b` · `<select\b` · `<textarea\b`
 
-**C:** JSX opening tags of the 14 ui/ components located via `<(AuthorInput|Badge|Button|ChipInput|CollapsibleSection|FileDropZone|FormField|IconButton|Modal|SearchInput|SegmentedControl|StarRating|Toast|UnifiedNavBar)\b` scanned brace-aware to the tag-closing `>`; the `className` value (string or `{...}` expression) then matched against:
+**C:** JSX opening tags of the 14 ui/ components located via `<(AuthorInput|Badge|Button|ChipInput|CollapsibleSection|FileDropZone|FormField|IconButton|Modal|SearchInput|SegmentedControl|StarRating|Toast|UnifiedNavBar)\b` *(rename note, 2026-07-20: CollapsibleSection → TruncatedText v0.72.0, deleted v0.73.0 — regex preserved as run)* scanned brace-aware to the tag-closing `>`; the `className` value (string or `{...}` expression) then matched against:
 - color: `(?<![\w-])(?:[a-z][\w-]*:)*(?:text|bg|border)-(?:white|black|(?:gray|zinc|slate|red|green|blue|yellow|indigo|orange|amber|lime|emerald|teal|cyan|sky|violet|purple|fuchsia|pink|rose|stone|neutral)-\d{2,3}|\[#[0-9a-fA-F]{3,8}\]|text-(?:primary|secondary|muted|inverse|body)|bg-(?:base|surface|elevated|overlay)|border-(?:default|subtle|focus)|action-[\w-]+|chip-[\w-]+|status-[\w-]+|library-[\w-]+)(?![\w-])`
 - typography: `(?<![\w-])(?:[a-z][\w-]*:)*(?:text-(?:xl|2xl|3xl)|font-(?:bold|semibold))(?![\w-])`
 - token-class: `(?<![\w.-])text-(?:h[1-4]|body(?:-sm)?|caption|label)(?![\w-])`

@@ -556,7 +556,7 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
     if refused_formats:
         refusal_message = '; '.join(
             f"Already have {'an' if f[0] in 'aeiou' else 'a'} {f} for this title "
-            "— use Replace file in the book's Files section to swap in a new copy."
+            "— use Replace file in the title's Files section to swap in a new copy."
             for f in refused_formats
         )
         if not files_to_land:
@@ -614,15 +614,15 @@ async def add_files_to_existing_title(session, book_id: str, title_id: int, db, 
         )
         if deferred:
             message_parts.append(
-                'edition records deferred — run a full sync after the format migration succeeds'
+                'Edition records deferred — run a full sync after the format migration succeeds'
             )
         elif collided:
             message_parts.append(
-                'already recorded, kept the existing edition: ' + ', '.join(collided)
+                'Already recorded, kept the existing edition: ' + ', '.join(collided)
             )
     if skipped_paths:
         message_parts.append(
-            'same-format duplicates kept but not recorded: '
+            'Same-format duplicates kept but not recorded: '
             + ', '.join(os.path.basename(p) for p in skipped_paths)
         )
 
@@ -970,7 +970,7 @@ async def finalize_batch_endpoint(
                         result['title_id'] = title_id
                         if duplicate_files:
                             result['message'] = (
-                                'same-format duplicates kept but not recorded: '
+                                'Same-format duplicates kept but not recorded: '
                                 + ', '.join(p.name for p in duplicate_files)
                             )
                     except Exception as e:
@@ -1005,17 +1005,17 @@ async def finalize_batch_endpoint(
                                 await db.commit()
                                 if deferred:
                                     message_parts.append(
-                                        'edition records deferred — run a full sync '
+                                        'Edition records deferred — run a full sync '
                                         'after the format migration succeeds'
                                     )
                                 elif collided:
                                     message_parts.append(
-                                        'already recorded, kept the existing edition: '
+                                        'Already recorded, kept the existing edition: '
                                         + ', '.join(collided)
                                     )
                             if skipped_paths:
                                 message_parts.append(
-                                    'same-format duplicates kept but not recorded: '
+                                    'Same-format duplicates kept but not recorded: '
                                     + ', '.join(os.path.basename(p) for p in skipped_paths)
                                 )
                             if message_parts:
@@ -1182,7 +1182,7 @@ async def link_files_to_title(
         if refused_formats:
             refusal_message = '; '.join(
                 f"Already have {'an' if f[0] in 'aeiou' else 'a'} {f} for this title "
-                "— use Replace file in the book's Files section to swap in a new copy."
+                "— use Replace file in the title's Files section to swap in a new copy."
                 for f in refused_formats
             )
             if not files_to_land:

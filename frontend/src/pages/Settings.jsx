@@ -779,7 +779,7 @@ export default function Settings() {
         onEmptied={() => {
           setEmptyTrashOpen(false)
           loadTrashStats()
-          setToast({ type: 'success', message: 'Trash emptied.' })
+          setToast({ type: 'success', message: 'Trash emptied' })
         }}
         onRefreshStats={loadTrashStats}
       />

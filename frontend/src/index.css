@@ -4,6 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* design-lint-hex-sanctioned-start — token mirror: base styles and scrollbar pseudo-elements can't take Tailwind utilities, so these four hexes hand-mirror tailwind.config.js values (each names its token inline) */
 /* Base styles */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -28,6 +29,7 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #5e5954; /* action.secondary-hover — tailwind.config.js */
 }
+/* design-lint-hex-sanctioned-end */
 
 /* Gradient cover animation */
 .cover-gradient {

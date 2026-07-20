@@ -224,6 +224,8 @@ Every routed page renders `UnifiedNavBar` at the top (12/12 today — keep it th
 
 Display labels come from `useStatusLabels` — **only**. "Abandoned" is the internal DB value; the display label is user-configurable and defaults to "DNF"; the literal word "Abandoned" never renders (lint-enforced for literals; the hook is the mechanism). Session-status keys (snake_case: `in_progress`/`finished`/`dnf`) translate through `SESSION_STATUS_TO_BACKEND` (BookDetail) before hitting `getLabel`. Status options in selects come from `getStatusOptions()`, never hand-built arrays. Rating labels likewise via `useRatingLabels`.
 
+**Ratified exception (StatusLabelsModal, v0.65.0):** the settings modal's field labels render the static canonical defaults (Unread / In Progress / Finished / DNF) — never the live-updating custom values — so the canonical name stays on screen while a custom label is typed; the per-field Reset link renders only while the field's value differs from its default. Reviews should not re-flag this render.
+
 ## 5. Anti-patterns ("Cursor, don't")
 
 | Don't | Enforcement |
@@ -231,13 +233,13 @@ Display labels come from `useStatusLabels` — **only**. "Abandoned" is the inte
 | Indigo, anywhere — any `indigo-*` utility | **Lint (strict)** |
 | Red/danger styling on DNF or set-aside states — DNF is neutral | **Judgment** (code-reviewer; philosophy: setting aside ≠ failure) |
 | Raw `<button>` outside `components/ui/` | **Lint (report-only** until the conversion backlog clears, then strict**)** |
-| Hardcoded colors outside frozen files — default palette, raw hex, arbitrary hex values | **Lint (strict**, audit patterns A1–A5; known gaps — unbracketed hex, non-listed hues — are logged in CHANGELOG 0.50.0 and fall to **judgment)** |
+| Hardcoded colors outside frozen files — default palette, raw hex, arbitrary hex values | **Lint (strict**, audit patterns A1–A5 plus A6 since v0.74.0: unbracketed hex in className strings, SVG `stroke=`/`fill=` attributes, and CSS declarations (minus index.css's sanctioned token-mirror block) is lint-caught; inline-style values and generation-data constants are **judgment** — code-reviewer scope, ratified 2026-07-20. Non-listed hues remain the CHANGELOG 0.50.0 logged gap**)** |
 | Color-bearing component classes in `tokens.css` — the `@layer components` token era is over (deleted v0.49.0) | **Judgment** (code-reviewer; config is the only token source) |
 | "Abandoned" / "Did Not Finish" as UI copy | **Lint (strict** for literals**)** + `useStatusLabels` pattern |
 | SmartPaste references in the frontend — feature removed (C5, v0.44); backend endpoints linger but have no UI | **Judgment** |
 | `font-bold` on headings or beside typography tokens | **Lint (strict)** |
 | Tabs inside modals | **Judgment** (code-reviewer; restructure as steps/sections) |
-| `window.confirm(` — and `alert()` for blocking errors | **Lint (strict** for `window.confirm(` and bare `confirm(` — same function, both spellings matched since S16 C1**)**; `alert(` is a logged gap — 14 legacy call sites are conversion backlog, don't add more |
+| `window.confirm(` — and `alert()` for blocking errors | **Lint (strict** for `window.confirm(` and bare `confirm(` — same function, both spellings matched since S16 C1; `alert(` strict since the v0.57.0 rider — the ledger closed at v0.63.0 with 0 call sites**)** |
 | Typography token + core Tailwind size in one className | **Lint (strict**, cascade-flip**)** |
 | `text-h1` | **Lint (strict)** — see §2 |
 

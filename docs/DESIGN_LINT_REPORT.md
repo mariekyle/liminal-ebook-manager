@@ -10,7 +10,7 @@
 
 | Category | Severity | Count | Target | Status |
 |----------|----------|-------|--------|--------|
-| Hardcoded colors (A1–A5) | strict | 0 | 0 | ✅ pass |
+| Hardcoded colors (A1–A6) | strict | 0 | 0 | ✅ pass |
 | Legacy library-* alias classes | strict | 0 | 0 | ✅ pass |
 | Indigo utility classes | strict | 0 | 0 | ✅ pass |
 | Cascade-flip pairing (token + core size) | strict | 0 | 0 | ✅ pass |
@@ -54,12 +54,12 @@ Raw `<button>` is report-only until the post-S13 conversion backlog clears, then
 | frontend/src/components/BookDetail.jsx:1887 | raw-button | `<button` |
 | frontend/src/components/BookDetail.jsx:1931 | raw-button | `<button` |
 | frontend/src/components/BookDetail.jsx:1955 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:2058 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:2314 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:2374 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:2531 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:3001 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:3500 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:2059 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:2315 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:2376 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:2534 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:3005 | raw-button | `<button` |
+| frontend/src/components/BookDetail.jsx:3504 | raw-button | `<button` |
 | frontend/src/components/BookLinkPopup.jsx:91 | raw-button | `<button` |
 | frontend/src/components/BookLinkPopup.jsx:122 | raw-button | `<button` |
 | frontend/src/components/BookLinkPopup.jsx:152 | raw-button | `<button` |
@@ -152,4 +152,9 @@ Raw `<button>` is report-only until the post-S13 conversion backlog clears, then
 
 Every `design-lint-ignore` in the scanned scope, so exceptions stay visible instead of rotting silently:
 
-_None. No line-level exceptions are currently in effect._
+| File:line | Ignore comment |
+|-----------|----------------|
+| frontend/src/components/BookDetail.jsx:1962 | `{/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}` |
+| frontend/src/components/BookDetail.jsx:2322 | `{/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}` |
+| frontend/src/components/BookDetail.jsx:2382 | `{/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}` |
+| frontend/src/components/BookDetail.jsx:2540 | `{/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}` |
