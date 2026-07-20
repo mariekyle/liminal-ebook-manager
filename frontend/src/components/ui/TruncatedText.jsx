@@ -1,5 +1,5 @@
 /**
- * CollapsibleSection - Expandable content area with gradient fade
+ * TruncatedText - Expandable content area with gradient fade
  * 
  * Features:
  * - Collapsed by default (3 lines for text, ~2 rows for tags)
@@ -16,7 +16,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 
-export default function CollapsibleSection({
+export default function TruncatedText({
   title,
   children,
   variant = 'text',        // 'text' | 'tags' | 'grid'

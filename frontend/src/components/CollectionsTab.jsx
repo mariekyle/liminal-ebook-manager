@@ -104,6 +104,7 @@ export default function CollectionsTab() {
   const [collectionToDelete, setCollectionToDelete] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
+  const [reorderError, setReorderError] = useState(null)
   
   // Configure drag sensors with activation constraint
   const sensors = useSensors(
@@ -163,6 +164,7 @@ export default function CollectionsTab() {
   // Enter reorder mode
   const enterReorderMode = () => {
     setViewMode('list') // Force list view for reordering
+    setReorderError(null)
     setIsReorderMode(true)
   }
   
@@ -224,12 +226,14 @@ export default function CollectionsTab() {
     
     // Optimistic update
     setCollections(newCollections)
-    
+    setReorderError(null)
+
     // Save to backend
     try {
       await reorderCollections(newCollections.map(c => c.id))
     } catch (err) {
       console.error('Failed to reorder collections:', err)
+      setReorderError("Couldn't save the new order. Try again?")
       // Revert on error
       fetchCollections()
     }
@@ -353,6 +357,16 @@ export default function CollectionsTab() {
           <Button type="button" size="sm" variant="primary" onClick={exitReorderMode}>
             Done
           </Button>
+        </div>
+      )}
+
+      {/* Failed reorder save — renders where the reorder action lives */}
+      {isReorderMode && reorderError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+        >
+          {reorderError}
         </div>
       )}
       

@@ -1,7 +1,7 @@
 import { useStatusLabels } from '../hooks/useStatusLabels'
 
 /**
- * ReadingStatusCard - Displays current reading status with contextual action
+ * AcquireCard - Displays current reading status with contextual action
  */
 
 const BookIcon = () => (
@@ -67,7 +67,7 @@ const STATUS_CONFIG = {
   }
 }
 
-export default function ReadingStatusCard({
+export default function AcquireCard({
   status = 'unread',
   subtitle = null,
   fileUrl = null,

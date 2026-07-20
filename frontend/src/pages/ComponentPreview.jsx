@@ -8,7 +8,7 @@ import FormField from '../components/ui/FormField'
 import StarRating from '../components/ui/StarRating'
 import Modal from '../components/ui/Modal'
 import Toast from '../components/ui/Toast'
-import CollapsibleSection from '../components/ui/CollapsibleSection'
+import TruncatedText from '../components/ui/TruncatedText'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 
 /* Preview icons — same strokes as lucide-react Pencil, Trash2, Plus, Settings, X. Run `npm i lucide-react` and swap imports if you prefer. */
@@ -499,24 +499,24 @@ export default function ComponentPreview() {
           </div>
         </Section>
 
-        {/* 9. CollapsibleSection */}
-        <Section title="CollapsibleSection">
+        {/* 9. TruncatedText */}
+        <Section title="TruncatedText">
           <div className="space-y-4">
             <p className="text-caption text-text-muted">
               Component mounts collapsed; expand with &quot;View more&quot; when content overflows. No defaultOpen prop.
             </p>
             <div className="bg-bg-elevated rounded-lg overflow-hidden">
-              <CollapsibleSection title="Open Section (long body)">
+              <TruncatedText title="Open Section (long body)">
                 <p className="text-body-sm text-text-secondary leading-relaxed">{longText}</p>
-              </CollapsibleSection>
+              </TruncatedText>
             </div>
             <div className="bg-bg-elevated rounded-lg overflow-hidden">
-              <CollapsibleSection title="Collapsed Section (long body)">
+              <TruncatedText title="Collapsed Section (long body)">
                 <p className="text-body-sm text-text-secondary leading-relaxed">
                   {longText} A second block from <em>Planet of Exile</em> reminds us that exile is also a kind of
                   homecoming when the snow holds your footprints.
                 </p>
-              </CollapsibleSection>
+              </TruncatedText>
             </div>
           </div>
         </Section>

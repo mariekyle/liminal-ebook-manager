@@ -189,6 +189,7 @@ export default function CollectionDetail() {
   const [preReorderViewMode, setPreReorderViewMode] = useState(null) // Track view mode before reorder
   const [preReorderSearchQuery, setPreReorderSearchQuery] = useState('')
   const [isSavingReorder, setIsSavingReorder] = useState(false) // Prevent race conditions during save
+  const [reorderError, setReorderError] = useState(null)
   
   // Configure drag sensors with activation constraint
   // Memoize the activation constraint to prevent recreation on each render
@@ -223,6 +224,8 @@ export default function CollectionDetail() {
   
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadingSection, setLoadingSection] = useState(null) // 'incomplete' | 'completed' | null
+  // Which sentinel row shows a failed load-more: 'main' | 'incomplete' | 'completed' | null
+  const [loadMoreError, setLoadMoreError] = useState(null)
   
   const incompleteLoaderRef = useRef(null)
   const completedLoaderRef = useRef(null)
@@ -267,6 +270,7 @@ export default function CollectionDetail() {
     
     try {
       setLoading(true)
+      setLoadMoreError(null)
       // undefined means use state, null means force backend default, string means use that value
       const effectiveSort = sortOverride !== undefined ? sortOverride : sortOption
       const params = {
@@ -402,13 +406,14 @@ export default function CollectionDetail() {
     const requestSortVersion = sortVersionRef.current
     
     setLoadingMore(true)
+    setLoadMoreError(prev => (prev === 'main' ? null : prev))
     try {
       const params = { limit: BOOKS_PER_PAGE, offset }
       if (sortOption !== null) {
         params.sort = sortOption
       }
       const data = await getCollection(id, params)
-      
+
       // Only apply results if sort hasn't changed during the request
       if (sortVersionRef.current === requestSortVersion) {
         setBooks(prev => [...prev, ...data.books])
@@ -417,6 +422,10 @@ export default function CollectionDetail() {
       }
     } catch (err) {
       console.error('Failed to load more books:', err)
+      // Surface only if this request is still relevant (mirrors the success guard)
+      if (sortVersionRef.current === requestSortVersion) {
+        setLoadMoreError('main')
+      }
     } finally {
       // Always clear loading flag - even if sort changed, we need to allow new requests
       setLoadingMore(false)
@@ -431,7 +440,8 @@ export default function CollectionDetail() {
     
     loadingSectionRef.current = 'incomplete'
     setLoadingSection('incomplete')
-    
+    setLoadMoreError(prev => (prev === 'incomplete' ? null : prev))
+
     try {
       const data = await getCollection(id, {
         incompleteLimit: BOOKS_PER_PAGE,
@@ -450,6 +460,7 @@ export default function CollectionDetail() {
       setIncompleteOffset(prev => prev + BOOKS_PER_PAGE)
     } catch (err) {
       console.error('Failed to load more incomplete books:', err)
+      setLoadMoreError('incomplete')
     } finally {
       loadingSectionRef.current = null
       setLoadingSection(null)
@@ -464,7 +475,8 @@ export default function CollectionDetail() {
     
     loadingSectionRef.current = 'completed'
     setLoadingSection('completed')
-    
+    setLoadMoreError(prev => (prev === 'completed' ? null : prev))
+
     try {
       const data = await getCollection(id, {
         incompleteLimit: 0,
@@ -483,6 +495,7 @@ export default function CollectionDetail() {
       setCompletedOffset(prev => prev + BOOKS_PER_PAGE)
     } catch (err) {
       console.error('Failed to load more completed books:', err)
+      setLoadMoreError('completed')
     } finally {
       loadingSectionRef.current = null
       setLoadingSection(null)
@@ -757,15 +770,16 @@ export default function CollectionDetail() {
     
     const oldIndex = booksArray.findIndex(b => b.id === active.id)
     const newIndex = booksArray.findIndex(b => b.id === over.id)
-    
+
     if (oldIndex === -1 || newIndex === -1) return
-    
+
     // Optimistically update UI
     const newOrder = arrayMove(booksArray, oldIndex, newIndex)
     setBooksArray(newOrder)
-    
+
     // Persist to backend - send ALL book IDs in new order
     setIsSavingReorder(true)
+    setReorderError(null)
     try {
       const allBookIds = newOrder.map(b => b.id)
       await reorderBooksInCollection(parseInt(id), allBookIds)
@@ -773,6 +787,7 @@ export default function CollectionDetail() {
       console.error('Failed to reorder books:', err)
       // Revert on error - safe now since we blocked concurrent drags
       setBooksArray(booksArray)
+      setReorderError("Couldn't save the new order. Try again?")
     } finally {
       setIsSavingReorder(false)
     }
@@ -1070,6 +1085,7 @@ export default function CollectionDetail() {
                         // so SortableContext items match the rendered DOM
                         setPreReorderSearchQuery(searchQuery)
                         setSearchQuery('')
+                        setReorderError(null)
                         setIsReorderMode(true)
                       }
                     }}
@@ -1251,6 +1267,16 @@ export default function CollectionDetail() {
         </div>
       )}
 
+      {/* Failed reorder save — renders where the reorder action lives */}
+      {isReorderMode && reorderError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+        >
+          {reorderError}
+        </div>
+      )}
+
       {/* Automatic collection info - greyscale */}
       {isAutomatic && (
         <div className="mb-4 px-4 py-3 bg-bg-elevated/70 border border-border-subtle rounded-lg">
@@ -1301,6 +1327,14 @@ export default function CollectionDetail() {
                     <span className="text-sm">Loading more books...</span>
                   </div>
                 )}
+                {loadingSection !== 'incomplete' && loadMoreError === 'incomplete' && (
+                  <div className="flex flex-col items-center gap-2">
+                    <p role="alert" className="text-body-sm text-text-secondary">Couldn&apos;t load more titles.</p>
+                    <Button type="button" variant="secondary" size="sm" onClick={loadMoreIncomplete}>
+                      Try again
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1328,6 +1362,14 @@ export default function CollectionDetail() {
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <span className="text-sm">Loading more books...</span>
+                      </div>
+                    )}
+                    {loadingSection !== 'completed' && loadMoreError === 'completed' && (
+                      <div className="flex flex-col items-center gap-2">
+                        <p role="alert" className="text-body-sm text-text-secondary">Couldn&apos;t load more titles.</p>
+                        <Button type="button" variant="secondary" size="sm" onClick={loadMoreCompleted}>
+                          Try again
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -1375,6 +1417,14 @@ export default function CollectionDetail() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <span className="text-sm">Loading more books...</span>
+                </div>
+              )}
+              {!loadingMore && loadMoreError === 'main' && (
+                <div className="flex flex-col items-center gap-2">
+                  <p role="alert" className="text-body-sm text-text-secondary">Couldn&apos;t load more titles.</p>
+                  <Button type="button" variant="secondary" size="sm" onClick={loadMoreBooks}>
+                    Try again
+                  </Button>
                 </div>
               )}
             </div>

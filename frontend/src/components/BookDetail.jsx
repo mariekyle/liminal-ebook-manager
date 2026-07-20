@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, replaceEditionFile, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import ReadingStatusCard from './ReadingStatusCard'
+import AcquireCard from './AcquireCard'
 import GradientCover from './GradientCover'
 import UnifiedEditModal from './UnifiedEditModal'
 import ChangeCoverModal from './ChangeCoverModal'
@@ -1749,7 +1749,7 @@ function BookDetail() {
 
       {isWishlist && (
         <div className="py-3">
-          <ReadingStatusCard
+          <AcquireCard
             status="unread"
             subtitle={book.tbr_priority ? `${book.tbr_priority.charAt(0).toUpperCase() + book.tbr_priority.slice(1)} priority` : null}
             isWishlist

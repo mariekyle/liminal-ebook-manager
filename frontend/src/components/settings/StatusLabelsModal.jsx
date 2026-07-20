@@ -9,9 +9,13 @@ const FIELDS = ['unread', 'in_progress', 'finished', 'dnf']
 
 export default function StatusLabelsModal({ isOpen, onClose }) {
   const [labels, setLabels] = useState(DEFAULTS)
+  const [loadError, setLoadError] = useState(null)
+  // { key, message } — renders at the failed field's row (save-on-blur has no
+  // Save button, so the field is the point of action)
+  const [saveError, setSaveError] = useState(null)
 
-  useEffect(() => {
-    if (!isOpen) return
+  const loadLabels = () => {
+    setLoadError(null)
     getSettings()
       .then(data => {
         setLabels({
@@ -21,7 +25,16 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
           dnf: data.status_label_dnf || DEFAULTS.dnf,
         })
       })
-      .catch(err => console.error('Failed to load status labels:', err))
+      .catch(err => {
+        console.error('Failed to load status labels:', err)
+        setLoadError("Couldn't load your labels.")
+      })
+  }
+
+  useEffect(() => {
+    if (!isOpen) return
+    setSaveError(null)
+    loadLabels()
   }, [isOpen])
 
   const handleChange = (key, value) => {
@@ -31,13 +44,20 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
   // Save-on-commit path shared by blur and Reset — this modal has no Save
   // button, so a state-only reset would never persist
   const persistLabel = async (key, value) => {
+    const prevValue = labels[key]
     const next = { ...labels, [key]: value }
     setLabels(next)
+    setSaveError(null)
     try {
       await updateSetting(`status_label_${key}`, value)
       window.dispatchEvent(new CustomEvent('settingsChanged', { detail: { statusLabels: next } }))
     } catch (err) {
       console.error('Failed to save status label:', err)
+      // Roll back the optimistic value: the field (and the Reset link's render
+      // condition) must reflect what the database still holds — a failed Reset
+      // otherwise shows the default while the DB keeps the custom label
+      setLabels(prev => ({ ...prev, [key]: prevValue }))
+      setSaveError({ key, message: "Couldn't save your changes. Try again?" })
     }
   }
 
@@ -49,6 +69,17 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
     <Modal isOpen={isOpen} onClose={onClose} aria-label="Edit status labels">
       <Modal.Header onClose={onClose}>Status Labels</Modal.Header>
       <Modal.Body>
+        {loadError && (
+          <div
+            role="alert"
+            className="mb-3 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+          >
+            <span>{loadError}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={loadLabels}>
+              Try again
+            </Button>
+          </div>
+        )}
         <p className="text-body-sm text-text-secondary mb-4">
           Rename any reading status. Shorter labels fit better in filters and badges.
         </p>
@@ -79,6 +110,11 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
                 placeholder={DEFAULTS[key]}
                 className="w-full bg-bg-elevated px-3 py-2 rounded text-text-primary border border-border-default focus:border-action-primary focus:outline-none text-sm"
               />
+              {saveError?.key === key && (
+                <p role="alert" className="mt-1.5 text-caption text-action-danger">
+                  {saveError.message}
+                </p>
+              )}
             </FormField>
           ))}
         </div>

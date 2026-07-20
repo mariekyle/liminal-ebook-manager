@@ -31,7 +31,9 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
   const [selectedIds, setSelectedIds] = useState(new Set(currentCollectionIds))
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  
+  const [loadError, setLoadError] = useState(null)
+  const [saveError, setSaveError] = useState(null)
+
   useEffect(() => {
     loadCollections()
   }, [])
@@ -43,10 +45,12 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
   const loadCollections = async () => {
     try {
       setLoading(true)
+      setLoadError(null)
       const data = await listCollections()
       setCollections(data)
     } catch (err) {
       console.error('Failed to load collections:', err)
+      setLoadError("Couldn't load your collections.")
     } finally {
       setLoading(false)
     }
@@ -63,6 +67,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
 
   const handleNewCollectionSuccess = async (newCollection) => {
     setShowCreateModal(false)
+    setSaveError(null)
     if (!newCollection?.id) {
       // Fallback: just refresh the list if we didn't get the new collection back
       await loadCollections()
@@ -76,6 +81,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
       if (onUpdate) onUpdate()
     } catch (err) {
       console.error('Failed to add book to new collection:', err)
+      setSaveError("Created the collection, but couldn't add this title to it. Tap it below to try again.")
       // Still reload so the user at least sees the new (empty) collection
       await loadCollections()
       if (onUpdate) onUpdate()
@@ -87,7 +93,8 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
     
     const isCurrentlySelected = selectedIds.has(collectionId)
     setUpdating(collectionId)
-    
+    setSaveError(null)
+
     try {
       if (isCurrentlySelected) {
         await removeBookFromCollection(collectionId, bookId)
@@ -104,6 +111,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
       if (onUpdate) onUpdate()
     } catch (err) {
       console.error('Failed to update collection:', err)
+      setSaveError("Couldn't save your changes. Try again?")
     } finally {
       setUpdating(null)
     }
@@ -117,8 +125,28 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-action-primary" />
           </div>
+        ) : loadError ? (
+          <div className="px-1 py-4 text-center">
+            <div
+              role="alert"
+              className="mb-3 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+            >
+              {loadError}
+            </div>
+            <Button type="button" variant="secondary" size="sm" onClick={loadCollections}>
+              Try again
+            </Button>
+          </div>
         ) : (
           <>
+            {saveError && (
+              <div
+                role="alert"
+                className="mx-1 mt-1 mb-2 rounded-lg px-3 py-2 text-body-sm bg-action-danger/10 border border-action-danger/30 text-action-danger"
+              >
+                {saveError}
+              </div>
+            )}
             {collections.length > 0 && (
               <div className="px-1 pb-2 pt-1">
                 <SearchInput
