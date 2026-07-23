@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 22, 2026 (v0.77.0)
+> **Last Updated:** July 22, 2026 (v0.78.0)
 > **Current Focus:** Batch 3 closed at v0.74.0. The batch moved the app from "features ship" to "failures speak": every destructive file operation routes through the trash folder with an in-app Trash surface behind the app's only type-to-confirm gate, every upload write path is contained and refuses collisions instead of overwriting, wishlist-to-library conversion is lossless for notes and covers, every blocking error renders where the failed action lives, and the design lint's baselines are true (comment-aware matching, bare confirm( caught, hex rules scoped to what they can honestly enforce). Now underway: the shared-component adoption sprint (raw-button conversion, a MenuItem primitive, gallery completion — S1 shipped across v0.75.0–v0.76.0; S2 shipped v0.77.0, every real-action text-labeled button now on the shared Button), then the post-batch queue — conversion auto-scan, duplicate-pair triage, the merge-confirm redesign, and the date_added semantic decision. Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
@@ -393,7 +393,7 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 | Session | Scope | Status |
 |---------|-------|--------|
 | S1 | Gallery exit + Settings link, 4 missing demos + StarRating slot, Badge verdict recon, MenuItem five-site recon, doc riders | ✅ Shipped in full — v0.75.0 (demos, recon verdicts, doc riders) + v0.76.0 rider (demo-frame z-0 fix, gallery exit, Settings "Developer" link); mobile verify pending |
-| S2 | B1: real-action text-labeled raw buttons → Button | ✅ Shipped v0.77.0 — 17 sites / 13 files converted, variants mapped per site, zero style overrides; raw-button count 120 → 103. Census corrected 19 → 17: the triage's two extra sites were AcquireCard dormant-block buttons already deleted in v0.73.0 |
+| S2 | B1: real-action text-labeled raw buttons → Button | ✅ Shipped v0.77.0 — 17 sites / 13 files converted, variants mapped per site, zero style overrides; raw-button count 120 → 103. Census corrected 19 → 17: the triage's two extra sites were AcquireCard dormant-block buttons already deleted in v0.73.0. + v0.78.0 rider: ghost variant restyled borderless per phone-test ratification — all 61 ghost usages (32 files) inherit, zero call-site edits |
 | S3 | B2: raw buttons → IconButton — clears the four A6 stroke ignores | Queued |
 | S4 | MenuItem primitive (contract locked 2026-07-22) + adoption, ThreeDotMenu extraction to `ui/`, Badge rebuild (survived S1 recon: 7 adoptable sites), raw-`<button>` strict flip | Queued |
 

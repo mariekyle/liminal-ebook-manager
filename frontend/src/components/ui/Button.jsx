@@ -27,7 +27,7 @@ export default function Button({
     primary: 'bg-action-primary text-text-primary hover:bg-action-primary-hover active:scale-[0.97]',
     secondary:
       'bg-action-secondary text-text-primary hover:bg-action-secondary-hover active:scale-[0.97]',
-    ghost: 'bg-transparent text-text-secondary border border-border-default hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]',
+    ghost: 'bg-transparent text-text-secondary hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]',
     danger: 'bg-action-danger text-text-primary hover:bg-action-danger-hover active:scale-[0.97]',
     success: 'bg-action-success text-text-primary hover:bg-action-success-hover active:scale-[0.97]',
     warning: 'bg-action-warning text-text-primary hover:bg-action-warning-hover active:scale-[0.97]',

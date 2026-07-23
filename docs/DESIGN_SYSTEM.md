@@ -77,9 +77,9 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 ### Button
 
 - **Purpose:** The action component. Raw `<button>` outside `ui/` is a lint category (report-only until the conversion backlog clears, then strict).
-- **Variants & states:** `variant`: primary / secondary / ghost / danger / success / warning. `size`: sm (36px) / md (44px) / lg (48px). `loading` (spinner, disables), `disabled` (dimmed, disables). `icon` slot (hidden while loading). Extra props spread to the native button.
+- **Variants & states:** `variant`: primary / secondary / ghost (borderless quiet — plain text at rest, `bg-bg-elevated` fill on hover; v0.78.0) / danger / success / warning. `size`: sm (36px) / md (44px) / lg (48px). `loading` (spinner, disables), `disabled` (dimmed, disables). `icon` slot (hidden while loading). Extra props spread to the native button.
 - **Required props:** `children`. Optional: `variant='primary'`, `size='md'`, `icon`, `loading`, `disabled`, `className`.
-- **When to use:** On-page actions — save, delete, toggle, open-modal (Ghost for section-header modal triggers). Buttons act; links navigate.
+- **When to use:** On-page actions — save, delete, toggle, open-modal (Ghost for section-header modal triggers). Buttons act; links navigate. Ghost is the register for quiet actions that used to ship link-styled (teal/underline text) — convert those to ghost, don't restyle a link.
 - **When NOT to use:** Navigation (use a Link styled as text — "View Series"); icon-only actions (IconButton).
 - **Common mistakes:** Unknown `variant`/`size` injects `undefined` into the className — no fallback, silent visual break. `className` is for **layout only** (`w-full`, `flex-1`, `shrink-0`); overriding colors via `!important` classes was the S12 Category-C drift that the success/warning variants exist to prevent.
 - **Frozen behaviors:** None.

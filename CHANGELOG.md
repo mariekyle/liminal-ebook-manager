@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.78.0] — 2026-07-22
+
+**S2b rider — ghost goes borderless. Executes the S2 Phone-Test ratification (Decisions.md 2026-07-22): the quiet variant stops rendering boxes.**
+
+### Changed
+- **`ui/Button` ghost variant restyled borderless** — the S2 phone test found the ten newly-converted quiet text actions rendering as bordered boxes, fighting the calm-UX register the variant mapping was built on. One class-string edit; zero call-site changes — consumers inherit. Rest label keeps `text-text-secondary`, hover keeps the `bg-bg-elevated` fill + text brighten, active scale and 200ms transition unchanged, sm/md/lg sizes and tap targets unchanged.
+  - Before: `bg-transparent text-text-secondary border border-border-default hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]`
+  - After: `bg-transparent text-text-secondary hover:bg-bg-elevated hover:text-text-primary active:scale-[0.97]`
+- **Blast radius counted honestly:** the ratification was reasoned from S2's ten sites; the execution-time grep census is **61 `variant="ghost"` usages across 32 files** — dominated by the standing modal-footer Cancel population (settings modals, BookDetail's session/edition/merge/acquire modals, FilterDrawer, FileDropZone's picker, gallery demos), all of which go quieter with it. No call site carries a compensating border/color class (repo-wide contextual grep; two `<p>` loading-text false positives in Settings.jsx excluded by inspection); the border was load-bearing nowhere — heights ride `min-h-*`, margins and stretches are border-independent, and the 2px border-box shrink moves no alignment (StatusLabelsModal's `-mr-5` flush included). Flagged for the v0.78.0 phone pass: **footer Cancels now read as text buttons** — by design, or grounds for a follow-up ratification.
+- **DESIGN_SYSTEM §3 Button entry updated** — variants line now describes ghost as borderless quiet (plain text at rest, hover fill); "When to use" gains the register note: quiet actions that used to ship link-styled convert to ghost — don't restyle a link.
+
+### Technical
+- **Modified:** `frontend/src/components/ui/Button.jsx` (one variant class string), `docs/DESIGN_SYSTEM.md` (§3 Button entry, two lines), `backend/main.py` (version 0.77.0 → 0.78.0), CHANGELOG.md, ROADMAP.md. **Backend file changed (version bump only): full Docker rebuild required. No schema change, no migration, no file operations — no `library.db` backup needed.**
+- **Verified:** esbuild parse clean on Button.jsx; `py_compile` clean on backend/main.py; design-lint (deno) all nine strict categories 0/pass, raw-`<button>` **103, delta 0** (tool printed "Report unchanged"); ghost consumer census and compensating-class sweep as above. Reclassification noted, not acted on: TBR "Why this one?" Edit → pencil IconButton is S3's per the same Decisions block.
+
 ## [0.77.0] — 2026-07-22
 
 **Adoption sprint S2 — every real-action text-labeled raw button is now `ui/Button`. The B1 category empties: 17 sites across 13 files converted with per-site variant mapping, raw-`<button>` count 120 → 103.**
