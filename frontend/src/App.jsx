@@ -10,6 +10,7 @@ import AuthorsList from './pages/AuthorsList'
 import AddPage from './pages/AddPage'
 import DuplicatesPage from './pages/DuplicatesPage'
 import Settings from './pages/Settings'
+import Button from './components/ui/Button'
 import SyncResultsPage from './pages/SyncResultsPage'
 import ComponentPreview from './pages/ComponentPreview'
 import BottomNav from './components/BottomNav'
@@ -51,12 +52,9 @@ function ConnectedApp() {
           <h1 className="text-h3 text-text-primary mb-2">Connection Error</h1>
           <p className="text-text-secondary mb-4">Could not connect to the library backend.</p>
           <p className="text-text-muted text-sm mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-action-primary text-text-primary px-4 py-2 rounded hover:opacity-90"
-          >
+          <Button variant="primary" onClick={() => window.location.reload()}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )

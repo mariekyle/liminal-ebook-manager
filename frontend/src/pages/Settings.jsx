@@ -759,6 +759,12 @@ export default function Settings() {
               <p className="px-4 py-3 text-body-sm text-text-muted">Loading trash…</p>
             )}
           </div>
+
+          {/* ================= DEVELOPER ================= */}
+          <SectionHeader>Developer</SectionHeader>
+          <div className="px-2 space-y-1">
+            <SettingsRow label="Component gallery" to="/dev/components" />
+          </div>
         </>
       )}
 

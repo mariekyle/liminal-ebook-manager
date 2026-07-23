@@ -92,14 +92,15 @@ export default function StatusLabelsModal({ isOpen, onClose }) {
               <div className="flex items-center justify-between min-h-11">
                 <label className="block text-label text-text-body">{DEFAULTS[key]}</label>
                 {labels[key] !== DEFAULTS[key] && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    className="-mr-5"
                     onClick={() => persistLabel(key, DEFAULTS[key])}
                     aria-label={`Reset ${DEFAULTS[key]} label`}
-                    className="min-h-11 px-3 -mr-3 text-body-sm text-action-primary"
                   >
                     Reset
-                  </button>
+                  </Button>
                 )}
               </div>
               <input

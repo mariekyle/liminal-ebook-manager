@@ -349,14 +349,15 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-label text-text-primary">Type</span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon={<InfoIcon />}
                   onClick={() => setShowTypeInfo(!showTypeInfo)}
-                  className="flex items-center gap-1 text-caption text-action-primary hover:opacity-90"
                 >
-                  <InfoIcon />
                   {showTypeInfo ? 'Hide' : 'Info'}
-                </button>
+                </Button>
               </div>
 
               {showTypeInfo && (
@@ -502,13 +503,9 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
                 </label>
                 
                 {coverType === 'custom' && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteCover}
-                    className="w-full text-sm text-action-danger hover:opacity-90 py-1 text-left"
-                  >
+                  <Button type="button" variant="danger" size="sm" onClick={handleDeleteCover}>
                     Remove custom cover
-                  </button>
+                  </Button>
                 )}
               </div>
             </FormField>

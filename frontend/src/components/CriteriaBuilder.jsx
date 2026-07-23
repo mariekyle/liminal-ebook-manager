@@ -14,6 +14,7 @@
 
 import TagsMultiSelect from './TagsMultiSelect'
 import FormField from './ui/FormField'
+import Button from './ui/Button'
 import { useStatusLabels } from '../hooks/useStatusLabels'
 
 const CATEGORY_OPTIONS = [
@@ -175,13 +176,9 @@ export default function CriteriaBuilder({ criteria, onChange }) {
           <span className="text-xs text-text-muted">
             {activeCount} rule{activeCount !== 1 ? 's' : ''} active
           </span>
-          <button
-            type="button"
-            onClick={() => onChange({})}
-            className="text-xs text-action-danger hover:text-action-danger-hover transition-colors"
-          >
+          <Button type="button" variant="danger" size="sm" onClick={() => onChange({})}>
             Clear all
-          </button>
+          </Button>
         </div>
       )}
     </div>

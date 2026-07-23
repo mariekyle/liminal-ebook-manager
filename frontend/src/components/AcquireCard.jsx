@@ -1,4 +1,5 @@
 import { useStatusLabels } from '../hooks/useStatusLabels'
+import Button from './ui/Button'
 
 /**
  * AcquireCard - Displays current reading status with contextual action
@@ -85,13 +86,9 @@ export default function AcquireCard({
       {/* Wishlist acquire button — above the fold */}
       {isWishlist && onAcquire && (
         <div className="flex gap-2 mt-3 pt-3 border-t border-border-default">
-          <button
-            type="button"
-            onClick={onAcquire}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-action-primary text-text-primary font-medium text-sm transition-colors hover:opacity-90"
-          >
+          <Button type="button" variant="primary" className="flex-1" onClick={onAcquire}>
             I got this one
-          </button>
+          </Button>
         </div>
       )}
     </div>

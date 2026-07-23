@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 19, 2026 (v0.72.0)
-> **Current Focus:** Batch 3 closed at v0.74.0. The batch moved the app from "features ship" to "failures speak": every destructive file operation routes through the trash folder with an in-app Trash surface behind the app's only type-to-confirm gate, every upload write path is contained and refuses collisions instead of overwriting, wishlist-to-library conversion is lossless for notes and covers, every blocking error renders where the failed action lives, and the design lint's baselines are true (comment-aware matching, bare confirm( caught, hex rules scoped to what they can honestly enforce). Next up: the shared-component adoption sprint (raw-button conversion, a MenuItem primitive, gallery completion), then the post-batch queue — conversion auto-scan, duplicate-pair triage, the merge-confirm redesign, and the date_added semantic decision. Full history lives in CHANGELOG.md.
+> **Last Updated:** July 22, 2026 (v0.77.0)
+> **Current Focus:** Batch 3 closed at v0.74.0. The batch moved the app from "features ship" to "failures speak": every destructive file operation routes through the trash folder with an in-app Trash surface behind the app's only type-to-confirm gate, every upload write path is contained and refuses collisions instead of overwriting, wishlist-to-library conversion is lossless for notes and covers, every blocking error renders where the failed action lives, and the design lint's baselines are true (comment-aware matching, bare confirm( caught, hex rules scoped to what they can honestly enforce). Now underway: the shared-component adoption sprint (raw-button conversion, a MenuItem primitive, gallery completion — S1 shipped across v0.75.0–v0.76.0; S2 shipped v0.77.0, every real-action text-labeled button now on the shared Button), then the post-batch queue — conversion auto-scan, duplicate-pair triage, the merge-confirm redesign, and the date_added semantic decision. Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.74.0)
+## Current State (v0.76.0)
 
 The app is fully functional for daily use with 1,700+ titles. Core systems are stable:
 
@@ -382,6 +382,36 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 - [ ] **Batch-2 UI items (remaining):** coarse-chip collapse (multiple storage-format chips reading as one Ebook group where appropriate); ~~desktop stale-path download bug (fold-in, Decisions 2026-07-10)~~ ✅ closed v0.67.0 — desktop downloads fetch first and surface the backend's 404 detail as the error toast; the no-share and share-fallback branches unified into one blob-save path; ~~backup-filename parser~~ ✅ closed v0.67.0 — recon characterized the one real defect per the 2026-07-17 no-invented-defects ruling (the rotation parser misread `liminal_pre_sync_*` names positionally and exempted them from retention; timestamp now parsed from the trailing tokens with the `liminal_` prefix required; "Last backup"/stats were never filename-derived and are untouched); microcopy verification pass over the new format surfaces (now including the Session 3 strings: confirm-modal file consequence, "size unavailable", "No file"); ~~render S15.2b's per-book upload messages (skips/defers) in AddPage~~ ✅ closed v0.67.0 — rendered as secondary lines on the UploadSuccess result rows (error messages keep their Errors block); the `getBackLabel` `/sync-results` queue item was re-verified present and dropped this session — it shipped as a v0.57.0 rider; ~~the `alert()` sites surfaced by the lint rule~~ ✅ closed v0.63.0 — all 7 remaining (CollectionsTab 1, CollectionModal 4, CollectionDetail 2) converted to inline error banners in their host surfaces; the lint's alert category is at 0 and every strict category passes; the 6 new error strings joined the microcopy-pass queue; from the 2026-07-12 decision sprint: download picker drops file size (the size now lives in the Files section — the picker-side removal remains); ~~3-dot menu audit~~ ✅ done v0.61.0 (Session B3): Edit · Change Cover ─ Merge · Rescan Metadata ─ Delete Title, add-session and add-to-collection removed (both live in their sections), plus the B3 History fixes (projection-ordered session list, finished-only Times Read, + glyph) and the honest Remove Format confirm (stale/within-title-shared paths no longer promise a trash move; cross-title sharing parked as an accepted edge). ~~Merge actually merges files~~ — decision REVERSED 2026-07-12; shipped instead as records-only merge in Session 2 (v0.56.0)
 
 **Definition of Done:** Every file in a title's folder is a visible, downloadable edition with its real format — shipped; follow-ups close the loop on adding files and investigating sync findings in-app.
+
+---
+
+### Shared-Component Adoption Sprint (decisions locked 2026-07-22)
+
+**Priority:** P1 — current sprint
+**Sessions:** 4, sequencing ratified (Decisions.md, Adoption Sprint Decision Sprint); mandatory drift check between S3 and S4
+
+| Session | Scope | Status |
+|---------|-------|--------|
+| S1 | Gallery exit + Settings link, 4 missing demos + StarRating slot, Badge verdict recon, MenuItem five-site recon, doc riders | ✅ Shipped in full — v0.75.0 (demos, recon verdicts, doc riders) + v0.76.0 rider (demo-frame z-0 fix, gallery exit, Settings "Developer" link); mobile verify pending |
+| S2 | B1: real-action text-labeled raw buttons → Button | ✅ Shipped v0.77.0 — 17 sites / 13 files converted, variants mapped per site, zero style overrides; raw-button count 120 → 103. Census corrected 19 → 17: the triage's two extra sites were AcquireCard dormant-block buttons already deleted in v0.73.0 |
+| S3 | B2: raw buttons → IconButton — clears the four A6 stroke ignores | Queued |
+| S4 | MenuItem primitive (contract locked 2026-07-22) + adoption, ThreeDotMenu extraction to `ui/`, Badge rebuild (survived S1 recon: 7 adoptable sites), raw-`<button>` strict flip | Queued |
+
+---
+
+### Search Expansion (scoped 2026-07-20)
+
+**Priority:** P2 — queued behind the shared-component adoption sprint
+**Sessions:** 1–2
+
+One sprint closing the three known search gaps: full-text search across notes
+and summaries (LIKE-based — no schema change; FTS revisited only if
+performance demands it), authors surfaced in main search, and wishlist search
+actually searching the wishlist. Results render as grouped sections in the
+main search surface with matched-text snippets. Distinct from 10.3 External
+Book Search: this searches what you own; 10.3 searches the outside world.
+Scoping decisions pending (Decisions.md will hold them): which note types are
+searchable, result anatomy, priority order.
 
 ---
 
@@ -879,4 +909,4 @@ Moon+ Reader → WebDAV (on the NAS) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: July 19, 2026 (v0.72.0)*
+*Last updated: July 22, 2026 (v0.76.0)*

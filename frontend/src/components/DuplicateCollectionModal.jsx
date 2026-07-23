@@ -191,14 +191,15 @@ export default function DuplicateCollectionModal({ collection, onClose, onSucces
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-text-primary">Collection Type</span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                icon={<InfoIcon />}
                 onClick={() => setShowTypeInfo(!showTypeInfo)}
-                className="flex items-center gap-1 text-xs text-action-primary hover:opacity-90"
               >
-                <InfoIcon />
                 {showTypeInfo ? 'Hide' : 'Info'}
-              </button>
+              </Button>
             </div>
 
             {/* Type info tooltip */}

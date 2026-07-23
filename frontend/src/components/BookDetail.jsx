@@ -1884,16 +1884,17 @@ function BookDetail() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-label text-text-body">Why this one?</span>
                   {!isEditingReason && (
-                    <button
+                    <Button
                       type="button"
-                      className="text-action-primary hover:underline text-sm"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         setReasonDraft(book.tbr_reason || '')
                         setIsEditingReason(true)
                       }}
                     >
                       Edit
-                    </button>
+                    </Button>
                   )}
                 </div>
                 {isEditingReason ? (
@@ -1928,16 +1929,18 @@ function BookDetail() {
             
             {/* Add reason link if none exists */}
             {!book.tbr_reason && !isEditingReason && (
-              <button
+              <Button
                 type="button"
-                className="text-action-primary hover:underline text-sm mb-4"
+                variant="ghost"
+                size="sm"
+                className="mb-4"
                 onClick={() => {
                   setReasonDraft('')
                   setIsEditingReason(true)
                 }}
               >
                 + Add a reason why
-              </button>
+              </Button>
             )}
             
           </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listBooks } from '../api'
 import Modal from './ui/Modal'
 import SearchInput from './ui/SearchInput'
+import Button from './ui/Button'
 
 function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
   const [query, setQuery] = useState(currentSearch)
@@ -126,13 +127,9 @@ function SearchModal({ onClose, onApplyFilter, currentSearch = '' }) {
         </div>
         {query.trim() && (
           <div className="text-center pt-1">
-            <button
-              type="button"
-              onClick={handleApplyFilter}
-              className="text-action-primary text-body-sm hover:underline min-h-[44px] px-2"
-            >
+            <Button type="button" variant="ghost" onClick={handleApplyFilter}>
               Filter library by &quot;{query.trim()}&quot; →
-            </button>
+            </Button>
           </div>
         )}
       </Modal.Body>

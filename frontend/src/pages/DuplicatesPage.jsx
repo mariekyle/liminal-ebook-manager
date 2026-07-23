@@ -164,13 +164,9 @@ function DuplicatesPage() {
         {error && (
           <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-action-danger">
             {error}
-            <button
-              type="button"
-              onClick={scanForDuplicates}
-              className="ml-4 underline hover:no-underline text-body-sm text-text-secondary"
-            >
+            <Button type="button" variant="ghost" size="sm" className="ml-4" onClick={scanForDuplicates}>
               Try again
-            </button>
+            </Button>
           </div>
         )}
 
@@ -195,17 +191,19 @@ function DuplicatesPage() {
                   <div className="text-text-secondary text-body-sm">
                     Found {results.groups.length} potential duplicate {results.groups.length === 1 ? 'group' : 'groups'} ({results.total_duplicates} books)
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={scanForDuplicates}
                     disabled={loading}
-                    className="text-text-muted hover:text-text-primary text-body-sm flex items-center gap-1 min-h-[44px]"
+                    icon={
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    }
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
                     Rescan
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Groups */}

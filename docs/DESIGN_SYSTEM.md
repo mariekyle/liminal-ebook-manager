@@ -204,6 +204,11 @@ Build on `ui/Modal` exclusively. Complex modals (multi-section, pickers, editors
 
 Every data-driven view ships all three. Loading: skeletons or the pulse pattern, not spinners-only for full screens. Empty states get approved copy (MICROCOPY_LIBRARY, Empty States) — warm, one action offered. Errors: what happened + what to do + a way to do it (VOICE_AND_TONE, Error Messages); rejection-only paths get explicit states.
 
+**Two error registers, split by who acted (ratified 2026-07-19):**
+
+- **LOAD failures** — passive; the user didn't act, a fetch failed under them. Render quiet inline text (`text-text-secondary`) plus a Try again affordance, **inside the failed region**. No danger banner: the user has nothing to undo and nothing urgent to react to.
+- **ACTION failures** — the user acted and it didn't take (save, delete, upload, rename). Render the **danger banner at the point of action** (danger border/background tokens, inline, cleared on retry or next action). The v0.63.0 inline-banner precedent governs **this register only** — do not cite it to justify danger styling on load failures.
+
 ### List / grid
 
 Title grids use `useGridColumns` — the user's grid-columns setting controls mobile columns; desktop breakpoints are fixed in the hook's `gridClasses`. Adopters: Library, CollectionDetail, AuthorDetail, WishlistTab. **Group views are exempt by decision:** the Collections card grid and Library's Series tab keep fixed grids (they lay out groups, not titles). Rows in list mode come from `BookCard variant="list"`.

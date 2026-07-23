@@ -27,6 +27,7 @@ import {
   updateBookMetadata,
 } from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
+import Button from '../components/ui/Button'
 
 // Choice screens
 import AddChoice from '../components/add/AddChoice'
@@ -570,16 +571,18 @@ export default function AddPage() {
               </ul>
             </div>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-2"
             onClick={() => {
               setError(null)
               setAnalyzeRejections([])
             }}
-            className="text-action-danger/70 underline text-body-sm mt-2"
           >
             Dismiss
-          </button>
+          </Button>
         </div>
       )}
 

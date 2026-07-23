@@ -164,7 +164,7 @@ liminal/
 
 ## Current Status
 
-**Version:** 0.74.0 (July 2026), in active development.
+**Version:** 0.77.0 (July 2026), in active development.
 
 Core systems are stable: library browsing, metadata extraction, multi-format editions, reading tracking, wiki-style notes, wishlist management, smart collections, automated backups, and mobile-optimized navigation.
 

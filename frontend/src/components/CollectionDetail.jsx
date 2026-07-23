@@ -1549,27 +1549,23 @@ export default function CollectionDetail() {
             </div>
           )}
           <div className="flex items-center justify-between">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => { setRemoveMode(false); setSelectedForRemoval(new Set()); setRemoveError(null) }}
-              className="text-body-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px] px-3"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="danger"
               onClick={handleBatchRemove}
               disabled={selectedForRemoval.size === 0}
-              className={`text-body-sm font-medium min-h-[44px] px-4 rounded-lg transition-colors ${
-                selectedForRemoval.size > 0
-                  ? 'bg-action-danger text-text-primary hover:bg-action-danger-hover'
-                  : 'bg-bg-surface text-text-muted cursor-not-allowed'
-              }`}
             >
               {selectedForRemoval.size > 0
                 ? `Remove ${selectedForRemoval.size}`
                 : 'Remove'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

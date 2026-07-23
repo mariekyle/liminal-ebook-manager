@@ -9,6 +9,10 @@ import StarRating from '../components/ui/StarRating'
 import Modal from '../components/ui/Modal'
 import Toast from '../components/ui/Toast'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
+import AuthorInput from '../components/ui/AuthorInput'
+import ChipInput from '../components/ui/ChipInput'
+import FileDropZone from '../components/ui/FileDropZone'
+import SegmentedControl from '../components/ui/SegmentedControl'
 
 /* Preview icons — same strokes as lucide-react Pencil, Trash2, Plus, Settings, X. Run `npm i lucide-react` and swap imports if you prefer. */
 function PrevPencil(props) {
@@ -55,6 +59,14 @@ function PrevX(props) {
   )
 }
 
+/* Mirrors ManualEntryForm's CATEGORY_OPTIONS shape (minus Uncategorized) —
+   the canonical SegmentedControl use is the category picker. */
+const DEMO_CATEGORY_OPTIONS = [
+  { value: 'Fiction', label: 'Fiction' },
+  { value: 'Non-Fiction', label: 'Non-Fiction' },
+  { value: 'FanFiction', label: 'FanFiction' },
+]
+
 function Section({ title, children }) {
   return (
     <section className="py-8 border-b border-border-default">
@@ -77,6 +89,12 @@ export default function ComponentPreview() {
   const [authorValue, setAuthorValue] = useState('')
   const [isbnValue, setIsbnValue] = useState('abc')
 
+  const [starField, setStarField] = useState(4)
+  const [authorsDemo, setAuthorsDemo] = useState('Ursula K. Le Guin, Ted Chiang')
+  const [chipsDemo, setChipsDemo] = useState(['slow burn', 'found family'])
+  const [segmentDemo, setSegmentDemo] = useState('Fiction')
+  const [filesDemo, setFilesDemo] = useState([])
+
   const [starSm, setStarSm] = useState(3)
   const [starMd, setStarMd] = useState(3)
   const [starLg, setStarLg] = useState(3)
@@ -98,6 +116,10 @@ export default function ComponentPreview() {
   return (
     <div className="min-h-screen bg-bg-base text-text-primary pb-24">
       <Toast toast={toast} />
+
+      {/* Real page chrome — the demo specimens below are de-stickied and
+          forced to z-0 by their frames, so this bar always wins the paint */}
+      <UnifiedNavBar backLabel="Settings" backTo="/settings" />
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-10">
         <header className="mb-10">
@@ -322,9 +344,7 @@ export default function ComponentPreview() {
               error="Must be a valid ISBN"
             />
             <FormField label="Rating">
-              <div className="text-text-muted text-body-sm border border-dashed border-border-default rounded-lg px-3 py-2">
-                [StarRating would go here]
-              </div>
+              <StarRating value={starField} onChange={setStarField} size="md" />
             </FormField>
           </div>
         </Section>
@@ -498,12 +518,12 @@ export default function ComponentPreview() {
         {/* 9. UnifiedNavBar */}
         <Section title="UnifiedNavBar">
           <div className="space-y-4">
-            <div className="border border-border-default rounded-lg overflow-hidden [&>div]:!relative [&>div]:!top-auto">
+            <div className="border border-border-default rounded-lg overflow-hidden [&>div]:!relative [&>div]:!top-auto [&>div]:!z-0">
               <UnifiedNavBar title="Sample Page" />
             </div>
             <p className="text-caption text-text-muted">Title-only variant (no back link, no right slot).</p>
 
-            <div className="border border-border-default rounded-lg overflow-hidden [&>div]:!relative [&>div]:!top-auto">
+            <div className="border border-border-default rounded-lg overflow-hidden [&>div]:!relative [&>div]:!top-auto [&>div]:!z-0">
               <UnifiedNavBar backLabel="Sample Page" backTo="/">
                 <IconButton variant="accent" aria-label="Settings" tooltip="Settings">
                   <PrevSettings className="w-5 h-5" />
@@ -513,6 +533,97 @@ export default function ComponentPreview() {
             <p className="text-caption text-text-muted">
               Back link + right slot via <code className="text-text-secondary">children</code>. Renders sticky in
               actual usage.
+            </p>
+          </div>
+        </Section>
+
+        {/* 10. AuthorInput */}
+        <Section title="AuthorInput">
+          <div className="max-w-md space-y-4">
+            <div>
+              <LabelRow>Interactive — value is a comma-joined string: &quot;{authorsDemo}&quot;</LabelRow>
+              <AuthorInput value={authorsDemo} onChange={setAuthorsDemo} />
+            </div>
+            <div>
+              <LabelRow>Empty (default placeholder)</LabelRow>
+              <AuthorInput value="" onChange={() => {}} />
+            </div>
+            <div>
+              <LabelRow>Error state (boolean — danger border only; message comes from the wrapping FormField)</LabelRow>
+              <AuthorInput value="" onChange={() => {}} error placeholder="Author name" />
+            </div>
+            <p className="text-caption text-text-muted">
+              Autocomplete draws on the library&apos;s author list, fetched once on mount — suggestions need the API
+              reachable.
+            </p>
+          </div>
+        </Section>
+
+        {/* 11. ChipInput */}
+        <Section title="ChipInput">
+          <div className="max-w-md space-y-4">
+            <div>
+              <LabelRow>Interactive — value is an array ({chipsDemo.length} chips); Enter or comma commits, lowercase-normalized</LabelRow>
+              <ChipInput
+                label="Tags"
+                value={chipsDemo}
+                onChange={setChipsDemo}
+                placeholder="Add a tag..."
+                suggestions={['slow burn', 'found family', 'hurt/comfort', 'canon divergence', 'fix-it']}
+              />
+            </div>
+            <div>
+              <LabelRow>Error state (string renders through its embedded FormField)</LabelRow>
+              <ChipInput label="Tags" value={[]} onChange={() => {}} error="Must have at least one tag" />
+            </div>
+            <p className="text-caption text-text-muted">
+              Embeds its own FormField — never wrap it in another one.
+            </p>
+          </div>
+        </Section>
+
+        {/* 12. SegmentedControl */}
+        <Section title="SegmentedControl">
+          <div className="max-w-md space-y-4">
+            <div>
+              <LabelRow>Production shape — size=&quot;sm&quot; + ariaLabel, inside FormField — value: {segmentDemo}</LabelRow>
+              <FormField label="Category">
+                <SegmentedControl
+                  size="sm"
+                  value={segmentDemo}
+                  onChange={setSegmentDemo}
+                  options={DEMO_CATEGORY_OPTIONS}
+                  ariaLabel="Category"
+                />
+              </FormField>
+            </div>
+            <p className="text-caption text-text-muted">
+              Every production caller passes size=&quot;sm&quot; + ariaLabel — the 11px sm label size is locked by
+              decision. Matching is strict ===.
+            </p>
+          </div>
+        </Section>
+
+        {/* 13. FileDropZone */}
+        <Section title="FileDropZone">
+          <div className="space-y-4">
+            <div>
+              <LabelRow>Controlled — files stay in memory, nothing uploads ({filesDemo.length} selected)</LabelRow>
+              <FileDropZone
+                files={filesDemo}
+                onFilesChange={setFilesDemo}
+                allowedExtensions={['.epub', '.pdf', '.mobi', '.azw3']}
+                maxFileSize={104857600}
+                maxFiles={20}
+              />
+            </div>
+            <div>
+              <LabelRow>Disabled</LabelRow>
+              <FileDropZone files={[]} onFilesChange={() => {}} disabled />
+            </div>
+            <p className="text-caption text-text-muted">
+              Production callers fetch constraints from /api/upload/limits — the demo passes static values (100 MB,
+              20 files).
             </p>
           </div>
         </Section>

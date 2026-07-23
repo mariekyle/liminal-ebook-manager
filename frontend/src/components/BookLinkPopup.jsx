@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { listBooks } from '../api'
+import Button from './ui/Button'
 
 function BookLinkPopup({ onSelect, onClose }) {
   const [query, setQuery] = useState('')
@@ -149,12 +150,9 @@ function BookLinkPopup({ onSelect, onClose }) {
           {/* Footer - Insert anyway option */}
           {query.trim() && (
             <div className="px-4 py-3 border-t border-border-default text-center">
-              <button
-                onClick={() => onSelect(query.trim())}
-                className="text-action-primary text-sm hover:underline"
-              >
+              <Button variant="ghost" size="sm" onClick={() => onSelect(query.trim())}>
                 Insert "{query.trim()}" as plain text →
-              </button>
+              </Button>
             </div>
           )}
         </div>

@@ -83,13 +83,9 @@ export default function MarkFinishedModal({ book, onConfirm, onClose, error, sav
                 </button>
               ))}
               {rating > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setRating(0)}
-                  className="ml-2 text-caption text-text-muted hover:text-text-secondary"
-                >
+                <Button type="button" variant="ghost" size="sm" className="ml-2" onClick={() => setRating(0)}>
                   Clear
-                </button>
+                </Button>
               )}
             </div>
           </FormField>
