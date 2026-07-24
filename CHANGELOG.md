@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.80.0] — 2026-07-23
+
+**S3 follow-up — the flagged Golden-Rule-4 deletion executes: dead `SearchBar.jsx` is deleted. v0.79.0's census proved the file orphaned and left it in place for a deletion pass; this session re-proved the orphaning against the live tree and removed it. Raw-`<button>` lint count 99 → 95 — the count no longer includes dead code.**
+
+### Removed
+- **`frontend/src/components/SearchBar.jsx` deleted (110 lines, dead code).** Grep verification re-run this session immediately before deletion: `grep -rn "SearchBar" frontend/src` matched only the file's own JSDoc line, function declaration, and default export — zero importers, same result as the v0.79.0 census. Reverse side trivially clean: the file contained no import lines at all (inline SVG glyphs, fully controlled via props, no shared state — the deletion-grep scorecard's setter-variant and decl/use-pairing checks don't apply to a self-contained component). Superseded by Library.jsx's IconButton toolbar (Add/Search/Filter with count badge) with `SearchModal` as the search surface.
+- **Its 4 raw `<button>` sites leave the lint count: 99 → 95.** These were S3's "−4 dead file" census line — sites that were never convertible work and are now no longer counted at all.
+
+### Changed
+- **`docs/CODE_PATTERNS.md`** — SearchBar.jsx removed from the Debounced Search Input "Files Using This Pattern" list. Flagged, not fixed (out of scope): the list's surviving entry `FandomModal.jsx` contains no debounce logic either, and `useDebounce` appears nowhere in `frontend/src` — the section currently documents a pattern nothing uses. Parked for a docs-accuracy pass.
+- **`docs/DESIGN_LINT_REPORT.md`** regenerated — the four SearchBar raw-button rows are gone; Active-ignores inventory still "None".
+
+### Technical
+- **Deleted:** `frontend/src/components/SearchBar.jsx`. **Modified:** `backend/main.py` (version 0.79.0 → 0.80.0), `docs/CODE_PATTERNS.md`, `docs/DESIGN_LINT_REPORT.md` (regenerated), CHANGELOG.md, ROADMAP.md. **Backend file changed (version bump only): full Docker rebuild required. No schema change, no migration, no bulk writes — no `library.db` backup needed.** Volume-side: the Docker volume's copy of `frontend/src/components/SearchBar.jsx` must be deleted by hand — a repo-side deletion doesn't propagate, and a stale volume copy would fail lcheck.
+- **Verified:** deletion grep both sides as above; design-lint (deno) all nine strict categories 0/pass, zero ignore lines, raw-`<button>` **99 − 4 = 95**; `py_compile` clean on backend/main.py. `docs/FRONTEND_AUDIT_S12.md` still names `components/SearchBar.jsx` in its per-file table — reported-not-edited by convention (historical audit record). Historical CHANGELOG references to SearchBar (v0.30-era token conversion) untouched per the append-only rule.
+
 ## [0.79.0] — 2026-07-23
 
 **Adoption sprint S3 — the icon-button pass. Every live icon-only raw action button is now `ui/IconButton`, BookDetail's four A6 stroke ignores are deleted (hardcoded-colors is truly 0/pass with zero exceptions for the first time since the category was designated), and the TBR Edit affordance returns to the ratified pencil convention. The census story is bigger than the conversion story: the triage's pool of 15 resolved to 4 live convertible sites, every subtraction named.**

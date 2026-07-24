@@ -206,7 +206,6 @@ useEffect(() => {
 ```
 
 ### Files Using This Pattern
-- `frontend/src/components/SearchBar.jsx`
 - `frontend/src/components/FandomModal.jsx`
 
 ---
