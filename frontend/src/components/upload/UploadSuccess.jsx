@@ -109,6 +109,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
               const isClickable = !isError && bookId !== null
 
               return (
+                // design-lint-button-chrome: content row — span-composed, below the element-children bar; re-anatomize post-sprint
                 <button
                   key={id}
                   type="button"

@@ -68,10 +68,11 @@ const ThreeDotMenu = ({
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* 3-dot button */}
+      {/* 3-dot button — p-3 + 20px glyph = 44px tap target (S4b rider;
+          the pre-extraction p-1.5 sat at ~32px on three surfaces) */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="text-text-secondary hover:text-text-primary p-1.5 rounded hover:bg-bg-elevated transition-colors"
+        className="text-text-secondary hover:text-text-primary p-3 rounded hover:bg-bg-elevated transition-colors"
         aria-label="More actions"
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -133,7 +134,7 @@ const ThreeDotMenu = ({
               <div className="px-2 pb-6 pt-2 border-t border-border-default">
                 <button
                   onClick={() => setMenuOpen(false)}
-                  className="w-full py-3.5 text-base font-medium text-text-secondary hover:bg-bg-surface rounded-lg transition-colors"
+                  className="w-full py-3.5 text-body font-medium text-text-secondary hover:bg-bg-surface rounded-lg transition-colors"
                 >
                   Cancel
                 </button>

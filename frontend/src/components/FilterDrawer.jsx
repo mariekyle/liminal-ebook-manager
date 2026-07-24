@@ -195,6 +195,7 @@ function FilterContent({
           {categories.map((cat) => {
             const isSelected = cat === 'All' ? !selectedCategory : selectedCategory === cat
             return (
+              // design-lint-button-chrome: chrome — filter pill row
               <button key={cat} type="button" onClick={() => onCategoryChange(cat === 'All' ? '' : cat)} className={pillBtn(isSelected)}>
                 {cat}
               </button>
@@ -211,6 +212,7 @@ function FilterContent({
               {statuses.map((status) => {
                 const isSelected = status === 'Any' ? !selectedStatus : selectedStatus === status
                 return (
+                  // design-lint-button-chrome: chrome — filter pill row
                   <button
                     key={status}
                     type="button"

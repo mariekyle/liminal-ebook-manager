@@ -212,6 +212,7 @@ export default function CollectionPicker({ bookId, currentCollectionIds = [], on
               </div>
             )}
 
+            {/* design-lint-button-chrome: create-slot affordance (parked NOT-B1, 2026-07-22) */}
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}

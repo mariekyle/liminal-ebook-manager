@@ -275,6 +275,7 @@ export default function CollectionsTab() {
             {/* Grid/List toggle */}
             {!isReorderMode && (
               <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                {/* design-lint-button-chrome: chrome — view toggle */}
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
@@ -288,6 +289,7 @@ export default function CollectionsTab() {
                 >
                   Grid
                 </button>
+                {/* design-lint-button-chrome: chrome — view toggle */}
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}

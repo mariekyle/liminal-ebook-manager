@@ -19,87 +19,70 @@
 | "Abandoned" / "Did Not Finish" in UI copy | strict | 0 | 0 | ✅ pass |
 | font-bold on headings / with token classes | strict | 0 | 0 | ✅ pass |
 | text-h1 (class no longer exists) | strict | 0 | 0 | ✅ pass |
-| Raw <button> outside components/ui/ | report-only | 70 | — (report-only) | ℹ️ counted |
+| Raw <button> outside components/ui/ (unmarked, unrescoped) | strict | 0 | 0 | ✅ pass |
 
-Raw `<button>` is report-only until the post-S13 conversion backlog clears, then becomes strict.
+Raw `<button>` is **strict** as of S4b (v0.82.0): a `<button>` outside `components/ui/` counts unless it is a content surface (element children, no bare text, no svg/span-only anatomy, no nested button) or an option row (`role="option"`), or carries an annotated `design-lint-button-chrome` marker. The conversion backlog cleared in the adoption sprint (S1–S4b).
 
 ## Violations
 
-| File:line | Category | Matched |
-|-----------|----------|---------|
-| frontend/src/components/add/ManualEntryForm.jsx:226 | raw-button | `<button` |
-| frontend/src/components/add/ManualEntryForm.jsx:255 | raw-button | `<button` |
-| frontend/src/components/add/WishlistForm.jsx:241 | raw-button | `<button` |
-| frontend/src/components/add/WishlistForm.jsx:286 | raw-button | `<button` |
-| frontend/src/components/AuthorChips.jsx:174 | raw-button | `<button` |
-| frontend/src/components/AuthorChips.jsx:227 | raw-button | `<button` |
-| frontend/src/components/AuthorDetail.jsx:409 | raw-button | `<button` |
-| frontend/src/components/AuthorDetail.jsx:422 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1553 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1574 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1636 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1646 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1656 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1687 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:1932 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:2880 | raw-button | `<button` |
-| frontend/src/components/BookDetail.jsx:3379 | raw-button | `<button` |
-| frontend/src/components/BookLinkPopup.jsx:92 | raw-button | `<button` |
-| frontend/src/components/BookLinkPopup.jsx:123 | raw-button | `<button` |
-| frontend/src/components/CollectionCard.jsx:186 | raw-button | `<button` |
-| frontend/src/components/CollectionCard.jsx:204 | raw-button | `<button` |
-| frontend/src/components/CollectionDetail.jsx:1155 | raw-button | `<button` |
-| frontend/src/components/CollectionDetail.jsx:1168 | raw-button | `<button` |
-| frontend/src/components/CollectionModal.jsx:376 | raw-button | `<button` |
-| frontend/src/components/CollectionModal.jsx:457 | raw-button | `<button` |
-| frontend/src/components/CollectionPicker.jsx:180 | raw-button | `<button` |
-| frontend/src/components/CollectionPicker.jsx:215 | raw-button | `<button` |
-| frontend/src/components/CollectionsTab.jsx:278 | raw-button | `<button` |
-| frontend/src/components/CollectionsTab.jsx:291 | raw-button | `<button` |
-| frontend/src/components/DuplicateCollectionModal.jsx:220 | raw-button | `<button` |
-| frontend/src/components/FandomModal.jsx:65 | raw-button | `<button` |
-| frontend/src/components/FilterDrawer.jsx:198 | raw-button | `<button` |
-| frontend/src/components/FilterDrawer.jsx:214 | raw-button | `<button` |
-| frontend/src/components/FilterDrawer.jsx:249 | raw-button | `<button` |
-| frontend/src/components/FilterDrawer.jsx:268 | raw-button | `<button` |
-| frontend/src/components/FilterDrawer.jsx:285 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:410 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:424 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:438 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:522 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:535 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:572 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:588 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:606 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:622 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:638 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:653 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:671 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:690 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:711 | raw-button | `<button` |
-| frontend/src/components/Library.jsx:728 | raw-button | `<button` |
-| frontend/src/components/SearchModal.jsx:105 | raw-button | `<button` |
-| frontend/src/components/settings/SettingsRow.jsx:80 | raw-button | `<button` |
-| frontend/src/components/settings/SettingsRow.jsx:118 | raw-button | `<button` |
-| frontend/src/components/ShipModal.jsx:60 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:103 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:124 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:145 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:155 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:165 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:201 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:222 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:232 | raw-button | `<button` |
-| frontend/src/components/SortDropdown.jsx:241 | raw-button | `<button` |
-| frontend/src/components/TagsModal.jsx:70 | raw-button | `<button` |
-| frontend/src/components/TagsMultiSelect.jsx:97 | raw-button | `<button` |
-| frontend/src/components/TagsMultiSelect.jsx:143 | raw-button | `<button` |
-| frontend/src/components/UnifiedEditModal.jsx:72 | raw-button | `<button` |
-| frontend/src/components/UnifiedEditModal.jsx:122 | raw-button | `<button` |
-| frontend/src/components/upload/UploadSuccess.jsx:112 | raw-button | `<button` |
+_None._
 
 ## Active-ignores inventory
 
 Every `design-lint-ignore` in the scanned scope, so exceptions stay visible instead of rotting silently:
 
 _None. No line-level exceptions are currently in effect._
+
+## Chrome-marker inventory
+
+Every `design-lint-button-chrome` marker in the scanned scope — the sanctioned raw-button exceptions, each carrying its reason:
+
+| File:line | Annotation |
+|-----------|------------|
+| frontend/src/components/AuthorChips.jsx:228 | chrome — chip remove (IconButton-shaped, post-sprint candidate) |
+| frontend/src/components/AuthorDetail.jsx:409 | chrome — view toggle |
+| frontend/src/components/AuthorDetail.jsx:423 | chrome — view toggle |
+| frontend/src/components/BookDetail.jsx:1636 | chrome — mobile tab bar |
+| frontend/src/components/BookDetail.jsx:1647 | chrome — mobile tab bar |
+| frontend/src/components/BookDetail.jsx:1658 | chrome — mobile tab bar |
+| frontend/src/components/BookDetail.jsx:1691 | chrome — priority popup trigger |
+| frontend/src/components/BookDetail.jsx:1939 | ratified-bespoke (v0.60.0 status toggle) |
+| frontend/src/components/BookDetail.jsx:2888 | ratified-bespoke (session form semantic actives) |
+| frontend/src/components/BookDetail.jsx:3388 | format-picker row — option-shaped, below the element-children bar |
+| frontend/src/components/CollectionCard.jsx:186 | chrome — drag handle |
+| frontend/src/components/CollectionDetail.jsx:1155 | chrome — view toggle |
+| frontend/src/components/CollectionDetail.jsx:1169 | chrome — view toggle |
+| frontend/src/components/CollectionModal.jsx:376 | chrome — collection type selector |
+| frontend/src/components/CollectionPicker.jsx:215 | create-slot affordance (parked NOT-B1, 2026-07-22) |
+| frontend/src/components/CollectionsTab.jsx:278 | chrome — view toggle |
+| frontend/src/components/CollectionsTab.jsx:292 | chrome — view toggle |
+| frontend/src/components/DuplicateCollectionModal.jsx:220 | chrome — collection type selector |
+| frontend/src/components/FilterDrawer.jsx:198 | chrome — filter pill row |
+| frontend/src/components/FilterDrawer.jsx:215 | chrome — filter pill row |
+| frontend/src/components/Library.jsx:410 | chrome — acquisition tabs |
+| frontend/src/components/Library.jsx:425 | chrome — acquisition tabs |
+| frontend/src/components/Library.jsx:440 | chrome — acquisition tabs |
+| frontend/src/components/Library.jsx:525 | chrome — view toggle |
+| frontend/src/components/Library.jsx:539 | chrome — view toggle |
+| frontend/src/components/Library.jsx:577 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:594 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:613 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:630 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:647 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:663 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:682 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:702 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:724 | chrome — active-filter chip |
+| frontend/src/components/Library.jsx:742 | chrome — active-filter chip |
+| frontend/src/components/SortDropdown.jsx:103 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:125 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:147 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:158 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:169 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:206 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:228 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:239 | provisional pending SortDropdown restructure |
+| frontend/src/components/SortDropdown.jsx:249 | provisional pending SortDropdown restructure |
+| frontend/src/components/TagsMultiSelect.jsx:97 | chrome — chip remove (IconButton-shaped, post-sprint candidate) |
+| frontend/src/components/add/ManualEntryForm.jsx:255 | chrome — banner dismiss (structural exclusion, S3) |
+| frontend/src/components/upload/UploadSuccess.jsx:112 | content row — span-composed, below the element-children bar; re-anatomize post-sprint |

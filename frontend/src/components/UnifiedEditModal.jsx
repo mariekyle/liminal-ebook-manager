@@ -72,6 +72,7 @@ const SearchableInput = ({ value, onChange, placeholder, fetchSuggestions }) => 
             <button
               key={i}
               type="button"
+              role="option"
               onMouseDown={() => handleSelect(item)}
               className="w-full text-left px-3 py-2 min-h-[44px] text-body-sm text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-all duration-200 ease-out"
             >
@@ -122,6 +123,7 @@ const SeriesInput = ({ value, onChange, allSeries }) => {
             <button
               key={i}
               type="button"
+              role="option"
               onMouseDown={() => {
                 onChange(s)
                 setShowSuggestions(false)

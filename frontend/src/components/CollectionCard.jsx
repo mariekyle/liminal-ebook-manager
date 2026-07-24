@@ -183,6 +183,7 @@ export default function CollectionCard({
           </div>
           
           {isReorderMode && dragHandleProps && (
+            // design-lint-button-chrome: chrome — drag handle
             <button
               type="button"
               {...dragHandleProps}

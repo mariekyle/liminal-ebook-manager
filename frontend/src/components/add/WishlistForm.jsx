@@ -241,6 +241,7 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
                 <button
                   key={idx}
                   type="button"
+                  role="option"
                   className="w-full text-left px-4 py-2 min-h-[44px] hover:bg-bg-surface"
                   onClick={() => {
                     setFamiliarTitle(book)
@@ -286,6 +287,7 @@ export default function WishlistForm({ onSubmit, onCancel, isSubmitting }) {
                   <button
                     key={idx}
                     type="button"
+                    role="option"
                     className="w-full text-left px-4 py-2 min-h-[44px] text-body-sm text-text-primary hover:bg-bg-surface"
                     onClick={() => {
                       updateForm('series', series)

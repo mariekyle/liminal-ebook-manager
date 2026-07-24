@@ -100,6 +100,7 @@ export default function SortDropdown({
   }
 
   const TriggerButton = (
+    // design-lint-button-chrome: provisional pending SortDropdown restructure
     <button
       type="button"
       onClick={() => setIsOpen(!isOpen)}
@@ -121,6 +122,7 @@ export default function SortDropdown({
         if (field === 'custom') {
           return (
             <div key={field} className="border-t border-border-default mt-1 pt-1">
+              {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
               <button
                 type="button"
                 onClick={() => handleOptionClick('custom')}
@@ -142,6 +144,7 @@ export default function SortDropdown({
         }
 
         return (
+          // design-lint-button-chrome: provisional pending SortDropdown restructure
           <button
             key={field}
             type="button"
@@ -152,6 +155,7 @@ export default function SortDropdown({
           >
             <span className={isActive ? 'text-action-primary' : 'text-text-body'}>{opt.label}</span>
             <div className={`flex items-center gap-0.5 p-0.5 rounded ${isActive ? 'bg-action-primary/10' : ''}`}>
+              {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
               <button
                 type="button"
                 onClick={(e) => handleDirectionClick(field, 'asc', e)}
@@ -162,6 +166,7 @@ export default function SortDropdown({
               >
                 <ChevronUpIcon />
               </button>
+              {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
               <button
                 type="button"
                 onClick={(e) => handleDirectionClick(field, 'desc', e)}
@@ -198,6 +203,7 @@ export default function SortDropdown({
             if (field === 'custom') {
               return (
                 <div key={field} className="border-t border-border-default mt-2 pt-2">
+                  {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
                   <button
                     type="button"
                     onClick={() => handleOptionClick('custom')}
@@ -219,6 +225,7 @@ export default function SortDropdown({
             }
 
             return (
+              // design-lint-button-chrome: provisional pending SortDropdown restructure
               <button
                 key={field}
                 type="button"
@@ -229,6 +236,7 @@ export default function SortDropdown({
               >
                 <span className={isActive ? 'text-action-primary' : 'text-text-body'}>{opt.label}</span>
                 <div className={`flex items-center gap-1 p-1 rounded ${isActive ? 'bg-action-primary/10' : ''}`}>
+                  {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
                   <button
                     type="button"
                     onClick={(e) => handleDirectionClick(field, 'asc', e)}
@@ -238,6 +246,7 @@ export default function SortDropdown({
                   >
                     <ChevronUpIcon />
                   </button>
+                  {/* design-lint-button-chrome: provisional pending SortDropdown restructure */}
                   <button
                     type="button"
                     onClick={(e) => handleDirectionClick(field, 'desc', e)}

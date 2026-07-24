@@ -373,6 +373,7 @@ export default function CollectionModal({ collection = null, onClose, onSuccess 
 
               <div className="grid grid-cols-3 gap-2">
                 {COLLECTION_TYPES.map(type => (
+                  // design-lint-button-chrome: chrome — collection type selector
                   <button
                     key={type.id}
                     type="button"

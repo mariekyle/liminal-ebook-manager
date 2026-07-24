@@ -1633,6 +1633,7 @@ function BookDetail() {
       {!isWishlist && (
         <div className="md:hidden mb-4">
           <div className="flex border-b border-border-default">
+            {/* design-lint-button-chrome: chrome — mobile tab bar */}
             <button
               onClick={() => setActiveTab('details')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
@@ -1643,6 +1644,7 @@ function BookDetail() {
             >
               Details
             </button>
+            {/* design-lint-button-chrome: chrome — mobile tab bar */}
             <button
               onClick={() => setActiveTab('notes')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
@@ -1653,6 +1655,7 @@ function BookDetail() {
             >
               Notes
             </button>
+            {/* design-lint-button-chrome: chrome — mobile tab bar */}
             <button
               onClick={() => setActiveTab('history')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
@@ -1682,8 +1685,10 @@ function BookDetail() {
             <div className="flex flex-wrap gap-3 items-center mb-4">
               <span className="text-label text-text-body">Priority:</span>
               
-              {/* Priority Chip + Popup */}
-              <div className="relative">
+              {/* Priority Chip + Popup — flex keeps the save ✓/! beside the
+                  chip instead of wrapping under it when the row squeezes */}
+              <div className="relative flex items-center">
+                {/* design-lint-button-chrome: chrome — priority popup trigger */}
                 <button
                   onClick={() => setPriorityPopupOpen(!priorityPopupOpen)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-base border border-border-default hover:border-text-muted transition-colors cursor-pointer"
@@ -1705,8 +1710,10 @@ function BookDetail() {
                       className="fixed inset-0 z-10" 
                       onClick={() => setPriorityPopupOpen(false)}
                     />
-                    {/* Popup */}
-                    <div className="absolute top-full left-0 mt-1 bg-bg-base border border-border-default rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                    {/* Popup — w-max: the containing block is only as wide as
+                        the chip, and shrink-to-fit clamped the S4 MenuItems
+                        (base text + px-4) to min-w, wrapping the long label */}
+                    <div className="absolute top-full left-0 mt-1 bg-bg-base border border-border-default rounded-lg shadow-lg z-20 py-1 min-w-[140px] w-max">
                       <MenuItem
                         onClick={() => {
                           handlePriorityChange('normal')
@@ -1929,6 +1936,7 @@ function BookDetail() {
             {statusToggleOptions.map(({ value, label }) => {
               const active = value === selectedStatus
               return (
+                // design-lint-button-chrome: ratified-bespoke (v0.60.0 status toggle)
                 <button
                   key={value}
                   type="button"
@@ -2877,6 +2885,7 @@ function BookDetail() {
                 <FormField label="Status">
                   <div className="flex gap-2">
                     {['in_progress', 'finished', 'dnf'].map((status) => (
+                      // design-lint-button-chrome: ratified-bespoke (session form semantic actives)
                       <button
                         key={status}
                         type="button"
@@ -3376,6 +3385,7 @@ function BookDetail() {
             <div className="text-h4 text-text-primary mb-3">Choose a format</div>
             <div className="flex flex-col gap-2">
               {downloadableEditions.map((edition) => (
+                // design-lint-button-chrome: format-picker row — option-shaped, below the element-children bar
                 <button
                   key={edition.id}
                   type="button"

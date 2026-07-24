@@ -407,6 +407,7 @@ function Library() {
           {/* Tabs on left */}
           {activeView === 'library' && (
             <div className="flex gap-6 min-h-[44px] items-end">
+              {/* design-lint-button-chrome: chrome — acquisition tabs */}
               <button
                 type="button"
                 onClick={() => {
@@ -421,6 +422,7 @@ function Library() {
               >
                 Home
               </button>
+              {/* design-lint-button-chrome: chrome — acquisition tabs */}
               <button
                 type="button"
                 onClick={() => {
@@ -435,6 +437,7 @@ function Library() {
               >
                 Browse
               </button>
+              {/* design-lint-button-chrome: chrome — acquisition tabs */}
               <button
                 type="button"
                 onClick={() => {
@@ -519,6 +522,7 @@ function Library() {
               {/* Grid / List toggle — Browse and Series */}
               {(activeView === 'library' && acquisition === 'browse') || activeView === 'series' ? (
                 <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                  {/* design-lint-button-chrome: chrome — view toggle */}
                   <button
                     type="button"
                     onClick={() => setCurrentView('grid')}
@@ -532,6 +536,7 @@ function Library() {
                   >
                     Grid
                   </button>
+                  {/* design-lint-button-chrome: chrome — view toggle */}
                   <button
                     type="button"
                     onClick={() => setCurrentView('list')}
@@ -569,6 +574,7 @@ function Library() {
               {category && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {category}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -585,6 +591,7 @@ function Library() {
               {activeView === 'library' && status && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {status}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -603,6 +610,7 @@ function Library() {
                   className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption"
                 >
                   {tag}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -619,6 +627,7 @@ function Library() {
               {activeView === 'library' && readTimeFilter && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   {READ_TIME_FILTERS.find(f => f.value === readTimeFilter)?.label || readTimeFilter}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -635,6 +644,7 @@ function Library() {
               {activeView === 'library' && fandom && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-chip-fandom/20 text-chip-fandom rounded-full text-caption">
                   {fandom}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -650,6 +660,7 @@ function Library() {
               {activeView === 'library' && ship && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-chip-ship/20 text-chip-ship rounded-full text-caption">
                   {ship}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -668,6 +679,7 @@ function Library() {
                   className="inline-flex items-center gap-1 px-2 py-1 bg-action-danger/15 text-action-danger rounded-full text-caption"
                 >
                   {rating}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -687,6 +699,7 @@ function Library() {
                   className="inline-flex items-center gap-1 px-2 py-1 bg-action-success/15 text-action-success rounded-full text-caption"
                 >
                   {status}
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {
@@ -708,6 +721,7 @@ function Library() {
                     className="inline-flex items-center gap-1 px-2 py-1 bg-chip-character/20 text-chip-character rounded-full text-caption"
                   >
                     {formatLabel(format)}
+                    {/* design-lint-button-chrome: chrome — active-filter chip */}
                     <button
                       type="button"
                       onClick={() => {
@@ -725,6 +739,7 @@ function Library() {
               {search && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-action-primary/15 text-action-primary rounded-full text-caption">
                   &quot;{search}&quot;
+                  {/* design-lint-button-chrome: chrome — active-filter chip */}
                   <button
                     type="button"
                     onClick={() => {

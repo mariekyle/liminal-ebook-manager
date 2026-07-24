@@ -218,13 +218,14 @@ function DuplicatesPage() {
                     {/* Group Header */}
                     <div className="px-4 py-3 border-b border-border-default flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded text-caption font-medium ${
-                          group.match_type === 'exact' 
-                            ? 'bg-action-danger/15 text-action-danger' 
-                            : 'bg-action-warning/15 text-action-warning'
-                        }`}>
+                        <Badge
+                          variant="tint"
+                          tone={group.match_type === 'exact' ? 'danger' : 'warning'}
+                          size="sm"
+                          pill={false}
+                        >
                           {group.match_type === 'exact' ? 'Exact Match' : 'Similar Title'}
-                        </span>
+                        </Badge>
                         {group.same_author && (
                           <Badge variant="tint" tone="fanfiction" size="sm" pill={false}>
                             Same Author

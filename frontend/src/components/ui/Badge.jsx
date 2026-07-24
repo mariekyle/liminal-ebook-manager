@@ -13,7 +13,7 @@
  * Props:
  *   tone      — color family for solid/tint; ignored by outline/muted.
  *               solid: success | primary | danger | warning
- *               tint:  warning | fiction | fanfiction | nonfiction | fandom | character
+ *               tint:  danger | warning | fiction | fanfiction | nonfiction | fandom | character
  *   size      — sm (caption, px-2 py-0.5) | md (caption, px-2.5 py-1)
  *               | lg (body-sm, px-3 py-1.5). Default md.
  *   pill      — true (rounded-full, default) | false (rounded)
@@ -41,6 +41,7 @@ const SOLID_TONES = {
 }
 
 const TINT_TONES = {
+  danger: 'bg-action-danger/20 text-action-danger border border-action-danger/30',
   warning: 'bg-action-warning/20 text-action-warning border border-action-warning/30',
   fiction: 'bg-chip-fiction/20 text-chip-fiction border border-chip-fiction/30',
   fanfiction: 'bg-chip-fanfiction/20 text-chip-fanfiction border border-chip-fanfiction/30',

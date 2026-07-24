@@ -94,6 +94,7 @@ export default function TagsMultiSelect({ selectedTags = [], onChange }) {
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-chip-default/25 text-text-secondary text-body-sm rounded-md border border-border-subtle"
           >
             {tag}
+            {/* design-lint-button-chrome: chrome — chip remove (IconButton-shaped, post-sprint candidate) */}
             <button
               type="button"
               onClick={(e) => {
@@ -143,6 +144,7 @@ export default function TagsMultiSelect({ selectedTags = [], onChange }) {
                 <button
                   key={tag}
                   type="button"
+                  role="option"
                   onClick={() => handleAddTag(tag)}
                   className="w-full px-3 py-1.5 text-left text-body-sm text-text-secondary hover:bg-bg-surface hover:text-text-primary transition-all duration-200 ease-out min-h-[40px]"
                 >

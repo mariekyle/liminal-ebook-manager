@@ -406,6 +406,7 @@ function AuthorDetail() {
               options={['series', 'title', 'added', 'published']}
             />
             <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[36px]">
+              {/* design-lint-button-chrome: chrome — view toggle */}
               <button
                 type="button"
                 onClick={() => updateView('grid')}
@@ -419,6 +420,7 @@ function AuthorDetail() {
               >
                 Grid
               </button>
+              {/* design-lint-button-chrome: chrome — view toggle */}
               <button
                 type="button"
                 onClick={() => updateView('list')}

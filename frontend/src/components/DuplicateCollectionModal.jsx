@@ -217,6 +217,7 @@ export default function DuplicateCollectionModal({ collection, onClose, onSucces
             {/* Type selector buttons */}
             <div className="grid grid-cols-3 gap-2">
               {COLLECTION_TYPES.map(type => (
+                // design-lint-button-chrome: chrome — collection type selector
                 <button
                   key={type.id}
                   type="button"

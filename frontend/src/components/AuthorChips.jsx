@@ -174,6 +174,7 @@ function AuthorChips({ authors, onChange }) {
               <button
                 key={author}
                 type="button"
+                role="option"
                 onClick={() => handleSuggestionClick(author)}
                 className={`
                   w-full text-left px-3 py-2 text-sm transition-colors
@@ -224,6 +225,7 @@ function AuthorChips({ authors, onChange }) {
             <span className="text-text-primary text-sm">{author}</span>
             
             {authors.length > 1 && (
+              // design-lint-button-chrome: chrome — chip remove (IconButton-shaped, post-sprint candidate)
               <button
                 type="button"
                 onClick={() => handleRemoveAuthor(index)}

@@ -137,6 +137,34 @@ const FONT_BOLD = /(?<![\w-])(?:[a-z][\w-]*:)*font-bold(?![\w-])/
 
 const RAW_BUTTON = /<button\b/g
 
+// Raw-button rescope + strict flip (S4b, ratified 2026-07-23).
+//
+// A <button> occurrence outside ui//frozen is EXEMPT from the count iff:
+//   1. its opening tag carries role="option" (an option row in a combobox
+//      dropdown — WishlistForm, AuthorChips, TagsMultiSelect,
+//      UnifiedEditModal), OR
+//   2. it is structurally a tappable CONTENT SURFACE, all four holding:
+//      a. no bare text at direct-child depth (every non-whitespace char
+//         sits inside an element subtree or a {...} expression),
+//      b. >= 1 direct child element that is not icon/label chrome
+//         anatomy: tags svg and span never qualify, and neither does a
+//         component tag matching /Icon$/ (DotsIcon, ChevronUpIcon,
+//         DragHandleIcon — the codebase's glyph-component convention);
+//         div, img, and other Uppercase component tags qualify,
+//      c. no nested <button> at any depth (a button inside a button is
+//         the SortDropdown defect — invalid HTML never exempts),
+//      d. the button closes properly in-file.
+//   {...} expression children are neutral: permitted, never qualifying.
+//
+// Everything still counted is chrome and must carry an explicit marker:
+//   design-lint-button-chrome: <annotation>
+// in a comment on the same line as <button or the line directly above.
+// The annotation is REQUIRED — a bare marker suppresses nothing. Markers
+// suppress ONLY this category (design-lint-ignore stays all-category)
+// and are inventoried in the report so exceptions stay visible.
+const BUTTON_CHROME_TOKEN = 'design-lint-button-chrome'
+const ROLE_OPTION = /role\s*=\s*["']option["']/
+
 const CATEGORIES = [
   { key: 'hardcoded-colors', label: 'Hardcoded colors (A1–A6)', strict: true },
   { key: 'library-alias', label: 'Legacy library-* alias classes', strict: true },
@@ -147,7 +175,7 @@ const CATEGORIES = [
   { key: 'status-label-literal', label: '"Abandoned" / "Did Not Finish" in UI copy', strict: true },
   { key: 'font-bold', label: 'font-bold on headings / with token classes', strict: true },
   { key: 'text-h1', label: 'text-h1 (class no longer exists)', strict: true },
-  { key: 'raw-button', label: 'Raw <button> outside components/ui/', strict: false },
+  { key: 'raw-button', label: 'Raw <button> outside components/ui/ (unmarked, unrescoped)', strict: true },
 ]
 
 // ---------------------------------------------------------------------------
@@ -282,6 +310,89 @@ function* headingTags(text) {
 }
 
 /**
+ * Walks from `<` at `start` to the `>` that closes the opening tag, honoring
+ * braced attribute expressions and quoted strings (same walk headingTags
+ * uses). Returns the offset of `>` or -1.
+ */
+function tagEnd(text, start) {
+  for (let i = start + 1; i < text.length; i++) {
+    const c = text[i]
+    if (c === '{') {
+      const end = scanBraced(text, i)
+      if (end === -1) return -1
+      i = end
+    } else if (c === '"' || c === "'") {
+      const end = text.indexOf(c, i + 1)
+      if (end === -1) return -1
+      i = end
+    } else if (c === '>') return i
+  }
+  return -1
+}
+
+/**
+ * Classifies one `<button` occurrence (offset of `<`) against the S4b
+ * exemption test documented at BUTTON_CHROME_TOKEN above. Returns
+ * { exempt, end } — end is the offset just past the matching </button>
+ * (-1 when malformed/unterminated), used by the caller's containment
+ * check: a button nested inside another button never exempts, in either
+ * direction. Anything malformed or ambiguous counts (errs toward visible).
+ */
+function classifyButton(text, start) {
+  const openEnd = tagEnd(text, start)
+  if (openEnd === -1) return { exempt: false, end: -1 }
+  const openTag = text.slice(start, openEnd + 1)
+  const roleOption = ROLE_OPTION.test(openTag)
+  if (text[openEnd - 1] === '/') return { exempt: roleOption, end: openEnd + 1 }
+
+  let i = openEnd + 1
+  let depth = 0
+  let bareText = false
+  let qualifying = 0
+  let nestedButton = false
+  while (i < text.length) {
+    const c = text[i]
+    if (c === '<') {
+      if (text.startsWith('</', i)) {
+        const close = text.indexOf('>', i)
+        if (close === -1) return { exempt: false, end: -1 }
+        if (depth === 0) {
+          if (text.slice(i + 2, close).trim() !== 'button') return { exempt: false, end: -1 }
+          return {
+            exempt: (roleOption || (!bareText && qualifying > 0)) && !nestedButton,
+            end: close + 1,
+          }
+        }
+        depth--
+        i = close + 1
+        continue
+      }
+      const m = /^<([A-Za-z][\w.]*)/.exec(text.slice(i, i + 80))
+      if (!m) {
+        i++ // stray '<' (comparison inside text) — not an element
+        continue
+      }
+      if (m[1] === 'button') nestedButton = true
+      const end = tagEnd(text, i)
+      if (end === -1) return { exempt: false, end: -1 }
+      if (depth === 0 && m[1] !== 'svg' && m[1] !== 'span' && !/Icon$/.test(m[1])) qualifying++
+      if (text[end - 1] !== '/') depth++
+      i = end + 1
+      continue
+    }
+    if (c === '{' && depth === 0) {
+      const end = scanBraced(text, i)
+      if (end === -1) return { exempt: false, end: -1 }
+      i = end + 1
+      continue
+    }
+    if (depth === 0 && !/\s/.test(c)) bareText = true
+    i++
+  }
+  return { exempt: false, end: -1 } // never closed
+}
+
+/**
  * Replaces comment bodies with spaces so matchers never count commented-out
  * code or prose (e.g. a `<button` inside JSDoc). Newlines inside comments are
  * kept, so every offset and line number in the stripped text matches the
@@ -349,6 +460,23 @@ function scanFile(abs, ctx) {
     }
   })
 
+  // Chrome markers (raw-button only): annotation is required — a bare
+  // marker suppresses nothing, so every exception carries its reason.
+  // Read from original source like ignores; markers live in comments.
+  const chromeMarks = new Map()
+  lines.forEach((line, i) => {
+    const at = line.indexOf(BUTTON_CHROME_TOKEN)
+    if (at === -1) return
+    const annotation = line
+      .slice(at + BUTTON_CHROME_TOKEN.length)
+      .replace(/^[:\s]+/, '')
+      .replace(/\*\/.*$/, '')
+      .replace(/}}?\s*$/, '')
+      .trim()
+    chromeMarks.set(i + 1, annotation)
+    ctx.chromeMarkers.push({ file: rel, line: i + 1, annotation })
+  })
+
   const add = (category, offset, matched, detail = '') => {
     const line = lineAt(starts, offset)
     if (suppressed.has(line)) return
@@ -414,8 +542,29 @@ function scanFile(abs, ctx) {
     }
   }
 
-  // Report-only: raw <button> outside components/ui/
-  if (!rel.startsWith(UI_DIR)) runPattern('raw-button', RAW_BUTTON)
+  // Raw <button> outside components/ui/ — strict since S4b. Each match is
+  // classified (content surface / option row → exempt) and the remainder
+  // must carry an annotated chrome marker on its line or the line above.
+  // Nesting kills exemption in BOTH directions: neither the wrapper nor
+  // the wrapped button of invalid nesting is ever structurally exempt.
+  if (!rel.startsWith(UI_DIR)) {
+    RAW_BUTTON.lastIndex = 0
+    const sites = []
+    let m
+    while ((m = RAW_BUTTON.exec(stripped)) !== null) {
+      sites.push({ off: m.index, ...classifyButton(stripped, m.index) })
+    }
+    for (const s of sites) {
+      const nestedInside = sites.some(
+        (o) => o !== s && o.end !== -1 && s.off > o.off && s.off < o.end
+      )
+      if (s.exempt && !nestedInside) continue
+      const line = lineAt(starts, s.off)
+      const mark = chromeMarks.get(line) ?? chromeMarks.get(line - 1)
+      if (mark !== undefined && mark !== '') continue // annotated chrome
+      add('raw-button', s.off, '<button', mark === '' ? 'marker missing annotation' : 'unmarked')
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -427,7 +576,7 @@ const frozenSet = new Set(FROZEN_FILES)
 const scanned = allFiles.filter((f) => !frozenSet.has(relPath(f)))
 const frozenExcluded = allFiles.length - scanned.length
 
-const ctx = { violations: [], ignores: [] }
+const ctx = { violations: [], ignores: [], chromeMarkers: [] }
 for (const file of scanned.sort()) scanFile(file, ctx)
 ctx.violations.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)
 
@@ -470,6 +619,17 @@ const ignoreSection = ctx.ignores.length
     ].join('\n')
   : '_None. No line-level exceptions are currently in effect._'
 
+const chromeSection = ctx.chromeMarkers.length
+  ? [
+      '| File:line | Annotation |',
+      '|-----------|------------|',
+      ...ctx.chromeMarkers.map(
+        (c) =>
+          `| ${c.file}:${c.line} | ${c.annotation ? c.annotation.replace(/\|/g, '\\|') : '**MISSING — marker suppresses nothing**'} |`
+      ),
+    ].join('\n')
+  : '_None._'
+
 const report = `# Design Lint Report
 
 > Generated by \`scripts/design-lint.mjs\` — do not edit by hand. Regenerated whenever counts, violations, or ignores change (runs that change nothing leave the file untouched); the pre-commit hook refreshes and stages it.
@@ -484,7 +644,7 @@ const report = `# Design Lint Report
 |----------|----------|-------|--------|--------|
 ${summaryRows.join('\n')}
 
-Raw \`<button>\` is report-only until the post-S13 conversion backlog clears, then becomes strict.
+Raw \`<button>\` is **strict** as of S4b (v0.82.0): a \`<button>\` outside \`components/ui/\` counts unless it is a content surface (element children, no bare text, no svg/span-only anatomy, no nested button) or an option row (\`role="option"\`), or carries an annotated \`design-lint-button-chrome\` marker. The conversion backlog cleared in the adoption sprint (S1–S4b).
 
 ## Violations
 
@@ -495,6 +655,12 @@ ${violationSection}
 Every \`design-lint-ignore\` in the scanned scope, so exceptions stay visible instead of rotting silently:
 
 ${ignoreSection}
+
+## Chrome-marker inventory
+
+Every \`design-lint-button-chrome\` marker in the scanned scope — the sanctioned raw-button exceptions, each carrying its reason:
+
+${chromeSection}
 `
 
 fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true })

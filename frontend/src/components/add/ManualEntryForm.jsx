@@ -252,6 +252,7 @@ export default function ManualEntryForm({ onSubmit, onCancel, isSubmitting, init
                   {form.format} format.
                 </p>
               </div>
+              {/* design-lint-button-chrome: chrome — banner dismiss (structural exclusion, S3) */}
               <button
                 type="button"
                 onClick={clearExistingSelection}

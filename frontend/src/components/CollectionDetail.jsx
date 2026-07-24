@@ -1152,6 +1152,7 @@ export default function CollectionDetail() {
             </div>
             {!removeMode && books.length + incompleteBooks.length + completedBooks.length > 0 && (
               <div className="flex items-center rounded-lg border border-border-default bg-bg-surface p-0.5 min-h-[44px]">
+                {/* design-lint-button-chrome: chrome — view toggle */}
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
@@ -1165,6 +1166,7 @@ export default function CollectionDetail() {
                 >
                   Grid
                 </button>
+                {/* design-lint-button-chrome: chrome — view toggle */}
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}

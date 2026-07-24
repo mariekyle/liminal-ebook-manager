@@ -50,7 +50,7 @@ Seven token classes, defined as `fontSize` entries in `tailwind.config.js` (size
 
 ## 3. Component inventory — `frontend/src/components/ui/`
 
-Fifteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
+Sixteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
 
 Shared conventions across the directory: semantic tokens only; 200ms ease-out transitions; 44px tap targets at default (`md`) sizes — the explicit `sm` sizes drop to 36px (Button, IconButton) and SegmentedControl's segments sit at 40px inside a 44px container; `onChange` receives the **value** (string/array), not the event, in form components; autocomplete dropdowns cap at 8 suggestions, close 200ms after blur, and have no arrow-key navigation (pointer + typing only).
 
@@ -67,7 +67,7 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 ### Badge
 
 - **Purpose:** Non-interactive display pill for ambient metadata — result pills, format badges, category/type chips, the wishlist priority overlay. Rebuilt on tokens in S4 (v0.81.0): zero inline styles.
-- **Variants & states:** `variant` (required): `solid` (filled semantic color, medium weight — result pills, priority overlay) / `tint` (translucent fill + matching text + faint `/30` border — format badges, match and cover-source pills) / `outline` (neutral: bg-base + default border — category chip) / `muted` (neutral: elevated fill, muted text — type badges, unknown-format fallback). `tone` picks the color family for solid (success/primary/danger/warning) and tint (warning/fiction/fanfiction/nonfiction/fandom/character); outline/muted ignore it. `size`: sm (caption, tightest) / md (caption) / lg (body-sm — pairs with the priority-popup trigger chip). `pill`: rounded-full (default) or `pill={false}` for square-ish `rounded`.
+- **Variants & states:** `variant` (required): `solid` (filled semantic color, medium weight — result pills, priority overlay) / `tint` (translucent fill + matching text + faint `/30` border — format badges, match and cover-source pills) / `outline` (neutral: bg-base + default border — category chip) / `muted` (neutral: elevated fill, muted text — type badges, unknown-format fallback). `tone` picks the color family for solid (success/primary/danger/warning) and tint (danger/warning/fiction/fanfiction/nonfiction/fandom/character); outline/muted ignore it. `size`: sm (caption, tightest) / md (caption) / lg (body-sm — pairs with the priority-popup trigger chip). `pill`: rounded-full (default) or `pill={false}` for square-ish `rounded`.
 - **Required props:** `variant`, `children`; `tone` whenever variant is solid/tint. Optional: `size='md'`, `pill=true`, `title` (native tooltip passthrough), `className`.
 - **When to use:** The adopted census shapes — upload result pills (UploadSuccess), edition format badges (BookDetail, tones from `FORMAT_CONFIG`), TBR category chip (BookDetail), priority overlay (WishlistTab), collection type badges (CollectionDetail), Same Author match pill (DuplicatesPage), cover-source pill (ChangeCoverModal).
 - **When NOT to use:** Interactive/filter chips (Badge is a `<span>` — no button semantics; census precedent 2026-07-22 puts them in a different component class); numeric/icon cover overlays; reading-status labels — those render in BookCard/AcquireCard. There is deliberately **no status mode**; if one is ever added, its labels MUST route through `useStatusLabels`.
@@ -76,7 +76,7 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 
 ### Button
 
-- **Purpose:** The action component. Raw `<button>` outside `ui/` is a lint category (report-only until the conversion backlog clears, then strict).
+- **Purpose:** The action component. Raw `<button>` outside `ui/` is a **strict** lint category (S4b, v0.82.0): unmarked, unrescoped raw buttons fail the build-gate — new buttons are Button / IconButton / MenuItem, content surfaces and option rows are structurally exempt, and sanctioned chrome carries an annotated `design-lint-button-chrome` marker.
 - **Variants & states:** `variant`: primary / secondary / ghost (borderless quiet — plain text at rest, `bg-bg-elevated` fill on hover; v0.78.0) / danger / success / warning. `size`: sm (36px) / md (44px) / lg (48px). `loading` (spinner, disables), `disabled` (dimmed, disables). `icon` slot (hidden while loading). Extra props spread to the native button.
 - **Required props:** `children`. Optional: `variant='primary'`, `size='md'`, `icon`, `loading`, `disabled`, `className`.
 - **When to use:** On-page actions — save, delete, toggle, open-modal (Ghost for section-header modal triggers). Buttons act; links navigate. Ghost is the register for quiet actions that used to ship link-styled (teal/underline text) — convert those to ghost, don't restyle a link.
@@ -163,6 +163,16 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 - **When NOT to use:** Longer option lists (select inside FormField); multi-select (chips/checkboxes); navigation tabs.
 - **Common mistakes:** Mixed value types — matching is strict `===`, so a number value never matches a string option. All production callers pass `size="sm"` + `ariaLabel`; follow that shape.
 - **Frozen behaviors:** The 11px `sm` label size is locked (Fix Session 5, 2026-04-13) — do not "fix" it to a token size.
+
+### SettingsRow
+
+- **Purpose:** Single row on the Settings page — label + optional description with a right-side affordance. Moved to `ui/` in S4b (v0.82.0): it was already a shared primitive in the wrong folder (2026-07-23 ruling); internals unchanged by the move.
+- **Variants & states:** `type`: `navigation` (tappable row + chevron; renders a `Link` when `to` is passed, a button otherwise) / `toggle` (right-side `role="switch"` with `aria-checked`) / `display` (non-tappable, right-side `value`). `loading` swaps the chevron for a spinner and disables; `disabled` dims. Rows are 56px min-height, `text-body` label + `text-body-sm` description.
+- **Required props:** `label`. Navigation: `onClick` **or** `to`. Toggle: `checked` + `onChange(boolean)`. Optional: `description`, `value`, `loading`, `disabled`.
+- **When to use:** Every Settings-page row — the page composes entirely from these under its section headers.
+- **When NOT to use:** Menus (MenuItem), form rows (FormField), list rows outside Settings. `destructive` is a reserved prop that renders nothing — don't rely on it.
+- **Common mistakes:** Passing both `onClick` and `to` (Link wins when not disabled). Expecting `value` to be interactive — it's display-only; interactivity comes from the row `type`.
+- **Frozen behaviors:** None.
 
 ### StarRating
 
