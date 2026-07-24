@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.79.0] — 2026-07-23
+
+**Adoption sprint S3 — the icon-button pass. Every live icon-only raw action button is now `ui/IconButton`, BookDetail's four A6 stroke ignores are deleted (hardcoded-colors is truly 0/pass with zero exceptions for the first time since the category was designated), and the TBR Edit affordance returns to the ratified pencil convention. The census story is bigger than the conversion story: the triage's pool of 15 resolved to 4 live convertible sites, every subtraction named.**
+
+### Changed
+- **4 raw icon-button sites converted to `ui/IconButton`** — all in BookDetail, and exactly the four A6 ignore hosts: Reading History "+" add-session (mobile + desktop twins), Collections section pencil, Notes section pencil. All `size="sm"` (36px — matching their existing `w-9 h-9` chrome exactly), default variant (its `hover:bg-bg-elevated` is precisely the hover these sites already had); `type="button"`, `onClick`, and `title` preserved verbatim.
+- **The `#5c5752` section-affordance color moves to its sanctioned treatment:** `style={{ color: '#5c5752' }}` on the IconButton + `stroke="currentColor"` on the glyph. The 2026-04-13 ratification allows "inline style or arbitrary Tailwind class `text-[#5c5752]`" — the bracketed-class arm would trip A4, so the inline-style arm is used (the C2 hex rescope deliberately left inline-style objects out of lint scope). Rest and hover both stay pinned to `#5c5752`, exactly the fixed-color behavior the raw buttons had.
+- **TBR "Why this one?" Edit → pencil IconButton** (reclassification ratified 2026-07-22): S2's ghost text Button was a faithful conversion of a pre-existing convention violation — section edits are pencil IconButtons at `#5c5752` (2026-04-13, reaffirmed 2026-07-16). Now matches the other section pencils: same glyph path, same treatment, `title="Edit"`, `aria-label="Edit reason"`. "+ Add a reason why" stays a ghost Button, as ratified. (Raw-button count unaffected — the Button was never raw.)
+- **Aria-labels on every converted site.** Preserved: "Add reading session" ×2. New, flagged for microcopy ratification: **"Edit collections"**, **"Edit notes"** (both pencils previously exposed only `title="Edit"`), **"Edit reason"** (TBR pencil, matching its siblings' `title="Edit"` too).
+
+### Fixed
+- **The four A6 `stroke="#5c5752"` active-ignores are deleted** — the BookDetail :1965/:2325/:2385/:2543 comment markers went with their hosts' conversion. Design-lint hardcoded-colors: 0/pass with the Active-ignores inventory reading "None" — zero line-level exceptions in effect in the scanned scope for the first time since A6 was designated (v0.74.0).
+- **B2 census corrected: 4 live convertible sites, not the triage's 15 or the corollary's 13.** Fresh census over all 103 raw-button sites (per-site classification); every delta named, per the S2-ratified fresh-census-decides rule:
+  - **−2** AcquireCard dormant-block icon buttons (Download, Edit) — deleted v0.73.0 with the block. The known corollary; same attribution as S2's 19 → 17.
+  - **−4** `SearchBar.jsx` is a dead file: zero imports or references in `frontend/src` (grep-verified, all extensions), superseded by Library's IconButton toolbar (Add/Search/Filter with count badge) and `SearchModal` as the search surface. Its 4 icon buttons aren't convertible work; the file is left in place this session and flagged for a Golden-Rule-4 deletion pass. (Exact orphaning commit not recovered in-session — git history walks over SMB exceed timeouts; deadness itself is grep-proven.)
+  - **−3** 3-dot menu triggers (BookDetail :193, CollectionDetail :1005, CollectionsTab :313) — the ratified exemption architecture (Decisions 2026-07-22) shrinks B4 by extracting ThreeDotMenu to `ui/` in S4, trigger included; converting the triggers now would double-touch S4's extraction scope. All three map cleanly to the default variant when their day comes.
+  - **−1** MarkFinishedModal star row — a rating input, not an action button; the modal is S4's ratified StarRating adoption target (Decisions 2026-07-22). An S3 IconButton conversion would be unwound wholesale in S4.
+  - **−1** ManualEntryForm :255 — "×" text-glyph dismissal of the add-format banner; IconButton's §3 children contract is an svg, and the site is dismissal chrome (the CollectionPicker NOT-B1 shape: structural exclusion, lands wherever its true category takes it).
+
+### Technical
+- **Modified:** `frontend/src/components/BookDetail.jsx` (5 sites: 4 conversions + TBR reclassification; 4 ignore comments deleted), `backend/main.py` (version 0.78.0 → 0.79.0), `docs/DESIGN_LINT_REPORT.md` (regenerated — ignore inventory now empty), CHANGELOG.md, ROADMAP.md. **Backend file changed (version bump only): full Docker rebuild required. No schema change, no migration, no bulk writes — no `library.db` backup needed.**
+- **Verified:** esbuild parse clean (BookDetail.jsx); design-lint (deno) all nine strict categories 0/pass with **zero** ignore lines, raw-`<button>` **103 − 4 = 99**; `stroke="#5c5752"` count 0 in BookDetail; no `!` overrides in the diff (added lines contain no `!` character at all); `py_compile` clean on backend/main.py; IconButton import↔export grep-verified both sides (import pre-existed at BookDetail:6); Button import retained (35 remaining usages).
+
 ## [0.78.0] — 2026-07-22
 
 **S2b rider — ghost goes borderless. Executes the S2 Phone-Test ratification (Decisions.md 2026-07-22): the quiet variant stops rendering boxes.**

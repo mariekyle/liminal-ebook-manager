@@ -1884,17 +1884,22 @@ function BookDetail() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-label text-text-body">Why this one?</span>
                   {!isEditingReason && (
-                    <Button
+                    <IconButton
                       type="button"
-                      variant="ghost"
                       size="sm"
+                      style={{ color: '#5c5752' }}
+                      title="Edit"
+                      aria-label="Edit reason"
                       onClick={() => {
                         setReasonDraft(book.tbr_reason || '')
                         setIsEditingReason(true)
                       }}
                     >
-                      Edit
-                    </Button>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                        <path d="m15 5 4 4"/>
+                      </svg>
+                    </IconButton>
                   )}
                 </div>
                 {isEditingReason ? (
@@ -1955,19 +1960,19 @@ function BookDetail() {
                   <h3 id="reading-history" className="text-label text-text-body uppercase tracking-wide">
                     Reading History
                   </h3>
-                  <button
+                  <IconButton
                     type="button"
+                    size="sm"
+                    style={{ color: '#5c5752' }}
                     onClick={() => openAddSession()}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
                     title="Add reading session"
                     aria-label="Add reading session"
                   >
-                    {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                       <path d="M12 5v14"/>
                       <path d="M5 12h14"/>
                     </svg>
-                  </button>
+                  </IconButton>
                 </div>
 
                 {/* Sessions List */}
@@ -2315,19 +2320,19 @@ function BookDetail() {
               <h3 id="reading-history-desktop" className="text-label text-text-body uppercase tracking-wide">
                 Reading History
               </h3>
-              <button
+              <IconButton
                 type="button"
+                size="sm"
+                style={{ color: '#5c5752' }}
                 onClick={() => openAddSession()}
-                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
                 title="Add reading session"
                 aria-label="Add reading session"
               >
-                {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
-                <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                   <path d="M12 5v14"/>
                   <path d="M5 12h14"/>
                 </svg>
-              </button>
+              </IconButton>
             </div>
 
             {/* Sessions List */}
@@ -2376,18 +2381,19 @@ function BookDetail() {
         <div className={`border-t border-border-default pt-4 mt-4 ${activeTab !== 'details' ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-label text-text-body uppercase tracking-wide">Collections</h2>
-            <button
+            <IconButton
               type="button"
+              size="sm"
+              style={{ color: '#5c5752' }}
               onClick={() => setShowCollectionPicker(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
               title="Edit"
+              aria-label="Edit collections"
             >
-              {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 <path d="m15 5 4 4"/>
               </svg>
-            </button>
+            </IconButton>
           </div>
           
           {collectionsLoading ? (
@@ -2534,18 +2540,19 @@ function BookDetail() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-label text-text-body uppercase tracking-wide">Notes</h2>
-            <button
+            <IconButton
               type="button"
+              size="sm"
+              style={{ color: '#5c5752' }}
               onClick={() => setIsEditingNotes(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
               title="Edit"
+              aria-label="Edit notes"
             >
-              {/* design-lint-ignore A6 stroke="#5c5752" — raw icon-button glyph predates the shared IconButton; cleared by: shared-component adoption sprint (B2 IconButton conversions) */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="#5c5752" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 <path d="m15 5 4 4"/>
               </svg>
-            </button>
+            </IconButton>
           </div>
 
           <div className="flex items-center gap-2">
