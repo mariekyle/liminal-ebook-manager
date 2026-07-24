@@ -12,8 +12,7 @@ This is a living document — add new patterns as we solve them.
 2. [Loading State Pattern](#loading-state-pattern)
 3. [API Error Handling](#api-error-handling)
 4. [LocalStorage with Fallback](#localstorage-with-fallback)
-5. [Debounced Search](#debounced-search)
-6. [Race Condition Guard (Version Ref)](#race-condition-guard-version-ref)
+5. [Race Condition Guard (Version Ref)](#race-condition-guard-version-ref)
 
 ---
 
@@ -172,41 +171,6 @@ const updateViewMode = (mode) => {
 ### Files Using This Pattern
 - `frontend/src/components/CollectionDetail.jsx` — View mode preference
 - `frontend/src/pages/Library.jsx` — Filter state (via URL params instead)
-
----
-
-## Debounced Search
-
-**Problem:** Search input fires on every keystroke, causing excessive API calls.
-
-```javascript
-import { useState, useEffect, useCallback } from 'react'
-
-// Debounce hook
-function useDebounce(value, delay = 300) {
-  const [debouncedValue, setDebouncedValue] = useState(value)
-  
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay)
-    return () => clearTimeout(timer)
-  }, [value, delay])
-  
-  return debouncedValue
-}
-
-// Usage
-const [searchInput, setSearchInput] = useState('')
-const debouncedSearch = useDebounce(searchInput, 300)
-
-useEffect(() => {
-  if (debouncedSearch) {
-    performSearch(debouncedSearch)
-  }
-}, [debouncedSearch])
-```
-
-### Files Using This Pattern
-- `frontend/src/components/FandomModal.jsx`
 
 ---
 
