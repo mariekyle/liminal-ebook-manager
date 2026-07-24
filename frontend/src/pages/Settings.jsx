@@ -14,6 +14,7 @@ import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
 import FormField from '../components/ui/FormField'
 import Toast from '../components/ui/Toast'
+import SegmentedControl from '../components/ui/SegmentedControl'
 import SettingsRow from '../components/settings/SettingsRow'
 import StatusLabelsModal from '../components/settings/StatusLabelsModal'
 import RatingLabelsModal from '../components/settings/RatingLabelsModal'
@@ -398,22 +399,17 @@ export default function Settings() {
                 <span className="text-body text-text-primary">Books per row (mobile)</span>
                 <span className="text-body-sm text-text-muted mt-0.5">Applies to grid views.</span>
               </div>
-              <div className="flex gap-2">
-                {['2', '3', '4'].map(cols => (
-                  <button
-                    key={cols}
-                    type="button"
-                    onClick={() => handleGridColumnsChange(cols)}
-                    className={`flex-1 min-h-[44px] px-4 rounded-lg text-sm font-medium transition-colors ${
-                      gridColumns === cols
-                        ? 'bg-action-primary text-text-primary'
-                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
-                    }`}
-                  >
-                    {cols}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                size="sm"
+                value={gridColumns}
+                onChange={handleGridColumnsChange}
+                options={[
+                  { value: '2', label: '2' },
+                  { value: '3', label: '3' },
+                  { value: '4', label: '4' },
+                ]}
+                ariaLabel="Books per row (mobile)"
+              />
             </div>
 
             {/* Card style — inline segmented */}
@@ -424,25 +420,16 @@ export default function Settings() {
                   Compact shows covers only. Standard adds title and author below.
                 </span>
               </div>
-              <div className="flex gap-2">
-                {[
+              <SegmentedControl
+                size="sm"
+                value={gridCardVariant}
+                onChange={handleGridVariantChange}
+                options={[
                   { value: 'compact', label: 'Compact' },
                   { value: 'standard', label: 'Standard' },
-                ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => handleGridVariantChange(value)}
-                    className={`flex-1 min-h-[44px] px-4 rounded-lg text-sm font-medium transition-colors ${
-                      gridCardVariant === value
-                        ? 'bg-action-primary text-text-primary'
-                        : 'bg-bg-elevated text-text-secondary hover:bg-bg-surface'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                ariaLabel="Card style"
+              />
             </div>
 
             <SettingsRow

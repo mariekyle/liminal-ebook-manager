@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { findDuplicates, mergeTitles } from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 
 // Stable client-side group ID. Prefers crypto.randomUUID (modern browsers, Android
 // WebView ≥ recent) with a math-based fallback so we never crash on older contexts.
@@ -225,9 +226,9 @@ function DuplicatesPage() {
                           {group.match_type === 'exact' ? 'Exact Match' : 'Similar Title'}
                         </span>
                         {group.same_author && (
-                          <span className="px-2 py-0.5 rounded text-caption font-medium bg-chip-fanfiction/15 text-chip-fanfiction">
+                          <Badge variant="tint" tone="fanfiction" size="sm" pill={false}>
                             Same Author
-                          </span>
+                          </Badge>
                         )}
                         <span className="text-text-muted text-body-sm">
                           {group.books.length} books

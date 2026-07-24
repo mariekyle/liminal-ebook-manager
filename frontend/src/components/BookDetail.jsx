@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
-import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { getBook, listBooks, getBookNotes, saveNote, updateBookCategory, getCategories, updateBookStatus, getSeriesDetail, getSettings, lookupBooksByTitles, getBookBacklinks, updateTBR, convertTBRToLibrary, getBookSessions, createSession, updateSession, deleteSession, createEdition, deleteEdition, replaceEditionFile, mergeTitles, deleteTitle, rescanBookMetadata, updateEnhancedMetadata, updateBookMetadata, getCollectionsForBook } from '../api'
 import Button from './ui/Button'
@@ -15,6 +14,9 @@ import Toast from './ui/Toast'
 import Modal from './ui/Modal'
 import FormField from './ui/FormField'
 import StarRating from './ui/StarRating'
+import ThreeDotMenu from './ui/ThreeDotMenu'
+import MenuItem from './ui/MenuItem'
+import Badge from './ui/Badge'
 import { getReadTimeData } from '../utils/readTime'
 import ReactMarkdown from 'react-markdown'
 import { useStatusLabels } from '../hooks/useStatusLabels'
@@ -141,140 +143,6 @@ const NOTE_TEMPLATES = {
 
 `
   }
-}
-
-// 3-Dot Menu Component (moved outside for stability)
-const ThreeDotMenu = ({ 
-  menuOpen, 
-  setMenuOpen, 
-  menuItems 
-}) => {
-  const menuRef = useRef(null)
-  // The portaled mobile sheet lives outside menuRef's DOM subtree — without
-  // this second containment check, a tap on any sheet item would count as
-  // "outside" and close the menu on mousedown, before the item's click fires
-  const sheetRef = useRef(null)
-
-  // Close menu when clicking outside (desktop)
-  useEffect(() => {
-    if (!menuOpen) return
-
-    const handleClickOutside = (e) => {
-      if (
-        menuRef.current && !menuRef.current.contains(e.target) &&
-        !(sheetRef.current && sheetRef.current.contains(e.target))
-      ) {
-        setMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen, setMenuOpen])
-  
-  // Close menu on escape
-  useEffect(() => {
-    if (!menuOpen) return
-    
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') setMenuOpen(false)
-    }
-    
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [menuOpen, setMenuOpen])
-  
-  // Filter out items that shouldn't show
-  const visibleItems = menuItems.filter(item => item.show !== false)
-  
-  return (
-    <div className="relative" ref={menuRef}>
-      {/* 3-dot button */}
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        className="text-text-secondary hover:text-text-primary p-1.5 rounded hover:bg-bg-elevated transition-colors"
-        aria-label="More actions"
-      >
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="5" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="12" cy="19" r="2" />
-        </svg>
-      </button>
-      
-      {/* Desktop Dropdown */}
-      {menuOpen && (
-        <>
-          {/* Desktop dropdown - hidden on mobile */}
-          <div className="hidden md:block absolute right-0 top-full mt-1 w-56 bg-bg-surface border border-border-default rounded-lg shadow-xl z-50 py-1 overflow-hidden">
-            {visibleItems.map((item, idx) => (
-              item.type === 'divider' ? (
-                <div key={idx} className="border-t border-border-default my-1" />
-              ) : (
-                <button
-                  key={idx}
-                  onClick={item.onClick}
-                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-bg-elevated transition-colors ${item.danger ? 'text-action-danger' : 'text-text-body'}`}
-                >
-                  {item.label}
-                </button>
-              )
-            ))}
-          </div>
-          
-          {/* Mobile Bottom Sheet — portaled to <body>: the sticky UnifiedNavBar
-              wrapper (z-20) is a stacking context, so rendered in place the
-              sheet's z-50 resolves inside it and paints under the z-40 bottom
-              nav no matter how high its own z-index goes */}
-          {createPortal(
-          <div ref={sheetRef} className="md:hidden fixed inset-0 z-50">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-bg-overlay"
-              onClick={() => setMenuOpen(false)}
-            />
-            
-            {/* Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-bg-surface rounded-t-2xl overflow-hidden">
-              {/* Handle */}
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 bg-bg-elevated rounded-full" />
-              </div>
-              
-              {/* Menu Items */}
-              <div className="px-2 pb-2">
-                {visibleItems.map((item, idx) => (
-                  item.type === 'divider' ? (
-                    <div key={idx} className="border-t border-border-default my-1 mx-2" />
-                  ) : (
-                    <button
-                      key={idx}
-                      onClick={item.onClick}
-                      className={`w-full text-left px-4 py-3.5 text-base hover:bg-bg-elevated rounded-lg transition-colors ${item.danger ? 'text-action-danger' : 'text-text-body'}`}
-                    >
-                      {item.label}
-                    </button>
-                  )
-                ))}
-              </div>
-              
-              {/* Cancel Button */}
-              <div className="px-2 pb-6 pt-2 border-t border-border-default">
-                <button
-                  onClick={() => setMenuOpen(false)}
-                  className="w-full py-3.5 text-base font-medium text-text-secondary hover:bg-bg-elevated rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-          )}
-        </>
-      )}
-    </div>
-  )
 }
 
 function BookDetail() {
@@ -1718,16 +1586,19 @@ function BookDetail() {
           {!isWishlist && (
             <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
               {book.editions?.map((edition) => {
-                const config = FORMAT_CONFIG[edition.format] || { label: edition.format, color: 'bg-bg-elevated text-text-secondary border-border-default' }
+                // Unknown formats fall back to the neutral muted variant
+                const config = FORMAT_CONFIG[edition.format] || { label: edition.format }
 
                 return (
-                  <span
+                  <Badge
                     key={edition.id}
-                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${config.color}`}
+                    variant={config.tone ? 'tint' : 'muted'}
+                    tone={config.tone}
+                    size="md"
                     title={edition.file_path || edition.folder_path || `${config.label} edition`}
                   >
                     {config.label}
-                  </span>
+                  </Badge>
                 )
               })}
             </div>
@@ -1836,28 +1707,22 @@ function BookDetail() {
                     />
                     {/* Popup */}
                     <div className="absolute top-full left-0 mt-1 bg-bg-base border border-border-default rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
-                      <button
+                      <MenuItem
                         onClick={() => {
                           handlePriorityChange('normal')
                           setPriorityPopupOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bg-elevated transition-colors ${
-                          selectedPriority === 'normal' ? 'text-action-primary' : 'text-text-body'
-                        }`}
                       >
                         Normal
-                      </button>
-                      <button
+                      </MenuItem>
+                      <MenuItem
                         onClick={() => {
                           handlePriorityChange('high')
                           setPriorityPopupOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-bg-elevated transition-colors ${
-                          selectedPriority === 'high' ? 'text-action-warning' : 'text-text-body'
-                        }`}
                       >
                         ⭐ High Priority
-                      </button>
+                      </MenuItem>
                     </div>
                   </>
                 )}
@@ -1872,9 +1737,9 @@ function BookDetail() {
               
               {/* Category - Read Only Chip */}
               {selectedCategory && (
-                <span className="px-3 py-1.5 rounded-full bg-bg-base border border-border-default text-sm text-text-body">
+                <Badge variant="outline" size="lg">
                   {selectedCategory}
-                </span>
+                </Badge>
               )}
             </div>
             

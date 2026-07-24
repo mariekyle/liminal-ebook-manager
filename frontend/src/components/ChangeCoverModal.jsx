@@ -3,6 +3,7 @@ import { uploadCover, extractCover, revertToGradient } from '../api'
 import GradientCover from './GradientCover'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
+import Badge from './ui/Badge'
 
 const UploadIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -102,11 +103,13 @@ export default function ChangeCoverModal({ book, isOpen, onClose, onSuccess }) {
     return 'Generated Gradient'
   }
 
-  const getCoverSourceClasses = () => {
-    if (hasCustomCover) return 'bg-chip-fanfiction/20 text-chip-fanfiction'
-    if (hasExtractedCover) return 'bg-chip-character/20 text-chip-character'
-    return 'bg-bg-elevated text-text-muted'
-  }
+  // Source pill props (S4 — Badge adoption): custom/extracted are tinted,
+  // the gradient default is the neutral muted variant
+  const coverSourceBadge = hasCustomCover
+    ? { variant: 'tint', tone: 'fanfiction' }
+    : hasExtractedCover
+      ? { variant: 'tint', tone: 'character' }
+      : { variant: 'muted' }
 
   if (!book) return null
 
@@ -125,9 +128,9 @@ export default function ChangeCoverModal({ book, isOpen, onClose, onSuccess }) {
         </div>
 
         <div className="text-center mb-5">
-          <span className={`inline-block px-3 py-1 rounded-full text-caption font-medium ${getCoverSourceClasses()}`}>
+          <Badge variant={coverSourceBadge.variant} tone={coverSourceBadge.tone} size="md">
             {getCoverSourceLabel()}
-          </span>
+          </Badge>
         </div>
 
         {error && (

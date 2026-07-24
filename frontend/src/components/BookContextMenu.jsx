@@ -1,3 +1,5 @@
+import MenuItem from './ui/MenuItem'
+
 /**
  * BookContextMenu — floating menu shown on long-press/right-click of a BookCard.
  * Offers quick status actions: Mark Finished or Change Status.
@@ -26,28 +28,28 @@ export default function BookContextMenu({ book, position, onMarkFinished, onChan
         onClick={(e) => e.stopPropagation()}
       >
         {isFinished ? (
-          <button
-            type="button"
+          <MenuItem
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path d="M1 4v10h10M23 20V10H13" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            }
             onClick={() => { onChangeStatus(); onClose(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path d="M1 4v10h10M23 20V10H13" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
             Update Status
-          </button>
+          </MenuItem>
         ) : (
-          <button
-            type="button"
+          <MenuItem
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+            }
             onClick={() => { onMarkFinished(); onClose(); }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="12" cy="12" r="10" />
-            </svg>
             Mark Finished
-          </button>
+          </MenuItem>
         )}
       </div>
     </>

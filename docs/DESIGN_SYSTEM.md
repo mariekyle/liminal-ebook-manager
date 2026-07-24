@@ -50,7 +50,7 @@ Seven token classes, defined as `fontSize` entries in `tailwind.config.js` (size
 
 ## 3. Component inventory — `frontend/src/components/ui/`
 
-Thirteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
+Fifteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
 
 Shared conventions across the directory: semantic tokens only; 200ms ease-out transitions; 44px tap targets at default (`md`) sizes — the explicit `sm` sizes drop to 36px (Button, IconButton) and SegmentedControl's segments sit at 40px inside a 44px container; `onChange` receives the **value** (string/array), not the event, in form components; autocomplete dropdowns cap at 8 suggestions, close 200ms after blur, and have no arrow-key navigation (pointer + typing only).
 
@@ -66,12 +66,12 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 
 ### Badge
 
-- **Purpose:** Status/category/chip pills for ambient metadata.
-- **Variants & states:** Three mutually exclusive modes by prop priority: `status` (unread/reading/finished/dnf, renders a dot; label goes through `useStatusLabels`) → `category` (fiction/fanfiction/nonfiction, fixed labels, case-insensitive lookup) → `chip` + `label` (fandom/ship/character/tag; unknown chip types fall back to tag). Unknown status/category renders `null` silently.
-- **Required props:** exactly one mode: `status`, or `category`, or `chip` **and** `label`. Optional: `className`.
-- **When to use:** Reading-status dots, category pills, fandom/ship/character/tag chips.
-- **When NOT to use:** Interactive/filter chips (Badge is non-interactive, no button semantics); bespoke one-off badges — extend the config maps instead.
-- **Common mistakes:** Passing two mode props (status silently wins). Chip mode without `label` renders nothing. Trying to restyle text color via `className` — variant text colors are inline styles and win. Note: several screens (WishlistTab, ImportPage, UploadSuccess) still carry local badge implementations predating Badge; don't copy those as precedent.
+- **Purpose:** Non-interactive display pill for ambient metadata — result pills, format badges, category/type chips, the wishlist priority overlay. Rebuilt on tokens in S4 (v0.81.0): zero inline styles.
+- **Variants & states:** `variant` (required): `solid` (filled semantic color, medium weight — result pills, priority overlay) / `tint` (translucent fill + matching text + faint `/30` border — format badges, match and cover-source pills) / `outline` (neutral: bg-base + default border — category chip) / `muted` (neutral: elevated fill, muted text — type badges, unknown-format fallback). `tone` picks the color family for solid (success/primary/danger/warning) and tint (warning/fiction/fanfiction/nonfiction/fandom/character); outline/muted ignore it. `size`: sm (caption, tightest) / md (caption) / lg (body-sm — pairs with the priority-popup trigger chip). `pill`: rounded-full (default) or `pill={false}` for square-ish `rounded`.
+- **Required props:** `variant`, `children`; `tone` whenever variant is solid/tint. Optional: `size='md'`, `pill=true`, `title` (native tooltip passthrough), `className`.
+- **When to use:** The adopted census shapes — upload result pills (UploadSuccess), edition format badges (BookDetail, tones from `FORMAT_CONFIG`), TBR category chip (BookDetail), priority overlay (WishlistTab), collection type badges (CollectionDetail), Same Author match pill (DuplicatesPage), cover-source pill (ChangeCoverModal).
+- **When NOT to use:** Interactive/filter chips (Badge is a `<span>` — no button semantics; census precedent 2026-07-22 puts them in a different component class); numeric/icon cover overlays; reading-status labels — those render in BookCard/AcquireCard. There is deliberately **no status mode**; if one is ever added, its labels MUST route through `useStatusLabels`.
+- **Common mistakes:** Unknown `variant` — or solid/tint with an unknown `tone` — renders `null` silently (the old Badge's convention, kept). `className` is **layout only** (the priority overlay's absolute positioning is the sanctioned example); color comes from the tone tables, never from call-site classes — call-site color strings are exactly the drift the rebuild deleted.
 - **Frozen behaviors:** None.
 
 ### Button
@@ -124,6 +124,16 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 - **Common mistakes:** Omitting `aria-label` (nothing supplies one). Omitting `type="button"` inside forms — the native default is submit. JSDoc calls the 44px size "default" but the prop key is `md`.
 - **Frozen behaviors:** None.
 
+### MenuItem
+
+- **Purpose:** One row inside a menu container — dropdowns, bottom sheets, context menus, popups. The B3b conversion target: every text-labeled menu row renders through it (S4, v0.81.0).
+- **Variants & states:** `danger` (danger text), `disabled` (dims to 40%, inert), optional leading `icon` slot (16px box that collapses when absent), `to` renders a react-router `Link` with identical styling. Elected visual (2026-07-23): `w-full flex items-center gap-3 px-4 py-3`, rest `text-text-primary`, hover `bg-bg-surface`, no rounding — the container clips. Rows clear 44px at base text size. Always `type="button"` in button form.
+- **Required props:** `children`; in practice one of `onClick` / `to`. Optional: `icon`, `danger`, `disabled`, `className` (**layout only** — Button's contract verbatim).
+- **When to use:** Action rows in any menu container — ThreeDotMenu items, BookContextMenu, CollectionCard's context menu, BookDetail's priority popup. Rows that navigate use `to` — never hand-roll an onClick-navigate (link semantics: long-press, middle-click, prefetch).
+- **When NOT to use (excluded by decision, 2026-07-22):** No trailing slot, no submenus, no selected state, no roving focus — additive later is cheap, removal means auditing every consumer. Dividers, section headers, and sheet chrome belong to the **container**. The moment this component grows a `variant="sheet"` prop it has failed.
+- **Common mistakes:** Expecting selection highlighting — menu items don't mark the current choice; the trigger displays it (priority-popup pattern). Styling the container through an item's `className`. `disabled` + `to` renders an inert dimmed button, never a Link — a disabled item must not navigate. The container owns close-on-select: item onClick handlers call the container's close setter themselves.
+- **Frozen behaviors:** None.
+
 ### Modal
 
 - **Purpose:** The one modal. Compound layout: `Modal.Header` / `Modal.Body` / `Modal.Footer`.
@@ -163,6 +173,16 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 - **When NOT to use:** Rating *labels* — the label text comes from `useRatingLabels`, not this component.
 - **Common mistakes:** Not handling `null` from toggle-to-clear. Passing floats and expecting halves — fill truncates (4.5 shows 4 stars). Forgetting that omitting `onChange` silently renders read-only.
 - **Frozen behaviors:** None.
+
+### ThreeDotMenu
+
+- **Purpose:** Page-level overflow menu — 3-dot trigger + desktop dropdown (≥768px) + portaled mobile bottom sheet. Extracted from BookDetail in S4 (v0.81.0) — ROADMAP 10.0.14's extraction claim, true at last. BookDetail, CollectionDetail, and CollectionsTab all render it.
+- **Variants & states:** Controlled: the caller owns `menuOpen`/`setMenuOpen`. Data-driven `menuItems`: `{ label, onClick, danger?, show?, icon? }` action rows — rendered via MenuItem in **both** containers — and `{ type: 'divider' }` hairlines. `show: false` hides a row. Containers are `bg-bg-elevated` (ratified 2026-07-23; MenuItem's `bg-bg-surface` hover is the one hover value everywhere). Outside-click (mousedown) and Escape close it; the sheet also closes on backdrop tap and Cancel.
+- **Required props:** `menuOpen`, `setMenuOpen`, `menuItems`.
+- **When to use:** Page-level actions in UnifiedNavBar's right slot or a page header row — delete, merge, change cover, reorder. Page verbs only; section edits stay pencil IconButtons (2026-04-12 convention).
+- **When NOT to use:** Long-press/right-click context menus (BookContextMenu and CollectionCard position their own containers and render MenuItem directly); option pickers with a current value (the priority-popup pattern — trigger chip + popup container + MenuItems).
+- **Common mistakes:** Item onClick handlers must close the menu themselves (`setMenuOpen(false)`) — the component only closes on outside-click/Escape/backdrop/Cancel. The mobile sheet is portaled to `<body>` on purpose (sticky-wrapper stacking contexts swallow `z-50` — the v0.65.0 lesson); don't "simplify" it back inline. The trigger supplies `aria-label="More actions"` — adopters don't add their own.
+- **Frozen behaviors:** The portaled sheet.
 
 ### Toast
 

@@ -42,6 +42,8 @@ import DuplicateCollectionModal from './DuplicateCollectionModal'
 import SortDropdown from './SortDropdown'
 import SearchInput from './ui/SearchInput'
 import UnifiedNavBar from './ui/UnifiedNavBar'
+import ThreeDotMenu from './ui/ThreeDotMenu'
+import Badge from './ui/Badge'
 import MarkFinishedModal from './MarkFinishedModal'
 import ChangeStatusModal from './ChangeStatusModal'
 import BookContextMenu from './BookContextMenu'
@@ -52,14 +54,6 @@ const VIEW_MODE_KEY = 'liminal-view-collection-detail'
 const BackIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
     <path d="M19 12H5M12 19l-7-7 7-7" />
-  </svg>
-)
-
-const DotsIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-    <circle cx="12" cy="12" r="1" />
-    <circle cx="12" cy="5" r="1" />
-    <circle cx="12" cy="19" r="1" />
   </svg>
 )
 
@@ -995,125 +989,97 @@ export default function CollectionDetail() {
       </div>
     )
   }
-  
+
+  // Page-level menu — rendered by the shared ThreeDotMenu (S4 adoption);
+  // conditional items use the API's show flag, handlers close via setShowMenu
+  const collectionMenuItems = [
+    {
+      label: 'Edit Collection',
+      icon: <PencilIcon />,
+      onClick: () => {
+        setShowMenu(false)
+        setShowEditModal(true)
+      },
+    },
+    // Duplicate - available for all collections
+    {
+      label: 'Duplicate',
+      icon: <CopyIcon />,
+      onClick: () => {
+        setShowMenu(false)
+        setShowDuplicateModal(true)
+      },
+    },
+    // Remove Books - only for manual/checklist with books, not in reorder mode
+    {
+      label: 'Remove Books',
+      icon: <XIcon />,
+      show: !isAutomatic && totalBooks > 0 && !isReorderMode && !removeMode,
+      onClick: () => {
+        setShowMenu(false)
+        setRemoveMode(true)
+        setSelectedForRemoval(new Set())
+      },
+    },
+    // Reorder Books - only for manual/checklist with sortable books, not in remove mode, and full pagination done
+    // For checklists: need 2+ incomplete books. For manual: need 2+ total books
+    {
+      label: isReorderMode ? 'Done Reordering' : 'Reorder Books',
+      icon: <ReorderIcon />,
+      show:
+        !isAutomatic && !removeMode &&
+        (isChecklist
+          ? (!incompleteHasMore && incompleteBooks.length > 1)
+          : (!hasMore && totalBooks > 1)),
+      onClick: () => {
+        setShowMenu(false)
+        if (isReorderMode) {
+          // Restore original view mode when exiting reorder
+          if (preReorderViewMode) {
+            setViewMode(preReorderViewMode)
+            localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
+          }
+          setPreReorderViewMode(null)
+          // Restore search query if one was active pre-reorder
+          setSearchQuery(preReorderSearchQuery)
+          setPreReorderSearchQuery('')
+          setIsReorderMode(false)
+        } else {
+          // Save current view mode and switch to list for reordering
+          setPreReorderViewMode(viewMode)
+          setViewMode('list') // Force list view for reordering (don't save to localStorage)
+          // Save + clear search — reorder must operate on the full book set
+          // so SortableContext items match the rendered DOM
+          setPreReorderSearchQuery(searchQuery)
+          setSearchQuery('')
+          setReorderError(null)
+          setIsReorderMode(true)
+        }
+      },
+    },
+    // Delete - not for default collections
+    {
+      label: 'Delete Collection',
+      icon: <TrashIcon />,
+      danger: true,
+      show: !isDefault,
+      onClick: () => {
+        setShowMenu(false)
+        setDeleteError(null)
+        setShowDeleteConfirm(true)
+      },
+    },
+  ]
+
   return (
     <div className={`max-w-4xl mx-auto ${removeMode ? 'pb-40' : 'pb-24'}`}>
       {/* Header */}
       <UnifiedNavBar backLabel="Collections" backTo="/collections">
-        {/* Menu button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 text-text-secondary hover:text-text-primary rounded-lg hover:bg-bg-elevated transition-colors"
-          >
-            <DotsIcon />
-          </button>
-          
-          {/* Dropdown menu */}
-          {showMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-40"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50 overflow-hidden">
-                <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    setShowEditModal(true)
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-                >
-                  <PencilIcon />
-                  Edit Collection
-                </button>
-                
-                {/* Duplicate - available for all collections */}
-                <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    setShowDuplicateModal(true)
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-                >
-                  <CopyIcon />
-                  Duplicate
-                </button>
-                
-                {/* Remove Books - only for manual/checklist with books, not in reorder mode */}
-                {!isAutomatic && totalBooks > 0 && !isReorderMode && !removeMode && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false)
-                      setRemoveMode(true)
-                      setSelectedForRemoval(new Set())
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-                  >
-                    <XIcon />
-                    Remove Books
-                  </button>
-                )}
-                
-                {/* Reorder Books - only for manual/checklist with sortable books, not in remove mode, and full pagination done */}
-                {/* For checklists: need 2+ incomplete books. For manual: need 2+ total books */}
-                {!isAutomatic && !removeMode && 
-                 (isChecklist 
-                   ? (!incompleteHasMore && incompleteBooks.length > 1)
-                   : (!hasMore && totalBooks > 1)
-                 ) && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      if (isReorderMode) {
-                        // Restore original view mode when exiting reorder
-                        if (preReorderViewMode) {
-                          setViewMode(preReorderViewMode)
-                          localStorage.setItem(VIEW_MODE_KEY, preReorderViewMode)
-                        }
-                        setPreReorderViewMode(null)
-                        // Restore search query if one was active pre-reorder
-                        setSearchQuery(preReorderSearchQuery)
-                        setPreReorderSearchQuery('')
-                        setIsReorderMode(false)
-                      } else {
-                        // Save current view mode and switch to list for reordering
-                        setPreReorderViewMode(viewMode)
-                        setViewMode('list') // Force list view for reordering (don't save to localStorage)
-                        // Save + clear search — reorder must operate on the full book set
-                        // so SortableContext items match the rendered DOM
-                        setPreReorderSearchQuery(searchQuery)
-                        setSearchQuery('')
-                        setReorderError(null)
-                        setIsReorderMode(true)
-                      }
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-text-primary hover:bg-bg-surface transition-colors"
-                  >
-                    <ReorderIcon />
-                    {isReorderMode ? 'Done Reordering' : 'Reorder Books'}
-                  </button>
-                )}
-                
-                {/* Delete - not for default collections */}
-                {!isDefault && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false)
-                      setDeleteError(null)
-                      setShowDeleteConfirm(true)
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-action-danger hover:bg-bg-surface transition-colors"
-                  >
-                    <TrashIcon />
-                    Delete Collection
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <ThreeDotMenu
+          menuOpen={showMenu}
+          setMenuOpen={setShowMenu}
+          menuItems={collectionMenuItems}
+        />
       </UnifiedNavBar>
       
       <div className="px-4">
@@ -1135,14 +1101,14 @@ export default function CollectionDetail() {
           </h1>
           {/* Collection type badge - greyscale */}
           {isChecklist && (
-            <span className="text-xs px-2 py-0.5 bg-bg-elevated/80 text-text-muted rounded">
+            <Badge variant="muted" size="sm" pill={false}>
               Checklist
-            </span>
+            </Badge>
           )}
           {isAutomatic && (
-            <span className="text-xs px-2 py-0.5 bg-bg-elevated/80 text-text-muted rounded">
+            <Badge variant="muted" size="sm" pill={false}>
               Auto
-            </span>
+            </Badge>
           )}
         </div>
         {/* Row 1: book count + sort dropdown (automatic collections) */}

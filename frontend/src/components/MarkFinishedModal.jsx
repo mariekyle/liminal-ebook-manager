@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import FormField from './ui/FormField'
+import StarRating from './ui/StarRating'
 
 /**
  * MarkFinishedModal — quick-action modal for marking a book as finished.
@@ -23,7 +24,6 @@ export default function MarkFinishedModal({ book, onConfirm, onClose, error, sav
     return new Date().toISOString().split('T')[0]
   })
   const [rating, setRating] = useState(book.rating || 0)
-  const [hoveredRating, setHoveredRating] = useState(0)
   const [dateError, setDateError] = useState(null)
 
   const handleSubmit = () => {
@@ -59,29 +59,13 @@ export default function MarkFinishedModal({ book, onConfirm, onClose, error, sav
           </FormField>
           <FormField label="Rating (optional)">
             <div className="flex flex-wrap items-center gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(rating === star ? 0 : star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="p-1 transition-colors"
-                >
-                  <svg
-                    className={`w-7 h-7 ${
-                      star <= (hoveredRating || rating)
-                        ? 'text-action-warning fill-current'
-                        : 'text-text-muted'
-                    }`}
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                </button>
-              ))}
+              {/* StarRating's toggle-to-clear emits null — normalize to the
+                  modal's 0-means-unrated state */}
+              <StarRating
+                value={rating || null}
+                onChange={(val) => setRating(val || 0)}
+                size="lg"
+              />
               {rating > 0 && (
                 <Button type="button" variant="ghost" size="sm" className="ml-2" onClick={() => setRating(0)}>
                   Clear

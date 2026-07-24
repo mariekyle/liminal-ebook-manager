@@ -25,21 +25,20 @@ export const ALL_EDITION_FORMATS = [
   ...COARSE_FORMATS.filter((f) => !EBOOK_FORMATS.includes(f)),
 ]
 
-// Chip display config per format — extends the BookDetail formatConfig
-// pattern. Storage formats share the ebook chip styling.
-const EBOOK_CHIP = 'bg-chip-fiction/20 text-chip-fiction border-chip-fiction/30'
-
+// Display config per format: label + ui/Badge tint tone (S4 — the class
+// strings moved into Badge's tone tables). Storage formats share the
+// ebook tone.
 export const FORMAT_CONFIG = {
-  ebook: { label: 'Ebook', color: EBOOK_CHIP },
-  epub: { label: 'EPUB', color: EBOOK_CHIP },
-  pdf: { label: 'PDF', color: EBOOK_CHIP },
-  mobi: { label: 'MOBI', color: EBOOK_CHIP },
-  azw3: { label: 'AZW3', color: EBOOK_CHIP },
-  azw: { label: 'AZW', color: EBOOK_CHIP },
-  html: { label: 'HTML', color: EBOOK_CHIP },
-  physical: { label: 'Physical', color: 'bg-action-warning/20 text-action-warning border-action-warning/30' },
-  audiobook: { label: 'Audiobook', color: 'bg-chip-fandom/20 text-chip-fandom border-chip-fandom/30' },
-  web: { label: 'Web', color: 'bg-chip-nonfiction/20 text-chip-nonfiction border-chip-nonfiction/30' },
+  ebook: { label: 'Ebook', tone: 'fiction' },
+  epub: { label: 'EPUB', tone: 'fiction' },
+  pdf: { label: 'PDF', tone: 'fiction' },
+  mobi: { label: 'MOBI', tone: 'fiction' },
+  azw3: { label: 'AZW3', tone: 'fiction' },
+  azw: { label: 'AZW', tone: 'fiction' },
+  html: { label: 'HTML', tone: 'fiction' },
+  physical: { label: 'Physical', tone: 'warning' },
+  audiobook: { label: 'Audiobook', tone: 'fandom' },
+  web: { label: 'Web', tone: 'nonfiction' },
 }
 
 // Display name with raw-value fallback for unknown formats

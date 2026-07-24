@@ -28,6 +28,7 @@ import { CSS } from '@dnd-kit/utilities'
 import CollectionCard from './CollectionCard'
 import CollectionModal from './CollectionModal'
 import UnifiedNavBar from './ui/UnifiedNavBar'
+import ThreeDotMenu from './ui/ThreeDotMenu'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import { listCollections, reorderCollections, deleteCollection } from '../api'
@@ -36,12 +37,6 @@ import { listCollections, reorderCollections, deleteCollection } from '../api'
 const VIEW_MODE_KEY = 'liminal-view-collections'
 
 // Icons
-const DotsIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-  </svg>
-)
-
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
     <line x1="12" y1="5" x2="12" y2="19" />
@@ -309,44 +304,14 @@ export default function CollectionsTab() {
               </div>
             )}
             
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-2 rounded-lg hover:bg-bg-elevated text-text-secondary hover:text-text-primary transition-colors duration-200 ease-out"
-              >
-                <DotsIcon />
-              </button>
-              
-              {showMenu && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowMenu(false)}
-                  />
-                  
-                  <div className="absolute right-0 mt-1 py-1 w-48 bg-bg-elevated rounded-lg shadow-xl border border-border-default z-50">
-                    <button
-                      type="button"
-                      onClick={() => handleMenuAction('add')}
-                      className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
-                    >
-                      Add Collection
-                    </button>
-                    
-                    {!isReorderMode && (
-                      <button
-                        type="button"
-                        onClick={() => handleMenuAction('reorder')}
-                        className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
-                      >
-                        Reorder Collections
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <ThreeDotMenu
+              menuOpen={showMenu}
+              setMenuOpen={setShowMenu}
+              menuItems={[
+                { label: 'Add Collection', onClick: () => handleMenuAction('add') },
+                { label: 'Reorder Collections', show: !isReorderMode, onClick: () => handleMenuAction('reorder') },
+              ]}
+            />
           </div>
         </div>
       

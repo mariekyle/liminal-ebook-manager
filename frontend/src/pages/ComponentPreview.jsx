@@ -13,6 +13,8 @@ import AuthorInput from '../components/ui/AuthorInput'
 import ChipInput from '../components/ui/ChipInput'
 import FileDropZone from '../components/ui/FileDropZone'
 import SegmentedControl from '../components/ui/SegmentedControl'
+import MenuItem from '../components/ui/MenuItem'
+import ThreeDotMenu from '../components/ui/ThreeDotMenu'
 
 /* Preview icons — same strokes as lucide-react Pencil, Trash2, Plus, Settings, X. Run `npm i lucide-react` and swap imports if you prefer. */
 function PrevPencil(props) {
@@ -106,6 +108,8 @@ export default function ComponentPreview() {
   const [openFs, setOpenFs] = useState(false)
 
   const [toast, setToast] = useState(null)
+
+  const [demoMenuOpen, setDemoMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!toast) return
@@ -271,31 +275,44 @@ export default function ComponentPreview() {
         <Section title="Badge">
           <div className="space-y-6">
             <div>
-              <GroupLabel>Status</GroupLabel>
+              <GroupLabel>Solid — result pills (sm, square) + priority overlay (sm, pill)</GroupLabel>
               <div className="flex flex-wrap gap-3 items-center">
-                <Badge status="unread" />
-                <Badge status="reading" />
-                <Badge status="finished" />
-                <Badge status="dnf" />
+                <Badge variant="solid" tone="success" size="sm" pill={false}>NEW</Badge>
+                <Badge variant="solid" tone="primary" size="sm" pill={false}>+FORMAT</Badge>
+                <Badge variant="solid" tone="danger" size="sm" pill={false}>ERROR</Badge>
+                <Badge variant="solid" tone="warning" size="sm">High</Badge>
               </div>
             </div>
             <div>
-              <GroupLabel>Category</GroupLabel>
+              <GroupLabel>Tint — format badges (md) + match/source pills</GroupLabel>
               <div className="flex flex-wrap gap-3 items-center">
-                <Badge category="fiction" />
-                <Badge category="fanfiction" />
-                <Badge category="nonfiction" />
+                <Badge variant="tint" tone="fiction" size="md" title="EPUB edition">EPUB</Badge>
+                <Badge variant="tint" tone="warning" size="md">Physical</Badge>
+                <Badge variant="tint" tone="fandom" size="md">Audiobook</Badge>
+                <Badge variant="tint" tone="nonfiction" size="md">Web</Badge>
+                <Badge variant="tint" tone="character" size="md">Extracted from EPUB</Badge>
+                <Badge variant="tint" tone="fanfiction" size="sm" pill={false}>Same Author</Badge>
               </div>
             </div>
             <div>
-              <GroupLabel>Metadata chips</GroupLabel>
+              <GroupLabel>Outline — category chip (lg)</GroupLabel>
               <div className="flex flex-wrap gap-3 items-center">
-                <Badge chip="fandom" label="Hainish Cycle" />
-                <Badge chip="ship" label="Genly / Estraven" />
-                <Badge chip="character" label="Genly Ai" />
-                <Badge chip="tag" label="Hugo Award" />
+                <Badge variant="outline" size="lg">Fiction</Badge>
+                <Badge variant="outline" size="lg">FanFiction</Badge>
               </div>
             </div>
+            <div>
+              <GroupLabel>Muted — type badges (sm, square) + neutral fallback (md)</GroupLabel>
+              <div className="flex flex-wrap gap-3 items-center">
+                <Badge variant="muted" size="sm" pill={false}>Checklist</Badge>
+                <Badge variant="muted" size="sm" pill={false}>Auto</Badge>
+                <Badge variant="muted" size="md">Generated Gradient</Badge>
+              </div>
+            </div>
+            <p className="text-caption text-text-muted">
+              Display-only span — interactive/filter chips are a different component class. No status
+              mode: reading-status labels render in BookCard/AcquireCard via useStatusLabels.
+            </p>
           </div>
         </Section>
 
@@ -624,6 +641,61 @@ export default function ComponentPreview() {
             <p className="text-caption text-text-muted">
               Production callers fetch constraints from /api/upload/limits — the demo passes static values (100 MB,
               20 files).
+            </p>
+          </div>
+        </Section>
+
+        {/* 14. MenuItem */}
+        <Section title="MenuItem">
+          <div className="space-y-4">
+            <div>
+              <LabelRow>default / icon / danger / disabled / to — in a mock elevated menu container</LabelRow>
+              <div className="max-w-xs bg-bg-elevated border border-border-default rounded-lg shadow-xl py-1 overflow-hidden">
+                <MenuItem onClick={() => {}}>Default item</MenuItem>
+                <MenuItem icon={<PrevPencil className="w-4 h-4" />} onClick={() => {}}>
+                  With icon
+                </MenuItem>
+                <MenuItem danger icon={<PrevTrash2 className="w-4 h-4" />} onClick={() => {}}>
+                  Danger item
+                </MenuItem>
+                <MenuItem disabled onClick={() => {}}>
+                  Disabled item
+                </MenuItem>
+                <MenuItem to="/dev/components">Link item (to)</MenuItem>
+              </div>
+            </div>
+            <p className="text-caption text-text-muted">
+              Owns item concerns only — padding, tap height, danger color, disabled dimming, icon slot.
+              Dividers, headers, and sheet chrome belong to the container. No trailing slot, no submenus,
+              no selected state, no roving focus (excluded by decision).
+            </p>
+          </div>
+        </Section>
+
+        {/* 15. ThreeDotMenu */}
+        <Section title="ThreeDotMenu">
+          <div className="space-y-4">
+            <div>
+              <LabelRow>Controlled — desktop dropdown ≥768px, portaled bottom sheet on mobile</LabelRow>
+              <div className="flex justify-end max-w-xs">
+                <ThreeDotMenu
+                  menuOpen={demoMenuOpen}
+                  setMenuOpen={setDemoMenuOpen}
+                  menuItems={[
+                    { label: 'Edit', onClick: () => setDemoMenuOpen(false) },
+                    { label: 'Change Cover', icon: <PrevPencil className="w-4 h-4" />, onClick: () => setDemoMenuOpen(false) },
+                    { type: 'divider' },
+                    { label: 'Hidden item', show: false, onClick: () => setDemoMenuOpen(false) },
+                    { label: 'Delete Title', danger: true, onClick: () => setDemoMenuOpen(false) },
+                  ]}
+                />
+              </div>
+            </div>
+            <p className="text-caption text-text-muted">
+              Items render via MenuItem in both containers (bg-bg-elevated, ratified). Item onClick
+              handlers close the menu themselves. The show flag hides rows (one is hidden here);
+              divider rows draw hairlines. Sheet chrome — handle, Cancel, backdrop — lives in the
+              component.
             </p>
           </div>
         </Section>

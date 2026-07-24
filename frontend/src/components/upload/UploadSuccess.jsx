@@ -7,6 +7,7 @@
 import { useNavigate } from 'react-router-dom'
 import StepIndicator from '../add/StepIndicator'
 import Button from '../ui/Button'
+import Badge from '../ui/Badge'
 
 export default function UploadSuccess({ results, books, onGoToLibrary, onUploadMore }) {
   const navigate = useNavigate()
@@ -53,17 +54,12 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
     }
   }
 
-  const getBadge = (status) => {
-    switch (status) {
-      case 'created':
-        return { text: 'NEW', className: 'bg-action-success text-text-primary' }
-      case 'format_added':
-        return { text: '+FORMAT', className: 'bg-action-primary text-text-primary' }
-      case 'error':
-        return { text: 'ERROR', className: 'bg-action-danger text-text-primary' }
-      default:
-        return null
-    }
+  // Result badge text + ui/Badge solid tone per row status (S4 — the
+  // class strings moved into Badge's tone tables)
+  const RESULT_BADGES = {
+    created: { text: 'NEW', tone: 'success' },
+    format_added: { text: '+FORMAT', tone: 'primary' },
+    error: { text: 'ERROR', tone: 'danger' },
   }
 
   return (
@@ -107,7 +103,7 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
           <div className="bg-bg-surface/80 rounded-lg overflow-hidden border border-border-subtle">
             {bookResults.map((result) => {
               const { id, status, book, message, title_id: tid } = result
-              const badge = getBadge(status)
+              const badge = RESULT_BADGES[status] || null
               const isError = status === 'error'
               const bookId = tid || book?.title_id || null
               const isClickable = !isError && bookId !== null
@@ -146,9 +142,9 @@ export default function UploadSuccess({ results, books, onGoToLibrary, onUploadM
                     )}
                   </span>
                   {badge && (
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${badge.className}`}>
+                    <Badge variant="solid" tone={badge.tone} size="sm" pill={false}>
                       {badge.text}
-                    </span>
+                    </Badge>
                   )}
                   {isClickable && <span className="text-text-muted text-sm">›</span>}
                 </button>

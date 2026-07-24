@@ -5,18 +5,9 @@ import GradientCover from './GradientCover'
 import SortDropdown from './SortDropdown'
 import { useSort } from '../hooks/useSort'
 import Button from './ui/Button'
+import Badge from './ui/Badge'
+import SegmentedControl from './ui/SegmentedControl'
 import { useGridColumns } from '../hooks/useGridColumns'
-
-// Priority badge component
-function PriorityBadge({ priority }) {
-  if (priority !== 'high') return null
-
-  return (
-    <span className="absolute top-1.5 left-1.5 bg-action-warning text-text-inverse text-[0.625rem] leading-tight px-1.5 py-0.5 rounded-full font-medium">
-      High
-    </span>
-  )
-}
 
 // Empty state component
 function EmptyState() {
@@ -65,7 +56,11 @@ function WishlistCard({ book, onClick, variant = 'compact' }) {
           showAuthor={true}
           className=""
         />
-        <PriorityBadge priority={book.tbr_priority} />
+        {book.tbr_priority === 'high' && (
+          <Badge variant="solid" tone="warning" size="sm" className="absolute top-1.5 left-1.5">
+            High
+          </Badge>
+        )}
         {/* Wishlist bookmark badge */}
         <div
           className="absolute top-2 right-2 w-6 h-6 bg-bg-base/[0.88] rounded flex items-center justify-center"
@@ -209,41 +204,17 @@ function WishlistTab() {
           {/* Filters and Sort */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {/* Priority Filter */}
-            <div className="flex items-center gap-1 bg-bg-surface rounded-lg p-1 min-h-[44px]">
-              <button
-                type="button"
-                onClick={() => setFilter('all')}
-                className={`min-h-[44px] px-3 py-1.5 rounded-md text-body-sm transition-all duration-200 ease-out ${
-                  filter === 'all'
-                    ? 'bg-bg-elevated text-text-primary'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                All ({books.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('high')}
-                className={`min-h-[44px] px-3 py-1.5 rounded-md text-body-sm transition-all duration-200 ease-out ${
-                  filter === 'high'
-                    ? 'bg-bg-elevated text-text-primary'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                High ({highCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('normal')}
-                className={`min-h-[44px] px-3 py-1.5 rounded-md text-body-sm transition-all duration-200 ease-out ${
-                  filter === 'normal'
-                    ? 'bg-bg-elevated text-text-primary'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Normal ({normalCount})
-              </button>
-            </div>
+            <SegmentedControl
+              size="sm"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all', label: `All (${books.length})` },
+                { value: 'high', label: `High (${highCount})` },
+                { value: 'normal', label: `Normal (${normalCount})` },
+              ]}
+              ariaLabel="Filter by priority"
+            />
 
             {/* Sort Dropdown */}
             <div className="ml-auto">

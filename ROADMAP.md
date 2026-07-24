@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 23, 2026 (v0.80.0)
-> **Current Focus:** Batch 3 closed at v0.74.0. The batch moved the app from "features ship" to "failures speak": every destructive file operation routes through the trash folder with an in-app Trash surface behind the app's only type-to-confirm gate, every upload write path is contained and refuses collisions instead of overwriting, wishlist-to-library conversion is lossless for notes and covers, every blocking error renders where the failed action lives, and the design lint's baselines are true (comment-aware matching, bare confirm( caught, hex rules scoped to what they can honestly enforce). Now underway: the shared-component adoption sprint (raw-button conversion, a MenuItem primitive, gallery completion — S1 shipped across v0.75.0–v0.76.0; S2 shipped v0.77.0, every real-action text-labeled button now on the shared Button; S3 shipped v0.79.0, every live icon-only action button on IconButton and the last lint exceptions cleared), then the post-batch queue — conversion auto-scan, duplicate-pair triage, the merge-confirm redesign, and the date_added semantic decision. Full history lives in CHANGELOG.md.
+> **Last Updated:** July 24, 2026 (v0.81.0)
+> **Current Focus:** Batch 3 closed at v0.74.0. The batch moved the app from "features ship" to "failures speak": every destructive file operation routes through the trash folder with an in-app Trash surface behind the app's only type-to-confirm gate, every upload write path is contained and refuses collisions instead of overwriting, wishlist-to-library conversion is lossless for notes and covers, every blocking error renders where the failed action lives, and the design lint's baselines are true (comment-aware matching, bare confirm( caught, hex rules scoped to what they can honestly enforce). Now underway: the shared-component adoption sprint — S1 shipped v0.75.0–v0.76.0 (gallery + recon); S2 shipped v0.77.0 (every real-action text button on Button); S3 shipped v0.79.0 (every live icon action on IconButton, last lint exceptions cleared); S4 shipped v0.81.0 (MenuItem primitive + all 15 menu-item sites, ThreeDotMenu extracted to ui/ with three consumers, Badge rebuilt on tokens + 7 sites, SegmentedControl/StarRating adopted, raw-button 95 → 70). Next: S4b — exemption markers, matcher rescope, and the raw-button strict flip — then the post-batch queue: conversion auto-scan, duplicate-pair triage, the merge-confirm redesign, and the date_added semantic decision. Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -175,9 +175,9 @@ Establish design tokens and core components before building Phase 10 features. A
 - [x] 10.0.11 Move `UnifiedNavBar` to `components/ui/`
 - [x] 10.0.12 Move `Toast` to `components/ui/` (extracted from BookDetail inline)
 - [x] 10.0.13 Move `CollapsibleSection` to `components/ui/`
-- [ ] 10.0.14 Extract `ThreeDotMenu` from BookDetail to `components/ui/ThreeDotMenu.jsx`
-  - **Record corrected 2026-07-17 (v0.65.0):** previously checked, but the extraction never happened — `ThreeDotMenu` is still an inline component in `BookDetail.jsx` (single consumer), no `ui/ThreeDotMenu.jsx` exists, and the 2026-07-07 ghost-component cleanup had already removed it from SKILL.md's ui/ listing. The v0.65.0 stacking fix (mobile sheet portaled to body) lives in the inline component; `SortDropdown.jsx` carries its own separate bottom-sheet implementation. Extraction stays open for if Series/Author/Collection detail pages ever need the menu.
-  - Desktop dropdown + mobile bottom sheet, zero behavior changes
+- [x] 10.0.14 Extract `ThreeDotMenu` from BookDetail to `components/ui/ThreeDotMenu.jsx`
+  - **Done for real in v0.81.0 (S4).** The box was first checked while the extraction never happened (record corrected 2026-07-17, v0.65.0 — the component sat inline in BookDetail, single consumer, no `ui/` file). It now exists at `components/ui/ThreeDotMenu.jsx`, items render via the new `ui/MenuItem`, the v0.65.0 portaled-sheet fix rode along verbatim, and the "if other pages ever need the menu" condition arrived on schedule: CollectionDetail and CollectionsTab adopted it in the same session, replacing hand-rolled dropdowns.
+  - Desktop dropdown + mobile bottom sheet; containers standardized on the elevated background (2026-07-23 ratification)
 
 **Warm Gradient Palette:**
 - [x] 10.0.15 **Warm Gradient Lanes** — Updated 10 lane seed colors in `covers.py`
@@ -388,14 +388,15 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 ### Shared-Component Adoption Sprint (decisions locked 2026-07-22)
 
 **Priority:** P1 — current sprint
-**Sessions:** 4, sequencing ratified (Decisions.md, Adoption Sprint Decision Sprint); mandatory drift check between S3 and S4
+**Sessions:** 4 + the S4b split (ratified 2026-07-23 — S4 builds, S4b flips); sequencing ratified (Decisions.md, Adoption Sprint Decision Sprint); the mandatory S3→S4 drift check ran clean 2026-07-23
 
 | Session | Scope | Status |
 |---------|-------|--------|
 | S1 | Gallery exit + Settings link, 4 missing demos + StarRating slot, Badge verdict recon, MenuItem five-site recon, doc riders | ✅ Shipped in full — v0.75.0 (demos, recon verdicts, doc riders) + v0.76.0 rider (demo-frame z-0 fix, gallery exit, Settings "Developer" link); mobile verify pending |
 | S2 | B1: real-action text-labeled raw buttons → Button | ✅ Shipped v0.77.0 — 17 sites / 13 files converted, variants mapped per site, zero style overrides; raw-button count 120 → 103. Census corrected 19 → 17: the triage's two extra sites were AcquireCard dormant-block buttons already deleted in v0.73.0. + v0.78.0 rider: ghost variant restyled borderless per phone-test ratification — all 61 ghost usages (32 files) inherit, zero call-site edits |
 | S3 | B2: raw buttons → IconButton — clears the four A6 stroke ignores | ✅ Shipped v0.79.0 — census resolved the triage's 15 to 4 live convertible sites (2 died with v0.73.0's AcquireCard block; 4 sit in a dead orphaned component; 3 are S4 ThreeDotMenu-extraction scope; 2 are S4-StarRating/structural exclusions — every delta attributed). All 4 converted (BookDetail: add-session ×2, Collections + Notes pencils), the four A6 stroke ignores deleted — hardcoded-colors 0/pass with zero exceptions; raw-button 103 → 99. + TBR Edit reclassified back to the pencil-IconButton convention. + v0.80.0 follow-up: the flagged Golden-Rule-4 deletion executed — dead SearchBar.jsx removed after fresh both-sides grep re-verification; raw-button 99 → 95 |
-| S4 | MenuItem primitive (contract locked 2026-07-22) + adoption, ThreeDotMenu extraction to `ui/`, Badge rebuild (survived S1 recon: 7 adoptable sites), raw-`<button>` strict flip | Queued |
+| S4 | MenuItem primitive (contract locked 2026-07-22) + adoption, ThreeDotMenu extraction to `ui/`, Badge rebuild (survived S1 recon: 7 adoptable sites) | ✅ Shipped v0.81.0 — MenuItem ships per the locked contract + elected visual; all 15 B3b sites convert across six containers (extraction 2, adoption 7, direct 6); ThreeDotMenu extracted to `ui/` with CollectionDetail + CollectionsTab adopting (both gain the mobile sheet + trigger aria-labels; 10.0.14 true at last); Badge rebuilt on tokens (4 variants exactly — solid/tint/outline/muted + tone/size/pill) and adopted at all 7 census sites with every local pill implementation deleted; SegmentedControl adopted at Settings ×2 + WishlistTab (recon gate passed); MarkFinishedModal star picker → StarRating. Raw-button **95 → 70**, −25 fully attributed. Two STOPs: BookDetail's reading-status + session-status segment groups have per-status active colors, a disabled guard, and the 2×2 flip — inexpressible in SegmentedControl's props; left for S4b disposition. Strict flip deferred to S4b as ratified |
+| S4b | Matcher rescope (B3a element-children OR role="option"), role additions, SettingsRow move to ui/, BookLinkPopup close ×→IconButton, chrome markers (incl. SortDropdown's 9 provisional), **raw-`<button>` STRICT FLIP**, sprint scorecard | Queued — prompt writes only after S4's report per the 2026-07-23 split ruling; the two S4 segment-group STOPs join its marker arithmetic |
 
 ---
 
@@ -846,7 +847,7 @@ Items to address when time permits:
 | 10.0A | Tokens + Audit Refresh | Mar 2026 | Color tokens, typography classes, Tailwind config |
 | 10.0B | Core Components | Mar 2026 | Button, IconButton, Badge, SearchInput, Modal, FormField |
 | 10.0.10 | BookCard v4 | Mar 2026 | variant prop, grid badges, progress bar, list view |
-| 10.0.14 | ThreeDotMenu Extraction | — | Record corrected 2026-07-17: never extracted — still inline in BookDetail (see 10.0.14 above) |
+| 10.0.14 | ThreeDotMenu Extraction | Jul 2026 | Extracted for real in v0.81.0 (S4) after the 2026-07-17 record correction; three consumers (BookDetail, CollectionDetail, CollectionsTab), items via MenuItem |
 | 10.0.15 | Warm Gradient Palette | Mar 2026 | 10 warm lanes, migration of 1,700+ covers |
 
 ### Phase 10.0C Design System Conversion

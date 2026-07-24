@@ -1,120 +1,90 @@
-import { useStatusLabels } from '../../hooks/useStatusLabels'
-
 /**
- * Badge — Status indicators, category labels, metadata chips
+ * Badge — non-interactive display pill for ambient metadata.
+ * Rebuilt on tokens in S4 (v0.81.0) — zero inline styles, class strings
+ * are full literals for the Tailwind scanner.
  *
- * Types:
- *   status: Unread, In Progress, Finished, DNF (with dot indicator)
- *   category: Fiction, FanFiction, Non-Fiction
- *   chip: fandom, ship, character, tag (for fanfic metadata)
+ * Variants (visual treatment; required):
+ *   solid   — filled semantic color, medium weight (result pills, priority overlay)
+ *   tint    — translucent fill + matching text + faint border (format badges,
+ *             match pills, cover-source pill)
+ *   outline — neutral: bg-base fill + default border (category chip)
+ *   muted   — neutral: elevated fill, muted text (type badges, unknown-format fallback)
+ *
+ * Props:
+ *   tone      — color family for solid/tint; ignored by outline/muted.
+ *               solid: success | primary | danger | warning
+ *               tint:  warning | fiction | fanfiction | nonfiction | fandom | character
+ *   size      — sm (caption, px-2 py-0.5) | md (caption, px-2.5 py-1)
+ *               | lg (body-sm, px-3 py-1.5). Default md.
+ *   pill      — true (rounded-full, default) | false (rounded)
+ *   title     — native tooltip passthrough
+ *   className — LAYOUT ONLY (positioning/spacing — Button's contract)
+ *
+ * Unknown variant — or solid/tint without a known tone — renders null,
+ * matching the old Badge's unknown-mode behavior.
+ *
+ * No status mode: reading-status rendering lives in BookCard/AcquireCard.
+ * If a status mode is ever added here, its labels MUST route through
+ * useStatusLabels (never a hardcoded "Abandoned"/"DNF").
  *
  * Usage:
- *   <Badge status="finished" />
- *   <Badge category="fanfiction" />
- *   <Badge chip="ship" label="Draco/Harry" />
- *   <Badge chip="tag" label="slow burn" />
+ *   <Badge variant="solid" tone="success" size="sm" pill={false}>NEW</Badge>
+ *   <Badge variant="tint" tone="fiction" size="md" title="EPUB edition">EPUB</Badge>
+ *   <Badge variant="outline" size="lg">Fiction</Badge>
+ *   <Badge variant="muted" size="sm" pill={false}>Checklist</Badge>
  */
-const STATUS_BACKEND_KEY = {
-  unread: 'Unread',
-  reading: 'In Progress',
-  finished: 'Finished',
-  dnf: 'Abandoned',
+const SOLID_TONES = {
+  success: 'bg-action-success text-text-primary',
+  primary: 'bg-action-primary text-text-primary',
+  danger: 'bg-action-danger text-text-primary',
+  warning: 'bg-action-warning text-text-inverse',
 }
 
-const STATUS_CONFIG = {
-  unread: {
-    dotColor: 'bg-status-unread',
-    bgClass: 'bg-status-unread/20',
-    textClass: 'text-text-secondary',
-  },
-  reading: {
-    dotColor: 'bg-status-reading',
-    bgClass: 'bg-status-reading/[0.18]',
-    textColor: '#85b5b5',
-  },
-  finished: {
-    dotColor: 'bg-status-finished',
-    bgClass: 'bg-status-finished/[0.18]',
-    textColor: '#9dbd8c',
-  },
-  dnf: {
-    dotColor: 'bg-status-dnf',
-    bgClass: 'bg-status-dnf/20',
-    textClass: 'text-text-secondary',
-  },
+const TINT_TONES = {
+  warning: 'bg-action-warning/20 text-action-warning border border-action-warning/30',
+  fiction: 'bg-chip-fiction/20 text-chip-fiction border border-chip-fiction/30',
+  fanfiction: 'bg-chip-fanfiction/20 text-chip-fanfiction border border-chip-fanfiction/30',
+  nonfiction: 'bg-chip-nonfiction/20 text-chip-nonfiction border border-chip-nonfiction/30',
+  fandom: 'bg-chip-fandom/20 text-chip-fandom border border-chip-fandom/30',
+  character: 'bg-chip-character/20 text-chip-character border border-chip-character/30',
 }
 
-const CATEGORY_CONFIG = {
-  fiction: {
-    label: 'Fiction',
-    bgClass: 'bg-chip-fiction/[0.18]',
-    textColor: '#8db3d4',
-  },
-  fanfiction: {
-    label: 'FanFiction',
-    bgClass: 'bg-chip-fanfiction/[0.18]',
-    textColor: '#a99ccf',
-  },
-  nonfiction: {
-    label: 'Non-Fiction',
-    bgClass: 'bg-chip-nonfiction/[0.18]',
-    textColor: '#8dbda8',
-  },
+const SIZES = {
+  sm: 'text-caption px-2 py-0.5',
+  md: 'text-caption px-2.5 py-1',
+  lg: 'text-body-sm px-3 py-1.5',
 }
 
-const CHIP_CONFIG = {
-  fandom: { bgClass: 'bg-chip-fandom/15', textColor: '#a99ccf' },
-  ship: { bgClass: 'bg-chip-ship/15', textColor: '#cfa0af' },
-  character: { bgClass: 'bg-chip-character/15', textColor: '#8dc1cf' },
-  tag: { bgClass: 'bg-chip-default/[0.35]', textClass: 'text-text-secondary' },
-}
-
-export default function Badge({ status, category, chip, label, className = '' }) {
-  const { getLabel } = useStatusLabels()
-
-  // Status badge (with dot indicator)
-  if (status) {
-    const config = STATUS_CONFIG[status]
-    if (!config) return null
-    const labelText = getLabel(STATUS_BACKEND_KEY[status] || status)
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${config.bgClass} ${config.textClass || ''} ${className}`}
-        style={config.textColor ? { color: config.textColor } : undefined}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dotColor}`} />
-        {labelText}
-      </span>
-    )
+export default function Badge({
+  children,
+  variant,
+  tone,
+  size = 'md',
+  pill = true,
+  title,
+  className = '',
+}) {
+  let treatment
+  if (variant === 'solid') {
+    treatment = SOLID_TONES[tone] && `${SOLID_TONES[tone]} font-medium`
+  } else if (variant === 'tint') {
+    treatment = TINT_TONES[tone] && `${TINT_TONES[tone]} font-medium`
+  } else if (variant === 'outline') {
+    treatment = 'bg-bg-base border border-border-default text-text-body'
+  } else if (variant === 'muted') {
+    treatment = 'bg-bg-elevated/80 text-text-muted'
   }
 
-  // Category badge
-  if (category) {
-    const config = CATEGORY_CONFIG[category.toLowerCase()]
-    if (!config) return null
-    return (
-      <span
-        className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${config.bgClass} ${className}`}
-        style={{ color: config.textColor }}
-      >
-        {config.label}
-      </span>
-    )
-  }
+  if (!treatment) return null
 
-  // Metadata chip
-  if (chip && label) {
-    const config = CHIP_CONFIG[chip] || CHIP_CONFIG.tag
-    return (
-      <span
-        className={`inline-flex items-center text-xs px-2.5 py-1 rounded-lg whitespace-nowrap ${config.bgClass} ${config.textClass || ''} ${className}`}
-        style={config.textColor ? { color: config.textColor } : undefined}
-      >
-        {label}
-      </span>
-    )
-  }
-
-  return null
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center whitespace-nowrap ${SIZES[size] || SIZES.md} ${
+        pill ? 'rounded-full' : 'rounded'
+      } ${treatment} ${className}`}
+    >
+      {children}
+    </span>
+  )
 }
-

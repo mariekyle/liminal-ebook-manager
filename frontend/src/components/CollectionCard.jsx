@@ -14,6 +14,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CollectionGradient from './CollectionGradient'
 import MosaicCover from './MosaicCover'
+import MenuItem from './ui/MenuItem'
 
 const DragHandleIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-text-muted">
@@ -118,30 +119,27 @@ export default function CollectionCard({
             top: `${menuPosition.y}px`,
           }}
         >
-          <button
-            type="button"
+          <MenuItem
             onClick={(e) => {
               e.stopPropagation()
               setShowContextMenu(false)
               onEdit?.(collection)
             }}
-            className="w-full px-4 py-2 text-left text-text-primary hover:bg-bg-surface transition-colors"
           >
             Edit Collection
-          </button>
-          
+          </MenuItem>
+
           {!collection.is_default && (
-            <button
-              type="button"
+            <MenuItem
+              danger
               onClick={(e) => {
                 e.stopPropagation()
                 setShowContextMenu(false)
                 onDelete?.(collection)
               }}
-              className="w-full px-4 py-2 text-left text-action-danger hover:bg-bg-surface transition-colors"
             >
               Delete Collection
-            </button>
+            </MenuItem>
           )}
         </div>
       </>
