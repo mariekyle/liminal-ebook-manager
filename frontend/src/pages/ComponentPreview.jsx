@@ -16,6 +16,7 @@ import SegmentedControl from '../components/ui/SegmentedControl'
 import MenuItem from '../components/ui/MenuItem'
 import ThreeDotMenu from '../components/ui/ThreeDotMenu'
 import SortDropdown from '../components/ui/SortDropdown'
+import SettingsRow from '../components/ui/SettingsRow'
 
 /* Preview icons — same strokes as lucide-react Pencil, Trash2, Plus, Settings, X. Run `npm i lucide-react` and swap imports if you prefer. */
 function PrevPencil(props) {
@@ -114,6 +115,8 @@ export default function ComponentPreview() {
 
   const [demoSortField, setDemoSortField] = useState('added')
   const [demoSortDir, setDemoSortDir] = useState('desc')
+
+  const [demoSettingsToggle, setDemoSettingsToggle] = useState(true)
 
   useEffect(() => {
     if (!toast) return
@@ -730,6 +733,58 @@ export default function ComponentPreview() {
               exported defaultSortDirection helper); tapping the active field flips direction. Every
               tap closes. The active row shows its current-direction label + glyph — rows are bespoke
               by decision (MenuItem excludes selected state).
+            </p>
+          </div>
+        </Section>
+
+        {/* 17. SettingsRow */}
+        <Section title="SettingsRow">
+          <div className="space-y-4">
+            <div>
+              <LabelRow>
+                Three types — navigation (chevron), toggle (switch), display (value only) — plus
+                loading and disabled states. Toggle: {demoSettingsToggle ? 'on' : 'off'}
+              </LabelRow>
+              <div className="max-w-md space-y-1">
+                <SettingsRow
+                  label="Status Labels"
+                  description="Navigation row — onClick, or to (renders a Link)"
+                  type="navigation"
+                  onClick={() => {}}
+                />
+                <SettingsRow
+                  label="Show finished dates"
+                  description="Toggle row — checked + onChange(nextBoolean)"
+                  type="toggle"
+                  checked={demoSettingsToggle}
+                  onChange={setDemoSettingsToggle}
+                />
+                <SettingsRow
+                  label="Library folder"
+                  value="/Books"
+                  type="display"
+                />
+                <SettingsRow
+                  label="Sync Library"
+                  description="loading replaces the chevron with a spinner"
+                  type="navigation"
+                  onClick={() => {}}
+                  loading
+                />
+                <SettingsRow
+                  label="Full Library Sync"
+                  description="Disabled row"
+                  type="navigation"
+                  onClick={() => {}}
+                  disabled
+                />
+              </div>
+            </div>
+            <p className="text-caption text-text-muted">
+              Single row on the Settings page — label + optional description left, value / chevron /
+              switch / spinner right, 56px minimum height. type=&quot;navigation&quot; requires
+              onClick or to; type=&quot;toggle&quot; requires checked + onChange; type=&quot;display&quot;
+              is non-interactive. The destructive prop is reserved and unused.
             </p>
           </div>
         </Section>

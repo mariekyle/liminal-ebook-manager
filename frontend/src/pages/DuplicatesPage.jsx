@@ -37,6 +37,10 @@ function DuplicatesPage() {
   const [mergeError, setMergeError] = useState({})
   // Track which groups are showing the merge confirmation (one extra tap before merge)
   const [confirmingMerge, setConfirmingMerge] = useState({})
+  // Bulk partial-failure message when the failed group no longer exists
+  // after the auto-rescan (its remaining titles stopped matching as
+  // duplicates) — rendered as a page banner instead of a group row
+  const [bulkFailure, setBulkFailure] = useState(null)
 
   useEffect(() => {
     scanForDuplicates()
@@ -50,6 +54,7 @@ function DuplicatesPage() {
     setMergeSuccess({})
     setMergeError({})
     setConfirmingMerge({})
+    setBulkFailure(null)
     try {
       const data = await findDuplicates()
       // Assign a stable client-side key to every group so all per-group state maps
@@ -68,6 +73,9 @@ function DuplicatesPage() {
         }
       })
       setSelections(initialSelections)
+      // Returned so the partial-failure path can locate the surviving
+      // group in the fresh scan; other callers ignore the return value
+      return groupsWithKeys
     } catch (err) {
       console.error('Failed to find duplicates:', err)
       setError(err.message || 'Failed to scan for duplicates')
@@ -86,7 +94,7 @@ function DuplicatesPage() {
     const keepId = selections[groupKey]
 
     if (!keepId) {
-      setMergeError(prev => ({ ...prev, [groupKey]: 'Please select a book to keep' }))
+      setMergeError(prev => ({ ...prev, [groupKey]: 'Select a title to keep' }))
       return
     }
 
@@ -101,23 +109,62 @@ function DuplicatesPage() {
     setMergeError(prev => ({ ...prev, [groupKey]: null }))
     setConfirmingMerge(prev => ({ ...prev, [groupKey]: false }))
 
+    // Sum what actually moved across the loop's response bodies — the
+    // conditional carries (cover, wishlist note) are only knowable from
+    // the responses, never predicted (Decisions 2026-07-25)
+    let completed = 0
+    let sessionsMoved = 0
+    let notesMoved = 0
+    let collectionsMoved = 0
+    let coverCarried = false
+    let wishlistNoteCarried = false
+
     try {
-      // Merge each book into the target sequentially
+      // Merge each title into the target sequentially
       for (const sourceId of toMerge) {
-        await mergeTitles(keepId, sourceId)
+        const result = await mergeTitles(keepId, sourceId)
+        completed += 1
+        const m = result?.merged || {}
+        sessionsMoved += m.sessions || 0
+        notesMoved += m.notes || 0
+        collectionsMoved += m.collections || 0
+        if (m.cover_carried) coverCarried = true
+        if (m.wishlist_note_converted) wishlistNoteCarried = true
       }
 
-      setMergeSuccess(prev => ({ ...prev, [groupKey]: true }))
+      const movedParts = [
+        sessionsMoved > 0 && `${sessionsMoved} ${sessionsMoved === 1 ? 'read' : 'reads'}`,
+        notesMoved > 0 && `${notesMoved} ${notesMoved === 1 ? 'note' : 'notes'}`,
+        collectionsMoved > 0 && `${collectionsMoved} ${collectionsMoved === 1 ? 'collection' : 'collections'}`,
+      ].filter(Boolean)
+      const carriedParts = [
+        coverCarried && 'cover carried',
+        wishlistNoteCarried && 'wishlist note carried',
+      ].filter(Boolean)
+      const segments = []
+      if (movedParts.length > 0) segments.push(`${movedParts.join(', ')} moved over`)
+      if (carriedParts.length > 0) segments.push(carriedParts.join(', '))
+      setMergeSuccess(prev => ({
+        ...prev,
+        [groupKey]: segments.length > 0 ? `Merged — ${segments.join(' · ')}` : 'Merged',
+      }))
+      setMerging(prev => ({ ...prev, [groupKey]: false }))
 
       // Remove this group from results after short delay, and drop its entries
       // from every per-group state map. Using _key means we never have to care
       // about array index shifts — each map is a dictionary, not a positional list.
       setTimeout(() => {
-        setResults(prev => ({
-          ...prev,
-          groups: prev.groups.filter(g => g._key !== groupKey),
-          total_duplicates: prev.total_duplicates - group.books.length
-        }))
+        setResults(prev => {
+          // A rescan (manual, or a later group's failure path) may have
+          // replaced the groups since this timer was set — never decrement
+          // the fresh scan's count for a key it doesn't contain
+          if (!prev || !prev.groups.some(g => g._key === groupKey)) return prev
+          return {
+            ...prev,
+            groups: prev.groups.filter(g => g._key !== groupKey),
+            total_duplicates: prev.total_duplicates - group.books.length
+          }
+        })
         const drop = (obj) => {
           const { [groupKey]: _, ...rest } = obj
           return rest
@@ -130,10 +177,19 @@ function DuplicatesPage() {
       }, 1500)
 
     } catch (err) {
+      // Bulk partial-failure (Decisions 2026-07-25): stop the loop, rescan
+      // for truth (completed merges deleted titles — the page must never
+      // render rows that no longer exist), and name what completed.
+      // Completed merges were valid and stay; no rollback pretense.
       console.error('Failed to merge:', err)
-      setMergeError(prev => ({ ...prev, [groupKey]: err.message || 'Failed to merge' }))
-    } finally {
-      setMerging(prev => ({ ...prev, [groupKey]: false }))
+      const message = `Merged ${completed} of ${toMerge.length}, then failed`
+      const freshGroups = await scanForDuplicates()
+      const survivor = (freshGroups || []).find(g => g.books.some(b => b.id === keepId))
+      if (survivor) {
+        setMergeError(prev => ({ ...prev, [survivor._key]: message }))
+      } else {
+        setBulkFailure(message)
+      }
     }
   }
 
@@ -171,13 +227,21 @@ function DuplicatesPage() {
           </div>
         )}
 
+        {/* Bulk partial-failure banner — only when the failed group is gone
+            from the post-failure rescan; otherwise the message lands in the
+            surviving group's error row. Cleared by the next scan. */}
+        {bulkFailure && !loading && (
+          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-action-danger mb-6">
+            {bulkFailure}
+          </div>
+        )}
+
         {results && !loading && (
           <>
             {results.groups.length === 0 ? (
               <div className="text-center py-20">
-                <div className="text-6xl mb-4">✨</div>
                 <div className="text-text-primary text-h4 mb-2">No duplicates found</div>
-                <div className="text-text-secondary text-body-sm">Your library is clean!</div>
+                <div className="text-text-secondary text-body-sm">Your library is clean.</div>
                 <Link
                   to="/"
                   className="inline-block mt-6 px-6 py-2 bg-action-primary text-text-primary rounded-lg hover:bg-action-primary-hover transition-colors"
@@ -190,7 +254,7 @@ function DuplicatesPage() {
                 {/* Summary */}
                 <div className="flex items-center justify-between">
                   <div className="text-text-secondary text-body-sm">
-                    Found {results.groups.length} potential duplicate {results.groups.length === 1 ? 'group' : 'groups'} ({results.total_duplicates} books)
+                    Found {results.groups.length} potential duplicate {results.groups.length === 1 ? 'group' : 'groups'} ({results.total_duplicates} titles)
                   </div>
                   <Button
                     type="button"
@@ -232,7 +296,7 @@ function DuplicatesPage() {
                           </Badge>
                         )}
                         <span className="text-text-muted text-body-sm">
-                          {group.books.length} books
+                          {group.books.length} titles
                         </span>
                       </div>
                       
@@ -254,17 +318,17 @@ function DuplicatesPage() {
                               Merging...
                             </>
                           ) : (
-                            <>Merge into Selected</>
+                            <>Merge into selected</>
                           )}
                         </Button>
                       )}
                       
                       {mergeSuccess[group._key] && (
                         <span className="text-action-success text-body-sm flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          Merged!
+                          {mergeSuccess[group._key]}
                         </span>
                       )}
                     </div>
@@ -311,6 +375,16 @@ function DuplicatesPage() {
                             </div>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-caption text-text-muted">
                               <span>{book.edition_count} {book.edition_count === 1 ? 'edition' : 'editions'}</span>
+                              <span>•</span>
+                              <span>{book.session_count} {book.session_count === 1 ? 'read' : 'reads'}</span>
+                              <span>•</span>
+                              <span>{book.note_count} {book.note_count === 1 ? 'note' : 'notes'}</span>
+                              {book.has_file === false && (
+                                <>
+                                  <span>•</span>
+                                  <span>no file on disk</span>
+                                </>
+                              )}
                               {book.category && (
                                 <>
                                   <span>•</span>
@@ -338,7 +412,7 @@ function DuplicatesPage() {
                             to={`/book/${book.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="p-2 text-text-muted hover:text-text-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            title="View book details"
+                            title="View title details"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -351,19 +425,39 @@ function DuplicatesPage() {
                     {/* Help text — default state (hide during active merge so it doesn't duel with the "Merging..." button) */}
                     {!mergeSuccess[group._key] && !confirmingMerge[group._key] && !merging[group._key] && (
                       <div className="px-4 py-3 bg-bg-elevated/50 text-text-muted text-caption border-t border-border-subtle">
-                        💡 Select the book to keep, then click &quot;Merge into Selected&quot;. Other books will be merged into it.
+                        Select the title to keep, then tap &quot;Merge into selected&quot;. Other titles will be merged into it.
                       </div>
                     )}
 
-                    {/* Confirmation row — replaces help text when user taps Merge into Selected */}
+                    {/* Confirmation row — replaces help text when user taps Merge into
+                        Selected. Describes the computed outcome across the merging-away
+                        titles (Decisions 2026-07-25): real aggregated counts, zero rows
+                        suppressed, verb by total, trash clause only when files will
+                        actually move. */}
                     {!mergeSuccess[group._key] && confirmingMerge[group._key] && (() => {
                       const keptBook = group.books.find(b => b.id === selections[group._key])
-                      const mergeCount = group.books.length - 1
+                      const mergingAway = group.books.filter(b => b.id !== selections[group._key])
                       const keptTitle = keptBook?.title || 'the selected title'
+                      const totalReads = mergingAway.reduce((sum, b) => sum + (b.session_count || 0), 0)
+                      const totalNotes = mergingAway.reduce((sum, b) => sum + (b.note_count || 0), 0)
+                      const fileCount = mergingAway.filter(b => b.has_file).length
+                      const historyParts = [
+                        totalReads > 0 && `${totalReads} ${totalReads === 1 ? 'read' : 'reads'}`,
+                        totalNotes > 0 && `${totalNotes} ${totalNotes === 1 ? 'note' : 'notes'}`,
+                      ].filter(Boolean)
+                      const sentences = [
+                        `Merge ${mergingAway.length} ${mergingAway.length === 1 ? 'title' : 'titles'} into "${keptTitle}"?`,
+                      ]
+                      if (historyParts.length > 0) {
+                        sentences.push(`${historyParts.join(' and ')} ${totalReads + totalNotes === 1 ? 'moves' : 'move'} over.`)
+                      }
+                      if (fileCount > 0) {
+                        sentences.push(`${fileCount} ${fileCount === 1 ? 'file goes' : 'files go'} to the trash folder.`)
+                      }
                       return (
                         <div className="px-4 py-3 bg-action-danger/5 border-t border-action-danger/20 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <p className="text-body-sm text-text-primary">
-                            Merge {mergeCount} {mergeCount === 1 ? 'title' : 'titles'} into &quot;{keptTitle}&quot;? This can&apos;t be undone.
+                            {sentences.join(' ')}
                           </p>
                           <div className="flex gap-2 sm:flex-shrink-0">
                             <Button
@@ -372,7 +466,7 @@ function DuplicatesPage() {
                               onClick={() => setConfirmingMerge(prev => ({ ...prev, [group._key]: false }))}
                               disabled={merging[group._key]}
                             >
-                              Cancel
+                              Keep separate
                             </Button>
                             <Button
                               variant="danger"
@@ -380,7 +474,7 @@ function DuplicatesPage() {
                               onClick={() => handleMergeGroup(group._key)}
                               disabled={merging[group._key]}
                             >
-                              Merge &amp; Delete
+                              Merge
                             </Button>
                           </div>
                         </div>

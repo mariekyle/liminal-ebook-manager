@@ -3456,7 +3456,9 @@ async def find_duplicates(db = Depends(get_db)):
             t.category,
             t.series,
             t.series_number,
-            (SELECT COUNT(*) FROM editions WHERE title_id = t.id) as edition_count
+            (SELECT COUNT(*) FROM editions WHERE title_id = t.id) as edition_count,
+            (SELECT COUNT(*) FROM reading_sessions WHERE title_id = t.id) as session_count,
+            (SELECT COUNT(*) FROM notes WHERE title_id = t.id) as note_count
         FROM titles t
         WHERE t.acquisition_status = 'owned'
         ORDER BY t.title COLLATE NOCASE
@@ -3479,6 +3481,8 @@ async def find_duplicates(db = Depends(get_db)):
             "series": row["series"],
             "series_number": row["series_number"],
             "edition_count": row["edition_count"],
+            "session_count": row["session_count"],
+            "note_count": row["note_count"],
             "normalized": normalize_title(row["title"]),
             "author_normalized": normalize_title(primary_author)
         })
@@ -3512,7 +3516,9 @@ async def find_duplicates(db = Depends(get_db)):
                     "category": b["category"],
                     "series": b["series"],
                     "series_number": b["series_number"],
-                    "edition_count": b["edition_count"]
+                    "edition_count": b["edition_count"],
+                    "session_count": b["session_count"],
+                    "note_count": b["note_count"]
                 } for b in books]
             })
             for b in books:
@@ -3564,13 +3570,38 @@ async def find_duplicates(db = Depends(get_db)):
                         "category": b["category"],
                         "series": b["series"],
                         "series_number": b["series_number"],
-                        "edition_count": b["edition_count"]
+                        "edition_count": b["edition_count"],
+                        "session_count": b["session_count"],
+                        "note_count": b["note_count"]
                     } for b in similar_group]
                 })
     
     # Sort groups: exact matches first, then by number of books
     duplicate_groups.sort(key=lambda g: (0 if g["match_type"] == "exact" else 1, -len(g["books"])))
-    
+
+    # has_file per book: a title counts as having a file only when at least
+    # one edition's file_path stats successfully — zero editions or only
+    # dead paths is has_file False. Stat-checked only for titles that
+    # landed in a duplicate group, never the whole library.
+    grouped_ids = {b["id"] for g in duplicate_groups for b in g["books"]}
+    has_file_ids = set()
+    if grouped_ids:
+        placeholders = ",".join("?" * len(grouped_ids))
+        cursor = await db.execute(
+            f"SELECT title_id, file_path FROM editions WHERE title_id IN ({placeholders})",
+            tuple(grouped_ids)
+        )
+        for ed in await cursor.fetchall():
+            if ed["file_path"] and ed["title_id"] not in has_file_ids:
+                try:
+                    os.path.getsize(ed["file_path"])
+                    has_file_ids.add(ed["title_id"])
+                except OSError:
+                    pass  # stale/missing path — never an exception
+    for g in duplicate_groups:
+        for b in g["books"]:
+            b["has_file"] = b["id"] in has_file_ids
+
     # Count total duplicates
     total_duplicates = sum(len(g["books"]) for g in duplicate_groups)
     
