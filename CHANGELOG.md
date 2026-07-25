@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.83.0] — 2026-07-24
+
+**SortDropdown restructured and extracted to `ui/` — the seventeenth shared component — implementing the seven decisions ratified 2026-07-24. The parked nested-button defect is structurally gone: option rows no longer wrap chevron buttons; the active row shows its current direction as a visible label + glyph and tapping it flips. All 9 provisional chrome markers are deleted (inventory 47 → 38), the dead custom-sort path goes with them (Golden Rule 4), the trigger reaches 44px, and the control gains real listbox/option/dialog semantics.**
+
+### Changed
+- **Option-row anatomy (ratified 2026-07-24).** The per-row asc/desc chevron buttons are deleted in both variants — they were 24–28px targets nested inside another `<button>` (invalid HTML, the defect parked 2026-07-23) and unnamed icon buttons on mobile. Row semantics preserved: tapping a new field applies its default direction (recency sorts open newest-first), tapping the active field toggles direction, every tap still closes. The active row now renders its current-direction label — the existing ascLabel/descLabel strings, visible on mobile for the first time (previously desktop-`title`-tooltip-only) — plus a 16px chevron glyph (`ChevronDownIcon` rotated for asc), `text-body-sm text-action-primary`. Inactive rows render no trailing content. The chevrons' one unique capability (one tap to an inactive field with non-default direction) is retired with them, per the ratification. No new visible strings were needed: every consumer's option set is covered by the existing table (microcopy decision — nothing to ratify).
+- **Extracted to `ui/SortDropdown.jsx`.** All four consumers (Library, AuthorDetail, CollectionDetail, WishlistTab) import from the new path. The duplicated ~70-line option-list body collapses to ONE, rendered into both containers; the variant split is now CSS (`hidden md:block` / `md:hidden`, the ThreeDotMenu pattern) — the `isMobile` state + resize listener are deleted. Per-variant sizing survives via responsive prefixes (sheet rows 48px/rounded, dropdown rows 44px/square). Stays in-tree — no portal; the single-ref containment is unchanged by design (stacking verified clean on all four surfaces in the v0.72.0-era walk; ThreeDotMenu dedup stays parked).
+- **Sheet surface `bg-bg-surface` → `bg-bg-elevated`** per the 2026-07-23 container ratification — resolves the component's self-disagreement (its desktop dropdown was already elevated). One forced knock-on, same class as v0.82.0's ThreeDotMenu knock-ons: the inactive-row pressed state `active:bg-bg-elevated` would have vanished against the new surface, so it flips to `max-md:active:bg-bg-surface` (the ratified one-hover-value; `max-md:` scopes it to the sheet so desktop rows keep exactly their `hover:bg-bg-surface/80`). The handle already sat on `bg-border-default` — it was the v0.82.0 precedent — unchanged.
+- **Default-direction knowledge deduplicated.** The desc-default field list (`added`/`published`/`finished`) now lives once, as the named export `defaultSortDirection(field)`. AuthorDetail imports it and deletes its duplicated copy in the localStorage sort restore — behavior identical (same list, same `'asc'` fallback), so the STOP condition did not fire.
+- **Trigger: `min-h-[44px]`** (was ~32px — the S4b ThreeDotMenu-trigger precedent applied, per the a11y ratification).
+
+### Added
+- **A11y package (ratified 2026-07-24):** trigger `aria-expanded` + `aria-haspopup="listbox"`; option rows `role="option"` + `aria-selected` inside `role="listbox"` containers (both variants — the hidden variant is `display:none`, so exactly one listbox is in the accessibility tree at a time); mobile sheet `role="dialog"` + `aria-modal="true"`. Selection is no longer color-only: the active row carries `aria-selected` and a visible direction label.
+
+### Removed
+- **Golden Rule 4 deletions, each grep-gated both sides immediately before deleting (all zero-hit):**
+  - The custom-sort path: `showCustom`/`onCustomSelect` props and plumbing, both custom-row blocks, the "Drag to reorder" badge. Zero consumers passed the props; two of the nine markers annotated buttons that could never mount. (AuthorChips :195 and CollectionDetail :1214 carry their own independent "Drag to reorder…" strings — different copy owned by those components, untouched.)
+  - The `read_time` SORT_OPTIONS entry — zero `read_time` references in frontend/src outside the definition.
+  - The default `options` fallback — `options` is now required; all four consumers already pass it explicitly.
+- **All 9 provisional chrome markers** (`provisional pending SortDropdown restructure`) — `ui/` is outside the strict matcher's scope; none convert, none survive, per the ratified disposition. Chrome inventory 47 → 38.
+- **`handleDirectionClick`** — died with the chevrons (repo-wide 0 hits post-deletion).
+
+### Technical
+- **Created:** `frontend/src/components/ui/SortDropdown.jsx` — default export `SortDropdown` (props: `value`, `direction`, `onChange(field, dir)`, `options` **required**, `className`), named export `defaultSortDirection(field)`.
+- **Deleted:** `frontend/src/components/SortDropdown.jsx` (filesystem move; the rename reaches git via Marie's add-all).
+- **Modified:** `frontend/src/components/Library.jsx`, `CollectionDetail.jsx`, `WishlistTab.jsx` (import path), `AuthorDetail.jsx` (import path + `defaultSortDirection` adoption), `backend/main.py` (0.82.0 → 0.83.0), `docs/DESIGN_SYSTEM.md` (§3: seventeen components + SortDropdown entry), `docs/DESIGN_LINT_REPORT.md` (regenerated — chrome inventory 38), `CHANGELOG.md`, `ROADMAP.md`.
+- **Verification:** esbuild parse exit-0 on all five touched JSX files; design-lint FULL strict run all ten categories 0/pass, 38 annotated markers, zero unmarked, zero ignore lines; import↔export both-sides greps (4 new-path imports / matching exports printed; `showCustom`, `onCustomSelect`, `read_time`, `handleDirectionClick` at 0 hits repo-wide; old-path imports 0). Known gap, flagged: the `/dev/components` gallery has no SortDropdown demo yet — carried forward.
+- **Backend file changed (version bump only): full Docker rebuild required. No schema change, no migration, no bulk writes — no `library.db` backup needed.**
+
 ## [0.82.0] — 2026-07-24
 
 **S4b — the adoption sprint closes. Raw-`<button>` flips report-only → STRICT and every lint category passes at zero: 47 annotated chrome markers, 20 structural exemptions under two written criteria, zero unmarked sites, zero ignore lines. The v0.81.0 phone-pass defect (priority popup wrap + stranded ✓) is fixed at container level, the ratified riders land (44px trigger, token Cancel, eighth Badge site), SettingsRow finally lives in `ui/`, and BookLinkPopup's unlabeled ✕ becomes an IconButton. The sprint's scorecard: 124 → 0 strict violations across six sessions.**

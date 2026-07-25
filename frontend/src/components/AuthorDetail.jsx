@@ -9,7 +9,7 @@ import BookCard from './BookCard'
 import BookContextMenu from './BookContextMenu'
 import MarkFinishedModal from './MarkFinishedModal'
 import ChangeStatusModal from './ChangeStatusModal'
-import SortDropdown from './SortDropdown'
+import SortDropdown, { defaultSortDirection } from './ui/SortDropdown'
 
 function readPageView(key) {
   try {
@@ -58,10 +58,7 @@ function AuthorDetail() {
   const [currentView, setCurrentView] = useState(() => readPageView('author'))
   const [gridVariant, setGridVariant] = useState(readGridVariant)
   const [sortField, setSortField] = useState(() => readAuthorSort())
-  const [sortDir, setSortDir] = useState(() => {
-    const field = readAuthorSort()
-    return ['added', 'published', 'finished'].includes(field) ? 'desc' : 'asc'
-  })
+  const [sortDir, setSortDir] = useState(() => defaultSortDirection(readAuthorSort()))
 
   const updateView = (value) => {
     setCurrentView(value)

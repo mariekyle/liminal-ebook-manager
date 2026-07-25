@@ -40,8 +40,8 @@ Every `design-lint-button-chrome` marker in the scanned scope — the sanctioned
 | File:line | Annotation |
 |-----------|------------|
 | frontend/src/components/AuthorChips.jsx:228 | chrome — chip remove (IconButton-shaped, post-sprint candidate) |
-| frontend/src/components/AuthorDetail.jsx:409 | chrome — view toggle |
-| frontend/src/components/AuthorDetail.jsx:423 | chrome — view toggle |
+| frontend/src/components/AuthorDetail.jsx:406 | chrome — view toggle |
+| frontend/src/components/AuthorDetail.jsx:420 | chrome — view toggle |
 | frontend/src/components/BookDetail.jsx:1636 | chrome — mobile tab bar |
 | frontend/src/components/BookDetail.jsx:1647 | chrome — mobile tab bar |
 | frontend/src/components/BookDetail.jsx:1658 | chrome — mobile tab bar |
@@ -74,15 +74,6 @@ Every `design-lint-button-chrome` marker in the scanned scope — the sanctioned
 | frontend/src/components/Library.jsx:702 | chrome — active-filter chip |
 | frontend/src/components/Library.jsx:724 | chrome — active-filter chip |
 | frontend/src/components/Library.jsx:742 | chrome — active-filter chip |
-| frontend/src/components/SortDropdown.jsx:103 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:125 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:147 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:158 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:169 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:206 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:228 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:239 | provisional pending SortDropdown restructure |
-| frontend/src/components/SortDropdown.jsx:249 | provisional pending SortDropdown restructure |
 | frontend/src/components/TagsMultiSelect.jsx:97 | chrome — chip remove (IconButton-shaped, post-sprint candidate) |
 | frontend/src/components/add/ManualEntryForm.jsx:255 | chrome — banner dismiss (structural exclusion, S3) |
 | frontend/src/components/upload/UploadSuccess.jsx:112 | content row — span-composed, below the element-children bar; re-anatomize post-sprint |

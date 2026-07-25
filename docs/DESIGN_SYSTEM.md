@@ -50,7 +50,7 @@ Seven token classes, defined as `fontSize` entries in `tailwind.config.js` (size
 
 ## 3. Component inventory — `frontend/src/components/ui/`
 
-Sixteen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
+Seventeen components. Import directly (no barrel): `import Button from '../ui/Button'` or the relative equivalent.
 
 Shared conventions across the directory: semantic tokens only; 200ms ease-out transitions; 44px tap targets at default (`md`) sizes — the explicit `sm` sizes drop to 36px (Button, IconButton) and SegmentedControl's segments sit at 40px inside a 44px container; `onChange` receives the **value** (string/array), not the event, in form components; autocomplete dropdowns cap at 8 suggestions, close 200ms after blur, and have no arrow-key navigation (pointer + typing only).
 
@@ -172,6 +172,16 @@ Shared conventions across the directory: semantic tokens only; 200ms ease-out tr
 - **When to use:** Every Settings-page row — the page composes entirely from these under its section headers.
 - **When NOT to use:** Menus (MenuItem), form rows (FormField), list rows outside Settings. `destructive` is a reserved prop that renders nothing — don't rely on it.
 - **Common mistakes:** Passing both `onClick` and `to` (Link wins when not disabled). Expecting `value` to be interactive — it's display-only; interactivity comes from the row `type`.
+- **Frozen behaviors:** None.
+
+### SortDropdown
+
+- **Purpose:** Sort control for list surfaces — trigger + desktop dropdown + mobile bottom sheet rendered from a single option-list body (CSS variant split). Extracted from `components/` in v0.83.0 with the ratified 2026-07-24 anatomy: the per-row chevron direction buttons are gone (the nested-button defect died with them).
+- **Variants & states:** Trigger shows the current option label + flipping direction chevron; `aria-expanded`/`aria-haspopup="listbox"`, 44px min-height. Rows are `role="option"` + `aria-selected` inside `role="listbox"` containers; the active row tints `bg-action-primary/10` and shows its current-direction label + 16px glyph (`text-body-sm text-action-primary`). Tapping a new field applies its default direction (recency fields open `desc`); tapping the active field toggles; every tap closes. The sheet is `role="dialog"` + `aria-modal`, in-tree (no portal — the single-ref outside-click containment depends on it), `bg-bg-elevated`, with backdrop, handle, and a secondary-Button Cancel; sheet rows 48px, dropdown rows 44px.
+- **Required props:** `value`, `direction` (`'asc'`/`'desc'`), `onChange(field, direction)`, `options` (array of internal SORT_OPTIONS keys — **no default**). Optional: `className` (trigger only). Named export: `defaultSortDirection(field)` — the shared desc-default list (`added`/`published`/`finished`); import it instead of duplicating the list (AuthorDetail's localStorage restore does).
+- **When to use:** Any surface sorting a list by field + direction — Library Browse, AuthorDetail, automatic CollectionDetail, WishlistTab.
+- **When NOT to use:** Overflow/action menus (ThreeDotMenu + MenuItem). Rows are bespoke by decision — MenuItem's contract excludes selected state (locked 2026-07-22); don't migrate them.
+- **Common mistakes:** Omitting `options` (required, no fallback). Passing a key the internal SORT_OPTIONS table doesn't define — the row is silently skipped. Expecting a per-row direction picker: the one-tap inactive-field + non-default-direction path was retired with the chevrons.
 - **Frozen behaviors:** None.
 
 ### StarRating
