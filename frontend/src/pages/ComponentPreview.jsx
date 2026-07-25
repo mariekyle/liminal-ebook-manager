@@ -15,6 +15,7 @@ import FileDropZone from '../components/ui/FileDropZone'
 import SegmentedControl from '../components/ui/SegmentedControl'
 import MenuItem from '../components/ui/MenuItem'
 import ThreeDotMenu from '../components/ui/ThreeDotMenu'
+import SortDropdown from '../components/ui/SortDropdown'
 
 /* Preview icons — same strokes as lucide-react Pencil, Trash2, Plus, Settings, X. Run `npm i lucide-react` and swap imports if you prefer. */
 function PrevPencil(props) {
@@ -110,6 +111,9 @@ export default function ComponentPreview() {
   const [toast, setToast] = useState(null)
 
   const [demoMenuOpen, setDemoMenuOpen] = useState(false)
+
+  const [demoSortField, setDemoSortField] = useState('added')
+  const [demoSortDir, setDemoSortDir] = useState('desc')
 
   useEffect(() => {
     if (!toast) return
@@ -696,6 +700,36 @@ export default function ComponentPreview() {
               handlers close the menu themselves. The show flag hides rows (one is hidden here);
               divider rows draw hairlines. Sheet chrome — handle, Cancel, backdrop — lives in the
               component.
+            </p>
+          </div>
+        </Section>
+
+        {/* 16. SortDropdown */}
+        <Section title="SortDropdown">
+          <div className="space-y-4">
+            <div>
+              <LabelRow>
+                Controlled — desktop dropdown ≥768px, bottom sheet on mobile (in-tree, no portal) —
+                value: {demoSortField} / {demoSortDir}
+              </LabelRow>
+              <div className="flex max-w-xs">
+                <SortDropdown
+                  value={demoSortField}
+                  direction={demoSortDir}
+                  onChange={(field, dir) => {
+                    setDemoSortField(field)
+                    setDemoSortDir(dir)
+                  }}
+                  options={['added', 'title', 'author', 'published']}
+                />
+              </div>
+            </div>
+            <p className="text-caption text-text-muted">
+              options is required (no default) — this demo passes Library&apos;s list. Tapping a new
+              field selects it with its default direction (recency sorts open newest-first via the
+              exported defaultSortDirection helper); tapping the active field flips direction. Every
+              tap closes. The active row shows its current-direction label + glyph — rows are bespoke
+              by decision (MenuItem excludes selected state).
             </p>
           </div>
         </Section>

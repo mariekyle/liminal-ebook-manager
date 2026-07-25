@@ -852,10 +852,15 @@ export async function createEdition(bookId, data) {
 }
 
 /**
- * Merge source title into target title
- * Moves all editions, sessions, notes, collections from source to target
+ * Merge source title into target title. Records operation (v0.56.0+):
+ * sessions, notes, collections, and links move to the target; the source's
+ * editions are dropped and its files/folders go to the trash folder — they
+ * never join the target, which keeps exactly the files it already had.
+ * The target's metadata wins; the source's cover carries only when it
+ * beats the target's, and a non-empty tbr_reason converts to a note.
+ * Response reports the moved counts and conditional carries under `merged`.
  * @param {number} targetId - ID of title to keep
- * @param {number} sourceId - ID of title to merge and delete
+ * @param {number} sourceId - ID of title merged away and deleted
  */
 export async function mergeTitles(targetId, sourceId) {
   return apiFetch(`/titles/${targetId}/merge`, {

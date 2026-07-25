@@ -307,6 +307,9 @@ function BookDetail() {
   const [mergeResults, setMergeResults] = useState([])
   const [mergeSearching, setMergeSearching] = useState(false)
   const [mergeTarget, setMergeTarget] = useState(null) // The book we're merging INTO
+  const [mergeTargetDetail, setMergeTargetDetail] = useState(null) // select-time getBook(target) — null while pending or after a failed fetch
+  const [mergeTargetLoading, setMergeTargetLoading] = useState(false)
+  const mergeTargetFetchIdRef = useRef(0) // version ref — a stale target fetch must not clobber a newer pick
   const [mergeSaving, setMergeSaving] = useState(false)
   const [mergeError, setMergeError] = useState(null)
 
@@ -613,10 +616,13 @@ function BookDetail() {
 
   // Merge handlers (Phase 8.7d)
   const openMergeModal = () => {
+    mergeTargetFetchIdRef.current++ // invalidate any in-flight target fetch from a previous open
     setMergeStep('search')
     setMergeSearch('')
     setMergeResults([])
     setMergeTarget(null)
+    setMergeTargetDetail(null)
+    setMergeTargetLoading(false)
     setMergeError(null)
     setMergeModalOpen(true)
   }
@@ -641,9 +647,28 @@ function BookDetail() {
     }
   }
   
-  const selectMergeTarget = (target) => {
+  const selectMergeTarget = async (target) => {
+    // Select-time target fetch (Decisions 2026-07-25): the Keeping card's
+    // meta line comes from getBook(target). It is a preview enhancement —
+    // on failure the confirm still renders from TitleSummary data with no
+    // meta line, and the merge itself is never blocked on this fetch.
+    const fetchId = ++mergeTargetFetchIdRef.current
     setMergeTarget(target)
+    setMergeTargetDetail(null)
+    setMergeTargetLoading(true)
     setMergeStep('confirm')
+    try {
+      const detail = await getBook(target.id)
+      if (mergeTargetFetchIdRef.current === fetchId) {
+        setMergeTargetDetail(detail)
+      }
+    } catch (err) {
+      console.error('Failed to load merge target details:', err)
+    } finally {
+      if (mergeTargetFetchIdRef.current === fetchId) {
+        setMergeTargetLoading(false)
+      }
+    }
   }
   
   const handleMerge = async () => {
@@ -653,12 +678,32 @@ function BookDetail() {
     setMergeError(null)
     
     try {
-      await mergeTitles(mergeTarget.id, book.id)
-      
+      const result = await mergeTitles(mergeTarget.id, book.id)
+
+      // Post-merge feedback (Decisions 2026-07-25): report what actually
+      // moved/carried from the response — the conditional carries (cover,
+      // wishlist note) are only knowable here, never predicted at confirm.
+      // Zero counts and false flags are suppressed.
+      const m = result?.merged || {}
+      const movedParts = [
+        m.sessions > 0 && `${m.sessions} ${m.sessions === 1 ? 'read' : 'reads'}`,
+        m.notes > 0 && `${m.notes} ${m.notes === 1 ? 'note' : 'notes'}`,
+        m.collections > 0 && `${m.collections} ${m.collections === 1 ? 'collection' : 'collections'}`,
+      ].filter(Boolean)
+      const carriedParts = [
+        m.cover_carried && 'cover carried',
+        m.wishlist_note_converted && 'wishlist note carried',
+      ].filter(Boolean)
+      const segments = []
+      if (movedParts.length > 0) segments.push(`${movedParts.join(', ')} moved over`)
+      if (carriedParts.length > 0) segments.push(carriedParts.join(', '))
+      showToast(segments.length > 0 ? `Merged — ${segments.join(' · ')}` : 'Merged', 'success', 5000)
+
       // Close modal before navigating
       setMergeModalOpen(false)
-      
-      // Navigate to the target book (since current book no longer exists)
+
+      // Navigate to the target book (since current book no longer exists);
+      // same /book/:id route, so the toast state survives the param change
       navigate(`/book/${mergeTarget.id}`)
     } catch (err) {
       console.error('Merge failed:', err)
@@ -1433,8 +1478,56 @@ function BookDetail() {
   const deleteReadCount = sessions.length
   const deleteNoteCount = notes.length
   const deleteRemovedParts = [
-    deleteReadCount > 0 && `${deleteReadCount} ${deleteReadCount === 1 ? 'read' : 'reads'} of reading history`,
+    deleteReadCount > 0 && `${deleteReadCount} ${deleteReadCount === 1 ? 'read' : 'reads'}`,
     deleteNoteCount > 0 && `${deleteNoteCount} ${deleteNoteCount === 1 ? 'note' : 'notes'}`,
+  ].filter(Boolean)
+
+  // Merge confirm facts (Decisions 2026-07-25) — source side from page state
+  // (Delete Title precedent above), target side from the select-time getBook
+  // fetch. The trash line keys on files actually on disk, per edition:
+  // stale paths (file_size null) are never moved by the backend.
+  const editionHasFileOnDisk = (e) => !!e?.file_path && e.file_size != null
+  const mergeSourceFileCount = (book?.editions || []).filter(editionHasFileOnDisk).length
+  const mergeSessionCount = sessions.length
+  const mergeNoteCount = notes.length
+  const mergeCollectionCount = bookCollections.length
+  const mergeTargetFileCount = mergeTargetDetail
+    ? (mergeTargetDetail.editions || []).filter(editionHasFileOnDisk).length
+    : null
+  const mergeTargetCoverLabel = mergeTargetDetail
+    ? (mergeTargetDetail.has_cover
+        ? (mergeTargetDetail.cover_source === 'custom' ? 'custom cover'
+          : mergeTargetDetail.cover_source === 'extracted' ? 'extracted cover'
+          : 'cover')
+        : 'generated cover')
+    : null
+  const mergeKeepingMeta = mergeTargetDetail
+    ? [
+        mergeTargetFileCount > 0
+          ? `${mergeTargetFileCount} ${mergeTargetFileCount === 1 ? 'file' : 'files'}`
+          : 'no file on disk',
+        mergeTargetCoverLabel,
+      ].filter(Boolean).join(' · ')
+    : null
+  const mergeAwayMeta = [
+    mergeSourceFileCount > 0
+      ? `${mergeSourceFileCount} ${mergeSourceFileCount === 1 ? 'file' : 'files'}`
+      : 'no file on disk',
+    mergeSessionCount > 0
+      ? `${mergeSessionCount} ${mergeSessionCount === 1 ? 'read' : 'reads'}`
+      : null,
+  ].filter(Boolean).join(' · ')
+  const mergeHistoryParts = [
+    mergeSessionCount > 0 && `${mergeSessionCount} ${mergeSessionCount === 1 ? 'read' : 'reads'}`,
+    mergeNoteCount > 0 && `${mergeNoteCount} ${mergeNoteCount === 1 ? 'note' : 'notes'}`,
+  ].filter(Boolean)
+  const mergeWhatHappens = [
+    mergeHistoryParts.length > 0 &&
+      `${mergeHistoryParts.join(' and ')} ${mergeSessionCount + mergeNoteCount === 1 ? 'moves' : 'move'} to the kept title`,
+    mergeCollectionCount > 0 &&
+      `Joins ${mergeCollectionCount} ${mergeCollectionCount === 1 ? 'collection' : 'collections'}`,
+    mergeSourceFileCount > 0 &&
+      `${mergeSourceFileCount} ${mergeSourceFileCount === 1 ? 'file moves' : 'files move'} to the trash folder — recoverable until you empty it`,
   ].filter(Boolean)
 
   return (
@@ -3031,11 +3124,17 @@ function BookDetail() {
                 Search for the title you want to merge this one INTO. The selected title will be kept, and this one's data will be moved to it.
               </p>
 
-              {/* Current book preview */}
+              {/* Current book preview — the trash clause renders only when
+                  files will actually move (same editionFileOnDisk logic as
+                  the confirm step's trash line) */}
               <div className="bg-bg-base border border-border-default rounded-lg p-3 mb-4">
-                <div className="text-caption text-text-muted mb-1">This title — its history moves over, its files go to trash</div>
-                <div className="font-medium text-text-primary">{book.title}</div>
-                <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                <div className="text-caption text-text-muted mb-1">
+                  {mergeSourceFileCount > 0
+                    ? 'This title — its history moves over, its files go to trash'
+                    : 'This title — its history moves over'}
+                </div>
+                <div className="text-h4 text-text-primary">{book.title}</div>
+                <div className="text-body-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
               </div>
 
               {/* Search input */}
@@ -3087,51 +3186,48 @@ function BookDetail() {
 
           {mergeStep === 'confirm' && mergeTarget && (
             <>
-              <div className="bg-bg-elevated border border-border-default rounded-lg p-4 mb-4">
-                <div className="text-body-sm text-text-secondary">
-                  This title's reading history, notes, and collections move to the one you picked. Its files move to the trash folder — the kept title stays with the files it already has.
-                </div>
-              </div>
-
-              {/* Visual merge preview */}
+              {/* Keeping-first framing (Decisions 2026-07-25): the kept
+                  title leads with the action-primary tint; the merging-away
+                  card is neutral. The confirm describes the computed
+                  outcome — real counts, zero rows suppressed. */}
               <div className="space-y-3">
-                {/* Source (current book - will be deleted) */}
-                <div className="bg-action-danger/20 border border-action-danger rounded-lg p-3">
-                  <div className="text-xs text-action-danger mb-1 font-medium">SOURCE (will be deleted)</div>
-                  <div className="font-medium text-text-primary">{book.title}</div>
-                  <div className="text-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                {/* Keeping (target) */}
+                <div className="bg-action-primary/15 border border-action-primary rounded-lg p-3">
+                  <div className="text-caption text-action-primary mb-1">Keeping</div>
+                  <div className="text-h4 text-text-primary">{mergeTarget.title}</div>
+                  <div className="text-body-sm text-text-secondary">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
+                  {mergeTargetLoading ? (
+                    <div className="text-caption text-text-muted mt-1">Loading…</div>
+                  ) : mergeKeepingMeta ? (
+                    <div className="text-caption text-text-muted mt-1">{mergeKeepingMeta}</div>
+                  ) : null}
                 </div>
 
-                {/* Arrow */}
-                <div className="flex justify-center text-text-secondary">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                </div>
-
-                {/* Target (selected book - will be kept) */}
-                <div className="bg-action-success/20 border border-action-success rounded-lg p-3">
-                  <div className="text-xs text-action-success mb-1 font-medium">TARGET (will be kept)</div>
-                  <div className="font-medium text-text-primary">{mergeTarget.title}</div>
-                  <div className="text-sm text-text-secondary">{mergeTarget.authors?.join(', ') || 'Unknown Author'}</div>
+                {/* Merging away (source) */}
+                <div className="bg-bg-base border border-border-default rounded-lg p-3">
+                  <div className="text-caption text-text-muted mb-1">Merging away</div>
+                  <div className="text-h4 text-text-primary">{book.title}</div>
+                  <div className="text-body-sm text-text-secondary">{book.authors?.join(', ') || 'Unknown Author'}</div>
+                  <div className="text-caption text-text-muted mt-1">{mergeAwayMeta}</div>
                 </div>
               </div>
 
-              <div className="mt-4 text-body-sm text-text-secondary">
-                <div className="text-label text-text-primary mb-2">Moves over</div>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Reading sessions</li>
-                  <li>Notes</li>
-                  <li>Collection memberships</li>
-                  <li>Backlinks</li>
-                </ul>
-                <div className="text-label text-text-primary mt-4 mb-2">Goes to the trash folder</div>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>This title's files and its folder</li>
-                </ul>
-                <div className="text-caption text-text-muted mt-3">
-                  Files can come back from the trash folder. Emptying it is manual.
+              {/* What happens — computed rows, zero rows suppressed; the
+                  trash line renders only when files will actually move */}
+              {mergeWhatHappens.length > 0 && (
+                <div className="mt-4 text-body-sm text-text-secondary">
+                  <div className="text-label text-text-primary mb-2">What happens</div>
+                  <ul className="list-disc list-inside space-y-1">
+                    {mergeWhatHappens.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
                 </div>
+              )}
+
+              {/* Metadata honesty — always renders */}
+              <div className="text-caption text-text-muted mt-3">
+                The kept title's details win — this one's tags and metadata aren't carried.
               </div>
             </>
           )}
