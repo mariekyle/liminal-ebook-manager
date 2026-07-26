@@ -613,6 +613,28 @@ async def run_titles_migrations(db: aiosqlite.Connection) -> None:
             f"{relabel_left_as_ebook} left as 'ebook'"
         )
 
+    # ==========================================================================
+    # Migration: Dismissed duplicate pairs (Decisions 2026-07-26)
+    # ==========================================================================
+    # "Not duplicates" verdicts from the duplicates scan, stored as unordered
+    # title-id pairs. title_id_a < title_id_b is enforced at write time in the
+    # router — no CHECK constraint by decision. No FK cascade either: pairs
+    # whose titles are later merged or deleted go inert and drop out of every
+    # read via JOIN against titles.
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS dismissed_duplicate_pairs (
+            title_id_a INTEGER NOT NULL,
+            title_id_b INTEGER NOT NULL,
+            dismissed_at TEXT NOT NULL,
+            PRIMARY KEY (title_id_a, title_id_b)
+        )
+    """)
+
+    await db.execute("""
+        CREATE INDEX IF NOT EXISTS idx_dismissed_pairs_dismissed_at
+        ON dismissed_duplicate_pairs(dismissed_at)
+    """)
+
 
 async def run_legacy_migrations(db: aiosqlite.Connection) -> None:
     """Migrations for old 'books' schema (pre-Phase 5)."""

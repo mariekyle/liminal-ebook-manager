@@ -970,6 +970,35 @@ export async function findDuplicates() {
   return apiFetch('/titles/duplicates')
 }
 
+/**
+ * Dismiss a duplicate group as "not duplicates" — stored pairwise
+ * @param {number[]} titleIds - Every title id in the group (min 2)
+ */
+export async function dismissDuplicateGroup(titleIds) {
+  return apiFetch('/titles/duplicates/dismissed', {
+    method: 'POST',
+    body: JSON.stringify({ title_ids: titleIds })
+  })
+}
+
+/**
+ * List dismissed pairs, resolved against live titles (stale pairs excluded)
+ */
+export async function getDismissedDuplicates() {
+  return apiFetch('/titles/duplicates/dismissed')
+}
+
+/**
+ * Restore (un-dismiss) one pair — ids accepted in either order
+ * @param {number} titleIdA - One side of the pair
+ * @param {number} titleIdB - The other side
+ */
+export async function restoreDismissedPair(titleIdA, titleIdB) {
+  return apiFetch(`/titles/duplicates/dismissed/${titleIdA}/${titleIdB}`, {
+    method: 'DELETE'
+  })
+}
+
 // Phase 8.7g: Edition Deletion
 export async function deleteEdition(editionId) {
   return apiFetch(`/editions/${editionId}`, {

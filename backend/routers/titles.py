@@ -3443,6 +3443,11 @@ def titles_are_similar(title1: str, title2: str, threshold: float = 0.75) -> boo
     return similarity >= threshold
 
 
+def dismissed_key(id1: int, id2: int) -> tuple:
+    """Normalized dismissed-pair lookup key: smaller title id first."""
+    return (id1, id2) if id1 < id2 else (id2, id1)
+
+
 @router.get("/titles/duplicates")
 async def find_duplicates(db = Depends(get_db)):
     """Find potential duplicate titles in the library."""
@@ -3486,7 +3491,17 @@ async def find_duplicates(db = Depends(get_db)):
             "normalized": normalize_title(row["title"]),
             "author_normalized": normalize_title(primary_author)
         })
-    
+
+    # Dismissed pairs ("not duplicates" verdicts) — loaded once per scan.
+    # Rows are stored normalized (title_id_a < title_id_b at write time),
+    # so lookups go through dismissed_key (Decisions 2026-07-26)
+    cursor = await db.execute(
+        "SELECT title_id_a, title_id_b FROM dismissed_duplicate_pairs"
+    )
+    dismissed_pairs = {
+        (row["title_id_a"], row["title_id_b"]) for row in await cursor.fetchall()
+    }
+
     # Group by normalized title for exact matches
     exact_groups = {}
     for book in titles_list:
@@ -3502,27 +3517,59 @@ async def find_duplicates(db = Depends(get_db)):
     # First pass: exact matches (after normalization)
     for key, books in exact_groups.items():
         if len(books) > 1:
-            # Check if same author too
-            author_set = set(b["author_normalized"] for b in books)
-            same_author = len(author_set) == 1 and "" not in author_set
-            
-            duplicate_groups.append({
-                "match_type": "exact",
-                "same_author": same_author,
-                "books": [{
-                    "id": b["id"],
-                    "title": b["title"],
-                    "authors": b["authors"],
-                    "category": b["category"],
-                    "series": b["series"],
-                    "series_number": b["series_number"],
-                    "edition_count": b["edition_count"],
-                    "session_count": b["session_count"],
-                    "note_count": b["note_count"]
-                } for b in books]
-            })
-            for b in books:
-                processed_ids.add(b["id"])
+            # Exact buckets are complete graphs — every member shares the
+            # same normalized title, so every pair was implicitly compared.
+            # Dismissed pairs drop as edges and the bucket re-forms as
+            # connected components; only components of 2+ survive as groups.
+            # Members left in no component stay unclaimed for the fuzzy
+            # pass (Decisions 2026-07-26). With nothing dismissed the whole
+            # bucket is one component — output identical to before.
+            member_ids = [b["id"] for b in books]
+            neighbors = {member_id: [] for member_id in member_ids}
+            for i, id1 in enumerate(member_ids):
+                for id2 in member_ids[i + 1:]:
+                    if dismissed_key(id1, id2) not in dismissed_pairs:
+                        neighbors[id1].append(id2)
+                        neighbors[id2].append(id1)
+
+            assigned = set()
+            for seed_id in member_ids:
+                if seed_id in assigned:
+                    continue
+                component_ids = {seed_id}
+                frontier = [seed_id]
+                while frontier:
+                    current = frontier.pop()
+                    for neighbor_id in neighbors[current]:
+                        if neighbor_id not in component_ids:
+                            component_ids.add(neighbor_id)
+                            frontier.append(neighbor_id)
+                assigned |= component_ids
+                if len(component_ids) < 2:
+                    continue
+
+                component_books = [b for b in books if b["id"] in component_ids]
+                # Same-author check scoped to the surviving component
+                author_set = set(b["author_normalized"] for b in component_books)
+                same_author = len(author_set) == 1 and "" not in author_set
+
+                duplicate_groups.append({
+                    "match_type": "exact",
+                    "same_author": same_author,
+                    "books": [{
+                        "id": b["id"],
+                        "title": b["title"],
+                        "authors": b["authors"],
+                        "category": b["category"],
+                        "series": b["series"],
+                        "series_number": b["series_number"],
+                        "edition_count": b["edition_count"],
+                        "session_count": b["session_count"],
+                        "note_count": b["note_count"]
+                    } for b in component_books]
+                })
+                for b in component_books:
+                    processed_ids.add(b["id"])
     
     # Second pass: fuzzy matches (same author, similar title)
     # Only check books not already in exact match groups
@@ -3553,7 +3600,13 @@ async def find_duplicates(db = Depends(get_db)):
             for j, book2 in enumerate(author_books[i+1:], i+1):
                 if book2["id"] in checked:
                     continue
-                
+
+                # Dismissed pair: skip without claiming — book2 stays
+                # eligible to seed or join a later group (Decisions
+                # 2026-07-26)
+                if dismissed_key(book1["id"], book2["id"]) in dismissed_pairs:
+                    continue
+
                 if titles_are_similar(book1["title"], book2["title"]):
                     similar_group.append(book2)
                     checked.add(book2["id"])
@@ -3609,3 +3662,111 @@ async def find_duplicates(db = Depends(get_db)):
         "groups": duplicate_groups,
         "total_duplicates": total_duplicates
     }
+
+
+@router.post("/titles/duplicates/dismissed")
+async def dismiss_duplicate_group(
+    title_ids: List[int] = Body(..., embed=True),
+    db = Depends(get_db)
+):
+    """
+    Record every pair in a duplicate group as "not duplicates".
+
+    Expands the group to all C(n,2) pairs, normalized title_id_a <
+    title_id_b at write time (no CHECK constraint by decision), INSERT OR
+    IGNORE so re-dismissing is idempotent, one transaction. Fuzzy groups
+    are greedy stars, so some stored pairs were never directly compared —
+    the control asserts "none of these duplicate each other" (named risk
+    accepted, Decisions 2026-07-26).
+    """
+    unique_ids = sorted(set(title_ids))
+    if len(unique_ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="A dismissal needs at least two distinct titles."
+        )
+
+    pairs = [
+        (unique_ids[i], unique_ids[j])
+        for i in range(len(unique_ids))
+        for j in range(i + 1, len(unique_ids))
+    ]
+    await db.executemany(
+        """
+        INSERT OR IGNORE INTO dismissed_duplicate_pairs
+            (title_id_a, title_id_b, dismissed_at)
+        VALUES (?, ?, datetime('now'))
+        """,
+        pairs
+    )
+    await db.commit()
+
+    return {"dismissed_pairs": len(pairs)}
+
+
+@router.get("/titles/duplicates/dismissed")
+async def list_dismissed_duplicates(db = Depends(get_db)):
+    """
+    List dismissed pairs, resolved against live titles.
+
+    INNER JOINs drop stale pairs (a side merged or deleted since dismissal)
+    by construction — inert rows never surface (Decisions 2026-07-26).
+    """
+    cursor = await db.execute("""
+        SELECT
+            d.title_id_a,
+            d.title_id_b,
+            d.dismissed_at,
+            ta.title AS title_a,
+            ta.authors AS authors_a,
+            tb.title AS title_b,
+            tb.authors AS authors_b
+        FROM dismissed_duplicate_pairs d
+        JOIN titles ta ON ta.id = d.title_id_a
+        JOIN titles tb ON tb.id = d.title_id_b
+        ORDER BY d.dismissed_at DESC, d.title_id_a, d.title_id_b
+    """)
+    rows = await cursor.fetchall()
+
+    pairs = []
+    for row in rows:
+        authors_a = parse_json_field(row["authors_a"])
+        authors_b = parse_json_field(row["authors_b"])
+        pairs.append({
+            "title_id_a": row["title_id_a"],
+            "title_a": row["title_a"],
+            "authors_a": ", ".join(authors_a) if authors_a else "Unknown Author",
+            "title_id_b": row["title_id_b"],
+            "title_b": row["title_b"],
+            "authors_b": ", ".join(authors_b) if authors_b else "Unknown Author",
+            "dismissed_at": row["dismissed_at"]
+        })
+
+    return {"pairs": pairs, "total": len(pairs)}
+
+
+@router.delete("/titles/duplicates/dismissed/{title_id_a}/{title_id_b}")
+async def restore_dismissed_pair(
+    title_id_a: int,
+    title_id_b: int,
+    db = Depends(get_db)
+):
+    """
+    Restore (un-dismiss) one pair. Ids accepted in either order.
+
+    Idempotent: deleting an absent pair reports restored=False instead of
+    erroring — a retried tap must never trap. The pair becomes eligible
+    again on the next scan.
+    """
+    id_a, id_b = (
+        (title_id_a, title_id_b)
+        if title_id_a < title_id_b
+        else (title_id_b, title_id_a)
+    )
+    cursor = await db.execute(
+        "DELETE FROM dismissed_duplicate_pairs WHERE title_id_a = ? AND title_id_b = ?",
+        (id_a, id_b)
+    )
+    await db.commit()
+
+    return {"restored": cursor.rowcount > 0}

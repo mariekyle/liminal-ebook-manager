@@ -108,7 +108,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.85.0",
+    version="0.87.0",
     lifespan=lifespan
 )
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { findDuplicates, mergeTitles } from '../api'
+import { findDuplicates, mergeTitles, dismissDuplicateGroup, getDismissedDuplicates, restoreDismissedPair } from '../api'
 import UnifiedNavBar from '../components/ui/UnifiedNavBar'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -41,6 +41,17 @@ function DuplicatesPage() {
   // after the auto-rescan (its remaining titles stopped matching as
   // duplicates) — rendered as a page banner instead of a group row
   const [bulkFailure, setBulkFailure] = useState(null)
+  // Per-group "Not duplicates" progress + failure
+  const [dismissing, setDismissing] = useState({})
+  const [dismissError, setDismissError] = useState({})
+  // Dismissed-pairs panel: null until the first load succeeds, so the
+  // affordance never flashes in before the count is known
+  const [dismissedPairs, setDismissedPairs] = useState(null)
+  const [dismissedError, setDismissedError] = useState(null)
+  const [showDismissed, setShowDismissed] = useState(false)
+  // Per-pair restore progress + failure, keyed `${title_id_a}-${title_id_b}`
+  const [restoring, setRestoring] = useState({})
+  const [restoreError, setRestoreError] = useState({})
 
   useEffect(() => {
     scanForDuplicates()
@@ -55,6 +66,12 @@ function DuplicatesPage() {
     setMergeError({})
     setConfirmingMerge({})
     setBulkFailure(null)
+    setDismissing({})
+    setDismissError({})
+    // Refresh the dismissed-pairs list alongside every scan (own error
+    // handling, never blocks the scan): merges delete titles, and stale
+    // pairs drop out of the backend list only when it is re-read
+    loadDismissedPairs()
     try {
       const data = await findDuplicates()
       // Assign a stable client-side key to every group so all per-group state maps
@@ -193,6 +210,94 @@ function DuplicatesPage() {
     }
   }
 
+  const loadDismissedPairs = async () => {
+    setDismissedError(null)
+    try {
+      const data = await getDismissedDuplicates()
+      setDismissedPairs(data.pairs || [])
+      // Fresh list, fresh per-pair state — old keys may no longer exist
+      setRestoring({})
+      setRestoreError({})
+    } catch (err) {
+      console.error('Failed to load dismissed pairs:', err)
+      setDismissedError(err.message || "Couldn't load dismissed pairs.")
+    }
+  }
+
+  const handleDismissGroup = async (groupKey) => {
+    const group = results.groups.find(g => g._key === groupKey)
+    if (!group) return
+
+    setDismissing(prev => ({ ...prev, [groupKey]: true }))
+    setDismissError(prev => ({ ...prev, [groupKey]: null }))
+
+    try {
+      await dismissDuplicateGroup(group.books.map(b => b.id))
+
+      // The group leaves the list immediately — no rescan (Decisions
+      // 2026-07-26); the summary count follows, same arithmetic as the
+      // merge removal path. Guard against a rescan having replaced the
+      // groups while the request was in flight.
+      setResults(prev => {
+        if (!prev || !prev.groups.some(g => g._key === groupKey)) return prev
+        return {
+          ...prev,
+          groups: prev.groups.filter(g => g._key !== groupKey),
+          total_duplicates: prev.total_duplicates - group.books.length
+        }
+      })
+      const drop = (obj) => {
+        const { [groupKey]: _, ...rest } = obj
+        return rest
+      }
+      setSelections(drop)
+      setMerging(drop)
+      setMergeSuccess(drop)
+      setMergeError(drop)
+      setConfirmingMerge(drop)
+      setDismissing(drop)
+      setDismissError(drop)
+      // Pull the authoritative pair list so the affordance count is
+      // backend truth, not client arithmetic
+      loadDismissedPairs()
+    } catch (err) {
+      console.error('Failed to dismiss group:', err)
+      setDismissing(prev => ({ ...prev, [groupKey]: false }))
+      setDismissError(prev => ({
+        ...prev,
+        [groupKey]: err.message || "Couldn't dismiss this group. Try again?"
+      }))
+    }
+  }
+
+  const handleRestorePair = async (pair) => {
+    const pairKey = `${pair.title_id_a}-${pair.title_id_b}`
+    setRestoring(prev => ({ ...prev, [pairKey]: true }))
+    setRestoreError(prev => ({ ...prev, [pairKey]: null }))
+
+    try {
+      await restoreDismissedPair(pair.title_id_a, pair.title_id_b)
+      // Row leaves the list; the pair is eligible again on the next scan —
+      // deliberately no auto-rescan (Decisions 2026-07-26)
+      setDismissedPairs(prev =>
+        (prev || []).filter(p =>
+          !(p.title_id_a === pair.title_id_a && p.title_id_b === pair.title_id_b)
+        )
+      )
+      setRestoring(prev => {
+        const { [pairKey]: _, ...rest } = prev
+        return rest
+      })
+    } catch (err) {
+      console.error('Failed to restore pair:', err)
+      setRestoring(prev => ({ ...prev, [pairKey]: false }))
+      setRestoreError(prev => ({
+        ...prev,
+        [pairKey]: err.message || "Couldn't restore this pair. Try again?"
+      }))
+    }
+  }
+
   const formatSeriesInfo = (book) => {
     if (!book.series) return null
     const num = book.series_number ? ` #${book.series_number}` : ''
@@ -219,7 +324,7 @@ function DuplicatesPage() {
         )}
 
         {error && (
-          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-action-danger">
+          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-body-sm text-action-danger">
             {error}
             <Button type="button" variant="ghost" size="sm" className="ml-4" onClick={scanForDuplicates}>
               Try again
@@ -231,7 +336,7 @@ function DuplicatesPage() {
             from the post-failure rescan; otherwise the message lands in the
             surviving group's error row. Cleared by the next scan. */}
         {bulkFailure && !loading && (
-          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-action-danger mb-6">
+          <div className="bg-action-danger/10 border border-action-danger/30 rounded-lg p-4 text-body-sm text-action-danger mb-6">
             {bulkFailure}
           </div>
         )}
@@ -279,8 +384,17 @@ function DuplicatesPage() {
                       mergeSuccess[group._key] ? 'opacity-50' : ''
                     }`}
                   >
-                    {/* Group Header */}
-                    <div className="px-4 py-3 border-b border-border-default flex items-center justify-between flex-wrap gap-2">
+                    {/* Group Header — two fixed rows (Decisions 2026-07-26,
+                        NNG deterministic-placement finding): row 1 is
+                        metadata and never interactive; row 2 is the verdict
+                        row with both actions in the same positions in every
+                        group, whatever the badge count. items-stretch +
+                        min-h-[44px] on the row gives both actions their
+                        44px touch height. Dismissal stays ghost: the
+                        bordered-variant promotion STOPPED this session
+                        (Button has no bordered variant), never danger —
+                        it destroys nothing. */}
+                    <div className="px-4 py-3 border-b border-border-default">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
                           variant="tint"
@@ -299,37 +413,52 @@ function DuplicatesPage() {
                           {group.books.length} titles
                         </span>
                       </div>
-                      
-                      {/* Merge button — hidden during confirmation */}
+
+                      {/* Verdict row — hidden during confirmation (the
+                          confirm strip at the card foot is the acting
+                          surface there) */}
                       {!mergeSuccess[group._key] && !confirmingMerge[group._key] && (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => setConfirmingMerge(prev => ({ ...prev, [group._key]: true }))}
-                          disabled={merging[group._key] || !selections[group._key]}
-                          className="flex items-center gap-2"
-                        >
-                          {merging[group._key] ? (
-                            <>
-                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                              Merging...
-                            </>
-                          ) : (
-                            <>Merge into selected</>
-                          )}
-                        </Button>
+                        <div className="mt-3 flex items-stretch justify-between gap-2 min-h-[44px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDismissGroup(group._key)}
+                            loading={dismissing[group._key]}
+                            disabled={merging[group._key]}
+                          >
+                            Not duplicates
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => setConfirmingMerge(prev => ({ ...prev, [group._key]: true }))}
+                            disabled={merging[group._key] || dismissing[group._key] || !selections[group._key]}
+                            className="flex items-center gap-2"
+                          >
+                            {merging[group._key] ? (
+                              <>
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Merging...
+                              </>
+                            ) : (
+                              <>Merge into selected</>
+                            )}
+                          </Button>
+                        </div>
                       )}
-                      
+
                       {mergeSuccess[group._key] && (
-                        <span className="text-action-success text-body-sm flex items-center gap-1">
-                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {mergeSuccess[group._key]}
-                        </span>
+                        <div className="mt-3 flex items-center min-h-[44px]">
+                          <span className="text-action-success text-body-sm flex items-center gap-1">
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {mergeSuccess[group._key]}
+                          </span>
+                        </div>
                       )}
                     </div>
 
@@ -337,6 +466,14 @@ function DuplicatesPage() {
                     {mergeError[group._key] && (
                       <div className="px-4 py-2 bg-action-danger/10 text-action-danger text-body-sm border-b border-border-subtle">
                         {mergeError[group._key]}
+                      </div>
+                    )}
+
+                    {/* Dismiss failure — same slot styling; the two never
+                        coexist (actions are sequential per group) */}
+                    {dismissError[group._key] && (
+                      <div className="px-4 py-2 bg-action-danger/10 text-action-danger text-body-sm border-b border-border-subtle">
+                        {dismissError[group._key]}
                       </div>
                     )}
 
@@ -482,6 +619,70 @@ function DuplicatesPage() {
                     })()}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Dismissed pairs — hidden entirely at zero. Dismiss happens in
+                groups, restore in pairs: the stored pair list is the only
+                identity that survives a rescan (Decisions 2026-07-26) */}
+            {dismissedError && (
+              <div className="mt-8 flex flex-wrap items-center gap-2 text-body-sm text-text-secondary">
+                <span>{dismissedError}</span>
+                <Button type="button" variant="ghost" size="sm" onClick={loadDismissedPairs}>
+                  Try again
+                </Button>
+              </div>
+            )}
+            {!dismissedError && dismissedPairs && dismissedPairs.length > 0 && (
+              <div className="mt-8">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowDismissed(prev => !prev)}
+                  aria-expanded={showDismissed}
+                  icon={
+                    <svg className={`w-4 h-4 ${showDismissed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  }
+                >
+                  Dismissed pairs ({dismissedPairs.length})
+                </Button>
+                {showDismissed && (
+                  <div className="mt-3 bg-bg-surface rounded-lg border border-border-default divide-y divide-border-subtle">
+                    {dismissedPairs.map((pair) => {
+                      const pairKey = `${pair.title_id_a}-${pair.title_id_b}`
+                      return (
+                        <div key={pairKey} className="p-4 flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-body-sm text-text-primary truncate">
+                              {pair.title_a}
+                              <span className="text-text-muted"> — {pair.authors_a}</span>
+                            </div>
+                            <div className="text-body-sm text-text-primary truncate">
+                              {pair.title_b}
+                              <span className="text-text-muted"> — {pair.authors_b}</span>
+                            </div>
+                            {restoreError[pairKey] && (
+                              <div className="mt-1 text-caption text-action-danger">
+                                {restoreError[pairKey]}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRestorePair(pair)}
+                            loading={restoring[pairKey]}
+                          >
+                            Restore
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </>
