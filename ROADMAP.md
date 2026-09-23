@@ -1,7 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** July 26, 2026 (v0.87.0)
-> **Current Focus:** THE ADOPTION SPRINT IS COMPLETE (S1–S4b, v0.75.0–v0.82.0). Every action button in the app now renders through a shared component — Button (17 text-action sites, S2), IconButton (icon actions, S3 + S4b), MenuItem (all 15 menu-item sites across six containers, S4) — with ThreeDotMenu extracted to ui/ and adopted on three pages, Badge rebuilt on tokens and adopted at eight sites, SegmentedControl and StarRating in production, and SettingsRow home in ui/ (seventeen shared components). The raw-`<button>` lint category is STRICT at zero: content surfaces and option rows are structurally exempt under two written criteria, the 38 remaining chrome sites carry annotated markers (inventoried in the lint report), and a new raw button outside ui/ now fails the gate instead of joining a count. The design lint passes all ten categories with zero ignore lines. The SortDropdown restructure shipped v0.83.0 (extracted to ui/, nested-button defect structurally gone, chrome inventory 47 → 38), and the component gallery is now **17 of 17 demoed** — SortDropdown's owed demo landed v0.84.0, and the SettingsRow gap it uncovered closed v0.85.0. THE MERGE-CONFIRM REDESIGN IS COMPLETE (decisions locked 2026-07-25, both sessions shipped): v0.84.0 rebuilt BookDetail's confirm step around the computed outcome (Keeping-first cards, real counts with zero rows suppressed, conditional trash line, metadata-honesty caption) with a post-merge toast from the previously-discarded response; v0.85.0 brought DuplicatesPage to the same model — aggregated computed confirm in the inline row, per-title triage data (read/note counts + stat-checked no-file indicator) from an additive find_duplicates extension, a numbered success state, bulk partial-failure with auto-rescan ("Merged M of N, then failed"), and the ratified "Merge" / "Keep separate" pair retiring "Merge & Delete" / "This can't be undone." from the merge flow repo-wide. DUPLICATE-PAIR TRIAGE SHIPPED v0.86.0 (decisions ratified 2026-07-26): every duplicate group carries a "Not duplicates" control that records its constituent pairs as dismissed — dismissed pairs are filtered inside the matcher itself (fuzzy-pass guard + exact-bucket component split), counts and the clean state are post-dismissal by construction, and a "Dismissed pairs (n)" panel below the results restores per pair (new `dismissed_duplicate_pairs` table; stale pairs go inert when a side is merged or deleted and drop out of reads). v0.87.0 polished the surface after phone testing: every group header split into two fixed rows — metadata first, then a verdict row with deterministic action positions and 44px touch targets from the row — and the two remaining untokened banners joined the v0.63.0 error-banner canon; the ghost→bordered promotion for "Not duplicates" STOPPED honestly (Button has no bordered variant — open as a Button-variant decision). Next up: conversion auto-scan, the date_added semantic decision, and the non-EPUB extraction sprint. Full history lives in CHANGELOG.md.
+> **Last Updated:** September 3, 2026 (v0.87.0 — no code shipped since 2026-07-26; August was the UI Mockup Sprint)
+> **Current Focus:** SEQUENCING RATIFIED 2026-09-03 (Decisions.md). The UI Mockup Sprint (Slices 1–6 captured; Slice 7 Stats mocked, capture pending; Slice 8 audit close remaining) closes first, then Slice 10 (Add flow) is mocked *with* the external-lookup states, then **10.3 External Book Search is the first implementation block** — highest-frequency daily pain, 2–3 sessions, no dependency on the redesign. UI implementation follows in blocks: Foundation (nav IA + Button bordered variant) first, then per-screen blocks ordered by a dedicated decision sprint after recon. Search Expansion is co-scheduled with the Search screen block (dependency, not a side item). 10.1b non-EPUB extraction (+ date_added rider) floats as an interleaved backend sprint. Slice 9 (DuplicatesPage restyle) trails everything. Last shipped code: v0.87.0 (DuplicatesPage polish, dismiss-pair mechanism v0.86.0, merge-confirm redesign v0.84.0–v0.85.0, SortDropdown restructure v0.83.0, adoption sprint v0.75.0–v0.82.0). Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
@@ -15,7 +15,7 @@ Liminal is a **connected reading hub** that eliminates friction across your enti
 
 ---
 
-## Current State (v0.76.0)
+## Current State (v0.87.0)
 
 The app is fully functional for daily use with 1,700+ titles. Core systems are stable:
 
@@ -47,6 +47,9 @@ The app is fully functional for daily use with 1,700+ titles. Core systems are s
 | Trash surface in Settings | ✅ Item count + size, `[Empty trash]` behind type-to-confirm — the app's only irreversible operation, and the copy owns it (Batch 3 B1, v0.66.0) |
 | Upload write-path containment | ✅ Every path contained; collisions and same-format duplicates refused, never overwritten (v0.67.0–v0.70.0) |
 | Wishlist → library conversion | ✅ Lossless — notes and covers survive; familiar-match includes wishlist entries (v0.69.0–v0.71.0) |
+| Shared-component adoption | ✅ Every action button through Button / IconButton / MenuItem; raw-`<button>` lint STRICT at zero (v0.75.0–v0.82.0) |
+| Merge confirm + duplicate triage | ✅ Computed-outcome confirms (v0.84.0–v0.85.0); dismiss-pair mechanism, 76 false-positive groups → 0 (v0.86.0–v0.87.0) |
+| UI redesign | 🎨 Mockup sprint — Slices 1–6 canonical (Book Detail, Home, Library, Search, Collections, Series/Author); Slice 7 Stats mocked; Slice 8 audit close pending. Design-only; implementation sequenced 2026-09-03 |
 
 **What's Missing:**
 - ❌ Wishlist requires manual metadata entry
@@ -61,16 +64,17 @@ The app is fully functional for daily use with 1,700+ titles. Core systems are s
 
 ```
 ┌───────────┬──────────────────────────────────────────────────────────────┐
-│  CURRENT  │  S15 batch-2 UI sessions (Files section shipped v0.57.0)    │
-│           │  Phase 10.0D Session 11 Final Audit still open               │
-│           │  Ship each session independently                             │
+│  CURRENT  │  UI Mockup Sprint close: Slice 7 capture → Slice 8 audit    │
+│           │  → Slice 10 (Add flow, mocked with lookup states)            │
 ├───────────┼──────────────────────────────────────────────────────────────┤
-│  ON HOLD  │  Phase 10.2-10.8: Liminal Connects (feature work)           │
-│           │  10.1 shipped v0.51.0; rest paused pending go-decisions      │
+│  NEXT     │  10.3 External Book Search — first implementation block      │
+│           │  Then UI implementation in blocks (Foundation/nav first)     │
 ├───────────┼──────────────────────────────────────────────────────────────┤
-│  PARALLEL │  Critical Fixes                                              │
-│           │  Cherry-picked bugs from Phase 9.5                           │
-│           │  Some now covered by audit findings                          │
+│  FLOATING │  10.1b non-EPUB extraction (+ date_added rider)              │
+│           │  Interleaved between UI blocks; one standalone-defect session│
+├───────────┼──────────────────────────────────────────────────────────────┤
+│  ON HOLD  │  Phase 10.2, 10.4–10.8: Liminal Connects (feature work)      │
+│           │  Resumes after UI implementation                             │
 ├───────────┼──────────────────────────────────────────────────────────────┤
 │  FUTURE   │  Phase 11: Smart Features                                    │
 │           │  Recommendations, mood-based discovery                       │
@@ -276,7 +280,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 | 8 | Status Label + Voice/Tone | DNF defaults, useStatusLabels everywhere, microcopy fixes | G3-06, G4-04, G6-04, UF-10, G6-13, G5-14 | ✅ v0.45.0 |
 | 9 | Mobile-First Polish | Edition badges display-only, collection cover cap, add choice nav | G2-14, G5-10, G5-03, G7-01, G7-15 | ✅ v0.46.0 |
 | 10 | Destructive Action Guards | DuplicatesPage inline confirm, session delete in-app confirm, modal-closes-on-failure | G8-02, G3-13, parked Session 3 modal error path | ✅ v0.47.0 |
-| 11 | Final Audit | Re-audit all changed areas, tap through 10 user flows, regression check | — | ⬜ Planned |
+| 11 | Final Audit | Re-audit all changed areas, tap through 10 user flows, regression check | — | ✅ Passed — regression pass on Sessions 1–10; non-regression findings logged to Open Questions; v0.47.2 contrast hotfix |
 
 **Already resolved (scratched from original sessions):** G3-10 (merge confirm — already in BookDetail), UF-33 (author view toggle — already exists).
 
@@ -284,7 +288,7 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 - **Fix now (Sessions 1-2):** Broken flow + accessibility failure + quick wins ✅
 - **Batch A (Sessions 3-5):** Core interaction quality (BookDetail + forms) ✅
 - **Batch B (Sessions 6-8):** Structural improvements (search/sort, settings, terminology) ✅
-- **Batch C (Sessions 9-11):** Polish, guards, final re-audit
+- **Batch C (Sessions 9-11):** Polish, guards, final re-audit ✅
 
 **Acceptance Criteria:**
 - All 4 critical findings resolved
@@ -412,9 +416,66 @@ Humans pick coarse groups (ebook/physical/audiobook/web) — no dropdown gains o
 
 ---
 
+### UI Redesign — Mockup Sprint + Implementation (sequencing ratified 2026-09-03)
+
+**Priority:** P1 — confronted on every open; ~95% of use is the phone
+**Status:** 🎨 Mockup sprint closing (design-only). Implementation not started — sequenced below.
+**Law:** Decisions.md entries S1–S9, NAV1–7, LIB1–13, STATE1–6, SRCH1–14, COLL1–14, SA/SER/AUTH, HP1–HP10, ST1–ST7 (pending capture). Canonical mockups are the visual spec; no separate spec docs.
+
+**The Problem:**
+The current UI grew screen-by-screen. Two bottom bars, three stacked control rows on index pages, inconsistent sort affordances, no fast-scroll on 1,400-row lists, Wishlist filed under Library. The design system is now real in code (10.0–10.0E, adoption sprint) but the screens it dresses were never redesigned around use.
+
+**The Solution:**
+One mockup sprint locking every screen's design as interactive HTML (phone-first, both themes, state scaffolds), then implementation in blocks against locked decisions.
+
+**Mockup slices:**
+
+| # | Slice | Status |
+|---|-------|--------|
+| 1 | Book Detail | ✅ v5 canonical |
+| 2 | Home + Nav IA | ✅ v8.1 canonical (Home purpose captured 2026-08-23) |
+| 3 | Library — scopes, ownership filter, sort, grid/list, filter sheet, A–Z rail, state system | ✅ v5 canonical |
+| 4 | Search — absorbs Browse; grouped results; owns author search | ✅ v3 canonical |
+| 5 | Collections — index + one variant-aware detail template | ✅ v2-5 canonical |
+| 6 | Series & Author detail | ✅ v7 canonical |
+| 7 | Stats page | 🔄 v1 mocked, ST1–ST7 proposed — device review + capture pending |
+| 8 | Settings + audit close — light-token ratification, cross-screen consistency, SA1 retro-touch (LIB12/SRCH8), **Open Questions triage split (Defects / Wants)** | ⬜ Next |
+| 10 | Add-to-Library flow — mocked **with the 10.3 external-lookup states** (search, results, prefill, no-match, error) | ⬜ Pulled forward — immediately after Slice 8 |
+| 9 | DuplicatesPage restyle | ⬜ Tail of implementation — page is at zero real duplicates and opened rarely |
+
+**Implementation sequence (ratified 2026-09-03):**
+1. **10.3 External Book Search** — first block, against the Slice 10 mockup. Decision sprint → prompt batches.
+2. **Foundation block** — nav IA (NAV1–7, touches every screen) + Button bordered variant (shared-component gap the mockups depend on) + light-token ratification outputs.
+3. **Per-screen blocks** — order locked by a dedicated decision sprint after recon against the post-Foundation tree. Search screen block **includes Search Expansion** (LIB13/SRCH8/SRCH14 assume authors, notes, and wishlist are searchable — the backend must exist for the screen to render honestly).
+4. **Slice 9** — last.
+
+**Floating, not gated:** 10.1b (below) interleaves between blocks. One standalone-defect session (add-flow title persistence, wishlist author link → error page, Notes section on TBR detail) whenever it's wanted; every other backlog defect either dies with the redesign of its screen or is absorbed by 10.1b / Search Expansion — waiting on them is a decision, not neglect.
+
+**Workflow per block:** recon → decision-sprint confirmation against the locked mockup decisions → prompt batches of ~3 → drift check → next batch. Estimate is deliberately not given; blocks ship independently and each is usable on its own.
+
+---
+
+### 10.1b: Non-EPUB Metadata Extraction (scoped 2026-07-20)
+
+**Priority:** P2 — the library's non-EPUB majority gets no title/author from its files
+**Status:** ⏸ Queued, floating — decision sprint first (agenda below), then 2–3 sessions; interleaves with UI implementation blocks
+**Sessions:** 2–3
+
+**The Problem:**
+Metadata extraction is EPUB-only. mobi/azw3/html/pdf titles land with nothing extracted, Rescan Metadata never re-reads the file, conversion flows (Acquire/link, add-to-existing) skip the scan entirely, and AO3 HTML's canonical work URL is never captured.
+
+**The Solution:**
+A per-format extraction cascade behind the existing `extract_metadata()` dispatch (offline — external lookup is 10.3, not this), fill-empty-only per the v0.54.0 contract, with a backfill over existing non-EPUB titles.
+
+**Absorbs (do not fix piecemeal):** conversion auto-scan (ratified 2026-07-26 to wait for this sprint) · Rescan re-extraction · fanfic source URL from the AO3 preface · **date_added rider** (conversion stamps the conversion date — Decisions 2026-08-02).
+
+**Decision-sprint agenda:** cascade order per format · confidence tiers + upload-review treatment · single-best-file vs cross-format field merge · backfill scope · known-author prior · dispatcher module shape · category subfolders on upload.
+
+---
+
 ### Search Expansion (scoped 2026-07-20)
 
-**Priority:** P2 — queued behind the shared-component adoption sprint
+**Priority:** P2 — co-scheduled with the Search screen implementation block (ratified 2026-09-03: a dependency of SRCH8/SRCH14, not a side item)
 **Sessions:** 1–2
 
 One sprint closing the three known search gaps: full-text search across notes
@@ -431,7 +492,7 @@ searchable, result anatomy, priority order.
 ### 10.2: Usage Analytics
 
 **Priority:** P1 — Foundational  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 1
 
 **The Problem:**  
@@ -466,7 +527,7 @@ Simple event logging to SQLite. No external tools needed.
 ### 10.3: External Book Search
 
 **Priority:** P2 — High Frequency Pain  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** 🔜 NEXT IMPLEMENTATION BLOCK (ratified 2026-09-03) — starts immediately after the Slice 10 Add-flow mockup is captured; decision sprint first, UI built against that mockup  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -506,7 +567,7 @@ Search external APIs and one-tap import.
 ### 10.4: Local AI Infrastructure
 
 **Priority:** P3 — Foundational for Future Features  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 1-2
 
 **The Problem:**  
@@ -538,7 +599,7 @@ Set up Ollama on self hosted NAS as a local AI server.
 ### 10.5: Fanfic Analysis Pipeline
 
 **Priority:** P4 — Leverages 10.4  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -585,7 +646,7 @@ Background analysis using local Ollama, storing structured metadata.
 ### 10.6: Moon Reader Integration
 
 **Priority:** P5 — High Value, Requires Setup  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 3-4
 
 **The Problem:**  
@@ -625,7 +686,7 @@ Read Moon Reader's sync data (via MoonSync approach) and import into Liminal.
 ### 10.7: Notes ↔ Obsidian Sync
 
 **Priority:** P6 — Important but Not Urgent  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 2-3
 
 **The Problem:**  
@@ -678,7 +739,7 @@ This book broke me in the best way.
 ### 10.8: Photo Lookup
 
 **Priority:** P7 — Nice to Have (Free with Local AI)  
-**Status:** ⏸ On hold (pending 10.0D completion)  
+**Status:** ⏸ On hold — resumes after UI implementation  
 **Sessions:** 1-2
 
 **The Problem:**  
@@ -711,11 +772,17 @@ Upload photo → local vision AI extracts title/author → feeds into external s
 |-----------|------|----------|--------|
 | 10.0 | Component Foundation | 2 | ✅ Complete |
 | 10.0C | Full Conversion | 8 | ✅ Complete |
-| **10.0D** | **UX Audit Fix Sessions** | **10 + 1** | **🔄 In Progress (10/10 shipped, Session 11 Final Audit next)** |
+| 10.0D | UX Audit Fix Sessions | 10 + 1 | ✅ Complete (11/11; regression pass passed) |
+| 10.0E | Design Consistency Sweep + guardrails | 3 + 2 | ✅ Complete (v0.48.0–v0.50.0) |
 | 10.1 | Download & Share | 1-2 | ✅ Shipped v0.51.0 (1 session) |
-| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0; S15.3a/b + S15.2b (v0.53.0) + P1 contract (v0.54.0) deployed 2026-07-12; batch-2 UI in progress (S1 Delete Title with trash v0.55.0, S2 merge trashes source v0.56.0, S3 Files section owns format actions v0.57.0) |
-| 10.2 | Usage Analytics | 1 | ⏸ On hold |
-| 10.3 | External Book Search | 2-3 | ⏸ On hold |
+| — | Multi-Format Editions (S15) | 3 + follow-ups | ✅ Shipped v0.52.0–v0.57.0; status knot S16 v0.59.0–v0.60.0; batch 3 closed v0.74.0 |
+| — | Shared-Component Adoption Sprint | 4 + S4b | ✅ v0.75.0–v0.82.0 |
+| — | SortDropdown restructure · Merge-confirm redesign · Dismiss-pair triage | 1 + 2 + 2 | ✅ v0.83.0–v0.87.0 |
+| — | UI Redesign — mockup sprint | 8 slices + 2 | 🎨 Slices 1–6 done, 7 mocked, 8 + 10 next; implementation sequenced 2026-09-03 |
+| 10.1b | Non-EPUB Metadata Extraction | 2-3 | ⏸ Queued, floating (interleaves with UI blocks) |
+| — | Search Expansion | 1-2 | ⏸ Co-scheduled with the Search screen block |
+| 10.2 | Usage Analytics | 1 | ⏸ On hold — after UI implementation |
+| 10.3 | External Book Search | 2-3 | 🔜 Next implementation block (after Slice 10 mockup) |
 | 10.4 | Local AI Infrastructure | 1-2 | ⏸ On hold |
 | 10.5 | Fanfic Analysis Pipeline | 2-3 | ⏸ On hold |
 | 10.6 | Moon Reader Integration | 3-4 | ⏸ On hold |
@@ -903,7 +970,7 @@ Moon+ Reader → WebDAV (on the NAS) → books.sync file
 4. **Local-first AI** — Use Ollama on self hosted NAS to avoid API costs and keep data private
 5. **Mobile-first** — Every feature works great on Android
 6. **Data integrity** — Never lose user's notes or reading history
-7. **Measure, then optimize** — Analytics before UI redesign
+7. **Measure, then optimize** — Analytics before UI redesign, when analytics exist. The 2026 redesign proceeded on daily-use evidence instead (Decisions 2026-09-03); 10.2 stays queued for what daily use can't see.
 
 ---
 
@@ -922,4 +989,4 @@ Moon+ Reader → WebDAV (on the NAS) → books.sync file
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: July 22, 2026 (v0.76.0)*
+*Last updated: September 3, 2026 (v0.87.0)*
