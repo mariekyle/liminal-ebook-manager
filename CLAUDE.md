@@ -160,11 +160,13 @@ produce the commit block and the report. Do not commit or push.
     `.githooks/`, `CLAUDE.md`, `.cursorrules`, `.gitignore`, `.env.example`. Never copied.
   - **Volume deletions** are a separate named section; state "none" explicitly.
   A file missing from the manifest is a stale file in production.
-- **Phase 2 (2026-09-23) is "move to the Beelink", not "change the deploy script":** the
-  candidate target is the todo repo's path (GitHub Actions publish → ghcr.io → manual
-  "Promote to stable" → the Beelink runs `:stable`), which would also move the data volume off
-  the Synology. Until Marie says so, this section describes the Synology path and nothing
-  else. If it changes, rewrite this section in the same commit.
+- **Phase 2 is decided (D-003–D-013, 2026-09-24): production moves to the Beelink, running
+  the registry image.** The repo half shipped in 0.88.0: `publish.yml` builds on a `v*` tag and
+  fails if the tag disagrees with `main.py`'s `version=` (D-010); `promote.yml` retags to
+  `:stable`; the compose is a run file (D-012); `main.py` snapshots `library.db` before
+  `init_db` (D-009) and sync refuses a library root without `.liminal-library` (D-008). The
+  cutover (D-011 steps 2–9) is pending, and until step 9 the Synology path above is still
+  production. This section is rewritten in the retirement commit, not before.
 - **Data.** One SQLite file, `library.db`, plus `covers/`, under the NAS data volume (host
   path in `CLAUDE.local.md`). Never `liminal.db`. Back up `library.db` before any schema
   change, any migration, and any full library sync: the trigger is bulk writes, not schema
@@ -184,7 +186,10 @@ produce the commit block and the report. Do not commit or push.
   Folder = one title; file metadata wins over folder name; category comes from the parent
   folder (Fiction / Non-Fiction / FanFiction).
 - One image (`Dockerfile`, multi-stage: `node:20` builds the frontend, `python:3.11` serves
-  it). Local compose needs `BOOKS_HOST_PATH` in `.env` (copy `.env.example`).
+  it). The compose is a run file: it needs `DATA_HOST_PATH`, `BOOKS_HOST_PATH` and
+  `BACKUPS_HOST_PATH` in `.env` (copy `.env.example`). Local build: `docker build -t
+  liminal-local .` then `LIMINAL_IMAGE=liminal-local docker compose up`; without
+  `LIMINAL_IMAGE` it pulls `:stable`.
 
 ## Environment notes
 

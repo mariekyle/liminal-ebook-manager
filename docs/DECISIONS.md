@@ -23,6 +23,57 @@
 Decisions Claude Code made because the docs were silent. Marie ratifies by saying so in a
 session; Claude Code then moves the block below the line. Newest first.
 
+_Nothing pending. D-001 and D-002 ratified by Marie, 2026-09-24._
+
+---
+
+# Log
+
+## D-013 · 2026-09-24 · The Beelink serves Liminal over HTTPS via `tailscale serve`, the same as todo, and this is cutover precondition 8; the phone installs it as a PWA from that origin
+Why: PWA install and service-worker registration require a secure context. Today's origin is plain HTTP on the LAN, which is why Liminal has never been installable. `tailscale serve` terminates TLS with a tailnet cert, no port opened, no certificate to manage; the phone already runs Tailscale for todo. Repointing to the new origin resets localStorage (view mode, sort); accepted. Recon at prompt time: confirm `frontend/` ships a web manifest and a service worker; if not, adding them is in the cutover session's scope, not a later sprint.
+Rules out: A plain-HTTP cutover. LAN-IP bookmarks as the primary access path after step 8. Any inbound port.
+
+## D-012 · 2026-09-24 · The tracked `docker-compose.yml` is the Beelink run file; every host path is a required env var, and the real values live only in the TrueNAS app config and `CLAUDE.local.md`
+Why: TrueNAS Apps holds the YAML with real paths; the repo holds the same shape with `${DATA_HOST_PATH:?}`, `${BOOKS_HOST_PATH:?}`, `${BACKUPS_HOST_PATH:?}` so it fails loudly when unset and never carries a path. Both `BOOKS_PATH` and `BOOKS_DIR` are set to `/books` (upload.py reads the second name). `.dockerignore` excludes `CLAUDE*.md`, `data/`, `*.db`, `.env`, `docs/`, `scripts/`, `frontend/node_modules`.
+Rules out: A build-mode compose in the repo. A second compose file. Any host path in git.
+
+## D-011 · 2026-09-24 · Cutover runs in the order Claude Code laid out, amended: `scripts/lcheck.sh` and the SMB deploy section are deleted in the retirement commit (step 9), not step 1; the NAS `data/` folder is the rollback for 30 days; the prototype's volumes are deleted after one look at its Postgres
+Why: Between step 1 and step 9 the NAS is still production; the rulebook describes reality at every commit or it's not a rulebook. The prototype's Postgres is the last consumer of the leaked June-2025 passphrase; deleting its volumes closes phase 1 for good. Preconditions 1–7 run on a throwaway container against a copy of `library.db` before anything touches the real one; the day-long phone test between steps 8 and 9 is the only window where a rollback loses data, so nothing irreplaceable gets added during it.
+Rules out: Running the NAS and Beelink apps in parallel against the same data (no shared-writer SQLite, ever). Rewriting CLAUDE.md's deploy section before the Beelink is production.
+
+## D-010 · 2026-09-24 · `main.py`'s `version=` stays the version of record; the release paste block tags `vX.Y.Z` to match, and Publish fails if the tag and `main.py` disagree
+Why: A build arg would leave local dev and the M1 versionless and lets the tag and code drift the other way. One source in the repo, one CI assertion, zero drift.
+Rules out: Build-arg version injection. The git tag as sole source. Publishing an image whose `/openapi.json` disagrees with its tag.
+
+## D-009 · 2026-09-24 · `main.py`'s lifespan snapshots `library.db` through the backup service before `init_db()` runs; skipped when no DB file exists; a snapshot failure aborts startup
+Why: Promote removes the human who used to back up before schema changes. Putting the guard in the process that runs the migrations makes it deploy-mechanism-agnostic. A container that refuses to start is visible; a migration with no backup is not. Filename shape `liminal_pre_deploy_YYYYMMDD_HHMMSS.db` so the v0.67.0 retention parser ages them out.
+Rules out: Relying on the deploy mechanism, the scheduler, or Marie for the pre-migration copy. Fail-open on snapshot error.
+Rider (2026-09-24, ratified at implementation): `create_backup` never raises; it returns `{"status": "failed"}`. So `main.py` checks the returned status and raises on `"failed"`; an `except` around the call would fail open. `"skipped"` (backups disabled in Settings) is not a failure: startup continues with a warning that says explicitly that backups are disabled and no pre-deploy snapshot was taken.
+
+## D-008 · 2026-09-24 · A sentinel file at the books root distinguishes "library unmounted" from "library empty"; sync refuses and `/api/health` reports the library unreachable when it is missing
+Why: An unmounted NFS share is a mounted, empty directory. Sync never deletes, but it would orphan every title and un-orphan them on the next run — pure churn that also poisons the sync-results view. Path existence can't tell the two apart; a marker file (`.liminal-library`) can. Created once by hand on the NAS.
+Rules out: Emptiness heuristics. Any sync run against a root without the marker.
+
+## D-007 · 2026-09-24 · The Synology NFS export for the Beelink maps root to admin ("Map root to admin"), not "No mapping"; a throwaway-container write test is precondition 2
+Why: The image runs as root; with root_squash on, every write lands as `nobody` and upload fails with EACCES on the first real use. "Map root to admin" gives writable files owned by the NAS admin; "No mapping" is strictly more permissive for no gain. Test: `docker run --rm -v <books mount>:/books alpine sh -c 'touch /books/.w && rm /books/.w'`.
+Rules out: Running the container as a non-root user to dodge the mapping (revisit only with a reason). Discovering the squash setting at first upload.
+
+## D-006 · 2026-09-24 · Data placement: `library.db` and `covers/` on the Beelink's local ZFS (`apps_pool`); `/books` is the existing NFS mount of the NAS Media share, writable; backups write to an NFS folder on that share (`Reading/_liminal-backups`) via the app's `backup_path` setting
+Why: SQLite over NFS corrupts under lock contention — the one thing in this plan that can destroy data. The Beelink already mounts the Media share; no second export needed. Backups as whole-file copies are fine over NFS, and this puts the DB's history on a different box than the live file — a better split than today.
+Rules out: SQLite on any network filesystem, ever. A second NFS export. Backups on the same disk as the live DB.
+
+## D-005 · 2026-09-24 · Deploy pipeline is todo's: Publish on tag builds `linux/amd64` and pushes to `ghcr.io/mariekyle/liminal-ebook-manager`; manual "Promote to stable"; the Beelink pulls `:stable` on a manual TrueNAS Apps update
+Why: The build happens on the runner, so a Rollup failure is a red X before anything touches the Beelink. Promote is the staging gate the push-to-deploy webhook never had. The pull is a click in a web UI Marie already uses. `promote.yml` verbatim; `publish.yml` adapted — the smoke step runs the image and asserts HTTP 200 on `/api/health` (not the string "healthy", which needs a books path). The GHCR package is set public after the first push.
+Rules out: Watchtower or any automatic pull. Building on the NAS or the Beelink. Any webhook.
+
+## D-004 · 2026-09-24 · The `liminal_*` prototype on the Beelink (June-2025 Postgres/Redis stack) is stopped, its ports freed, and its containers and volumes removed as step 2 of the cutover
+Why: It squats on 3000/8000, has never served the library, and its Postgres is the only remaining consumer of the leaked passphrase. Marie takes one look at the Postgres contents before the volumes go, in case of a surprise. There won't be one.
+Rules out: Keeping it "just in case." Reusing its compose, images, or storage folder for the real app.
+
+## D-003 · 2026-09-24 · Production moves from the Synology (Container Manager, SMB copy) to the Beelink, running the registry image; the Synology keeps the books, the backups, and a 30-day cold copy of the old data folder
+Why: The SMB copy is the step that failed silently twice (v0.55.0); `lcheck.sh` narrows it, a registry image removes it. Rollback becomes "promote the previous tag." The Beelink is the box built to run apps; the NAS is the box built to hold files.
+Rules out: The SMB-copy + Container Manager path after step 9. Any deploy that involves copying source files to a host.
+
 ## D-002 · 2026-09-23 · DECISIONS.md switches to numbered `## D-NNN · date · decision` blocks with a Pending-ratification section; earlier entries keep their format
 Why: Same shape as the todo repo, so one workflow serves both. The old dated-sprint entries are the record of how the sprints were decided; converting them would rewrite history for no gain.
 Rules out: Renumbering or reformatting anything under `# Log (before D-001)`. A second decisions file.
@@ -30,10 +81,6 @@ Rules out: Renumbering or reformatting anything under `# Log (before D-001)`. A 
 ## D-001 · 2026-09-23 · A commit that changes app code must also change the project record: anything under `docs/`, or `CHANGELOG.md` or `ROADMAP.md` at the root; `docs/DESIGN_LINT_REPORT.md` alone doesn't count
 Why: The pre-commit hook in `.githooks/` enforces it. The lint report is refreshed and staged by the hook itself, so it would satisfy the rule on every commit without anyone writing anything; it is excluded so the rule means a human-written change. `CHANGELOG.md` and `ROADMAP.md` stay at the root because README, ARCHITECTURE, .cursorrules and the Liminal skill all cite them there.
 Rules out: Moving CHANGELOG.md or ROADMAP.md into docs/. Requiring one specific file per commit (todo's D-050 requires PIPELINE.md; Liminal's PIPELINE.md is a queue, not a per-commit status file).
-
----
-
-# Log
 
 
 # Log (before D-001)

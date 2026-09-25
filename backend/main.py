@@ -17,8 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import aiosqlite
 
 from database import init_db, get_db, get_db_path
+from constants import LIBRARY_SENTINEL
 from routers import titles, sync
-from services.backup import get_backup_settings, schedule_backup_jobs, start_scheduler
+from services.backup import get_backup_settings, schedule_backup_jobs, start_scheduler, create_backup
 from routers.upload import router as upload_router
 from routers.settings import router as settings_router
 from routers.authors import router as authors_router
@@ -61,6 +62,28 @@ async def fix_halfstate_tbr_titles(db: aiosqlite.Connection):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database on startup, start backup scheduler."""
+    # D-009: snapshot library.db before migrations. Promote removed the human backup step.
+    # create_backup never raises — it returns {"status": "failed"} — so the status is checked
+    # (D-009 rider). "skipped" means backups are disabled in Settings: warn, continue.
+    if os.path.exists(DATABASE_PATH):
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            result = await create_backup(db, backup_type="pre_deploy", db_path=DATABASE_PATH)
+        status = result.get("status")
+        if status == "success":
+            logger.warning(f"Pre-deploy snapshot written before init_db: {result.get('file_path')}")
+        elif status == "skipped":
+            logger.warning(
+                "Backups are disabled in Settings — NO pre-deploy snapshot was taken before init_db"
+            )
+        else:
+            logger.error(
+                f"Pre-deploy snapshot FAILED — refusing to start: {result.get('reason')}"
+            )
+            raise RuntimeError(f"Pre-deploy snapshot failed: {result.get('reason')}")
+    else:
+        logger.warning("No library.db found — fresh install, pre-deploy snapshot skipped")
+
     await init_db(DATABASE_PATH)
 
     # Fix half-state wishlist/TBR titles that already have editions
@@ -108,7 +131,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Liminal",
     description="Personal ebook library manager with notes",
-    version="0.87.0",
+    version="0.88.0",
     lifespan=lifespan
 )
 
@@ -140,10 +163,14 @@ app.include_router(trash_router)  # Batch-3 B1: trash stats + empty trash
 @app.get("/api/health")
 async def health_check():
     """Simple health check to verify the API is running."""
+    # D-008: an unmounted network share is a mounted, empty directory. The sentinel at the
+    # library root is what says the library itself is there, not just a directory.
+    library_mounted = (Path(BOOKS_PATH) / LIBRARY_SENTINEL).is_file()
     return {
-        "status": "healthy",
+        "status": "healthy" if library_mounted else "library_unreachable",
         "books_path": BOOKS_PATH,
-        "books_path_exists": Path(BOOKS_PATH).exists()
+        "books_path_exists": Path(BOOKS_PATH).exists(),
+        "library_mounted": library_mounted,
     }
 
 
@@ -155,6 +182,11 @@ if static_path.exists():
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """Serve the React frontend for all non-API routes."""
+        # PWA shell (D-013): sw.js, manifest.webmanifest, icons and workbox-*.js live at the
+        # static root and must be served as themselves, not as index.html. Only files
+        # directly inside static/ qualify — no path components, so nothing can escape it.
+        if full_path and "/" not in full_path and (static_path / full_path).is_file():
+            return FileResponse(static_path / full_path)
         # For SPA routing, always serve index.html
         return FileResponse(static_path / "index.html")
 else:

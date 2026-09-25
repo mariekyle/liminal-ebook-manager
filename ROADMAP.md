@@ -1,6 +1,7 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** September 3, 2026 (v0.87.0 — no code shipped since 2026-07-26; August was the UI Mockup Sprint)
+> **Last Updated:** September 24, 2026 (v0.88.0 — infrastructure only: CI image publish, run-mode compose, PWA shell, startup DB snapshot, library sentinel. Last product code v0.87.0, 2026-07-26)
+> **Infrastructure:** Deploy is moving to a registry image with a manual promote gate (Decisions D-003–D-013, 2026-09-24); the repo half shipped in v0.88.0, cutover pending. Details stay out of this public file.
 > **Current Focus:** SEQUENCING RATIFIED 2026-09-03 (Decisions.md). The UI Mockup Sprint (Slices 1–6 captured; Slice 7 Stats mocked, capture pending; Slice 8 audit close remaining) closes first, then Slice 10 (Add flow) is mocked *with* the external-lookup states, then **10.3 External Book Search is the first implementation block** — highest-frequency daily pain, 2–3 sessions, no dependency on the redesign. UI implementation follows in blocks: Foundation (nav IA + Button bordered variant) first, then per-screen blocks ordered by a dedicated decision sprint after recon. Search Expansion is co-scheduled with the Search screen block (dependency, not a side item). 10.1b non-EPUB extraction (+ date_added rider) floats as an interleaved backend sprint. Slice 9 (DuplicatesPage restyle) trails everything. Last shipped code: v0.87.0 (DuplicatesPage polish, dismiss-pair mechanism v0.86.0, merge-confirm redesign v0.84.0–v0.85.0, SortDropdown restructure v0.83.0, adoption sprint v0.75.0–v0.82.0). Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 

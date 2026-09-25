@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 from pydantic import BaseModel
 
 from database import get_db, get_db_path
-from constants import EXTENSION_TO_FORMAT, STORAGE_FORMATS
+from constants import EXTENSION_TO_FORMAT, STORAGE_FORMATS, LIBRARY_SENTINEL
 from services.trash import TRASH_DIR_NAME
 from services.metadata import extract_metadata
 from services.covers import generate_cover_colors, extract_epub_cover
@@ -487,6 +487,18 @@ async def _do_sync(db, full: bool = False) -> SyncResult:
     if not books_path_exists:
         # Full path in the logs only — this message renders on the results page
         logger.error(f"Sync: books path does not exist: {BOOKS_PATH}")
+        result = SyncResult(
+            status="error",
+            message="Couldn't reach the library folder. Check that it's connected, then try again."
+        )
+        await _persist_sync_result(db, result)
+        return result
+
+    # D-008: the path exists but the marker doesn't — an unmounted share looks exactly like
+    # an empty library, and a sync against it would orphan every title. Refuse. Every entry
+    # point (/api/sync, the upload-triggered background sync) passes through here.
+    if not (books_root / LIBRARY_SENTINEL).is_file():
+        logger.error(f"Sync: library sentinel {LIBRARY_SENTINEL} missing at {BOOKS_PATH} — refusing")
         result = SyncResult(
             status="error",
             message="Couldn't reach the library folder. Check that it's connected, then try again."

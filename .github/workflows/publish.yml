@@ -1,0 +1,121 @@
+name: Publish image
+
+# Builds the image for one version and pushes it to GHCR. It never creates a GitHub Release:
+# a release records a promotion to :stable, and only "Promote to stable" makes one.
+#
+# Adapted from the todo repo (D-005). There, every push to main builds and the workflow
+# chooses and pushes the git tag. Here the tag comes first: Marie's release block tags
+# vX.Y.Z, that push is the trigger, and the tag must match `version=` in backend/main.py
+# (D-010). A push to main with no tag builds nothing.
+
+on:
+  push:
+    tags: ['v*']
+
+# Runs queue rather than cancel: a cancelled run could leave a version with no image.
+concurrency:
+  group: publish-image
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/mariekyle/liminal-ebook-manager
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The tag is the version. backend/main.py is the version of record (D-010): the two
+      # must agree, or the image's /openapi.json would disagree with its tag.
+      - name: Check the tag against backend/main.py
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::\"$version\" isn't a version tag. Use the form v0.88.0."
+            exit 1
+          fi
+          in_code=$(sed -nE 's/^[[:space:]]*version="([0-9]+\.[0-9]+\.[0-9]+)",?$/\1/p' backend/main.py | head -n1)
+          if [ -z "$in_code" ]; then
+            echo "::error::No version=\"X.Y.Z\" line found in backend/main.py."
+            exit 1
+          fi
+          if [ "v$in_code" != "$version" ]; then
+            echo "::error::Tag $version does not match backend/main.py version=\"$in_code\" (D-010). Fix one and re-tag."
+            exit 1
+          fi
+
+          # A version names one image, once.
+          if docker buildx imagetools inspect "$IMAGE:$version" >/dev/null 2>&1; then
+            echo "::error::$IMAGE:$version is already published. Bump the version and tag again."
+            exit 1
+          fi
+
+          echo "Building $version (backend/main.py agrees)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=${{ steps.version.outputs.version }}
+
+      # Build into the local daemon so the smoke test can gate the push.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # HTTP 200 only. The body says "healthy" only with a books path, which the runner
+      # has no reason to have (D-005).
+      - name: Smoke test the built image
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker run -d --name smoke -p 3000:3000 \
+            -e BOOKS_PATH=/tmp/nobooks -e DATABASE_PATH=/tmp/smoke.db \
+            "$IMAGE:$VERSION"
+          code=$(curl -s --retry 30 --retry-delay 2 --retry-all-errors -o /dev/null -w "%{http_code}" \
+            http://localhost:3000/api/health || true)
+          docker logs smoke | tail -20
+          docker rm -f smoke
+          if [ "$code" != "200" ]; then
+            echo "::error::/api/health returned '$code', not 200."
+            exit 1
+          fi
+
+      # Push the exact image that passed. The version tag goes last, so a published version
+      # always has its sha tag too.
+      - name: Push the tested image
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for tag in $TAGS; do
+            [ "$tag" = "$IMAGE:$VERSION" ] || docker push "$tag"
+          done
+          docker push "$IMAGE:$VERSION"
+          echo "Built \`$VERSION\` from \`${GITHUB_SHA::7}\`. Not live until promoted." >> "$GITHUB_STEP_SUMMARY"

@@ -1,18 +1,33 @@
-version: '3.8'
-
+# Run file (D-012). Nothing here builds: the image comes from GHCR, published by
+# .github/workflows/publish.yml on a v* tag and promoted to :stable by hand (Actions →
+# Promote to stable). pull_policy: always re-pulls :stable whenever the service starts, so
+# it can never run a build that hasn't been promoted.
+#
+# Every host path is a required env var, so this file never carries one and refuses to start
+# with any unset. Set them in a .env next to this file (copy .env.example) or, on TrueNAS,
+# in the app's environment. The real values live only there and in CLAUDE.local.md.
+#
+# Local dev against a local build: docker build -t liminal-local . then
+# LIMINAL_IMAGE=liminal-local docker compose up.
 services:
-  app:
-    build: .
+  liminal:
+    image: ${LIMINAL_IMAGE:-ghcr.io/mariekyle/liminal-ebook-manager:stable}
+    container_name: liminal
+    restart: unless-stopped
+    pull_policy: always
     ports:
       - "3000:3000"
+    environment:
+      - BOOKS_PATH=/books
+      - BOOKS_DIR=/books
+      - DATABASE_PATH=/app/data/library.db
+      - COVERS_DIR=/app/data/covers
     volumes:
-      - ./data:/app/data
+      # library.db + covers/. Local disk only — never a network filesystem (D-006).
+      - ${DATA_HOST_PATH:?Set DATA_HOST_PATH in .env — host path for library.db and covers}:/app/data
       # Host path to your ebook library — set BOOKS_HOST_PATH in a .env file
       # next to this compose file (copy .env.example). Required on purpose:
       # compose fails loudly instead of silently mounting a wrong path.
       - ${BOOKS_HOST_PATH:?Set BOOKS_HOST_PATH in .env — host path to your ebook library}:/books
-    environment:
-      - BOOKS_PATH=/books
-      - DATABASE_PATH=/app/data/library.db
-      - COVERS_DIR=/app/data/covers
-    restart: unless-stopped
+      # Where the app's backup_path setting points (Settings → Backups → /backups).
+      - ${BACKUPS_HOST_PATH:?Set BACKUPS_HOST_PATH in .env — host path for database backups}:/backups

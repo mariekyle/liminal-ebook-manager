@@ -11,7 +11,7 @@
 # Scope (repo-relative). frontend/src/ and backend/ are mirrored with --delete, so a file
 # removed from the repo is removed from the volume too. Everything else is copied one way and
 # never deleted. Compared by checksum, not mtime: SMB mounts don't always keep mtimes.
-#   frontend/src/  backend/                          (mirrored)
+#   frontend/src/  backend/  frontend/public/        (mirrored)
 #   Dockerfile  frontend/package.json  frontend/package-lock.json  frontend/vite.config.js
 #   frontend/tailwind.config.js  frontend/postcss.config.js  frontend/index.html
 #   CHANGELOG.md  ROADMAP.md                          (copied, never deleted)
@@ -42,7 +42,7 @@ if [ ! -f "$LIMINAL_VOLUME/docker-compose.yml" ]; then
 fi
 
 # Note: backend/requirements.txt is inside the mirrored backend/ tree; the Dockerfile reads it there.
-MIRRORED="frontend/src backend"
+MIRRORED="frontend/src backend frontend/public"
 COPIED="Dockerfile frontend/package.json frontend/package-lock.json frontend/vite.config.js
 frontend/tailwind.config.js frontend/postcss.config.js frontend/index.html CHANGELOG.md ROADMAP.md"
 
@@ -50,7 +50,7 @@ EXCLUDES="--exclude=node_modules --exclude=__pycache__ --exclude=*.pyc --exclude
 --exclude=.env --exclude=.DS_Store"
 
 # -r recurse, -l links as links, -c compare by checksum, -i itemize. No -t/-p: SMB owns those.
-# One shot per tree so --delete never reaches outside the two mirrored trees.
+# One shot per tree so --delete never reaches outside the mirrored trees.
 run() {   # $1 = "" or --dry-run
   for d in $MIRRORED; do
     rsync -rlci --delete $1 $EXCLUDES "$d/" "$LIMINAL_VOLUME/$d/" || return 1

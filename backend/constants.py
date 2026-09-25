@@ -9,6 +9,12 @@ options from the storage tier. reading_sessions.format stays coarse.
 Mirrored in frontend/src/constants/formats.js — keep the two in sync.
 """
 
+# D-008: marker file at the root of the book library. An unmounted network share is a
+# mounted, empty directory; path existence can't tell "unmounted" from "empty", this can.
+# Created once by hand at the library root. sync refuses and /api/health reports the
+# library unreachable while it is missing. Single source: main.py and routers/sync.py import it.
+LIBRARY_SENTINEL = ".liminal-library"
+
 # Extension-derived formats for file-backed editions
 STORAGE_FORMATS = ['epub', 'pdf', 'mobi', 'azw3', 'azw', 'html']
 

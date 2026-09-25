@@ -28,11 +28,12 @@
 
 ## Current Queue: sequencing ratified 2026-09-03
 
-> v0.87.0 is still the last shipped code (2026-07-26). Order below is law — Decisions.md SEQ1–SEQ10.
+> v0.88.0 (2026-09-24) is the Beelink-migration repo half; v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
 
 | #   | Item                                                                                   | Status                         |
 | --- | -------------------------------------------------------------------------------------- | ------------------------------ |
-| 1   | Slice 7 Stats — device review + capture (ST1–ST7)                                      | Next                           |
+| 0   | **Beelink cutover (D-011 steps 2–9)** — repo half shipped v0.88.0; preconditions 1–7 on a throwaway container, then steps 4–9 | Next                           |
+| 1   | Slice 7 Stats — device review + capture (ST1–ST7)                                      | Queued                          |
 | 2   | Slice 8 Settings + audit close — incl. Open Questions Defects/Wants split              | Queued                         |
 | 3   | Slice 10 Add flow — mocked with 10.3 lookup states                                     | Queued                         |
 | 4   | **10.3 External Book Search** — decision sprint → prompts (first implementation block) | Queued                         |

@@ -1,0 +1,101 @@
+name: Promote to stable
+
+# Points :stable at an image that is already in GHCR. Never builds: the registry copies the
+# manifest, so :stable is byte-for-byte the image CI smoke-tested under that version.
+# Once :stable is verified it records the promotion as the repository's latest GitHub Release
+# (D-015). Releases are created here only; Publish tags builds and must not create releases.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to promote, e.g. v0.1.3
+        required: true
+        type: string
+
+concurrency:
+  group: promote-stable
+  cancel-in-progress: false
+
+permissions:
+  contents: write # create or re-mark the GitHub Release
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the version name
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::\"$VERSION\" isn't a version. Use the form v0.1.3 — a sha-… tag can't be promoted."
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Point stable at the version
+        id: promote
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The digest of a manifest is the sha256 of its raw bytes.
+          digest() { docker buildx imagetools inspect --raw "$1" | sha256sum | sed 's/^/sha256:/; s/ .*//'; }
+
+          if ! want=$(digest "$IMAGE:$VERSION"); then
+            echo "::error::$IMAGE:$VERSION isn't in GHCR, so there is nothing to promote. Nothing was built or changed."
+            exit 1
+          fi
+          previous=$(digest "$IMAGE:stable" 2>/dev/null) || previous=none
+
+          # --prefer-index=false copies the manifest as it is; without it a single image
+          # manifest gets wrapped in a new manifest list with a different digest.
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:stable" "$IMAGE:$VERSION"
+
+          got=$(digest "$IMAGE:stable")
+          if [ "$got" != "$want" ]; then
+            echo "::error:::stable is now $got, not $VERSION ($want). Promote a version to replace it; it was $previous before this run."
+            exit 1
+          fi
+
+          revision=$(docker buildx imagetools inspect "$IMAGE:$VERSION" \
+            --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}') || revision=unknown
+          {
+            echo "\`:stable\` → \`$VERSION\` · commit \`${revision::7}\` · \`$want\`"
+            echo ""
+            echo "Previous \`:stable\`: \`$previous\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "digest=$want" >> "$GITHUB_OUTPUT"
+
+      - name: Mark the version as the latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ steps.promote.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The v* git tag was pushed by Publish before the image (D-008), so it names the commit.
+          sha=$(gh api "repos/$GH_REPO/commits/$VERSION" -q .sha)
+          body=$(printf 'Commit: %s\nImage: %s@%s' "$sha" "$IMAGE" "$DIGEST")
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            # Re-promotion or rollback: the release exists; only the "latest" mark moves.
+            gh release edit "$VERSION" --latest --notes "$body"
+            echo "Release $VERSION already existed; marked latest." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh release create "$VERSION" --verify-tag --latest --title "$VERSION" --notes "$body"
+            echo "Release $VERSION created and marked latest." >> "$GITHUB_STEP_SUMMARY"
+          fi
