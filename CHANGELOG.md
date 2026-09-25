@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Dev workflow brought in line with the todo repo (2026-09-23/24).** `docs/DECISIONS.md` gains numbered `## D-NNN · date · decision` blocks and a Pending-ratification section (D-002; earlier entries untouched). `docs/OPEN_QUESTIONS.md` gains an INBOX section for raw phone drops, triaged at session start. `.githooks/pre-commit` chains the existing design-lint hook and then rejects any app-code commit that changes nothing in `docs/`, `CHANGELOG.md` or `ROADMAP.md` (D-001). `CLAUDE.md` is now tracked (previously gitignored); machine-specific detail moves to the gitignored `CLAUDE.local.md`. `.gitignore` covers `.claude/settings.local.json`, `.claude/launch.json`, `.claude/worktrees/` and `CLAUDE.local.md`.
+
+### Added
+- **`scripts/lcheck.sh`** replaces the old `lcheck`: rsyncs the deploy scope from the repo to `$LIMINAL_VOLUME` (mirrors `frontend/src/` and `backend/` with delete; copies `Dockerfile`, the `frontend/` config files, `CHANGELOG.md` and `ROADMAP.md` one way), compares by checksum, dry-run by default, `--apply` copies then re-verifies and exits non-zero on any remaining difference. Refuses to run unless `LIMINAL_VOLUME` is a mounted directory containing `docker-compose.yml`.
+
+### Removed
+- **`webhook/` and `docs/AUTO_DEPLOY.md`.** The push-to-deploy webhook was never switched on; production has always been the SMB-copy + Container Manager path, which `CLAUDE.md` now describes. `WEBHOOK_SECRET` dropped from `.env.example`. Grep: no other tracked file referenced them.
+
 ## [0.87.0] — 2026-07-26
 
 **DuplicatesPage polish, ratified 2026-07-26 after v0.86.0 phone testing (NNG findings: missing signifier on the ghost dismiss control, nondeterministic action placement, overloaded header row). The group header becomes two fixed rows — metadata that is never interactive, then a verdict row holding "Not duplicates" and "Merge into selected" in the same positions in every group — and the ratified carry-over pair closes: both untokened banners (scan-error, bulkFailure) join the v0.63.0 error-banner canon. One ratified STOP fired: the ghost→bordered variant promotion did not ship, because Button has no bordered variant to promote to.**

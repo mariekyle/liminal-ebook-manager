@@ -10,6 +10,16 @@
 
 ---
 
+# INBOX
+
+> Marie drops raw items here in any format, from the phone or mid-session. Claude Code triages
+> them at session start: each one gets a priority and a home in BACKLOG (or becomes a decision
+> or a Pipeline queue item), then leaves the Inbox. Nothing else writes here.
+
+- 
+
+---
+
 # CURRENT SPRINT GATES
 
 > None. Merge-confirm decisions locked 2026-07-25 (eight decisions + riders); session 2 (v0.85.0) is implementation-only. Next decision sprint on the horizon: date_added semantic (queue #4).

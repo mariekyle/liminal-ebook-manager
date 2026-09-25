@@ -1,0 +1,77 @@
+#!/bin/sh
+# Liminal pre-commit: design-lint (warn-and-allow), then the docs gate.
+#
+# 1. scripts/pre-commit runs the design lint and stages a refreshed
+#    docs/DESIGN_LINT_REPORT.md. It never blocks (Decisions 2026-07-08).
+# 2. The docs gate rejects a commit that changes app code without changing the
+#    project record (D-001). The record is docs/, CHANGELOG.md and ROADMAP.md.
+#    docs/DESIGN_LINT_REPORT.md on its own doesn't count: step 1 stages it on
+#    every commit. App code is every other path except .claude/, .githooks/,
+#    .cursorrules, CLAUDE.md, .gitignore, .gitattributes and .dockerignore.
+#
+# Git never runs hooks that arrive with a clone. Switch this on once per clone:
+#   git config core.hooksPath .githooks
+
+set +e
+unset GIT_LITERAL_PATHSPECS GIT_GLOB_PATHSPECS GIT_NOGLOB_PATHSPECS GIT_ICASE_PATHSPECS
+
+# --- 1. design lint -----------------------------------------------------------
+if [ -f scripts/pre-commit ]; then
+  sh scripts/pre-commit
+fi
+
+# --- 2. docs gate -------------------------------------------------------------
+if git rev-parse --verify --quiet HEAD >/dev/null; then
+  against=HEAD
+else
+  against=$(git hash-object -t tree /dev/null)
+fi
+
+# Plumbing, so diff settings in the user's config can't change the answer.
+staged() {
+  git -c core.quotepath=off diff-index --cached --ita-invisible-in-index \
+    --ignore-submodules=none "$@"
+}
+
+app_code() {
+  staged "$@" "$against" -- . \
+    ':(exclude)docs' ':(exclude)CHANGELOG.md' ':(exclude)ROADMAP.md' \
+    ':(exclude).claude' ':(exclude).githooks' ':(exclude).cursorrules' \
+    ':(exclude)CLAUDE.md' ':(exclude).gitignore' ':(exclude).gitattributes' \
+    ':(exclude).dockerignore'
+}
+
+record() {
+  staged "$@" "$against" -- docs CHANGELOG.md ROADMAP.md \
+    ':(exclude)docs/DESIGN_LINT_REPORT.md'
+}
+
+app_code --quiet
+case $? in
+  0) exit 0 ;;   # no app code staged: nothing to gate
+  1) ;;
+  *) exit 1 ;;
+esac
+
+record --quiet
+case $? in
+  1) exit 0 ;;   # the record changed too: allowed
+  0) ;;
+  *) exit 1 ;;
+esac
+
+{
+  echo "pre-commit: this commit changes app code but nothing in the project record:"
+  app_code --name-only | sed 's/^/  /'
+  cat <<'EOF'
+
+The record ships in the same commit as the code (CLAUDE.md "Documentation", D-001):
+  CHANGELOG.md             what changed, under the version being built
+  docs/DECISIONS.md        anything decided where the docs were silent (Pending ratification)
+  docs/PIPELINE.md         queue status, when a queue item moves
+  docs/OPEN_QUESTIONS.md   anything deferred
+docs/DESIGN_LINT_REPORT.md alone doesn't satisfy this; the hook stages it for you.
+Stage a docs update, then commit again. To bypass on purpose: git commit --no-verify
+EOF
+} >&2
+exit 1

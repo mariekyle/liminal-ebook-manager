@@ -1,18 +1,44 @@
-> Append-only. Never edit old entries. If a decision changes, add a new entry that says so. Format: `YYYY-MM-DD | Decision | Reasoning (brief)`
+> Append-top. Never edit old entries. If a decision changes, add a new entry that names what it supersedes.
 
 ---
 
 # How to Use This File
 
-- **On the phone:** After working through a question in the Claude Project, add the decision here. One line. Don't write an essay.
+- **Format (from 2026-09-23, D-001 onward):** one block per decision, newest first, under `# Log`. The heading carries the decision itself, not the topic, so search returns the answer:
+
+  ```
+  ## D-NNN · YYYY-MM-DD · <the decision>
+  Why: <one or two lines>
+  Rules out: <what this closes off>
+  Supersedes: D-NNN   (only if it does)
+  ```
+
+- **Numbering:** D-NNN counts up from D-001. Entries before 2026-09-23 keep their original dated-sprint format under `# Log (before D-001)` and are cited by date, as they always were. Nothing below that line is ever renumbered or rewritten.
+- **On the phone:** After working through a question in the Claude Project, add the decision here as a D-block. Don't write an essay.
 - **At the laptop:** Reference this before implementing. If you can't find a decision for what you're about to build, that's an Open Question — add it there, don't just wing it.
-- **When a decision changes:** Don't delete the old one. Add a new line: `SUPERSEDES [date] — New decision | Why it changed`
+- **When a decision changes:** Don't delete the old one. Add a new block with `Supersedes:`.
+
+## Pending ratification
+
+Decisions Claude Code made because the docs were silent. Marie ratifies by saying so in a
+session; Claude Code then moves the block below the line. Newest first.
+
+## D-002 · 2026-09-23 · DECISIONS.md switches to numbered `## D-NNN · date · decision` blocks with a Pending-ratification section; earlier entries keep their format
+Why: Same shape as the todo repo, so one workflow serves both. The old dated-sprint entries are the record of how the sprints were decided; converting them would rewrite history for no gain.
+Rules out: Renumbering or reformatting anything under `# Log (before D-001)`. A second decisions file.
+
+## D-001 · 2026-09-23 · A commit that changes app code must also change the project record: anything under `docs/`, or `CHANGELOG.md` or `ROADMAP.md` at the root; `docs/DESIGN_LINT_REPORT.md` alone doesn't count
+Why: The pre-commit hook in `.githooks/` enforces it. The lint report is refreshed and staged by the hook itself, so it would satisfy the rule on every commit without anyone writing anything; it is excluded so the rule means a human-written change. `CHANGELOG.md` and `ROADMAP.md` stay at the root because README, ARCHITECTURE, .cursorrules and the Liminal skill all cite them there.
+Rules out: Moving CHANGELOG.md or ROADMAP.md into docs/. Requiring one specific file per commit (todo's D-050 requires PIPELINE.md; Liminal's PIPELINE.md is a queue, not a per-commit status file).
 
 ---
 
 # Log
 
-### New decisions
+
+# Log (before D-001)
+
+> Dated-sprint format, as written at the time. Cite by date.
 
 #### **==2026-09-03 — Implementation sequencing after the UI Mockup Sprint==**
 Ratified: Marie, 2026-09-03. Supersedes the post-v0.87.0 Pipeline queue order (#2–#4) and ROADMAP's 10.3 "on hold." Context: no code has shipped since v0.87.0 (2026-07-26); August was design-only.

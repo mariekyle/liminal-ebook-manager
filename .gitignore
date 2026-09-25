@@ -30,11 +30,17 @@ Thumbs.db
 # Logs
 *.log
 
-# Claude Code session rules — local only, single copy at repo root (contains NAS/network detail)
-CLAUDE.md
+# Claude Code: CLAUDE.md is tracked (public, no infrastructure detail). Machine-specific
+# detail — hosts, IPs, host paths, the compose file the Beelink really runs — lives here:
+CLAUDE.local.md
 
 # Syncthing
 .stfolder
 .stignore
 *.sync-conflict-*
 .stversions
+
+# Claude Code per-machine settings
+.claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
