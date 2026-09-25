@@ -28,7 +28,7 @@
 
 ## Current Queue: sequencing ratified 2026-09-03
 
-> v0.88.0 (2026-09-24) is the Beelink-migration repo half; v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
+> v0.88.0 (2026-09-24) is the Beelink-migration repo half — live on the Synology since 2026-09-25, image `v0.88.0` in GHCR, not promoted; v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
 
 | #   | Item                                                                                   | Status                         |
 | --- | -------------------------------------------------------------------------------------- | ------------------------------ |

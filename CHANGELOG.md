@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Infrastructure only — the Beelink migration, repo half (Decisions D-003–D-013, 2026-09-24). No product change. Production still runs on the Synology; the cutover is D-011 steps 2–9 and has its own session.**
 
+Deployed to the Synology 2026-09-25 from `7dc91c7`: first-start log showed the pre-deploy snapshot line, `/api/health` returned `library_mounted: true` with the sentinel in place, one sync completed with the expected results. Publish `v0.88.0` green; image in GHCR (public), not promoted.
+
 ### Added
 - **CI image publish (D-005, D-010).** `.github/workflows/publish.yml`: on a `v*` tag, checks the tag against `version=` in `backend/main.py` and fails if they differ, builds `linux/amd64`, smoke-tests the image (HTTP 200 on `/api/health`, body not asserted — it can't say "healthy" without a books path), pushes `:sha-<short>` and `:vX.Y.Z` to `ghcr.io/mariekyle/liminal-ebook-manager`. A push to `main` without a tag builds nothing. `.github/workflows/promote.yml`: verbatim from the todo repo; retags an already-published version to `:stable` by digest and records a GitHub Release.
 - **`.dockerignore`.** The build context no longer carries `.git`, `docs/`, `scripts/`, `data/`, any `*.db`, `.env*`, `CLAUDE*.md`, `frontend/node_modules` or `frontend/dist`.
