@@ -23,19 +23,23 @@
 Decisions Claude Code made because the docs were silent. Marie ratifies by saying so in a
 session; Claude Code then moves the block below the line. Newest first.
 
-### Compose `user:` placeholder ships commented out · 2026-09-28
-Why: A literal `user: "<uid>:<gid>"` is an invalid user, so `docker compose up` and the documented local-build run would fail. Commented, the tracked file still shows where the user goes and production is unaffected (the TrueNAS app YAML sets it).
-Rules out: An uncommented placeholder. A new required env var for the user (would add a variable to `.env.example`, out of scope).
+_Nothing pending. The compose `user:` placeholder was ratified by Marie 2026-09-28 and folded into D-014._
 
 ---
 
 # Log
+
+## D-015 · 2026-09-28 · `CHANGELOG.md` and `ROADMAP.md` live in `docs/`, so the whole project record is one folder and shows in the Obsidian vault
+Why: Marie's 0.88.2 brief. The living docs were invisible in the vault at the repo root. With both in `docs/`, the pre-commit docs gate's record is just `docs/`.
+Rules out: Keeping either file at the repo root. A root-level copy or stub.
+Amends: D-001 — its "Rules out: Moving CHANGELOG.md or ROADMAP.md into docs/" no longer holds; the rest of D-001 stands.
 
 ## D-014 · 2026-09-28 · The container runs as a non-root user set by `user:` in the TrueNAS app YAML, one the storage already allows to write; `/app/data`, `/books` and `/backups` are bind mounts
 Why: Recorded from Marie's 0.88.1 brief, as built at cutover. D-007's root mapping can't work on this storage, and an unmapped root client is denied. A user the storage already trusts gives writable `/books` and `/backups` with no mapping workaround. Specifics in `CLAUDE.local.md`.
 Rules out: Running the container as root. Mapping root to a storage account. Writing anywhere outside the three mounts.
 Amends: D-007 — the root-mapping setting only; the share itself stands.
 Note (D-013): `tailscale serve` targets the host on the app's port, matching todo's rule. The PWA installs cleanly alongside todo; no manifest `id` needed unless a second app on the host claims the same scope.
+Local docker-compose runs as root (user: line commented); production sets user: in the TrueNAS app YAML. Accepted — local never touches the NAS.
 
 ## D-013 · 2026-09-24 · The Beelink serves Liminal over HTTPS via `tailscale serve`, the same as todo, and this is cutover precondition 8; the phone installs it as a PWA from that origin
 Why: PWA install and service-worker registration require a secure context. Today's origin is plain HTTP on the LAN, which is why Liminal has never been installable. `tailscale serve` terminates TLS with a tailnet cert, no port opened, no certificate to manage; the phone already runs Tailscale for todo. Repointing to the new origin resets localStorage (view mode, sort); accepted. Recon at prompt time: confirm `frontend/` ships a web manifest and a service worker; if not, adding them is in the cutover session's scope, not a later sprint.

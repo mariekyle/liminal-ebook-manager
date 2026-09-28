@@ -4,7 +4,7 @@
 # 1. scripts/pre-commit runs the design lint and stages a refreshed
 #    docs/DESIGN_LINT_REPORT.md. It never blocks (Decisions 2026-07-08).
 # 2. The docs gate rejects a commit that changes app code without changing the
-#    project record (D-001). The record is docs/, CHANGELOG.md and ROADMAP.md.
+#    project record (D-001). The record is docs/, changelog and roadmap included (D-015).
 #    docs/DESIGN_LINT_REPORT.md on its own doesn't count: step 1 stages it on
 #    every commit. App code is every other path except .claude/, .githooks/,
 #    .cursorrules, CLAUDE.md, .gitignore, .gitattributes and .dockerignore.
@@ -35,14 +35,14 @@ staged() {
 
 app_code() {
   staged "$@" "$against" -- . \
-    ':(exclude)docs' ':(exclude)CHANGELOG.md' ':(exclude)ROADMAP.md' \
+    ':(exclude)docs' \
     ':(exclude).claude' ':(exclude).githooks' ':(exclude).cursorrules' \
     ':(exclude)CLAUDE.md' ':(exclude).gitignore' ':(exclude).gitattributes' \
     ':(exclude).dockerignore'
 }
 
 record() {
-  staged "$@" "$against" -- docs CHANGELOG.md ROADMAP.md \
+  staged "$@" "$against" -- docs \
     ':(exclude)docs/DESIGN_LINT_REPORT.md'
 }
 
@@ -66,7 +66,7 @@ esac
   cat <<'EOF'
 
 The record ships in the same commit as the code (CLAUDE.md "Documentation", D-001):
-  CHANGELOG.md             what changed, under the version being built
+  docs/CHANGELOG.md        what changed, under the version being built
   docs/DECISIONS.md        anything decided where the docs were silent (Pending ratification)
   docs/PIPELINE.md         queue status, when a queue item moves
   docs/OPEN_QUESTIONS.md   anything deferred

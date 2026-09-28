@@ -65,6 +65,6 @@
 - **Code** -- That's in the repo
 - **Specs or PRDs** -- Claude Project conversation or the ROADMAP
 - **General Liminal ideas** -- Claude Project conversation
-- **Bug reports** -- ROADMAP.md or git issues
+- **Bug reports** -- docs/ROADMAP.md or git issues
 - **Documentation updates** (CHANGELOG, ROADMAP entries) -- Happen at session end during laptop phase, same git commit as the code
 - **Future group decision queues** (C2-C8 questions) -- Claude Project conversation, pulled into Open Questions just-in-time

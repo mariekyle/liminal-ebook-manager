@@ -152,8 +152,8 @@ liminal/
 | Document | Description |
 |----------|-------------|
 | `ARCHITECTURE.md` | System design and data flow |
-| `ROADMAP.md` | Priorities and future plans |
-| `CHANGELOG.md` | Version history |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Priorities and future plans |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
 | `CODE_PATTERNS.md` | Reusable code solutions |
 | `docs/DESIGN_SYSTEM.md` | Tokens, components, and pattern law |
 | `docs/DESIGN_PHILOSOPHY.md` | Why the app feels the way it does |
@@ -170,7 +170,7 @@ Core systems are stable: library browsing, metadata extraction, multi-format edi
 
 Recent development focused on **data safety and honest failure handling**: trash-first file operations, overwrite-proof syncing, contained uploads, lossless wishlist conversion, and an interface where every failure speaks. Current focus is design-system consolidation, with metadata extraction for non-EPUB formats and external integrations (reading apps, Obsidian, metadata sources, local AI) on the roadmap.
 
-See `ROADMAP.md` for full details.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for full details.
 
 ---
 

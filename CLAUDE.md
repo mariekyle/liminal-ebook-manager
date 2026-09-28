@@ -66,7 +66,7 @@ In particular:
 ## Frozen files
 
 Frozen means any edit needs a justification against the stated risk, an explicit flag at edit
-time, and Marie's ratification, logged in `docs/DECISIONS.md` and `CHANGELOG.md`. A silent
+time, and Marie's ratification, logged in `docs/DECISIONS.md` and `docs/CHANGELOG.md`. A silent
 edit is a violation even when correct.
 
 - `frontend/src/components/GradientCover.jsx` — output changes repaint every rendered cover
@@ -82,7 +82,7 @@ edit is a violation even when correct.
 
 ## Documentation — same commit as the code, every time
 
-The project record is `docs/`, plus `CHANGELOG.md` and `ROADMAP.md` at the root. A pre-commit
+The project record is `docs/`, which holds `docs/CHANGELOG.md` and `docs/ROADMAP.md` too (D-015). A pre-commit
 hook (`.githooks/pre-commit`, D-001) rejects any commit that touches app code without touching
 the record; `docs/DESIGN_LINT_REPORT.md` alone doesn't count because the hook stages it itself.
 Enable the hook once per clone: `git config core.hooksPath .githooks`.
@@ -96,13 +96,13 @@ Enable the hook once per clone: `git config core.hooksPath .githooks`.
   D-001 keep their dated-sprint format and are cited by date.
 - `docs/OPEN_QUESTIONS.md` — deferred items, prioritised. Not append-only: resolved items
   are deleted. `# INBOX` at the top is Marie's; write nothing else there.
-- `CHANGELOG.md` — Keep a Changelog, append-top, one file, never dated copies. Unshipped work
+- `docs/CHANGELOG.md` — Keep a Changelog, append-top, one file, never dated copies. Unshipped work
   goes under `## [Unreleased]`. Never flatten or summarise older entries (a one-line erratum
   for a factual correction is allowed). Detail matches the work: full
   Added/Changed/Fixed/Removed + Technical (files created, modified, deleted) for features and
   schema changes, with root causes for fixes; summary for small fixes; nothing for docs-only
   commits.
-- `ROADMAP.md` — the plan, one file, edited in place. Public on GitHub: no infrastructure
+- `docs/ROADMAP.md` — the plan, one file, edited in place. Public on GitHub: no infrastructure
   detail, ever. Nothing is ever named "FINAL".
 - `docs/ARCHITECTURE.md`, `docs/CODE_PATTERNS.md` — current-state reference. Update when the
   state they describe changes.
@@ -129,7 +129,7 @@ block (plus the tag block when the change ships) and the report. Do not commit o
   editor". Unsure of the format: omit the block.
 - Commit directly to `main`, one step per commit, conventional prefix (`feat:`, `fix:`,
   `docs:`, `chore:`).
-- **Version of record** is the `version=` string in `backend/main.py` (v0.88.1 as of
+- **Version of record** is the `version=` string in `backend/main.py` (v0.88.2 as of
   2026-09-28); bump it in the commit that ships the change and head the changelog entry with it.
 - **Verification rule, before the session-end sequence:** any change under `frontend/src/`
   runs `npm run build` in `frontend/` and must pass; any change under `backend/` runs

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.2] — 2026-09-28
+
+**Docs only. No product change, no tag, no image; production stays on v0.88.0.**
+
+### Changed
+- **`CHANGELOG.md` and `ROADMAP.md` move into `docs/`** (`git mv`, history follows) so the living docs sit with the rest of the record in the Obsidian vault (D-015, amends D-001).
+- Every current-state path reference updated: `CLAUDE.md`, `README.md` (now links), `.cursorrules`, `.githooks/pre-commit` (the docs gate's record is just `docs/`), `docs/ARCHITECTURE.md`, `docs/START_HERE.md`. Older changelog and decision entries keep the paths they were written with.
+- Version `0.88.1` → `0.88.2`.
+
 ### Changed
 - Old-deploy references brought in line with the TrueNAS Apps deploy, docs-only (no tag, no image): `docker-compose.yml` gains a `user:` placeholder (production sets it in the app YAML, D-014); `docs/ARCHITECTURE.md` §8 and §10 rewritten; `.cursorrules` and `.claude/agents/code-reviewer.md` no longer describe the Synology or the deploy manifest. Public docs no longer carry storage-side detail.
 

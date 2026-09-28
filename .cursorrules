@@ -32,15 +32,15 @@ Self-hosted web app for managing an ebook library on a NAS.
    - Ask first: "I notice X isn't being used - should I remove it?"
  
 5. **Single-file documentation.**
-   - `CHANGELOG.md` is ONE file. Append new entries at the top. Never create dated copies.
-   - `ROADMAP.md` is ONE file. Edit it directly. Never create delta/patch files.
+   - `docs/CHANGELOG.md` is ONE file. Append new entries at the top. Never create dated copies.
+   - `docs/ROADMAP.md` is ONE file. Edit it directly. Never create delta/patch files.
    - Git handles version history — don't duplicate that job with filename timestamps.
    - Never flatten, summarize, or remove detail from older changelog entries.
  
 6. **After every change, summarize:**
    - What changed
    - What was preserved/verified unchanged
-   - CHANGELOG.md and ROADMAP.md updates needed (provide the text)
+   - docs/CHANGELOG.md and docs/ROADMAP.md updates needed (provide the text)
  
 ## Protected Systems (ask before modifying)
  
@@ -166,5 +166,5 @@ Use `<Button>`, `<Modal>`, `<FormField>`, `<Badge>` from `components/ui/` — do
 - List what changed
 - Confirm what stayed the same
 - Note any side effects or areas to test
-- Provide CHANGELOG.md entry text (append at top, never create separate file)
-- Provide ROADMAP.md updates if tasks were completed (edit in place, never create patch file)
+- Provide docs/CHANGELOG.md entry text (append at top, never create separate file)
+- Provide docs/ROADMAP.md updates if tasks were completed (edit in place, never create patch file)
