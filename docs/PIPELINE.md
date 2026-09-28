@@ -28,12 +28,12 @@
 
 ## Current Queue: sequencing ratified 2026-09-03
 
-> v0.88.0 (2026-09-24) is the Beelink-migration repo half — live on the Synology since 2026-09-25, image `v0.88.0` in GHCR, not promoted; v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
+> v0.88.1 (2026-09-28) closes the Beelink cutover: production is TrueNAS Apps on `:stable` (v0.88.0 promoted 2026-09-27); the Synology deploy is retired. v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
 
 | #   | Item                                                                                   | Status                         |
 | --- | -------------------------------------------------------------------------------------- | ------------------------------ |
-| 0   | **Beelink cutover (D-011 steps 2–9)** — repo half shipped v0.88.0; preconditions 1–7 on a throwaway container, then steps 4–9 | Next                           |
-| 1   | Slice 7 Stats — device review + capture (ST1–ST7)                                      | Queued                          |
+| 0   | **Beelink cutover (D-011 steps 2–9)** — repo half v0.88.0, retirement commit v0.88.1   | [x] Done 2026-09-28            |
+| 1   | Slice 7 Stats — device review + capture (ST1–ST7)                                      | Next                           |
 | 2   | Slice 8 Settings + audit close — incl. Open Questions Defects/Wants split              | Queued                         |
 | 3   | Slice 10 Add flow — mocked with 10.3 lookup states                                     | Queued                         |
 | 4   | **10.3 External Book Search** — decision sprint → prompts (first implementation block) | Queued                         |
@@ -52,9 +52,8 @@
 
 > _**Standard post-prompt steps** (apply after every prompt):_
 > 
-> - _Copy changed files dev → Docker volume
-> - Run lcheck (do not rebuild on ✗)
-> - Rebuild the container
+> - _Commit and push; tag `vX.Y.Z` when it ships (Publish image runs on the tag)
+> - Promote to stable, then TrueNAS Apps → liminal → Update (docs/AUTO_DEPLOY.md)
 > - Test on mobile
 > - Commit to git — CHANGELOG/ROADMAP ship in the same commit._
 

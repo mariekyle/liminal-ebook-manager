@@ -1,8 +1,8 @@
 # Liminal — Rulebook
 
 Self-hosted reading-management PWA for a ~1,700-title library including fanfiction. FastAPI +
-SQLite backend, React 18 + Tailwind 3.4 frontend, one Docker image, run on the Synology NAS
-through Container Manager. ~95% of use is on an Android phone with a thumb.
+SQLite backend, React 18 + Tailwind 3.4 frontend, one Docker image, published to GHCR
+and run on the Beelink through TrueNAS Apps. ~95% of use is on an Android phone with a thumb.
 
 This file is the contract. It wins over `.cursorrules` and the Liminal skill wherever they
 disagree; both are orientation, this is law. Never cite its rules (frozen list, golden rules,
@@ -113,8 +113,8 @@ and anything under `## Pending ratification`, and wait for a step.
 
 Session end (a session that changed code), in this order: the verification rule below; the
 `code-reviewer` agent's three checks (frozen-file detection, scope drift, pattern conformance);
-changelog entry, decisions, Open Questions triage, Pipeline update; the deploy manifest; then
-produce the commit block and the report. Do not commit or push.
+changelog entry, decisions, Open Questions triage, Pipeline update; then produce the commit
+block (plus the tag block when the change ships) and the report. Do not commit or push.
 
 ## Build, version, deploy
 
@@ -129,46 +129,35 @@ produce the commit block and the report. Do not commit or push.
   editor". Unsure of the format: omit the block.
 - Commit directly to `main`, one step per commit, conventional prefix (`feat:`, `fix:`,
   `docs:`, `chore:`).
-- **Version of record** is the `version=` string in `backend/main.py` (v0.87.0 as of
-  2026-07-26); bump it in the commit that ships the change and head the changelog entry with it.
+- **Version of record** is the `version=` string in `backend/main.py` (v0.88.1 as of
+  2026-09-28); bump it in the commit that ships the change and head the changelog entry with it.
 - **Verification rule, before the session-end sequence:** any change under `frontend/src/`
   runs `npm run build` in `frontend/` and must pass; any change under `backend/` runs
   `python -m compileall -q backend` and must pass; test fixtures are built from the real
   `init_db`, never a hand-written schema (Decisions 2026-07-19). Local Node is 26; the image
   builds with `node:20`. When they disagree, the image is truth.
-- **Deploy is manual, and git plays no part in it.** Production is the Synology NAS,
-  Container Manager, at the address in `CLAUDE.local.md`. The dev repo (this folder) and the
-  NAS docker volume are separate folders, joined by an SMB mount. No SSH, no hot reload.
-  A backend change forces a full image rebuild; say so.
-  1. Session end: the deploy manifest (below) is the copy instruction.
-  2. When Marie says **"deploy"**, and only then, Claude Code runs `scripts/lcheck.sh --apply`.
-     It rsyncs the manifest's scope from the repo to `$LIMINAL_VOLUME` (mirroring
-     `frontend/src/` and `backend/` with delete, copying the rest one way), then re-checks by
-     checksum and exits non-zero if anything still differs. `✓` = safe to rebuild. `✗` = do not
-     rebuild; report the named files. Without `--apply` it is a dry run; run it freely.
-  3. Marie rebuilds in Container Manager and tests on the phone.
-- **Deploy manifest, every session that changes code (Decisions 2026-07-19, amended 2026-07-20).**
-  It is a copy instruction, not an inventory: every modified, created or deleted file,
-  repo-relative, in exactly three buckets:
-  - **VOLUME-COPY** — `frontend/src/` and `backend/`. This is `lcheck`'s mirrored scope, the
-    only part it deletes in; say so.
-  - **ALSO-COPIED-BY-CONVENTION** — `CHANGELOG.md` and `ROADMAP.md`, always, plus
-    `Dockerfile` and the `frontend/` config files (`package.json`, `package-lock.json`,
-    `vite.config.js`, `tailwind.config.js`, `postcss.config.js`, `index.html`) when changed.
-    `lcheck` copies these one way and never deletes them.
-  - **REPO-ONLY** — `docs/` (including `DESIGN_LINT_REPORT.md`), `scripts/`, `.claude/`,
-    `.githooks/`, `CLAUDE.md`, `.cursorrules`, `.gitignore`, `.env.example`. Never copied.
-  - **Volume deletions** are a separate named section; state "none" explicitly.
-  A file missing from the manifest is a stale file in production.
-- **Phase 2 is decided (D-003–D-013, 2026-09-24): production moves to the Beelink, running
-  the registry image.** The repo half shipped in 0.88.0: `publish.yml` builds on a `v*` tag and
-  fails if the tag disagrees with `main.py`'s `version=` (D-010); `promote.yml` retags to
-  `:stable`; the compose is a run file (D-012); `main.py` snapshots `library.db` before
-  `init_db` (D-009) and sync refuses a library root without `.liminal-library` (D-008). The
-  cutover (D-011 steps 2–9) is pending, and until step 9 the Synology path above is still
-  production. This section is rewritten in the retirement commit, not before.
-- **Data.** One SQLite file, `library.db`, plus `covers/`, under the NAS data volume (host
-  path in `CLAUDE.local.md`). Never `liminal.db`. Back up `library.db` before any schema
+- **Deploy is a registry image, promoted by hand (D-003–D-014).** Production runs on TrueNAS
+  Apps (app `liminal`) from `ghcr.io/mariekyle/liminal-ebook-manager:stable`. Nothing is copied
+  to a host and nothing builds there. The address, host paths and the user line are in
+  `CLAUDE.local.md`. Every step below is Marie's; Claude Code gives the git blocks and runs no
+  workflow unless she says to.
+  1. **Push** the commit to `main`. That builds nothing.
+  2. **Tag** `vX.Y.Z`, matching `version=` in `backend/main.py`. Claude Code gives this as its
+     own one-line block after the commit block: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+  3. **Publish image** (GitHub Actions) runs on the tag: fails if the tag and `main.py`
+     disagree (D-010), builds `linux/amd64`, smoke-tests `/api/health`, pushes `:vX.Y.Z` and
+     `:sha-<short>`. Red means nothing was pushed.
+  4. **Promote to stable** (Actions, run by hand) with the version including the `v`
+     (`v0.88.1`, not `0.88.1`). Retags that exact image to `:stable` by digest and marks its
+     GitHub Release latest.
+  5. **TrueNAS Apps → `liminal` → Update.** Pulls `:stable` and restarts; `main.py` snapshots
+     `library.db` before `init_db` (D-009). Marie tests on the phone.
+  Rollback: promote the previous tag, then Update. Detail in `docs/AUTO_DEPLOY.md`.
+- **The container runs as a non-root user**, set with `user:` in the TrueNAS app YAML (D-014).
+  `/app/data`, `/books` and `/backups` are bind mounts; the app can write nowhere else that
+  persists. Host paths, the UID and the NFS export settings: see `CLAUDE.local.md`.
+- **Data.** One SQLite file, `library.db`, plus `covers/`, in the `/app/data` bind mount on the
+  Beelink's local disk, never on NFS (D-006; host path in `CLAUDE.local.md`). Never `liminal.db`. Back up `library.db` before any schema
   change, any migration, and any full library sync: the trigger is bulk writes, not schema
   alone. Say so in the report.
 
@@ -195,8 +184,8 @@ produce the commit block and the report. Do not commit or push.
 
 - All development is on the M1 MacBook at `~/dev/liminal/app`; there is no other working copy.
   Node 26 via Homebrew, so `npm run build` and the design lint run natively.
-- The Synology NAS builds and runs the image in Container Manager. Its address, the SMB mount,
-  `LIMINAL_VOLUME`, the book library path and the DB location are in `CLAUDE.local.md`.
-- The Beelink (TrueNAS SCALE, x86-64) runs todo and other services. Its `liminal_*` containers
-  are an unrelated Postgres/Redis prototype from 2025, not this repo; ignore them.
+- The Beelink (TrueNAS SCALE, x86-64) runs Liminal (TrueNAS Apps, served over HTTPS by
+  `tailscale serve`, D-013), todo and other services.
+- The Synology NAS holds the book library and the backups, exported to the Beelink over NFS.
+  It no longer runs Liminal. Addresses and paths for both boxes are in `CLAUDE.local.md`.
 - `~/dev/liminal/files/` (mockups, captures, screenshots) is outside the repo on purpose.

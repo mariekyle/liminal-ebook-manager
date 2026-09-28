@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.1] — 2026-09-28
+
+**Infrastructure and docs only. No product change. The Beelink cutover is complete (D-011 steps 2–9): production now runs on TrueNAS Apps from the `:stable` registry image, and the Synology deploy is retired.**
+
+### Changed
+- **Production moved to TrueNAS Apps** on the Beelink, pulling `ghcr.io/mariekyle/liminal-ebook-manager:stable`. Deploy is push → tag `vX.Y.Z` → Publish image → Promote to stable → Update in TrueNAS Apps. v0.88.0 promoted to `:stable` 2026-09-27.
+- **The container runs as a non-root user**, set with `user:` in the app YAML (D-014, supersedes D-007). The NFS export uses "No mapping", so the UID must be on the share's ACL; `/app/data`, `/books` and `/backups` are bind mounts.
+- `CLAUDE.md`: deploy section rewritten for the registry flow; the deploy-manifest rule and the Phase 2 interim section are gone; data and environment notes describe the Beelink. `docs/PIPELINE.md`: cutover marked done, the post-prompt copy/lcheck steps replaced.
+- Version `0.88.0` → `0.88.1`.
+
+### Added
+- `docs/AUTO_DEPLOY.md`: the Publish and Promote workflows, what `:stable` means, the app YAML with placeholders, and the rollback.
+
+### Removed
+- **Synology deploy.** The SMB copy + Container Manager path is retired (D-003). The old data folder stays on the NAS as the 30-day rollback copy (D-011).
+- **`scripts/lcheck.sh`.** It only copied source to the Synology volume. Grep: remaining mentions are in `CHANGELOG.md` and `docs/DECISIONS.md` history, which isn't rewritten.
+
+### Technical
+- Created: `docs/AUTO_DEPLOY.md`. Modified: `backend/main.py` (version only), `CLAUDE.md`, `docs/DECISIONS.md`, `docs/PIPELINE.md`, `ROADMAP.md`. Deleted: `scripts/lcheck.sh`.
+- Frozen files untouched. No schema change. Verified: `python -m compileall -q backend` clean.
+
 ## [0.88.0] — 2026-09-24
 
 **Infrastructure only — the Beelink migration, repo half (Decisions D-003–D-013, 2026-09-24). No product change. Production still runs on the Synology; the cutover is D-011 steps 2–9 and has its own session.**
