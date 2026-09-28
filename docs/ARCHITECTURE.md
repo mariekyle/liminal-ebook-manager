@@ -1,6 +1,6 @@
 # Liminal Architecture
 
-> Describes the system as of **v0.50.0**. History lives in git and `docs/CHANGELOG.md` — this doc is current-state only. Public repo: paths below are container-relative; deployment is described generically.
+> Describes the system as of **v0.88.2**. History lives in git and `docs/CHANGELOG.md` — this doc is current-state only. Public repo: paths below are container-relative; deployment is described generically.
 
 ## 1. System overview
 
@@ -85,7 +85,7 @@ liminal/
 ├── scripts/
 │   ├── design-lint.mjs          # design-system lint (see DESIGN_LINT_REPORT.md)
 │   └── pre-commit               # warn-and-allow hook source
-├── docs/                        # this file + design docs + audits
+├── docs/                        # this file, CHANGELOG.md, ROADMAP.md, design docs, audits
 ├── Dockerfile                   # two-stage: node build → python runtime
 └── docker-compose.yml
 ```

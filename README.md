@@ -19,7 +19,7 @@ The name comes from that transported mental state you enter when you're truly ab
 - **Custom covers**: upload images or extract embedded covers
 - **Category support**: Fiction, Non-Fiction, and FanFiction with dedicated metadata fields (fandoms, ships, tags, source URLs)
 - **Manual entry** for physical books, audiobooks, and web serials
-- **Duplicate finder**: review possible duplicate titles and merge them — merges move files, carry covers and notes, and drop nothing silently
+- **Duplicate finder**: review possible duplicate titles and merge them — merges are records-only: history, notes and collections move to the kept title, the merged-away title's files go to the trash folder, and nothing is deleted
 
 ### Data Safety
 - **Nothing is hard-deleted.** Every destructive file operation — removing a title, removing a format, replacing a file, merging duplicates — moves files to a trash folder instead of deleting them
@@ -141,6 +141,7 @@ liminal/
 │   └── vite.config.js
 ├── scripts/
 │   └── design-lint.mjs      # Design-system lint (tokens, copy rules, patterns)
+├── docs/                    # CHANGELOG, ROADMAP, ARCHITECTURE, design docs
 ├── docker-compose.yml
 └── Dockerfile
 ```
@@ -151,10 +152,10 @@ liminal/
 
 | Document | Description |
 |----------|-------------|
-| `ARCHITECTURE.md` | System design and data flow |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and data flow |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Priorities and future plans |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
-| `CODE_PATTERNS.md` | Reusable code solutions |
+| [docs/CODE_PATTERNS.md](docs/CODE_PATTERNS.md) | Reusable code solutions |
 | `docs/DESIGN_SYSTEM.md` | Tokens, components, and pattern law |
 | `docs/DESIGN_PHILOSOPHY.md` | Why the app feels the way it does |
 | `docs/VOICE_AND_TONE.md` | How the app speaks |
@@ -164,11 +165,11 @@ liminal/
 
 ## Current Status
 
-**Version:** 0.87.0 (July 2026), in active development.
+**Version:** 0.88.2 (September 2026), in active development.
 
 Core systems are stable: library browsing, metadata extraction, multi-format editions, reading tracking, wiki-style notes, wishlist management, smart collections, automated backups, and mobile-optimized navigation.
 
-Recent development focused on **data safety and honest failure handling**: trash-first file operations, overwrite-proof syncing, contained uploads, lossless wishlist conversion, and an interface where every failure speaks. Current focus is design-system consolidation, with metadata extraction for non-EPUB formats and external integrations (reading apps, Obsidian, metadata sources, local AI) on the roadmap.
+Recent development focused on **data safety and honest failure handling**: trash-first file operations, overwrite-proof syncing, contained uploads, lossless wishlist conversion, and an interface where every failure speaks. Current focus is the UI redesign mockup sprint, with external book search as the next implementation block, and metadata extraction for non-EPUB formats and external integrations (reading apps, Obsidian, metadata sources, local AI) on the roadmap.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full details.
 

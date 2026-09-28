@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** September 28, 2026 (v0.88.1 — infrastructure and docs only: cutover complete. Last product code v0.87.0, 2026-07-26)
+> **Last Updated:** September 28, 2026 (v0.88.2 — docs only; cutover complete in v0.88.1. Last product code v0.87.0, 2026-07-26)
 > **Infrastructure:** ✅ Deploy runs from a registry image with a manual promote gate (Decisions D-003–D-014). Repo half shipped in v0.88.0; cutover done in v0.88.1: D-011 steps 2–9 ✅, run-file compose (D-012) ✅, HTTPS origin and PWA install (D-013) ✅. Details stay out of this public file.
 > **Current Focus:** SEQUENCING RATIFIED 2026-09-03 (Decisions.md). The UI Mockup Sprint (Slices 1–6 captured; Slice 7 Stats mocked, capture pending; Slice 8 audit close remaining) closes first, then Slice 10 (Add flow) is mocked *with* the external-lookup states, then **10.3 External Book Search is the first implementation block** — highest-frequency daily pain, 2–3 sessions, no dependency on the redesign. UI implementation follows in blocks: Foundation (nav IA + Button bordered variant) first, then per-screen blocks ordered by a dedicated decision sprint after recon. Search Expansion is co-scheduled with the Search screen block (dependency, not a side item). 10.1b non-EPUB extraction (+ date_added rider) floats as an interleaved backend sprint. Slice 9 (DuplicatesPage restyle) trails everything. Last shipped code: v0.87.0 (DuplicatesPage polish, dismiss-pair mechanism v0.86.0, merge-confirm redesign v0.84.0–v0.85.0, SortDropdown restructure v0.83.0, adoption sprint v0.75.0–v0.82.0). Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
@@ -949,7 +949,7 @@ Items to address when time permits:
 
 ### Current Architecture
 
-**Deployment:** Docker container on a self-hosted NAS. FastAPI backend + React frontend served from the same container. SQLite database and book files on mounted volumes.
+**Deployment:** A registry image running on a self-hosted host through TrueNAS Apps. FastAPI backend + React frontend served from the same container. The SQLite database sits on the host's local disk; the book library and backups are on network storage.
 
 ### Future with Moon Reader Sync
 
@@ -979,15 +979,15 @@ Moon+ Reader → WebDAV (on the NAS) → books.sync file
 
 | Document | Purpose |
 |----------|---------|
-| `ARCHITECTURE.md` | System design, data flow (needs update after Phase 10) |
-| `CHANGELOG.md` | Version history |
-| `CODE_PATTERNS.md` | Battle-tested code solutions |
-| `FRONTEND_AUDIT_2026.md` | Claude Code audit — basis for 10.0C work groups |
-| `liminal-ux-audit.md` | NNG usability audit — 141 findings, basis for 10.0D fix sessions |
-| `UX_FIX_SESSIONS.md` | 10 prioritized fix sessions with finding IDs and scope |
+| `docs/ARCHITECTURE.md` | System design, data flow (needs update after Phase 10) |
+| `docs/CHANGELOG.md` | Version history |
+| `docs/CODE_PATTERNS.md` | Battle-tested code solutions |
+| `docs/FRONTEND_AUDIT_2026.md` | Claude Code audit — basis for 10.0C work groups (archived; not in repo) |
+| `docs/liminal-ux-audit.md` | NNG usability audit — 141 findings, basis for 10.0D fix sessions (archived; not in repo) |
+| `docs/UX_FIX_SESSIONS.md` | 10 prioritized fix sessions with finding IDs and scope (archived; not in repo) |
 
 ---
 
 *Roadmap is the single source of truth. Update this document as work progresses.*
 
-*Last updated: September 3, 2026 (v0.87.0)*
+*Last updated: September 28, 2026 (v0.88.2)*

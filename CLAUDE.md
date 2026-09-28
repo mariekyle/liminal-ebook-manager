@@ -100,8 +100,8 @@ Enable the hook once per clone: `git config core.hooksPath .githooks`.
   goes under `## [Unreleased]`. Never flatten or summarise older entries (a one-line erratum
   for a factual correction is allowed). Detail matches the work: full
   Added/Changed/Fixed/Removed + Technical (files created, modified, deleted) for features and
-  schema changes, with root causes for fixes; summary for small fixes; nothing for docs-only
-  commits.
+  schema changes, with root causes for fixes; summary for small fixes. Docs-only releases (a version bump) get a short
+  changelog entry and no tag; docs-only commits without a bump get neither.
 - `docs/ROADMAP.md` — the plan, one file, edited in place. Public on GitHub: no infrastructure
   detail, ever. Nothing is ever named "FINAL".
 - `docs/ARCHITECTURE.md`, `docs/CODE_PATTERNS.md` — current-state reference. Update when the
@@ -129,7 +129,7 @@ block (plus the tag block when the change ships) and the report. Do not commit o
   editor". Unsure of the format: omit the block.
 - Commit directly to `main`, one step per commit, conventional prefix (`feat:`, `fix:`,
   `docs:`, `chore:`).
-- **Version of record** is the `version=` string in `backend/main.py` (v0.88.2 as of
+- **Version of record** is the `version=` string in `backend/main.py` (v0.88.3 as of
   2026-09-28); bump it in the commit that ships the change and head the changelog entry with it.
 - **Verification rule, before the session-end sequence:** any change under `frontend/src/`
   runs `npm run build` in `frontend/` and must pass; any change under `backend/` runs
