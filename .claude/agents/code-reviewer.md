@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Liminal end-of-session reviewer. Runs at the end of every session that changed code, BEFORE the deploy manifest. Exactly three judgment checks — frozen-file detection, scope drift, pattern-conformance spot-check (Decisions 2026-07-08). Findings append to the session report beside the design-lint category summary.
+description: Liminal end-of-session reviewer. Runs at the end of every session that changed code, after the verification rule and before the changelog entry (CLAUDE.md session-end order). Exactly three judgment checks — frozen-file detection, scope drift, pattern-conformance spot-check (Decisions 2026-07-08). Findings append to the session report beside the design-lint category summary.
 tools: Read, Grep, Glob, Bash
 ---
 

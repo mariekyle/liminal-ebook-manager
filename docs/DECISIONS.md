@@ -23,16 +23,19 @@
 Decisions Claude Code made because the docs were silent. Marie ratifies by saying so in a
 session; Claude Code then moves the block below the line. Newest first.
 
-_Nothing pending. D-001 and D-002 ratified by Marie, 2026-09-24._
+### Compose `user:` placeholder ships commented out · 2026-09-28
+Why: A literal `user: "<uid>:<gid>"` is an invalid user, so `docker compose up` and the documented local-build run would fail. Commented, the tracked file still shows where the user goes and production is unaffected (the TrueNAS app YAML sets it).
+Rules out: An uncommented placeholder. A new required env var for the user (would add a variable to `.env.example`, out of scope).
 
 ---
 
 # Log
 
-## D-014 · 2026-09-28 · The container runs as a non-root user set by `user:` in the TrueNAS app YAML; the NFS export uses squash "No mapping", and that UID must be on the share's ACL
-Why: Recorded from Marie's 0.88.1 brief, as built at cutover. "Map root to admin" (D-007) can't work because the Synology `admin` account is disabled, and with "No mapping" an unmapped root client is denied. A UID the share already trusts gives writable `/books` and `/backups` with no squash workaround. `/app/data`, `/books` and `/backups` are bind mounts.
-Rules out: Running the container as root. Mapping root to any NAS account. Writing anywhere outside the three mounts.
-Supersedes: D-007
+## D-014 · 2026-09-28 · The container runs as a non-root user set by `user:` in the TrueNAS app YAML, one the storage already allows to write; `/app/data`, `/books` and `/backups` are bind mounts
+Why: Recorded from Marie's 0.88.1 brief, as built at cutover. D-007's root mapping can't work on this storage, and an unmapped root client is denied. A user the storage already trusts gives writable `/books` and `/backups` with no mapping workaround. Specifics in `CLAUDE.local.md`.
+Rules out: Running the container as root. Mapping root to a storage account. Writing anywhere outside the three mounts.
+Amends: D-007 — the root-mapping setting only; the share itself stands.
+Note (D-013): `tailscale serve` targets the host on the app's port, matching todo's rule. The PWA installs cleanly alongside todo; no manifest `id` needed unless a second app on the host claims the same scope.
 
 ## D-013 · 2026-09-24 · The Beelink serves Liminal over HTTPS via `tailscale serve`, the same as todo, and this is cutover precondition 8; the phone installs it as a PWA from that origin
 Why: PWA install and service-worker registration require a secure context. Today's origin is plain HTTP on the LAN, which is why Liminal has never been installable. `tailscale serve` terminates TLS with a tailnet cert, no port opened, no certificate to manage; the phone already runs Tailscale for todo. Repointing to the new origin resets localStorage (view mode, sort); accepted. Recon at prompt time: confirm `frontend/` ships a web manifest and a service worker; if not, adding them is in the cutover session's scope, not a later sprint.

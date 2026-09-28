@@ -147,17 +147,20 @@ block (plus the tag block when the change ships) and the report. Do not commit o
   3. **Publish image** (GitHub Actions) runs on the tag: fails if the tag and `main.py`
      disagree (D-010), builds `linux/amd64`, smoke-tests `/api/health`, pushes `:vX.Y.Z` and
      `:sha-<short>`. Red means nothing was pushed.
+     Test the `:vX.Y.Z` build before promoting: `:stable` is production.
   4. **Promote to stable** (Actions, run by hand) with the version including the `v`
      (`v0.88.1`, not `0.88.1`). Retags that exact image to `:stable` by digest and marks its
      GitHub Release latest.
   5. **TrueNAS Apps → `liminal` → Update.** Pulls `:stable` and restarts; `main.py` snapshots
      `library.db` before `init_db` (D-009). Marie tests on the phone.
   Rollback: promote the previous tag, then Update. Detail in `docs/AUTO_DEPLOY.md`.
+  Docs-only commits get no tag and no image; production stays on the last promoted version.
+  The host console is the TrueNAS web shell, commands run with `sudo`. Never suggest SSH.
 - **The container runs as a non-root user**, set with `user:` in the TrueNAS app YAML (D-014).
   `/app/data`, `/books` and `/backups` are bind mounts; the app can write nowhere else that
-  persists. Host paths, the UID and the NFS export settings: see `CLAUDE.local.md`.
+  persists. Host paths, the user and the storage settings: see `CLAUDE.local.md`.
 - **Data.** One SQLite file, `library.db`, plus `covers/`, in the `/app/data` bind mount on the
-  Beelink's local disk, never on NFS (D-006; host path in `CLAUDE.local.md`). Never `liminal.db`. Back up `library.db` before any schema
+  Beelink's local disk, never on a network filesystem (D-006; host path in `CLAUDE.local.md`). Never `liminal.db`. Back up `library.db` before any schema
   change, any migration, and any full library sync: the trigger is bulk writes, not schema
   alone. Say so in the report.
 
@@ -186,6 +189,6 @@ block (plus the tag block when the change ships) and the report. Do not commit o
   Node 26 via Homebrew, so `npm run build` and the design lint run natively.
 - The Beelink (TrueNAS SCALE, x86-64) runs Liminal (TrueNAS Apps, served over HTTPS by
   `tailscale serve`, D-013), todo and other services.
-- The Synology NAS holds the book library and the backups, exported to the Beelink over NFS.
+- The Synology NAS holds the book library and the backups, shared to the Beelink.
   It no longer runs Liminal. Addresses and paths for both boxes are in `CLAUDE.local.md`.
 - `~/dev/liminal/files/` (mockups, captures, screenshots) is outside the repo on purpose.

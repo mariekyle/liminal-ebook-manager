@@ -9,7 +9,7 @@ alwaysApply: true
 Self-hosted web app for managing an ebook library on a NAS.
 - **Backend**: Python FastAPI + SQLite (aiosqlite)
 - **Frontend**: React 18 + Tailwind CSS 3.4
-- **Deployment**: Docker on Synology NAS
+- **Deployment**: registry image (GHCR) on TrueNAS Apps, promoted by hand (docs/AUTO_DEPLOY.md)
 - **Database table**: `titles` (not `books` — renamed in Phase 5)
 - **API router**: `routers/titles.py` (endpoints still use `/api/books/` for backward compat)
  

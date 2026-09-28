@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Old-deploy references brought in line with the TrueNAS Apps deploy, docs-only (no tag, no image): `docker-compose.yml` gains a `user:` placeholder (production sets it in the app YAML, D-014); `docs/ARCHITECTURE.md` §8 and §10 rewritten; `.cursorrules` and `.claude/agents/code-reviewer.md` no longer describe the Synology or the deploy manifest. Public docs no longer carry storage-side detail.
+
 ## [0.88.1] — 2026-09-28
 
-**Infrastructure and docs only. No product change. The Beelink cutover is complete (D-011 steps 2–9): production now runs on TrueNAS Apps from the `:stable` registry image, and the Synology deploy is retired.**
+**Infrastructure and docs only. No product change. Docs-only release: no tag, no image; production stays on the last promoted version (v0.88.0). The Beelink cutover is complete (D-011 steps 2–9): production now runs on TrueNAS Apps from the `:stable` registry image, and the Synology deploy is retired.**
 
 ### Changed
 - **Production moved to TrueNAS Apps** on the Beelink, pulling `ghcr.io/mariekyle/liminal-ebook-manager:stable`. Deploy is push → tag `vX.Y.Z` → Publish image → Promote to stable → Update in TrueNAS Apps. v0.88.0 promoted to `:stable` 2026-09-27.
-- **The container runs as a non-root user**, set with `user:` in the app YAML (D-014, supersedes D-007). The NFS export uses "No mapping", so the UID must be on the share's ACL; `/app/data`, `/books` and `/backups` are bind mounts.
+- **The container runs as a non-root user**, set with `user:` in the app YAML (D-014, amends D-007), one the storage already allows to write; `/app/data`, `/books` and `/backups` are bind mounts.
 - `CLAUDE.md`: deploy section rewritten for the registry flow; the deploy-manifest rule and the Phase 2 interim section are gone; data and environment notes describe the Beelink. `docs/PIPELINE.md`: cutover marked done, the post-prompt copy/lcheck steps replaced.
 - Version `0.88.0` → `0.88.1`.
 

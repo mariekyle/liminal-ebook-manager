@@ -10,8 +10,10 @@ Decisions D-003–D-014.
 2. Tag the release and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must
    match `version=` in `backend/main.py`, the version of record (D-010).
 3. **Publish image** runs on the tag.
-4. When you're ready to go live, run **Promote to stable** by hand.
+4. Test the `:vX.Y.Z` build, then run **Promote to stable** by hand. `:stable` is production.
 5. On the host, update the app so it pulls `:stable` and restarts.
+
+Docs-only commits get no tag and no image; production stays on the last promoted version.
 
 ## Publish image (`.github/workflows/publish.yml`)
 
@@ -69,8 +71,7 @@ services:
 ```
 
 - The container runs as the non-root user in `user:`. That user must be able to write all
-  three mounts. If the books or backups live on an NFS share, the UID must be one the share
-  allows to write; with root squashing, root is not an option.
+  three mounts, so pick a user the storage already allows to write.
 - The books root must contain an empty `.liminal-library` file. Without it sync refuses and
   `/api/health` reports the library unreachable (D-008).
 - On every start the app snapshots `library.db` through the backup service before migrations

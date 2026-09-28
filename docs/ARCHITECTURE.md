@@ -229,14 +229,16 @@ POST /tbr/{id}/acquire        POST /upload/link-to-title     POST /books/{id}/ed
 
 ## 8. Deployment workflow
 
-Generic by design (public repo):
+Generic by design (public repo). Full detail in `docs/AUTO_DEPLOY.md`.
 
-1. Edit in the dev repo (Claude Code sessions; git is read-only for the agent — commits are manual).
-2. Copy changed files from the dev repo to the container volume. The two locations are separate folders — the end-of-session **deploy manifest** lists every changed file so nothing goes stale in production.
-3. Rebuild via Container Manager. The Dockerfile builds the frontend (node stage → static bundle at `/app/static`) and the Python runtime in one image. Backend or frontend-config changes require the rebuild; there is no hot reload.
-4. Doc updates (CHANGELOG, ROADMAP, this file) ship in the same commit as the code they describe.
+1. Edit in the dev repo (Claude Code sessions; git is read-only for the agent — commits and pushes are manual).
+2. Push to `main`, then tag `vX.Y.Z` to match `version=` in `backend/main.py`. A push without a tag builds nothing; docs-only commits get no tag and no image.
+3. **Publish image** (GitHub Actions) builds on the tag, smoke-tests `/api/health` and pushes `:vX.Y.Z` to GHCR.
+4. Test the `:vX.Y.Z` build, then run **Promote to stable**. `:stable` is production.
+5. On the host, TrueNAS Apps → the app → **Update** pulls `:stable` and restarts. Startup snapshots `library.db` before migrations run. Rollback: promote the previous tag, then Update.
+6. Doc updates (CHANGELOG, ROADMAP, this file) ship in the same commit as the code they describe.
 
-The SQLite database, covers, and backups live on the data volume and survive rebuilds. Back up the database file before any schema change — non-negotiable (CLAUDE.md).
+The container runs as a non-root user set in the app YAML. The SQLite database and covers (`/app/data`), the library (`/books`) and backups (`/backups`) are bind mounts and survive updates. Back up the database file before any schema change — non-negotiable (CLAUDE.md).
 
 ## 9. Frozen subsystems
 
@@ -270,7 +272,7 @@ Frozen ≠ untouchable: edits require an explicit flag, justification against th
 
 **Env vars** (read at startup): `BOOKS_PATH` (default `/books`, scan root) · `DATABASE_PATH` (default `/app/data/library.db`) · `BOOKS_DIR` (default `/books`, upload destination — a *separate* variable from BOOKS_PATH) · `COVERS_DIR` (collection covers only; the in-code default and the compose value differ — trust compose, which points inside `/app/data`).
 
-**Logs:** nothing writes log files. Everything (uvicorn access log, sync progress prints, backup scheduler messages) goes to the container's stdout/stderr — read it in the Container Manager log view. If the app seems dead: that log stream first, `GET /api/health` second.
+**Logs:** nothing writes log files. Everything (uvicorn access log, sync progress prints, backup scheduler messages) goes to the container's stdout/stderr — read it in the TrueNAS Apps log view for the app. The container runs as a non-root user, so a write outside the `/app/data`, `/books` and `/backups` bind mounts fails with a permission error. If the app seems dead: that log stream first, `GET /api/health` second.
 
 **DB inspection:** open a *copy* of `library.db` in DB Browser for SQLite (pull it from the data volume; don't edit the live file while the container runs). Sanity queries: `SELECT COUNT(*) FROM titles;` · cache vs sessions for one title: `SELECT status, rating, date_finished FROM titles WHERE id = ?;` against `SELECT * FROM reading_sessions WHERE title_id = ? ORDER BY session_number;`.
 

@@ -15,6 +15,9 @@ services:
     container_name: liminal
     restart: unless-stopped
     pull_policy: always
+    # Non-root (D-014). Production sets the real user in the TrueNAS app YAML. Uncomment and
+    # fill in a uid:gid that can write all three mounts; left as-is, the container runs as root.
+    # user: "<uid>:<gid>"
     ports:
       - "3000:3000"
     environment:
