@@ -1,6 +1,6 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** September 28, 2026 (v0.88.2 — docs only; cutover complete in v0.88.1. Last product code v0.87.0, 2026-07-26)
+> **Last Updated:** October 1, 2026 (v0.88.4 — download fix, D-016; cutover complete in v0.88.1)
 > **Infrastructure:** ✅ Deploy runs from a registry image with a manual promote gate (Decisions D-003–D-014). Repo half shipped in v0.88.0; cutover done in v0.88.1: D-011 steps 2–9 ✅, run-file compose (D-012) ✅, HTTPS origin and PWA install (D-013) ✅. Details stay out of this public file.
 > **Current Focus:** SEQUENCING RATIFIED 2026-09-03 (Decisions.md). The UI Mockup Sprint (Slices 1–6 captured; Slice 7 Stats mocked, capture pending; Slice 8 audit close remaining) closes first, then Slice 10 (Add flow) is mocked *with* the external-lookup states, then **10.3 External Book Search is the first implementation block** — highest-frequency daily pain, 2–3 sessions, no dependency on the redesign. UI implementation follows in blocks: Foundation (nav IA + Button bordered variant) first, then per-screen blocks ordered by a dedicated decision sprint after recon. Search Expansion is co-scheduled with the Search screen block (dependency, not a side item). 10.1b non-EPUB extraction (+ date_added rider) floats as an interleaved backend sprint. Slice 9 (DuplicatesPage restyle) trails everything. Last shipped code: v0.87.0 (DuplicatesPage polish, dismiss-pair mechanism v0.86.0, merge-confirm redesign v0.84.0–v0.85.0, SortDropdown restructure v0.83.0, adoption sprint v0.75.0–v0.82.0). Full history lives in CHANGELOG.md.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
@@ -335,22 +335,34 @@ A comprehensive NNG usability audit (8 screenshot groups + 10 interactive user f
 Finding and opening a book currently requires: Open Liminal → Note the book → Open NAS file browser → Navigate to books folder → Search → Download → Open in Moon Reader. This takes 1-2 minutes every time.
 
 **The Solution:**  
-One-tap download with share sheet integration.
+One-tap download. (Shipped with share sheet integration; the share path was removed in v0.88.4, D-016.)
 
 **Tasks:**
 - [x] 10.1.1 **Serve EPUB Files** — Backend endpoint to serve book files with proper MIME type — ✅ `GET /api/editions/{id}/download` in new `downloads.py` router; MIME by extension, attachment disposition, path-containment + stale-file guards
 - [x] 10.1.2 **Download Button** — ✅ shipped as a full-width "Download" button ABOVE ReadingStatusCard (not wired into the card — its dormant download affordance is reserved for the S15 knot sprint; Decisions 2026-07-09)
 - [x] 10.1.3 **Edition Selection** — If multiple editions exist, show picker (default to EPUB) — ✅ bottom-sheet picker (Treatment A); note: edition-create and merge both enforce one edition per format, so the picker triggers only if that invariant ever relaxes
-- [x] 10.1.4 **Web Share API** — Integrate share sheet for "Open in Moon Reader" on mobile — ✅ shares a typed `File` so reader apps appear as targets
-- [x] 10.1.5 **Fallback Download** — Direct download for browsers without Web Share API — ✅ temporary anchor click; attachment disposition handles the save
-- [x] 10.1.6 **Download Feedback** — Loading state, success/error toast — ✅ existing Toast pattern; share-sheet cancel fails quietly
+- [x] 10.1.4 **Web Share API** — Integrate share sheet for "Open in Moon Reader" on mobile — shipped v0.51.0, **removed v0.88.4 (D-016)**: the browser rejected the file share once production moved to HTTPS. Any future Share is a separate action with its own decision
+- [x] 10.1.5 **Direct Download** — ✅ the only path on every platform since v0.88.4: fetch, then a temporary anchor click on the fetched blob
+- [x] 10.1.6 **Download Feedback** — Loading state, success/error toast — ✅ existing Toast pattern; errors show the backend's detail or the approved fallback string, never a raw exception (v0.88.4)
 
 **Acceptance Criteria:**
-- Tap "Read" on any library book → file downloads or share sheet opens — *(label shipped as "Download" per Decisions 2026-07-09)*
-- Can select Moon Reader from share sheet and book opens
+- Tap "Read" on any library book → file downloads — *(label shipped as "Download" per Decisions 2026-07-09; share sheet removed v0.88.4, D-016)*
+- The downloaded file opens in Moon Reader from the device's downloads
 - Works on Android Chrome (primary use case)
 
 **Definition of Done:** The "find book → read book" loop is closed. No more NAS searching.
+
+### 10.1 follow-on / parked
+
+**Copy rec (share title info as text)** — Parked, needs a Decision Sprint before any prompts.
+One-tap action that copies a title's details as text for recommending it: title, author, and source link (for fanfiction, the AO3 work URL). Clipboard first; share sheet with text as a possible second path. This is separate from the removed file-share branch (see D-016).
+
+Open questions:
+1. Does Liminal reliably store the source URL for fanfiction? What share of fanfiction titles have one today?
+2. What goes in the copied block: title, author, link only, or also ship, word count, rating, a personal note?
+3. Format: plain text, Markdown link, or a setting?
+4. Scope: single title in v1, or multi-select from a collection or list?
+5. Non-fanfiction titles: title and author only, or some link?
 
 ---
 

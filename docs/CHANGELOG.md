@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.88.4] — 2026-10-01
+
+**Bug fix: Download works again on the phone.**
+
+### Fixed
+- **Download on Android showed a red "Permission denied" toast and saved nothing.** Root cause: `handleDownloadEdition` preferred the Web Share API wherever `navigator.canShare` existed. Web Share is only exposed on HTTPS, so the branch had never run on the phone until production moved to HTTPS; from then on the browser rejected `navigator.share({ files })` for the fetched file (most likely the file type; not confirmed on a device) and the catch surfaced the browser's raw `err.message`. The backend was never at fault (it returned 200).
+- Download now takes one path on every platform: fetch, blob, temporary anchor click (D-016, supersedes the 2026-07-09 Web Share decision).
+- Download error toasts no longer surface raw exceptions. The non-200 error carries the backend detail as `userMessage`; the catch shows that or "Couldn't download the file. Try again?".
+- The object URL is revoked 10 seconds after the anchor click instead of in the same tick, which could cancel the save on Android before the browser had read the blob.
+
+### Removed
+- The Web Share branch (`navigator.canShare` / `navigator.share`), its "Shared" toast, and the `AbortError` (share sheet closed) case, dead once the branch was gone. Grep: `navigator.share|canShare|'Shared'|AbortError` over `frontend/src` returns no matches.
+
+### Technical
+- Modified: `frontend/src/components/BookDetail.jsx` (`handleDownloadEdition` only), `backend/main.py` (version `0.88.3` → `0.88.4`), `docs/DECISIONS.md` (D-016), `docs/ROADMAP.md` (10.1 brought in line), `docs/OPEN_QUESTIONS.md` (note on the "downloaded securely" item).
+- Not yet tested on the phone: the blob download inside the installed PWA over HTTPS is checked on the `:v0.88.4` build before promoting.
+
 ## [0.88.3] — 2026-09-28
 
 **Docs only. No tag, no image; production stays on v0.88.0.**

@@ -1332,19 +1332,12 @@ function BookDetail() {
         } catch {
           // non-JSON error body — keep the generic message
         }
-        throw new Error(message)
+        const error = new Error(message)
+        error.userMessage = message
+        throw error
       }
       const blob = await response.blob()
-      if (navigator.canShare) {
-        const file = new File([blob], filename, { type: blob.type })
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] })
-          showToast('Shared', 'success')
-          maybeOfferStartReading()
-          return
-        }
-      }
-      // No file sharing — save the fetched blob
+      // Save the fetched blob — the same path on every platform (D-016)
       const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = objectUrl
@@ -1352,16 +1345,14 @@ function BookDetail() {
       document.body.appendChild(link)
       link.click()
       link.remove()
-      URL.revokeObjectURL(objectUrl)
+      // Revoke late — revoking in the same tick as the click can cancel
+      // the download on Android before the browser has read the blob
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000)
       showToast('Download started', 'success')
       maybeOfferStartReading()
     } catch (err) {
-      if (err.name === 'AbortError') {
-        // User closed the share sheet — clear the loading toast, no error
-        setToast(null)
-      } else {
-        showToast(err.message || "Couldn't download the file. Try again?", 'error')
-      }
+      // Only the backend's detail reaches the toast — never a raw exception
+      showToast(err.userMessage || "Couldn't download the file. Try again?", 'error')
     } finally {
       setDownloading(false)
     }
