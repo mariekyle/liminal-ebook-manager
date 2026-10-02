@@ -30,6 +30,11 @@
 
 > Grouped, deduped, prioritized. Work top-down within each tier.
 
+## 2026-10-02 — from the v0.88.4 download fix session
+- [ ] 🟠 **Frontend re-fetches in a loop.** Production logs from 2026-10-01 show roughly 400 identical `GET /api/books?search=` requests for two titles in three minutes, and about 30 back-to-back `GET /api/settings` calls on one page load. Needs a read-only investigation before any fix.
+- [ ] ⚪ **Copy rec: fanfiction source-URL count.** Open question 1 of the parked Copy rec item (ROADMAP, 10.1 follow-on): how many FanFiction titles have a `source_url` and how many do not. Not run yet; needs a copy of `library.db` on the dev machine, never production.
+- [ ] ⚪ **Stale version mentions.** `README.md` and `docs/ARCHITECTURE.md` still say 0.88.2; the version of record is 0.88.4.
+- [ ] ⚪ **Workflow runner warnings.** The Docker actions in the promote workflow target the deprecated Node 20 runtime, and `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19. Check the publish workflow for the same.
 
 ## 2026-08-23 — from Home-Purpose Decision Sprint
 
