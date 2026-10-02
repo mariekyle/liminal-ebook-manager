@@ -116,6 +116,9 @@ Session end (a session that changed code), in this order: the verification rule 
 changelog entry, decisions, Open Questions triage, Pipeline update; then produce the commit
 block (plus the tag block when the change ships) and the report. Do not commit or push.
 
+`/start`, `/wrap` and `/ship` live in `.claude/commands/` (D-017): session start, session end,
+and recording a deploy. They follow this file and never override it.
+
 ## Build, version, deploy
 
 - **Git.** Claude Code runs `git status`, `git diff`, `git log` and the like; every git write
@@ -129,8 +132,8 @@ block (plus the tag block when the change ships) and the report. Do not commit o
   editor". Unsure of the format: omit the block.
 - Commit directly to `main`, one step per commit, conventional prefix (`feat:`, `fix:`,
   `docs:`, `chore:`).
-- **Version of record** is the `version=` string in `backend/main.py` (v0.88.3 as of
-  2026-09-28); bump it in the commit that ships the change and head the changelog entry with it.
+- **Version of record** is the `version=` string in `backend/main.py`; bump it in
+  the commit that ships the change and head the changelog entry with it.
 - **Verification rule, before the session-end sequence:** any change under `frontend/src/`
   runs `npm run build` in `frontend/` and must pass; any change under `backend/` runs
   `python -m compileall -q backend` and must pass; test fixtures are built from the real

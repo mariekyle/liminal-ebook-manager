@@ -29,6 +29,10 @@ _Nothing pending. The compose `user:` placeholder was ratified by Marie 2026-09-
 
 # Log
 
+## D-017 · 2026-10-02 · Liminal has its own `/start`, `/wrap` and `/ship` commands in `.claude/commands/`; `/ship` records a deploy by editing the shipped changelog entry in place, with no version bump
+Why: The todo repo's commands assume git writes and an Unreleased-split changelog, neither of which applies here. Ratified by Marie 2026-10-02.
+Rules out: Reusing todo's commands in this repo. A command that overrides `CLAUDE.md`, runs a workflow, or commits. A new changelog entry or a version bump just to record a deploy.
+
 ## D-016 · 2026-10-01 · Download saves the file the same way on every platform (fetch, then a blob anchor download); the Web Share path is removed, and any future Share is a separate, explicit action with its own fallback
 Why: Web Share only exists on HTTPS. While the phone reached Liminal over plain HTTP the share branch never ran there, so the anchor download was the working path all along. Once production moved to HTTPS the branch went live on Android and the browser rejected the file share, so Download failed on the phone with a raw "Permission denied" toast (most likely because ebook file types are not ones the browser will share; not confirmed on a device). The anchor download is the path already proven on desktop.
 Rules out: Download choosing a share sheet by capability detection. A raw exception message in a download toast: only the backend's detail or the approved "Couldn't download the file. Try again?" shows. Adding a Share button without its own decision sprint.
