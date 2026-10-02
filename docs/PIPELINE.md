@@ -28,7 +28,7 @@
 
 ## Current Queue: sequencing ratified 2026-09-03
 
-> v0.88.1 (2026-09-28) closes the Beelink cutover: production is TrueNAS Apps on `:stable` (v0.88.0 promoted 2026-09-27); the Synology deploy is retired. v0.87.0 (2026-07-26) is the last product code. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
+> v0.88.1 (2026-09-28) closes the Beelink cutover: production is TrueNAS Apps on `:stable` (v0.88.0 promoted 2026-09-27); the Synology deploy is retired. v0.88.4 (download fix, D-016) is the last product code, promoted to `:stable` and live since 2026-10-02. Order below is law — Decisions.md SEQ1–SEQ10, with the cutover (D-003–D-013) ahead of it.
 
 | #   | Item                                                                                   | Status                         |
 | --- | -------------------------------------------------------------------------------------- | ------------------------------ |

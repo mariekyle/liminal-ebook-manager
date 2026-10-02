@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical
 - Modified: `frontend/src/components/BookDetail.jsx` (`handleDownloadEdition` only), `backend/main.py` (version `0.88.3` → `0.88.4`), `docs/DECISIONS.md` (D-016), `docs/ROADMAP.md` (10.1 brought in line), `docs/OPEN_QUESTIONS.md` (note on the "downloaded securely" item).
-- Not yet tested on the phone: the blob download inside the installed PWA over HTTPS is checked on the `:v0.88.4` build before promoting.
+- Deployed 2026-10-02 from `5e8d205`: Publish `v0.88.4` green, promoted to `:stable`, updated in TrueNAS Apps. Marie tested on the phone in the installed PWA: Download saves the file, and the old "File can't be downloaded securely" prompt did not appear (its Open Questions item is deleted as resolved). The phone test ran after promoting, because only production serves the HTTPS origin the bug needs.
 
 ## [0.88.3] — 2026-09-28
 
