@@ -16,6 +16,7 @@ Then, for every session:
    - docs/OPEN_QUESTIONS.md: triage; delete resolved items.
    - docs/PIPELINE.md: only where a queue item moved.
    - docs/ROADMAP.md, docs/ARCHITECTURE.md, docs/CODE_PATTERNS.md: only where the state they describe changed.
-5. Do not commit or push. Output one commit block in the fixed format. If the change ships, output the tag block after it; otherwise say "No tag."
+5. Invoke the project-board skill: set the Liminal card's status line to "X.Y.Z committed, awaiting tag" if the change ships, or "docs only, no build" if it does not. If the board update fails for any reason, end the report with "BOARD NOT UPDATED: <reason>".
+6. Do not commit or push. Output one commit block in the fixed format. If the change ships, output the tag block after it; otherwise say "No tag."
 
 Report what changed and what was verified unchanged. End with one line per item pending ratification and the words "Not live until tagged, published, promoted and updated."

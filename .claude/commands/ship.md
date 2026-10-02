@@ -1,6 +1,5 @@
 ---
 description: Record a deploy: write the deploy record for the promoted version, hand Marie the docs commit block
-allowed-tools: Bash(gh run list:*), Bash(gh run view:*), Bash(git status:*), Bash(git log:*), Read, Edit
 ---
 
 Record a deploy. Every deploy step is Marie's: run no workflow and change no deployment.
@@ -15,7 +14,7 @@ Record a deploy. Every deploy step is Marie's: run no workflow and change no dep
    - In that version's entry in docs/CHANGELOG.md, replace any not-yet-tested line with a one-line deploy record: date promoted, updated, phone test passed. Edit that line only; no version bump, no new entry.
    - Update docs/PIPELINE.md wherever it names the live version.
    - Delete items in docs/OPEN_QUESTIONS.md only if Marie names them as resolved by the phone test.
-   - If the project-board skill is loaded, invoke it: set the Liminal card's status line to the version and "live on stable". If it is not loaded, say so and skip it.
+   - Invoke the project-board skill: set the Liminal card's status line to the version and "live on stable". If the board update fails for any reason, end the report with "BOARD NOT UPDATED: <reason>".
 
 4. Do not commit or push. Output one docs commit block in the fixed format, subject "docs: record X.Y.Z deployed and phone-tested <date>". No tag.
 
