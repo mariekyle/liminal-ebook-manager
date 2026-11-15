@@ -29,6 +29,24 @@ _Nothing pending. The compose `user:` placeholder was ratified by Marie 2026-09-
 
 # Log
 
+#### ==2026-11-12 — Liminal frozen; BookOrbit is the server; v2 is a client==
+**Context.** BookOrbit v3.5 audit (2026-10-29) and full migration (2026-11-10/11). Audit findings: "BookOrbit Audit Protocol" Claude doc. Migration scripts and outputs in `_liminal-backups` and ~/Downloads: `liminal_to_obsidian.py`, `liminal_to_bookorbit.py`, `liminal_collections_to_bookorbit.py`, `move_fanfic.sh`.
+
+**Decisions.**
+- D-020 BookOrbit is the system of record for library, files, scanning, metadata providers, reading state, collections, audiobooks, comics. Liminal v1 is frozen as of 2026-11-12; container stopped, not deleted. No further v1 work.
+- D-021 Liminal v2 is a React PWA over BookOrbit's `/api/v1` (NestJS; Swagger at `/api/docs` when `SWAGGER_ENABLED=true`, otherwise off). Name, Warm A design system, tokens, mockups, voice doc carry forward. FastAPI/SQLite backend retired.
+- D-022 v2 scope, priority order: browse/search/filter · upload to Book Dock · reviews with a hub · estimated reading time · generated covers (own implementation, BookOrbit's as inspiration — see D-027) · TBR-not-owned / wishlist model · in-app EPUB reader · in-app audio player. Reader and player may embed BookOrbit's routes first.
+- D-023 Notes live in Obsidian. 680 Liminal notes exported 2026-11-10, merged with 33 Obsidian-only notes, title-only filenames with aliases. BookOrbit holds highlights only. No notes are written in BookOrbit reviews.
+- D-024 Fanfic is its own BookOrbit library (`Reading/FanFiction`, 1,294 books) plus a `fanfic` tag. Books library is published fiction + non-fiction (978). Genres stay as imported; Tags are the user layer; Smart Scopes replace Liminal collections that were status-derived.
+- D-025 Migrated 2026-11-11: 623 statuses + dates, 527 ratings, 270 custom covers, 67 collections / 1,350 memberships. Not migrated: rereads (30 titles, `rereads.csv`, manual entry), 23 fics missing from disk (`Missing from BookOrbit.md`, AO3 down until ~Dec), 14 audiobook statuses (manual), 97-title wishlist (`wishlist.md`, pending D-022 model). ABS listening history not migrated.
+- D-026 Moon+ Reader is OPDS-only in BookOrbit; no sync path. In-app reading is the long-term target.
+- D-027 Liminal stays MIT. BookOrbit (AGPL-3.0) code is not copied; its cover engine is reimplemented from the idea and credited in README as inspiration.
+- D-028 Folder convention is decided in the standardization session using BookOrbit's rename tool, not by hand. Candidate: `Author/Title (Year)/` for fic (AO3 downloader native, ~85% of fic already), `Author - Title/` for published. Books library currently has write-back + rename enabled; FanFiction does not. Not changed until that session.
+
+**Open.** TBR/wishlist model for v2 · HTTPS via Tailscale Serve for PWA install · upstream issues to file (case-sensitive genre filter, Android nav-stack bug, audio speed controls under nav bar) · rereads manual entry.
+
+**Next.** Folder standardization session → v2 Decision Sprint (API surface from Swagger, screen inventory vs mockups, reader strategy).
+
 ## D-017 · 2026-10-02 · Liminal has its own `/start`, `/wrap` and `/ship` commands in `.claude/commands/`; `/ship` records a deploy by editing the shipped changelog entry in place, with no version bump
 Why: The todo repo's commands assume git writes and an Unreleased-split changelog, neither of which applies here. Ratified by Marie 2026-10-02.
 Rules out: Reusing todo's commands in this repo. A command that overrides `CLAUDE.md`, runs a workflow, or commits. A new changelog entry or a version bump just to record a deploy.

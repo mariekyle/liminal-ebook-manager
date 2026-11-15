@@ -16,7 +16,7 @@
 > them at session start: each one gets a priority and a home in BACKLOG (or becomes a decision
 > or a Pipeline queue item), then leaves the Inbox. Nothing else writes here.
 
-- 
+- recently received a physical book as a gift and when I went to add it to the library, there was no option to enter word count. For physical books, this should be an option. I had to look up the word count at bookroo and do the calculation manually in a calculator. I have my wpm already set in the app, I'd like to add word count look up as part of whatever book metadata lookup scheme we will be implementing in future. Making the word count field available for physical book though should be super easy to take care of now with an update.
 
 ---
 

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.90.1] — 2026-11-14
+
+### Added
+- **Moon+ Reader history import** Reads a Moon+ `.mrpro` backup, infers distinct reads from per-day position data (a new read starts when position drops; 14-day gap fallback where no position is logged), and creates one BookOrbit session per reading day with real minutes and progress. Imported 1,581 sessions across 546 books (~2,200 hours, 2024–2026). `--replace` swaps hand-logged same-day sessions for Moon+ ones; `--map` resolves files Moon+ truncated or renamed.
+- **Migration inventory in ROADMAP.** New "Where We Left Off" checklist at the top of ROADMAP.md, Phase 11 (v2 scope) added, Phase 10 marked frozen. Nothing below Phase 11 was changed.
+
+### Changed
+- **Post-migration state, 2026-11-11 to 11-14.** Fanfiction moved to its own BookOrbit library (`Reading/FanFiction`, 1,294 books; Books 978). 67 Liminal collections recreated with 1,350 memberships; To Be Read collection set to Want to Read status. Six duplicate records in Books removed. Liminal collections that were status-derived are to be replaced by Smart Scopes.
+- **Not migrated, by decision:** rereads from Liminal (superseded by Moon+ import); 23 titles missing from disk (`Missing from BookOrbit.md`); 14 audiobook statuses (manual); 97-title wishlist (`wishlist.md`, pending the v2 TBR model).
+
+## [0.90.0] — 2026-11-12
+
+### Changed
+- **Liminal v1 frozen.** Library management has moved to a BookOrbit server; this codebase is no longer developed. Reading state, ratings, covers, and collections were migrated 2026-11-11; notes were exported to Obsidian 2026-11-10. v2 will be a client over the BookOrbit API and continues in this repository. See docs/DECISIONS.md 2026-11-12.
+- Migration tooling kept outside the repo (private). (export to Markdown, state and collection migration, fanfic folder move). Read-only against `library.db`; dry-run by default.
+
+
+
 ## [0.88.4] — 2026-10-01
 
 **Bug fix: Download works again on the phone.**
