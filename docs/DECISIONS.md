@@ -29,6 +29,47 @@ _Nothing pending. The compose `user:` placeholder was ratified by Marie 2026-09-
 
 # Log
 
+> 2026-11-18 audit of D-020 to D-028. D-027 was re-read and stands unchanged. The other eight are superseded by D-029 to D-036 below.
+## D-036 · 2026-11-18 · Library folders are flat in all four libraries, one folder per book: "Author - Title", or "Author - [Series NN] Title" in a series, authors comma-separated, no year, no nesting; the files inside every folder keep the names they have; applied with BookOrbit's Bulk Rename once the pattern passes its preview checks
+Why: The 2026-10-30 export during the AO3 outage showed nested folders are miserable outside an app, and files must be findable without one. The folder name carries author, series and title, which is enough to find a book by hand. The nested layout on disk was never chosen; it is BookOrbit's shipped default. Renaming the files as well was considered and dropped: audiobook folders hold the parts of one book, fic folders can hold two files of one format, and both would collide under a single name. One rule for all four libraries is also one pattern to maintain.
+Rules out: The nested Author/Title (Year) candidate and its AO3-downloader reasoning. Renaming by hand. Renaming the files inside a book's folder. Running Bulk Rename before the pattern checks pass (series with no index, more than three authors, an author literally named Anonymous, two books resolving to one name, a decimal series index, whether untracked sibling files move with their folder). Running it before the unexplained missing and updated counts are explained, or while v1 has the library mounted. Ingesting new fic before the pattern is set.
+Supersedes: D-028
+
+## D-035 · 2026-11-18 · Moon+ stays the reader until v2's reader has tap-to-turn and customizable themes; until then reading history reaches BookOrbit by rerunning the Moon+ import on the first of each month
+Why: Moon+ is kept for its interface only. BookOrbit serves it books over OPDS and gets nothing back, so stats go stale between imports. The import script adds only new sessions, so rerunning it is safe.
+Rules out: Building live Moon+ sync. Treating BookOrbit's time-of-day charts as real while imported sessions are all stamped at noon.
+Supersedes: D-026
+
+## D-034 · 2026-11-18 · The 2026-11-11 migration carried statuses, dates, ratings, custom covers and collection memberships; everything else stays in v1 until v2 restores it
+Why: D-025's not-migrated list was incomplete. Also not carried: notes and the links between books; word counts; fandom, ship, pairing, rating and warnings as separate fields (BookOrbit holds them only as undifferentiated genres); collection covers and descriptions. Already listed and still open: the fics missing from disk, audiobook statuses, the wishlist, and Audiobookshelf listening history. Rereads are no longer open; the 2026-11-14 Moon+ import supplied them.
+Rules out: Treating the migration as complete. Stopping v1 while it is the only structured copy of any item above.
+Supersedes: D-025 (the not-migrated list; the migrated counts stand as a record of that day)
+
+## D-033 · 2026-11-18 · Fanfic is its own BookOrbit library; the fanfic tag is retired; fandom, ship, pairing, rating and warnings exist in BookOrbit only as undifferentiated genres, and the structured version lives in v1 until v2 restores it
+Why: The library split is what allows per-library naming and file settings. The tag was a stopgap from before the split and now repeats it. BookOrbit tags are otherwise unused, so they are not a classification layer. Smart Scopes still replace the status-derived collections.
+Rules out: Relying on the fanfic tag or its Smart Scope for anything. Treating BookOrbit genres or tags as the structured home for fanfic fields. Stopping v1 before those fields are carried into v2.
+Supersedes: D-024
+
+## D-032 · 2026-11-18 · Notes are captured in Liminal: every book has a templated note waiting, with a Recap section and links to other books; Obsidian receives them one-way for further writing; until v2 has this, notes are captured in v1
+Why: In v1 roughly 95% of finished books got a note. In the week after capture moved to Obsidian, one did, and reading stopped. The habit depended on the note already existing, the template, and capture living beside reading progress. Obsidian is where notes get expanded, not where they start.
+Rules out: Any design where a note must be created by hand or started in a second app. Two-way sync between Liminal and Obsidian. BookOrbit's review field, for anything. Stopping v1 before v2 can capture notes and the final notes export has run.
+Supersedes: D-023 (capture location and the review-field line; the 2026-11-10 export stands, with filenames as "Title", or "Title (Author)" where titles collide)
+
+## D-031 · 2026-11-18 · v2 builds what BookOrbit lacks on the phone, in this order: browse/search/filter with reading time across all four libraries · note capture with book links · cover generator · not-owned wishlist · add flow · reader · audio player · stats
+Why: Each item was tested against daily use. BookOrbit's mobile web UI has no fandom, ship or read-time filters, buries search and resets filters. Notes stopped when capture left the app (D-032). Using Liminal for books and BookOrbit for audio would split one habit across two apps. Stats reads BookOrbit's session data and stores no copy; its content gets its own session, starting from the Slice 7 mockup.
+Rules out: "Upload to Book Dock" as the add flow. Embedding BookOrbit's reader. A reader without tap-to-turn and customizable themes. Porting BookOrbit's cover code or calculations (D-027). Keeping a Liminal copy of any field BookOrbit holds (D-030).
+Supersedes: D-022
+
+## D-030 · 2026-11-18 · Liminal v2 is a React PWA over BookOrbit's API plus a small store of its own, holding only what BookOrbit has no field for; the API recon decides what goes in the store, not whether it exists
+Why: BookOrbit has no word count, note capture, not-owned wishlist, structured fanfic fields, or collection covers and descriptions. Forking BookOrbit to add them would mean carrying every upstream release by hand under AGPL. A store beside it keeps upstream updates free. Name, Warm A tokens and the voice doc carry forward; mockups carry forward as design language and are re-checked per screen against the API.
+Rules out: Forking BookOrbit. Storing in Liminal anything BookOrbit already holds (one home per fact; two copies is how 2026-10-29 happened). Building screens before the API recon. Calling HTTPS optional: the PWA cannot reach the API without it.
+Supersedes: D-021
+
+## D-029 · 2026-11-18 · BookOrbit is the system of record and the only app that moves, renames or deletes library files; Liminal v1 keeps running without the library mounted, as the reference for word count, reading time and fanfic fields and as the place notes are captured, until v2 replaces each
+Why: BookOrbit has none of those. On 2026-10-29 two apps reconciling one library cost 1,269 orphaned titles and 1,271 duplicates; one writer, ever. v1's figures are database values (confirmed 2026-11-18: word count still shows on a title whose files v1 can no longer find), so paths going stale after a rename does not affect them.
+Rules out: Sync, Full Library Sync, uploads, Delete Title, Merge, Remove Format, Replace file, Add files and Empty trash in v1. Running v1 with the library mounted. Treating v1 as current for anything added after 2026-11-11. Stopping v1 before v2 ships reading time and note capture, the v1-only data in D-034 is carried over, and the final notes export has run.
+Supersedes: D-020 ("container stopped"; system of record and the freeze stand)
+
 #### ==2026-11-12 — Liminal frozen; BookOrbit is the server; v2 is a client==
 **Context.** BookOrbit v3.5 audit (2026-10-29) and full migration (2026-11-10/11). Audit findings: "BookOrbit Audit Protocol" Claude doc. Migration scripts and outputs in `_liminal-backups` and ~/Downloads: `liminal_to_obsidian.py`, `liminal_to_bookorbit.py`, `liminal_collections_to_bookorbit.py`, `move_fanfic.sh`.
 

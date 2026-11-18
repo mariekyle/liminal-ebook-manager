@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.90.2] — 2026-11-18
+
+**Docs only. No tag, no image; production stays on v0.88.4.**
+
+- **Decision audit of D-020 to D-028.** Each was re-read against daily use. Eight are superseded by D-029 to D-036; D-027 stands. v1 keeps running as a reference and for note capture, without the library mounted (D-029). v2 gets a small store of its own and is not a fork (D-030). v2's scope is reordered around what BookOrbit lacks on the phone (D-031). Note capture returns to Liminal (D-032). Folders are flat in all four libraries (D-036).
+- **Corrects [0.90.1]'s "Not migrated" list.** Also not carried into BookOrbit: notes and the links between books, word counts, structured fanfic fields, and collection covers and descriptions (D-034).
+- `docs/ROADMAP.md`: header, "Where We Left Off" and Phase 11 rewritten to match. `docs/OPEN_QUESTIONS.md`: the 2026-10-29 recovery proposals have owners assigned; three closed and removed.
+- `recovery/` added to `.gitignore`.
+- Version `0.90.1` → `0.90.2`.
 
 ## [0.90.1] — 2026-11-14
 

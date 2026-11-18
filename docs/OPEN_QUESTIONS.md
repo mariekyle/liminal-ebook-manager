@@ -12,9 +12,7 @@
 
 # INBOX
 
-> Marie drops raw items here in any format, from the phone or mid-session. Claude Code triages
-> them at session start: each one gets a priority and a home in BACKLOG (or becomes a decision
-> or a Pipeline queue item), then leaves the Inbox. Nothing else writes here.
+> Marie drops raw items here in any format, from the phone or mid-session. Claude Code triages them at session start: each one gets a priority and a home in BACKLOG (or becomes a decision or a Pipeline queue item), then leaves the Inbox. Nothing else writes here.
 
 - recently received a physical book as a gift and when I went to add it to the library, there was no option to enter word count. For physical books, this should be an option. I had to look up the word count at bookroo and do the calculation manually in a calculator. I have my wpm already set in the app, I'd like to add word count look up as part of whatever book metadata lookup scheme we will be implementing in future. Making the word count field available for physical book though should be super easy to take care of now with an update.
 
@@ -30,7 +28,22 @@
 
 > Grouped, deduped, prioritized. Work top-down within each tier.
 
+## 2026-11-18 — from the decision audit (D-029 to D-036)
+
+### Proposals from the 2026-10-29 recovery — owners assigned
+Logged 2026-11-15, owners assigned 2026-11-18. Three were closed and removed: sync circuit breaker, move-aware sync and orphan visibility all belong to BookOrbit, the only app that scans. v1 never syncs again (D-029), v2 does not scan, and BookOrbit already shows missing counts. Nothing to build.
+- [ ] **Normalize library layout.** Owner: BookOrbit, via Bulk Rename (D-036). Closes when two Folder Standardization checks pass: what happens when two books resolve to one folder name, and whether untracked sibling files move with their folder.
+- [ ] **Upload importer unescapes HTML entities** (`&amp;` in titles). Owner: Liminal v2, add flow (D-031 item 5). Check at that sprint whether BookOrbit's intake already does it.
+- [ ] **Edit form: emptied fields must clear, not no-op** (series/number; check source URL). Owner: Liminal v2, any edit screen. Depends on the API recon: does sending an empty field clear it?
+
+### New from the audit
+- [ ] 🟠 **Unexplained counts in BookOrbit.** Books "6 missing"; FanFiction "Watcher · 6,919 updated" with watching off; Library Integrity 2,643 of 2,730 present. Explain before any rename.
+- [ ] 🟠 **Does a second run of `liminal_to_obsidian.py` overwrite notes edited in Obsidian?** Must be known before the final export (ROADMAP, "Before v1 is stopped").
+- [ ] ⚪ **Moon+ import stamps every session at noon.** Is the time of day missing from the Moon+ export, or dropped by the script?
+- [ ] ⚪ **AO3 comes back before the add flow ships.** The add flow is fifth in D-031; if saving fic becomes painful again before then, revisit the order.
+
 ## 2026-10-02 — from the v0.88.4 download fix session
+
 - [ ] 🟠 **Frontend re-fetches in a loop.** Production logs from 2026-10-01 show roughly 400 identical `GET /api/books?search=` requests for two titles in three minutes, and about 30 back-to-back `GET /api/settings` calls on one page load. Needs a read-only investigation before any fix.
 - [ ] ⚪ **Copy rec: fanfiction source-URL count.** Open question 1 of the parked Copy rec item (ROADMAP, 10.1 follow-on): how many FanFiction titles have a `source_url` and how many do not. Not run yet; needs a copy of `library.db` on the dev machine, never production.
 - [ ] ⚪ **Stale version mentions.** `README.md` and `docs/ARCHITECTURE.md` still say 0.88.2; the version of record is 0.88.4.
@@ -40,34 +53,42 @@
 
 - ⚪ **Tally comparison mechanism.** "N words ≈ [book from your library] ×K" needs a word-count-match query + phrase template; recon backend cost and template shapes at implementation. Fallback if it underdelivers: number + period only, no whisper.
 - ⚪ **Lens query recon.** Each HP5 lens maps to a query against current schema; verify per-lens cost, the random-draw implementation (HP7), and "last finish" derivation before prompts are written.
+
 ## 2026-08-20 — from Slice 6 (Series + Author)
+
 - [ ] 🟡 **SA1 retro-touch** — series byline derivation ("_Name_ & others") must reach LIB12 Library series rows and SRCH8 series results. One-line addendum + verification at the Slice 8 audit.
 - [ ] ⚪ **Kebab menu contents (series/author)** — Edit is mocked as the sole action; recon actual edit endpoints/actions at implementation before writing the prompt.
 - [ ] ⚪ **Author aliases** — alias tracking lives in freeform bio text today ("aka: …"). Structured aliases/merging is feature territory, Liminal Connects-adjacent. No design work until then.
 - [ ] ⚪ **Light-theme wash alpha** — .26 reads rosier on wheat; dedicated light value at the light-token ratification pass.
 - [ ] ⚪ **Back-label derivation** — returnUrl carries origin; label text per origin screen needs a recon pass at implementation.
-- [x] 🟡 Home-purpose (launcher vs. daily pulse) — still gates Slice 7. 
+- [x] 🟡 Home-purpose (launcher vs. daily pulse) — still gates Slice 7.
 - [ ] 🟡 BD11 partial-rating rendering — untouched by SER3's filled-only row stars.
 
 ## 2026-08-05 — from Slice 5 (Collections)
+
 - [ ] ⚪ **Reorder / remove-books mode banners not re-mocked.** The live app's mode banners (teal "Reorder Mode / Done", red "Select titles to remove" + Cancel/Remove N bar) carry forward functionally; tokenize to the design system at implementation and confirm the remove flow keeps two-step confirmation (GR). Reorder mode is also where the Default/My section split lives (COLL1).
+
 ## 2026-08-03 — from Slice 4 (Search)
+
 - [ ] ⚪ **Recents-divider contrast with the SRCH9 divider rule.** Recents keep dividers while preview groups drop them; approved on desktop review. Validate the mixed treatment on device during implementation.
 
 ## 2026-08-02 — from Slice 3 (Library)
+
 - [ ] 🟠 **Sort direction reversal.** Sort sheet shows direction hints ("A to Z", "newest first") but no interaction to flip a sort's direction. Decide at implementation: tap-active-option-again to reverse, or per-option direction control. Low stakes, needs a decision before the sort sheet is built.
 - [ ] 🟠 **Control row density.** Four controls fit 430px with short sort labels but don't breathe. Marie accepted as-is for mockup; revisit during implementation if real device feel demands it (fallback: icon-only Wishlist chip).
 - [ ] 🟠 **A–Z rail touch feel.** 34px visual rail with full-height hit area + drag bubble works in mockup; validate 44px effective target and drag precision on device during implementation (GR3 applies).
-- [ ]  **Letterhead sticky offset.** Authors letter headers pin below the Library header; offset must be derived from actual header height at implementation, not hardcoded (mockup uses a fixed calc).
+- [ ] **Letterhead sticky offset.** Authors letter headers pin below the Library header; offset must be derived from actual header height at implementation, not hardcoded (mockup uses a fixed calc).
 
 ## 2026-07-30 — from UI Mockup Sprint
+
 - [ ] 🟠 **DNF chips render red in the live app.** Quartet History screenshot shows the DNF session chip in dusty red — direct violation of DESIGN_PHILOSOPHY (DNF = neutral warm gray, never failure-colored; "setting aside ≠ failure"). Independent of the redesign; needs recon on where session/status chip colors are sourced before a fix session. Mockup standard: neutral tint.
-- [x] 🟠 **Home purpose review.** v4 layout is structurally locked but reads flat. Open question before any implementation: what is Home *for* beyond resume / recent / discover? Marie thinking; no new Home mockups until answered.
+- [x] 🟠 **Home purpose review.** v4 layout is structurally locked but reads flat. Open question before any implementation: what is Home _for_ beyond resume / recent / discover? Marie thinking; no new Home mockups until answered.
 - [x] 🟠 **Home third track.** Deck row leaves column 3 as intentional open air. Judge on device; if it reads as a missing tile, candidate fix = a third deck (e.g., To Be Read), not decoration.
 - [ ] 🟠 **Partial-rating stars on History.** Mockup shows filled stars + dimmed empties for rated DNF/partial sessions. Confirm, or simplify to filled-only.
 - [ ] 🟠 **Dark-mode teal link contrast.** Current app link teal measures ≈4.15:1 on surface — under WCAG AA 4.5:1. Mockups use one-step-lighter link teal (#6f9a9a) on dark. Token decision needed at implementation time.
 
 ## 🟠 Metadata scanning (post-S15 cluster) → NON-EPUB EXTRACTION SPRINT
+
 > Sprint input captured: [[2026-07-20_non-epub-metadata-extraction]]. Scoping decisions locked 2026-07-20 (Decisions.md). Sprint runs from the post-adoption queue (Pipeline #5). These three items are inputs to that sprint, not standalone fixes — do not solve them piecemeal.
 
 - [ ] Rescan Metadata doesn't re-extract title/author from the book file — a manually replaced file on the NAS with corrected title/author never propagates. Must respect fill-empty-only (v0.54.0).
@@ -77,10 +98,12 @@
 **Sprint agenda (unanswered):** cascade order per format · confidence tiers + upload-review UI treatment · single-best-file vs cross-format field merge · backfill scope for existing mobi/html-only titles · known-author prior in/out · dispatcher module shape · does upload write into category subfolders again, or stay flat?
 
 ## 🟠 Wishlist → Library conversion
+
 - [ ] **Wishlist search only searches the library**, not the wishlist itself.
 - [ ] 🟠 Wishlist tab failed to render a genuine wishlist entry — title id 1991 ("A Stage Set for Villains") had acquisition_status wishlist (DB-verified 2026-07-25) but never appeared on the wishlist tab across days of manual scanning; /book/1991 loaded fine and merged normally. Unknown cause — filter, pagination, or query gap. If one entry can hide, others can. Recon candidate: what does the wishlist tab's query/filter actually exclude? (2026-07-25)
 
 ## 🔧 Known defects
+
 - [ ] 🟠 Reorder-mode bar isn't sticky — the "drag to reorder / done" block scrolls away on long lists, and as of v0.72.0 it takes the reorder-error banner with it, so a failed order save is invisible again on exactly the lists where reordering is hard. Sticky the bar; the banner rides it. (bumped 2026-07-19)
 - [ ] 🟠 **Progress bar missing on cover** for in-progress titles on BookDetail (status shows in pill, but no progress indicator at the cover base). | Session 11 Flow 3
 - [ ] ⚪ **Author-list sticky letter gap** — large gap between screen title and the sticky letter heading on mobile scroll. | Session 11 Flow 7, cosmetic
@@ -114,6 +137,7 @@
 - [ ] DuplicatesPage scan-error banner fires on mount-time auto-scan (a LOAD path) but wears the ACTION register; the ratified "both banners match" pair-constraint (v0.87.0) actively holds it there. Tension between pair-matching and the two-register rule — decide which governs when the DuplicatesPage banner pair is next opened. (filed 2026-07-26)
 
 ## Notes section renders on TBR BookDetail (found 2026-07-23, S3 phone test)
+
 - **Issue:** BookDetail shows the Notes section on TBR books. Notes should only render on regular (owned/read) book detail pages; TBR detail should not carry it.
 - **Status:** Pre-existing — S3 touched icon-button chrome only, no section visibility logic. Discovered during S3 phone test because the TBR Edit-pencil reclassification forced eyes on a TBR detail page.
 - **Scope guess (unverified):** likely a missing status/ownership condition on the Notes section render in BookDetail.jsx. Needs recon before fix — check whether other sections (Reading History, Collections?) have the same leak on TBR, and whether any TBR books already have notes saved (data question: hide the section, or hide only when empty?).
@@ -124,6 +148,7 @@
 ===
 
 ## 🟠 Collections
+
 - [ ] there are currently 2 special collections (to be ready and reading history). The issue? currently there is no way to know what date a book was dnf'd which mean that you can't view a book in dnf'd order (ie, I just dnf'd a book but once I mark it as dnf, I have no indication anywhere in the app that is was the last book I read). Reading history is maybe mislabeled because technically reading history should show all reading activity (not just completed works...hmmm) although I think there should be an additional tabbed area that allows you to quickly flip between completed, dnf, and all. But yeah. I think the other issue is that...there is no way to capture a dnf date. Need a good ux solution for this. I tried crating a regular collection to capture my dnf'd books but the sort options just don't make sense
 - [ ] Create-new-collection from the picker (a + / "add new" near the **top** of the modal, in addition to the existing bottom option).
 - [ ] Add-to-collection during the add-to-library / add-to-wishlist flow.
@@ -134,22 +159,26 @@
 - [ ] CollectionDetail: show the description directly below the title.
 
 ## 🟠 Tags
+
 - [ ] Can't create new tags in the edit modal — only existing tags are lookup-able.
 - [ ] Tag filtering is AND-only — want an OR mode (any selected tag).
 - [ ] Tag search ordering (partial fix in C8); broader tag discovery/management is a bigger parked project.
 
 ## 🟠 Filtering & Sorting
+
 - [ ] Length filter ranges (e.g. "under 4 hours" = 1 min–4 hr), not just fixed presets.
 - [ ] Author-detail filtering/sorting when an author has many titles. | C6
 - [ ] Author landing: category filter (no way to see only fiction vs non-fiction authors). | Flow 10
 - [ ] Sort by estimated read time in Library browse. | C8 — needs a backend sort endpoint
 
 ## 🟠 Covers, Images & Metadata
+
 - [ ] Cover-change flow is 6+ taps (BookDetail → dots → change cover → modal → upload → navigate → select → save). Compress it.
 - [ ] EPUB image selection — extract-cover can't pick which embedded image when there's more than one.
 - [ ] Add-flow title field not persisting — manual title edits on the review screen don't carry to book detail.
 
 ## 🟠 BookDetail & list-view polish
+
 - [ ] Add to collection popup - when searching for a collection that does not exisit, 'no collection match (search term)' appears, then "new collection" btn. when new collection btn is pressed, would be better if typed search term pre-populates the name field on the 'create collection' modal
 - [ ] Category onclick lands at the top of the edit modal — must scroll to the category field. Deep-link to the section, or open a focused category-only modal.
 - [ ] Not all section headers have edit affordances (Metadata, Tags, About lack them). | Convention ratified 2026-07-16: pencil icon = opens an editor. Remaining work is just the sweep.
@@ -167,6 +196,7 @@
 - [ ] wishlist book detail page - has author name as a link. when clicked, the link goes to an error page since the app currently does not create author detail pages for authors of wishlist titles
 
 ## ⚪ Navigation redesign — parked (touches every screen)
+
 > Real, known, big. Needs its own scoping pass — don't pick at it piecemeal.
 
 - [ ] Two bottom bars is the core problem. Usage ranking: Library > Search > Add (+) > Collections > Authors > Series. Can they collapse to one? | C3
@@ -174,8 +204,8 @@
 - [ ] Desktop has no navigation at all (separate from the mobile redesign).
 - [ ] Adapt UI to the top-3 actions: search, add-to-library, browse collections.
 
-
 ## ⚪ Deferred from earlier phases
+
 - [ ] Customizable rating labels | since Phase 3
 - [ ] Light/dark mode toggle | since Phase 3
 - [ ] Manual WPM field (from Moon Reader) | since Phase 3

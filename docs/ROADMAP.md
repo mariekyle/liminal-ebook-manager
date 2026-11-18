@@ -1,54 +1,106 @@
 # Liminal Product Roadmap
 
-> **Last Updated:** November 14, 2026 (v0.90.0 docs-only — v1 frozen; BookOrbit migration complete; v2 direction set)
-> **Status:** **Liminal v1 is frozen as of 2026-11-12.** Library management runs on a BookOrbit server. Liminal v2 is a client over BookOrbit's API and continues in this repository. Decisions D-020 to D-028 (docs/DECISIONS.md 2026-11-12).
-> **Current Focus:** Finish the post-migration inventory list below, then the **Folder Standardization session**, then the **v2 Decision Sprint**. Nothing in Phase 10 is active; it is kept for history.
+> **Last Updated:** November 18, 2026 (v0.90.2 docs-only — decision audit; D-020 to D-028 re-read, eight superseded by D-029 to D-036)
+> **Status:** **Liminal v1 is frozen as of 2026-11-12 and still running** as a reference and for note capture (D-029, D-032). Library management runs on a BookOrbit server. Liminal v2 is a client over BookOrbit's API with a small store of its own (D-030) and continues in this repository.
+> **Current Focus:** Remove the library mount from v1, then the **Folder Standardization session**, then the fic intake, then the **v2 Decision Sprint**. Nothing in Phase 10 is active; it is kept for history.
 > **Tracking Philosophy:** This roadmap is the single source of truth. No separate spec documents.
 
 ---
 
 ## Where We Left Off (read this first)
 
-Last session: 2026-11-14. Moon+ Reader history imported into BookOrbit (1,581 sessions, 546 books, ~2,200 hours). Migration is **closed**. Everything below is inventory work that does not block v2 and loses nothing by waiting.
+Last session: 2026-11-18. Decision audit of D-020 to D-028. Eight were superseded by D-029 to D-036; D-027 stands. No code changed and no BookOrbit setting was touched.
 
-### Not yet done — small, independent, any order
-- [ ] **Commit the freeze.** Apply the 2026-11-12 DECISIONS block and the 0.90.0 CHANGELOG entry to the repo; push. (Commit command was given 2026-11-12 and never run.)
-- [ ] **Ingest `1_import_new`** (2,159 fics from the AO3-outage dumps). Create `Reading/____Book Dock` as a fresh intake folder, point BookOrbit's Book Drop storage at it, fix the 13 EPUB+PDF pairs into folders first (one-liner given 2026-11-14), drop the folder in, review in Book Dock, file to FanFiction. Auto-finalize off for the first batch.
-- [ ] **Old `____To file books` pile.** Send a file listing; shape it for Book Dock; second batch through the same intake.
+### Standing rules from the audit
+- **One writer.** BookOrbit is the only app that moves, renames or deletes library files (D-029).
+- **One home per fact.** Liminal never keeps a copy of a field BookOrbit holds (D-030).
+- **v1 is for looking things up and taking notes.** Never Sync, Full Library Sync, upload, Delete Title, Merge, Remove Format, Replace file, Add files or Empty trash in v1 (D-029).
+- **Notes are captured in v1** until v2 has note capture (D-032).
+
+### Do first
+- [ ] **Remove the library mount from the v1 app** (D-029). In TrueNAS Apps, edit the liminal app and remove only the books storage entry. Leave data and backups alone: startup takes a snapshot and aborts if it cannot write one (D-009). If v1 will not start without the mount, put the entry back and delete the `.liminal-library` marker file at the books root instead; that blocks sync (D-008) but not the file actions.
+- [ ] **Read something and take the note in v1.**
+
+### Recurring
+- [ ] **First of each month, and before any stats session:** rerun `moonreader_to_bookorbit.py` (D-035). It adds only what is new.
+
+### Before v1 is stopped (D-029): all four, no exceptions
+- [ ] v2 shows estimated reading time.
+- [ ] v2 has note capture with book links.
+- [ ] Word counts, fanfic fields, book links, and collection covers and descriptions are carried from v1 into v2's store (D-034).
+- [ ] **Re-run the notes export.** Notes are being captured in v1 again as of 2026-11-18. Run `liminal_to_obsidian.py` against the current library.db and merge into the vault. Check first that the run adds and updates notes without overwriting anything edited in Obsidian since 2026-11-10. v1 does not get stopped until this box is ticked.
+
+### Inventory: small, independent, any order
+- [x] **Commit the freeze.** Done, commit c8f249c.
+- [x] **`recovery/` added to .gitignore** (0.90.2 commit).
 - [ ] **23 fics missing from disk** (`Missing from BookOrbit.md`). Mostly 2026 Cosmic Dramione Fest. Waiting on AO3 (December). Tides of Moonlight is already in `1_import_new`.
-- [ ] **Moon+ map leftovers.** After the fics above land, add their BookOrbit IDs to `moon_map.csv` and rerun `moonreader_to_bookorbit.py` (adds only what's new). Blank rows: Preach (needs a new file), Brave New World (fic, in `1_import_new`), Wife Swapping / The Facility / Final Assignment / IDK My BFF (never real reads; leave blank).
-- [ ] **Status pass from Moon+.** Optional: mark a book Read when its latest Moon+ read reached 95%+. Small script change if wanted.
-- [ ] **14 audiobook statuses** from Liminal (`unmatched.csv`) — set by hand in BookOrbit.
-- [ ] **Smart Scopes** replacing the empty collections (Reading History → Read; Paused Indefinitely → On Hold; Favs → 5★); delete the four empties and "missing files".
-- [ ] **Liminal container:** stop it in TrueNAS Apps. Do not delete. DB export, covers tarball, and TSV live in `_liminal-backups`.
-- [ ] **Upstream issues to file on BookOrbit:** case-sensitive genre filter; Android app Home-tab nav-stack bug; audio speed controls under the Android nav bar.
-- [ ] **HTTPS via Tailscale Serve** so the web app installs as a PWA on the phone.
+- [ ] **Moon+ map leftovers.** After new fics land, add their BookOrbit IDs to `moon_map.csv` and rerun the import. Blank rows: Preach (needs a new file), Brave New World (fic, in `1_import_new`), Wife Swapping / The Facility / Final Assignment / IDK My BFF (never real reads; leave blank).
+- [ ] **Status pass from Moon+.** Optional: mark a book Read when its latest Moon+ read reached 95%+.
+- [ ] **14 audiobook statuses** from Liminal (`unmatched.csv`), set by hand in BookOrbit.
+- [ ] **Smart Scopes** replacing the empty collections (Reading History → Read; Paused Indefinitely → On Hold; Favs → 5★); delete the four empties and "missing files". Also delete the `fanfic` tag and the Smart Scope built on it (D-033).
+- [ ] **Upstream issues to file on BookOrbit:** case-sensitive genre filter; Android app Home-tab nav-stack bug; audio speed controls under the Android nav bar; audio player back/forward jumps to the start or end of the book instead of the chapter.
 
 ### Next real sessions, in order
-1. **Folder Standardization** (own session; D-028). Bring a screenshot of BookOrbit → Settings → File Naming. Decide the convention (candidate: `Author/Title (Year)/` for fic, `Author - Title/` for published), then run BookOrbit's rename tool per library. Books library currently has write-back + rename on; FanFiction off. Don't touch until this session.
-2. **v2 Decision Sprint.** Inputs: BookOrbit OpenAPI spec (`/api/docs-json`, 705 paths; turn `SWAGGER_ENABLED=true` on for the pull, off after), existing mockups (Slices 1–7), VOICE_AND_TONE, DESIGN_SYSTEM. Decide: screen inventory vs mockups; reader strategy (embed BookOrbit `/read/:id` first vs build); TBR-not-owned / wishlist model (97 titles in `wishlist.md`); reading-time estimate source; cover engine (own implementation, BookOrbit as inspiration, MIT stays).
+
+**1. Folder Standardization (D-036).** Convention is decided; the pattern is a candidate until it passes the checks.
+
+Before anything is renamed:
+- [ ] v1's library mount is removed (above).
+- [ ] Explain the unexplained counts: Books "6 missing" (a lead: CHANGELOG 0.90.1 records six duplicate records removed from Books); FanFiction "Watcher · 6,919 updated" with watching off; Library Integrity showing 2,643 of 2,730 books present (87 without files).
+- [ ] A backup of BookOrbit's database and a snapshot of the library storage exist.
+- [ ] Author metadata is filled in, so no folder becomes "Unknown Author - …". In progress since 2026-11-18: Audiobooks first, then Books, then Comics. On 2026-11-18 BookOrbit's completeness chart showed about 17% of Audiobooks, 10% of Books and half of Comics with no author written in.
+- [ ] Saga: decide whether the single issues the compendium already covers move to the archive folder. Check which issues the compendium contains first, and keep any it does not. If they move, do it before the rename and clear the resulting "missing" entries, so they are not mistaken for a rename problem.
+
+Candidate pattern, folder then file:
+    <{authors}|Unknown Author> - <[{series} {seriesIndex}] ><{title}|{originalFilename}>/
+    {originalFilename}
+The file line is `{originalFilename}` in every library, so the files inside keep their names. Confirm in the preview that this leaves them untouched, extension included.
+
+Checks in BookOrbit's Result preview, before ratifying the pattern:
+- [ ] a. No series: the group vanishes. Series with no index: does not print `[Series ]`.
+- [ ] b. What `{authors:max3}` prints past three authors, and whether to use it.
+- [ ] c. An author literally named "Anonymous" or "orphan_account" comes through as written, not as "Unknown Author".
+- [ ] d. Two books that resolve to the same folder name: does Bulk Rename skip, suffix or merge?
+- [ ] e. Does Bulk Rename move the whole folder, or only the files BookOrbit tracks? Test on one fic that has sibling formats. FanFiction is 6.34 GB on disk against 1.11 GB reported.
+- [ ] f. A decimal series index (2.5).
+
+Then: all four libraries now share one pattern, so it goes in the shared Folder as Book default and no library needs an override. "Reset to shipped default" is the undo. Rename one library at a time, rescan, and compare book counts before and after.
+
+**2. Fic intake**, after the pattern is set so new books land flat.
+- [ ] **Ingest `1_import_new`** (2,159 fics from the AO3-outage dumps). Create `Reading/____Book Dock` as a fresh intake folder, point BookOrbit's Book Drop storage at it, fix the 13 EPUB+PDF pairs into folders first, drop the folder in, review in Book Dock, file to FanFiction. Auto-finalize off for the first batch.
+- [ ] **Old `____To file books` pile.** Send a file listing; shape it for Book Dock; second batch through the same intake.
+
+**3. v2 Decision Sprint.** Starts with the API recon; nothing is designed before it (D-030).
+- [ ] **HTTPS via Tailscale Serve** for BookOrbit. A prerequisite, not an extra: an installed PWA must be HTTPS and cannot call an HTTP API.
+- [ ] Pull the OpenAPI spec (`SWAGGER_ENABLED=true` for the pull, off after).
+- [ ] Recon questions: which Liminal-only data, if any, BookOrbit can hold; whether a metadata or cover edit made through the API triggers the same write-back to the file as one made in BookOrbit's UI; cover upload; audio streaming and progress sync; what session data is available for stats; whether a v1-to-BookOrbit book ID map exists for carrying notes and links; where the one-way push to Obsidian runs; whether sending an empty field clears it.
+- [ ] Then decide: the store's contents and shape; screen inventory against the mockups; how fandom, ship, pairing, rating and warnings are restored from v1.
+
+**4. Stats content session**, any time before v2 item 8. Starting point: the Slice 7 mockup and HP10. Note that BookOrbit's Peak Reading Hours, Reading Clock and Session Archetypes charts are import artifacts (D-035).
 
 ---
 
 ## Phase 11: Liminal v2 — client over BookOrbit (not started)
 
-**What v2 is.** A React PWA against BookOrbit's `/api/v1`. BookOrbit owns library, files, scanning, metadata providers, reading state, collections, audiobooks, comics. Liminal owns the screens Marie actually uses on the phone. FastAPI/SQLite backend retired (D-021).
+**What v2 is.** A React PWA against BookOrbit's API, plus a small store of its own for what BookOrbit has no field for (D-030). BookOrbit owns library, files, scanning, metadata providers, reading state, collections, audiobooks, comics. Liminal owns the screens Marie uses on the phone and the data BookOrbit cannot hold. It is not a fork.
 
-**Scope, priority order (D-022).**
-1. Browse / search / filter — thumb-first, Warm A, calm
-2. Upload to Book Dock
-3. Reviews with a hub (BookOrbit has no reviews list or search)
-4. Estimated reading time per book (BookOrbit has none)
-5. Generated covers for fanfic — own implementation; nine-style seeded SVG idea credited to BookOrbit (D-027)
-6. TBR-not-owned / wishlist model — open question
-7. In-app EPUB reader (may embed BookOrbit's reader route first)
-8. In-app audio player (may embed first)
+**Scope, priority order (D-031).**
+1. Browse / search / filter with estimated reading time, across all four libraries — fandom, ship and read-time filters, search one tap away, filters that persist
+2. Note capture with book links — a templated note waiting for every book, a Recap section, "Referenced by", one-way push to Obsidian (D-032)
+3. Cover generator — own implementation in Liminal's palette, handed to BookOrbit as the book's cover; built from the idea, not the code (D-027)
+4. Not-owned wishlist (97 titles waiting in `wishlist.md`)
+5. Add flow — several formats of one title in one go, with an already-owned check
+6. Reader — tap-to-turn and customizable themes are the acceptance criteria; this is what retires Moon+ (D-035)
+7. Audio player — chapters, speed, resume
+8. Stats — reads BookOrbit's session data, stores no copy
 
-**Carried forward from v1:** name, Warm A tokens, `tailwind.config.js` token system, mockups v5–v8, VOICE_AND_TONE, MICROCOPY_LIBRARY, `useStatusLabels` convention ("Abandoned" never renders).
+v1 can be stopped once items 1 and 2 ship and the "Before v1 is stopped" list above is ticked.
 
-**Dropped with v1:** everything in Phase 10 that assumed Liminal owned the data — 10.1b extraction, 10.3 external search (BookOrbit has 14 providers), 10.6 Moon Reader sync (OPDS-only in BookOrbit; D-026), 10.7 Obsidian sync (notes already live in Obsidian; D-023), duplicates page, merge flows, backups.
+**Carried forward from v1:** name, Warm A tokens, `tailwind.config.js` token system, VOICE_AND_TONE, MICROCOPY_LIBRARY, `useStatusLabels` convention ("Abandoned" never renders). Mockups v5–v8 carry forward as design language; each screen is re-checked against the API.
 
-**Open questions for the sprint.** Reader: embed vs build. Wishlist: BookOrbit Requests vs own model. Reading time: word count from BookOrbit metadata vs EPUB parse client-side. Offline: service worker scope.
+**Dropped with v1:** everything in Phase 10 that assumed Liminal owned the library — 10.1b extraction, 10.3 external search (BookOrbit has 14 providers), 10.6 Moon Reader sync (D-035), 10.7 two-way Obsidian sync (replaced by the one-way push in D-032), duplicates page, merge flows, backups.
+
+**Open questions for the sprint.** See "v2 Decision Sprint" under Where We Left Off.
 
 ---
 
